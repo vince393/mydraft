@@ -127,7 +127,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
         <SidebarFooter className="p-4">
           <Button 
             size="lg"
-            className="w-full justify-center gap-2 rounded-xl font-medium" 
+            className="w-full justify-center gap-2 rounded-xl font-medium bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 border-0" 
             data-testid="button-compose"
           >
             <PenSquare className="w-4 h-4" />
