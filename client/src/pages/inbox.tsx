@@ -11,8 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, ChevronRight } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
+import { Settings, LogOut, User } from "lucide-react";
 import type { Email, Draft } from "@shared/schema";
 
 interface InboxProps {
@@ -22,7 +21,6 @@ interface InboxProps {
 export default function Inbox({ activeFolder }: InboxProps) {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
-  const { open: sidebarOpen, toggleSidebar } = useSidebar();
 
   const { data: emails = [], isLoading: isLoadingEmails } = useQuery<Email[]>({
     queryKey: ["/api/emails", activeFolder],
@@ -121,15 +119,6 @@ export default function Inbox({ activeFolder }: InboxProps) {
 
   return (
     <div className="flex h-screen">
-      {!sidebarOpen && (
-        <button
-          onClick={toggleSidebar}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-center w-4 h-16 text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-          data-testid="button-open-sidebar"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      )}
       <div className="w-[320px] border-r border-border/50 flex-shrink-0 flex flex-col">
         <EmailList
           emails={emails}

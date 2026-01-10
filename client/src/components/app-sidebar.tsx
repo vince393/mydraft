@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle } from "lucide-react";
 import {
   Sidebar,
@@ -8,9 +8,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
   SidebarFooter,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +22,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface FolderItem {
   title: string;
@@ -50,7 +53,9 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
   const [folders, setFolders] = useState<FolderItem[]>(defaultItems);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
-  const { toggleSidebar, open } = useSidebar();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isHoverExpanded, setIsHoverExpanded] = useState(false);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -65,47 +70,146 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
     }
   };
 
+  const handleMouseEnter = () => {
+    if (isCollapsed) {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      setIsHoverExpanded(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (isCollapsed) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHoverExpanded(false);
+      }, 150);
+    }
+  };
+
+  const handleSidebarClick = () => {
+    if (isCollapsed && isHoverExpanded) {
+      setIsCollapsed(false);
+      setIsHoverExpanded(false);
+    }
+  };
+
+  const handleToggleCollapse = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isCollapsed) {
+      setIsCollapsed(false);
+      setIsHoverExpanded(false);
+    } else {
+      setIsCollapsed(true);
+      setIsHoverExpanded(false);
+    }
+  };
+
+  const isExpanded = !isCollapsed || isHoverExpanded;
+  const showText = isExpanded;
+
   return (
     <>
       <div 
         className={`
-          flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
-          ${open ? "w-[11rem]" : "w-0"}
+          flex-shrink-0 transition-all duration-300 ease-in-out overflow-visible relative
+          ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}
         `}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleSidebarClick}
       >
-        <Sidebar collapsible="none" className="border-r border-border/30 w-[11rem]">
-        <SidebarContent className="px-3">
+        <Sidebar collapsible="none" className={`border-r border-border/30 transition-all duration-300 ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}`}>
+        <SidebarContent className={`${isExpanded ? "px-3" : "px-1.5"} transition-all duration-300`}>
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
                 <SidebarMenuItem className="mb-2">
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setIsCreateOpen(true)}
-                      className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                      data-testid="button-create-folder"
-                    >
-                      <FolderPlus className="w-4 h-4" />
-                      <span className="text-sm">Folder</span>
-                    </button>
-                    {open && (
-                      <button
-                        onClick={toggleSidebar}
-                        className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                        data-testid="button-toggle-sidebar"
+                  <div className={`flex items-center ${isExpanded ? "gap-2" : "flex-col gap-1"}`}>
+                    {showText ? (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsCreateOpen(true);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                        data-testid="button-create-folder"
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        <FolderPlus className="w-4 h-4" />
+                        <span className="text-sm">Folder</span>
                       </button>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsCreateOpen(true);
+                            }}
+                            className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                            data-testid="button-create-folder"
+                          >
+                            <FolderPlus className="w-4 h-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">New Folder</TooltipContent>
+                      </Tooltip>
                     )}
+                    <button
+                      onClick={handleToggleCollapse}
+                      className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                      data-testid="button-toggle-sidebar"
+                    >
+                      {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                    </button>
                   </div>
                 </SidebarMenuItem>
                 {folders.map((item) => {
                   const isActive = activeFolder.toLowerCase() === item.title.toLowerCase();
                   const showCount = item.title === "Inbox" && unreadCount > 0;
+                  
+                  if (!showText) {
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SidebarMenuButton 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onFolderChange(item.title.toLowerCase());
+                              }}
+                              className={`
+                                w-full justify-center h-11 rounded-xl transition-all duration-200
+                                ${isActive 
+                                  ? "bg-muted/60 text-foreground" 
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                }
+                              `}
+                              data-testid={`nav-${item.title.toLowerCase()}`}
+                            >
+                              <div className="relative">
+                                <item.icon className="w-[18px] h-[18px]" />
+                                {showCount && (
+                                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                                )}
+                              </div>
+                            </SidebarMenuButton>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            {item.title}{showCount ? ` (${unreadCount})` : ""}
+                          </TooltipContent>
+                        </Tooltip>
+                      </SidebarMenuItem>
+                    );
+                  }
+                  
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton 
-                        onClick={() => onFolderChange(item.title.toLowerCase())}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onFolderChange(item.title.toLowerCase());
+                        }}
                         className={`
                           w-full justify-between h-11 rounded-xl transition-all duration-200
                           ${isActive 
@@ -134,15 +238,30 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="p-4">
-          <Button 
-            size="lg"
-            className="w-full justify-center gap-2 rounded-xl font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
-            data-testid="button-compose"
-          >
-            <PenSquare className="w-4 h-4" />
-            Compose
-          </Button>
+        <SidebarFooter className={`${isExpanded ? "p-4" : "p-2"} transition-all duration-300`}>
+          {showText ? (
+            <Button 
+              size="lg"
+              className="w-full justify-center gap-2 rounded-xl font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
+              data-testid="button-compose"
+            >
+              <PenSquare className="w-4 h-4" />
+              Compose
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  size="icon"
+                  className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
+                  data-testid="button-compose"
+                >
+                  <PenSquare className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Compose</TooltipContent>
+            </Tooltip>
+          )}
         </SidebarFooter>
         </Sidebar>
       </div>
