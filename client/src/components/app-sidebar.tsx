@@ -82,13 +82,15 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
                       <FolderPlus className="w-4 h-4" />
                       <span className="text-sm">Folder</span>
                     </button>
-                    <button
-                      onClick={toggleSidebar}
-                      className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                      data-testid="button-toggle-sidebar"
-                    >
-                      {open ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                    </button>
+                    {open && (
+                      <button
+                        onClick={toggleSidebar}
+                        className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                        data-testid="button-toggle-sidebar"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </SidebarMenuItem>
                 {folders.map((item) => {
