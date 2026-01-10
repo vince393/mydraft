@@ -106,26 +106,26 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
 
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="pl-6 pr-8 pt-4 pb-8">
-          <div className="flex items-start gap-4 mb-6">
-            <Avatar className="w-11 h-11 ring-2 ring-border/50">
+          <div className="flex items-start gap-3 mb-5">
+            <Avatar className="w-8 h-8 ring-1 ring-border/40">
               <AvatarFallback 
                 style={{ backgroundColor: email.avatarColor }}
-                className="text-white font-medium text-sm"
+                className="text-white font-medium text-xs"
               >
                 {initials}
               </AvatarFallback>
             </Avatar>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <h2 className="font-semibold text-base tracking-tight" data-testid="email-sender">
+              <div className="flex items-center gap-2">
+                <h2 className="font-medium text-sm tracking-tight" data-testid="email-sender">
                   {email.sender}
                 </h2>
                 <span className="text-xs text-muted-foreground" data-testid="email-date">
                   {formatSmartDate(new Date(email.receivedAt))}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground" data-testid="email-sender-address">
+              <p className="text-[11px] text-muted-foreground" data-testid="email-sender-address">
                 {email.senderEmail}
               </p>
             </div>
