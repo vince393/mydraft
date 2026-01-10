@@ -74,6 +74,12 @@ export default function Inbox() {
     }
   };
 
+  const handleDeleteMultipleEmails = async (emailIds: number[]) => {
+    for (const id of emailIds) {
+      await deleteEmailMutation.mutateAsync(id);
+    }
+  };
+
   return (
     <div className="flex h-screen">
       <div className="w-[320px] border-r border-border/50 flex-shrink-0 flex flex-col">
@@ -83,6 +89,7 @@ export default function Inbox() {
           onSelectEmail={handleSelectEmail}
           onAiReply={handleAiReply}
           onDeleteEmail={handleDeleteEmail}
+          onDeleteMultipleEmails={handleDeleteMultipleEmails}
           isAiLoading={generateDraftMutation.isPending}
           isDeleting={deleteEmailMutation.isPending}
           isLoading={isLoadingEmails}

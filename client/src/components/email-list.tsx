@@ -1,9 +1,11 @@
+import { useState, useRef, useCallback } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Email } from "@shared/schema";
 
 interface EmailListProps {
@@ -12,6 +14,7 @@ interface EmailListProps {
   onSelectEmail: (email: Email) => void;
   onAiReply: () => void;
   onDeleteEmail: () => void;
+  onDeleteMultipleEmails: (emailIds: number[]) => void;
   isAiLoading?: boolean;
   isDeleting?: boolean;
   isLoading?: boolean;
@@ -53,7 +56,65 @@ function EmailListEmpty() {
   );
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onDeleteEmail, isAiLoading, isDeleting, isLoading }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onDeleteEmail, onDeleteMultipleEmails, isAiLoading, isDeleting, isLoading }: EmailListProps) {
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggered = useRef(false);
+
+  const handleLongPressStart = useCallback((emailId: number) => {
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      setIsSelectionMode(true);
+      setSelectedIds(new Set([emailId]));
+    }, 500);
+  }, []);
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleEmailClick = useCallback((email: Email) => {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
+    
+    if (isSelectionMode) {
+      setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(email.id)) {
+          newSet.delete(email.id);
+        } else {
+          newSet.add(email.id);
+        }
+        if (newSet.size === 0) {
+          setIsSelectionMode(false);
+        }
+        return newSet;
+      });
+    } else {
+      onSelectEmail(email);
+    }
+  }, [isSelectionMode, onSelectEmail]);
+
+  const handleCancelSelection = useCallback(() => {
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIds.size > 0) {
+      onDeleteMultipleEmails(Array.from(selectedIds));
+      setIsSelectionMode(false);
+      setSelectedIds(new Set());
+    }
+  }, [selectedIds, onDeleteMultipleEmails]);
+
   if (isLoading) {
     return <EmailListSkeleton />;
   }
@@ -93,6 +154,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         <div className="space-y-0.5 p-3">
         {emails.map((email) => {
           const isSelected = email.id === selectedEmailId;
+          const isChecked = selectedIds.has(email.id);
           const initials = email.sender
             .split(" ")
             .map((n) => n[0])
@@ -103,31 +165,49 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           return (
             <div
               key={email.id}
-              onClick={() => onSelectEmail(email)}
+              onClick={() => handleEmailClick(email)}
+              onMouseDown={() => handleLongPressStart(email.id)}
+              onMouseUp={handleLongPressEnd}
+              onMouseLeave={handleLongPressEnd}
+              onTouchStart={() => handleLongPressStart(email.id)}
+              onTouchEnd={handleLongPressEnd}
               className={`
                 group relative p-4 rounded-xl cursor-pointer
-                transition-all duration-200 ease-out
-                ${isSelected 
-                  ? "bg-primary/10 ring-1 ring-primary/30" 
-                  : "hover:bg-muted/50"
+                transition-all duration-200 ease-out select-none
+                ${isSelectionMode && isChecked
+                  ? "bg-primary/20 ring-1 ring-primary/50"
+                  : isSelected 
+                    ? "bg-primary/10 ring-1 ring-primary/30" 
+                    : "hover:bg-muted/50"
                 }
               `}
               data-testid={`email-item-${email.id}`}
             >
               <div className="flex items-start gap-3">
-                <div className="relative flex-shrink-0">
-                  <Avatar className="w-11 h-11 ring-2 ring-border/30">
-                    <AvatarFallback 
-                      style={{ backgroundColor: email.avatarColor }}
-                      className="text-white text-sm font-medium"
-                    >
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!email.isRead && (
-                    <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary ring-2 ring-background" />
-                  )}
-                </div>
+                {isSelectionMode && (
+                  <div className="flex items-center justify-center w-11 h-11 flex-shrink-0">
+                    <Checkbox 
+                      checked={isChecked}
+                      className="w-5 h-5 rounded-md"
+                      data-testid={`checkbox-email-${email.id}`}
+                    />
+                  </div>
+                )}
+                {!isSelectionMode && (
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="w-11 h-11 ring-2 ring-border/30">
+                      <AvatarFallback 
+                        style={{ backgroundColor: email.avatarColor }}
+                        className="text-white text-sm font-medium"
+                      >
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    {!email.isRead && (
+                      <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary ring-2 ring-background" />
+                    )}
+                  </div>
+                )}
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
@@ -171,42 +251,68 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       </ScrollArea>
 
       <div className="p-3 border-t border-border/30 bg-background/95 backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center">
+        {isSelectionMode ? (
+          <div className="flex items-center gap-2">
             <Button 
               size="icon"
               variant="ghost"
-              disabled={!selectedEmailId}
+              onClick={handleCancelSelection}
               className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
-              data-testid="button-archive"
+              data-testid="button-cancel-selection"
             >
-              <Archive className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </Button>
+            <span className="text-sm text-muted-foreground flex-1">
+              {selectedIds.size} selected
+            </span>
             <Button 
-              size="icon"
-              variant="ghost"
-              disabled={!selectedEmailId || isDeleting}
-              onClick={onDeleteEmail}
-              className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
-              data-testid="button-trash"
+              onClick={handleDeleteSelected}
+              disabled={selectedIds.size === 0 || isDeleting}
+              className="gap-2 h-10 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white border-0 transition-all"
+              data-testid="button-delete-selected"
             >
               {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Delete
             </Button>
           </div>
-          <Button 
-            onClick={onAiReply}
-            disabled={!selectedEmailId || isAiLoading}
-            className="flex-1 gap-2 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0 transition-all"
-            data-testid="button-ai-reply"
-          >
-            {isAiLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
-            Draft with AI
-          </Button>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center">
+              <Button 
+                size="icon"
+                variant="ghost"
+                disabled={!selectedEmailId}
+                className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+                data-testid="button-archive"
+              >
+                <Archive className="w-4 h-4" />
+              </Button>
+              <Button 
+                size="icon"
+                variant="ghost"
+                disabled={!selectedEmailId || isDeleting}
+                onClick={onDeleteEmail}
+                className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                data-testid="button-trash"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              </Button>
+            </div>
+            <Button 
+              onClick={onAiReply}
+              disabled={!selectedEmailId || isAiLoading}
+              className="flex-1 gap-2 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0 transition-all"
+              data-testid="button-ai-reply"
+            >
+              {isAiLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              Draft with AI
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
