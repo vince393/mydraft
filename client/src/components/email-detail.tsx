@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { format } from "date-fns";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Reply, 
   ReplyAll, 
@@ -7,12 +10,16 @@ import {
   Star, 
   Archive, 
   Trash2,
-  ChevronLeft
+  ChevronLeft,
+  Sparkles,
+  Loader2,
+  X
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { Email } from "@shared/schema";
+import { Textarea } from "@/components/ui/textarea";
+import type { Email, Draft } from "@shared/schema";
 
 interface EmailDetailProps {
   email: Email | null;
@@ -35,6 +42,37 @@ function EmailDetailEmpty() {
 }
 
 export function EmailDetail({ email }: EmailDetailProps) {
+  const [showDraft, setShowDraft] = useState(false);
+  const [draftContent, setDraftContent] = useState("");
+
+  const { data: existingDraft } = useQuery<Draft | null>({
+    queryKey: ["/api/drafts", email?.id],
+    enabled: !!email?.id,
+  });
+
+  const generateDraftMutation = useMutation({
+    mutationFn: async (emailId: number) => {
+      const response = await apiRequest("POST", "/api/drafts/generate", { emailId });
+      return response.json();
+    },
+    onSuccess: (draft: Draft) => {
+      setDraftContent(draft.content);
+      setShowDraft(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/drafts", email?.id] });
+    },
+  });
+
+  const handleAiReply = () => {
+    if (email) {
+      generateDraftMutation.mutate(email.id);
+    }
+  };
+
+  const handleCloseDraft = () => {
+    setShowDraft(false);
+    setDraftContent("");
+  };
+
   if (!email) {
     return <EmailDetailEmpty />;
   }
@@ -113,8 +151,55 @@ export function EmailDetail({ email }: EmailDetailProps) {
             ))}
           </div>
 
+          {showDraft && (
+            <div className="mb-8 p-5 bg-muted/30 rounded-xl border border-border/40" data-testid="ai-draft-container">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">AI Generated Reply</span>
+                </div>
+                <Button size="icon" variant="ghost" onClick={handleCloseDraft} data-testid="button-close-draft">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <Textarea
+                value={draftContent}
+                onChange={(e) => setDraftContent(e.target.value)}
+                className="min-h-[150px] bg-background/50 border-border/30 rounded-lg resize-none"
+                placeholder="AI generated reply will appear here..."
+                data-testid="textarea-draft"
+              />
+              <div className="flex items-center gap-2 mt-4">
+                <Button variant="default" className="gap-2" data-testid="button-send-draft">
+                  Send Reply
+                </Button>
+                <Button variant="outline" onClick={handleAiReply} disabled={generateDraftMutation.isPending} data-testid="button-regenerate">
+                  {generateDraftMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Regenerate"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-3 pt-6 border-t border-border/50">
-            <Button variant="default" className="gap-2 px-5" data-testid="button-reply">
+            <Button 
+              variant="default" 
+              className="gap-2 px-5" 
+              onClick={handleAiReply}
+              disabled={generateDraftMutation.isPending}
+              data-testid="button-ai-reply"
+            >
+              {generateDraftMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              AI Reply
+            </Button>
+            <Button variant="outline" className="gap-2" data-testid="button-reply">
               <Reply className="w-4 h-4" />
               Reply
             </Button>
