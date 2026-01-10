@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { 
   Reply, 
   ReplyAll, 
@@ -67,6 +67,16 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
     .toUpperCase()
     .slice(0, 2);
 
+  const formatSmartDate = (date: Date) => {
+    if (isToday(date)) {
+      return format(date, "h:mm a");
+    } else if (isYesterday(date)) {
+      return "Yesterday";
+    } else {
+      return format(date, "MMM d");
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
@@ -107,19 +117,17 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
             </Avatar>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="font-semibold text-base tracking-tight" data-testid="email-sender">
-                    {email.sender}
-                  </h2>
-                  <p className="text-xs text-muted-foreground" data-testid="email-sender-address">
-                    {email.senderEmail}
-                  </p>
-                </div>
-                <p className="text-xs text-muted-foreground whitespace-nowrap" data-testid="email-date">
-                  {format(new Date(email.receivedAt), "MMM d, yyyy 'at' h:mm a")}
-                </p>
+              <div className="flex items-center gap-2 mb-0.5">
+                <h2 className="font-semibold text-base tracking-tight" data-testid="email-sender">
+                  {email.sender}
+                </h2>
+                <span className="text-xs text-muted-foreground" data-testid="email-date">
+                  {formatSmartDate(new Date(email.receivedAt))}
+                </span>
               </div>
+              <p className="text-xs text-muted-foreground" data-testid="email-sender-address">
+                {email.senderEmail}
+              </p>
             </div>
           </div>
 
