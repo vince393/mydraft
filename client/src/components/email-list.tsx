@@ -77,7 +77,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       if (!response.ok) throw new Error("Failed to fetch response time");
       return response.json();
     },
-    refetchInterval: 60000,
+    staleTime: Infinity,
   });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isDragging, setIsDragging] = useState(false);

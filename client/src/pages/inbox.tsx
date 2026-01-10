@@ -43,6 +43,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
     },
   });
 
@@ -76,6 +77,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
       setSelectedEmail(null);
       setGeneratedDraft(null);
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
     },
   });
 

@@ -8,6 +8,19 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+interface ResponseTimeCache {
+  signature: string;
+  estimatedMinutes: number;
+  unreadCount: number;
+  totalWords: number;
+}
+
+const responseTimeCache: Map<string, ResponseTimeCache> = new Map();
+
+function generateUnreadSignature(unreadEmailIds: number[]): string {
+  return unreadEmailIds.sort((a, b) => a - b).join(",");
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -234,16 +247,30 @@ Reply:`;
   app.get("/api/response-time", async (req, res) => {
     try {
       const folder = req.query.folder as string | undefined;
-      const emails = await storage.getEmails(folder || "inbox");
+      const targetFolder = folder || "inbox";
+      const emails = await storage.getEmails(targetFolder);
       
       const unreadEmails = emails.filter(e => !e.isRead);
       
       if (unreadEmails.length === 0) {
+        responseTimeCache.delete(targetFolder);
         return res.json({ 
           estimatedMinutes: 0, 
           unreadCount: 0,
           totalWords: 0,
           message: "All caught up!" 
+        });
+      }
+
+      const unreadIds = unreadEmails.map(e => e.id);
+      const currentSignature = generateUnreadSignature(unreadIds);
+      
+      const cached = responseTimeCache.get(targetFolder);
+      if (cached && cached.signature === currentSignature) {
+        return res.json({
+          estimatedMinutes: cached.estimatedMinutes,
+          unreadCount: cached.unreadCount,
+          totalWords: cached.totalWords
         });
       }
 
@@ -303,8 +330,17 @@ Return ONLY a JSON object with this exact format:
         }
       }
 
+      const finalMinutes = Math.max(1, Math.round(estimatedMinutes));
+      
+      responseTimeCache.set(targetFolder, {
+        signature: currentSignature,
+        estimatedMinutes: finalMinutes,
+        unreadCount: unreadEmails.length,
+        totalWords
+      });
+
       res.json({ 
-        estimatedMinutes: Math.max(1, Math.round(estimatedMinutes)),
+        estimatedMinutes: finalMinutes,
         unreadCount: unreadEmails.length,
         totalWords
       });
