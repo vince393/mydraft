@@ -4,6 +4,8 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,12 +13,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User } from "lucide-react";
+import { Settings, LogOut, User, Search, Bell, HelpCircle } from "lucide-react";
 import type { Email, Draft } from "@shared/schema";
 
 interface InboxProps {
   activeFolder: string;
 }
+
+const folderLabels: Record<string, string> = {
+  inbox: "Inbox",
+  sent: "Sent",
+  drafts: "Drafts",
+  archived: "Archive",
+  junk: "Junk",
+  trash: "Trash",
+};
 
 export default function Inbox({ activeFolder }: InboxProps) {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
@@ -119,9 +130,21 @@ export default function Inbox({ activeFolder }: InboxProps) {
     }
   };
 
+  const unreadCount = emails.filter(e => !e.isRead).length;
+
   return (
-    <div className="flex h-screen">
-      <div className="w-[320px] border-r border-border/50 flex-shrink-0 flex flex-col">
+    <div className="flex h-screen bg-background">
+      <div className="w-[340px] border-r border-border/40 flex-shrink-0 flex flex-col">
+        <div className="h-14 px-4 flex items-center gap-3 border-b border-border/40 bg-background">
+          <h1 className="text-base font-semibold">
+            {folderLabels[activeFolder] || activeFolder}
+          </h1>
+          {unreadCount > 0 && (
+            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              {unreadCount}
+            </span>
+          )}
+        </div>
         <EmailList
           emails={emails}
           selectedEmailId={selectedEmail?.id ?? null}
@@ -138,13 +161,35 @@ export default function Inbox({ activeFolder }: InboxProps) {
           activeFolder={activeFolder}
         />
       </div>
-      <div className="flex-1 min-w-0 flex flex-col">
-        <header className="flex items-center justify-end h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
+      <div className="flex-1 min-w-0 flex flex-col bg-background">
+        <header className="h-14 px-4 flex items-center gap-3 border-b border-border/40 bg-background sticky top-0 z-50 flex-shrink-0">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              type="search"
+              placeholder="Search mail..." 
+              className="pl-9 h-9 bg-muted/40 border-0 focus:bg-muted/60"
+              data-testid="input-search"
+            />
+          </div>
+          <div className="flex-1" />
+          <div className="flex items-center gap-1">
+            <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground" data-testid="button-help">
+              <HelpCircle className="w-4 h-4" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground" data-testid="button-notifications">
+              <Bell className="w-4 h-4" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground" data-testid="button-settings">
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="w-px h-6 bg-border/50 mx-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
-                <Avatar className="w-9 h-9 ring-2 ring-border/30">
-                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-medium">
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
                     JD
                   </AvatarFallback>
                 </Avatar>

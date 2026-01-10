@@ -39,15 +39,15 @@ interface EmailDetailProps {
 
 function EmailDetailEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-8 -mt-24">
-      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-8">
-        <svg className="w-10 h-10 text-primary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+      <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+        <svg className="w-7 h-7 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
         </svg>
       </div>
-      <h3 className="font-medium text-2xl mb-3 tracking-tight">Select an email</h3>
-      <p className="text-sm text-muted-foreground max-w-[300px] leading-relaxed">
-        Choose an email from the list to view its contents
+      <h3 className="font-medium text-base mb-1">No message selected</h3>
+      <p className="text-xs text-muted-foreground">
+        Select an email to read
       </p>
     </div>
   );
@@ -161,65 +161,66 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <Button size="icon" variant="ghost" className="lg:hidden" data-testid="button-back">
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-lg font-medium truncate pr-4 tracking-tight" data-testid="email-subject">
-            {email.subject}
-          </h1>
-        </div>
-        <div className="flex items-center gap-0.5">
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-archive">
-            <Archive className="w-4 h-4" />
-          </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-trash">
-            <Trash2 className="w-4 h-4" />
-          </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-star">
-            <Star className={`w-4 h-4 ${email.isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
-          </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-more">
-            <MoreHorizontal className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+      <ScrollArea className="flex-1">
+        <div className="max-w-3xl mx-auto px-6 py-6">
+          <div className="mb-6">
+            <h1 className="text-xl font-semibold mb-4 text-foreground" data-testid="email-subject">
+              {email.subject}
+            </h1>
+            
+            <div className="flex items-start gap-3 pb-4 border-b border-border/30">
+              <Avatar className="w-10 h-10">
+                <AvatarFallback 
+                  style={{ backgroundColor: email.avatarColor }}
+                  className="text-white font-medium text-sm"
+                >
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
 
-      <ScrollArea className="flex-1 scrollbar-thin">
-        <div className="pl-6 pr-8 pt-4 pb-8">
-          <div className="flex items-start gap-3 mb-5">
-            <Avatar className="w-8 h-8 ring-1 ring-border/40">
-              <AvatarFallback 
-                style={{ backgroundColor: email.avatarColor }}
-                className="text-white font-medium text-xs"
-              >
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="font-medium text-sm tracking-tight" data-testid="email-sender">
-                  {email.sender}
-                </h2>
-                <span className="text-xs text-muted-foreground" data-testid="email-date">
-                  {formatSmartDate(new Date(email.receivedAt))}
-                </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-sm" data-testid="email-sender">
+                    {email.sender}
+                  </span>
+                  <span className="text-xs text-muted-foreground" data-testid="email-sender-address">
+                    &lt;{email.senderEmail}&gt;
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="text-xs text-muted-foreground" data-testid="email-date">
+                    {format(new Date(email.receivedAt), "MMM d, yyyy 'at' h:mm a")}
+                  </span>
+                  {email.isStarred && (
+                    <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                  )}
+                </div>
               </div>
-              <p className="text-[11px] text-muted-foreground" data-testid="email-sender-address">
-                {email.senderEmail}
-              </p>
+
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" data-testid="button-archive">
+                  <Archive className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" data-testid="button-trash">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" data-testid="button-star">
+                  <Star className={`w-4 h-4 ${email.isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" data-testid="button-more">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
           <div 
-            className="mb-8"
+            className="mb-8 text-[15px] leading-relaxed text-foreground/90"
             data-testid="email-body"
           >
             {email.body.split("\n").map((paragraph, i) => (
               paragraph.trim() ? (
-                <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
+                <p key={i} className="mb-4 last:mb-0">
                   {paragraph}
                 </p>
               ) : null
@@ -354,17 +355,17 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
             </div>
           )}
 
-          <div className="flex items-center gap-3 pt-6 border-t border-border/50">
-            <Button className="gap-2 px-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" data-testid="button-reply">
-              <Reply className="w-4 h-4" />
+          <div className="flex items-center gap-2 pt-6 border-t border-border/30">
+            <Button size="sm" className="gap-1.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" data-testid="button-reply">
+              <Reply className="w-3.5 h-3.5" />
               Reply
             </Button>
-            <Button variant="outline" className="gap-2" data-testid="button-reply-all">
-              <ReplyAll className="w-4 h-4" />
+            <Button size="sm" variant="outline" className="gap-1.5" data-testid="button-reply-all">
+              <ReplyAll className="w-3.5 h-3.5" />
               Reply All
             </Button>
-            <Button variant="outline" className="gap-2" data-testid="button-forward">
-              <Forward className="w-4 h-4" />
+            <Button size="sm" variant="outline" className="gap-1.5" data-testid="button-forward">
+              <Forward className="w-3.5 h-3.5" />
               Forward
             </Button>
           </div>
