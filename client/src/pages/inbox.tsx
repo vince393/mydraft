@@ -59,7 +59,7 @@ export default function Inbox() {
 
   return (
     <div className="flex h-screen">
-      <div className="w-[400px] border-r border-border/50 flex-shrink-0 flex flex-col">
+      <div className="w-[320px] border-r border-border/50 flex-shrink-0 flex flex-col">
         <EmailList
           emails={emails}
           selectedEmailId={selectedEmail?.id ?? null}

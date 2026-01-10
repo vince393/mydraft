@@ -23,8 +23,8 @@ function AppContent() {
   return (
     <SidebarProvider
       style={{
-        "--sidebar-width": "17rem",
-        "--sidebar-width-icon": "3.5rem",
+        "--sidebar-width": "12rem",
+        "--sidebar-width-icon": "3rem",
       } as React.CSSProperties}
     >
       <div className="flex h-screen w-full bg-background">
