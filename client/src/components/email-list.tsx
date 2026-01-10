@@ -1,5 +1,5 @@
 import { formatDistanceToNowStrict } from "date-fns";
-import { Star, Search } from "lucide-react";
+import { Star } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -60,15 +60,12 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border/30">
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
-          <Input 
-            type="search"
-            placeholder="Search emails..." 
-            className="pl-10 bg-muted/30 border-0 h-10 rounded-xl focus:bg-muted/50 transition-colors"
-            data-testid="input-search"
-          />
-        </div>
+        <Input 
+          type="search"
+          placeholder="Search emails..." 
+          className="bg-muted/30 border-0 h-10 rounded-xl focus:bg-muted/50 transition-colors"
+          data-testid="input-search"
+        />
       </div>
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="space-y-0.5 p-3">

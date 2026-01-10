@@ -78,15 +78,16 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
+                <SidebarMenuItem className="mb-3">
+                  <Button 
+                    variant="outline"
                     onClick={() => setIsCreateOpen(true)}
-                    className="w-full justify-start gap-3 h-11 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200"
+                    className="w-full justify-start gap-3 h-10 rounded-xl border-dashed border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
                     data-testid="button-create-folder"
                   >
-                    <FolderPlus className="w-[18px] h-[18px]" />
+                    <FolderPlus className="w-4 h-4" />
                     <span className="text-sm">Create</span>
-                  </SidebarMenuButton>
+                  </Button>
                 </SidebarMenuItem>
 
                 {folders.map((item) => {
