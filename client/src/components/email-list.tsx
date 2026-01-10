@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import type { Email } from "@shared/schema";
 
 interface EmailListProps {
@@ -212,30 +211,24 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               data-testid={`email-item-${email.id}`}
             >
               <div className="flex items-start gap-3">
-                {isSelectionMode && (
-                  <div className="flex items-center justify-center w-11 h-11 flex-shrink-0">
-                    <Checkbox 
-                      checked={isChecked}
-                      className="w-5 h-5 rounded-md"
-                      data-testid={`checkbox-email-${email.id}`}
-                    />
-                  </div>
-                )}
-                {!isSelectionMode && (
-                  <div className="relative flex-shrink-0">
-                    <Avatar className="w-11 h-11 ring-2 ring-border/30">
-                      <AvatarFallback 
-                        style={{ backgroundColor: email.avatarColor }}
-                        className="text-white text-sm font-medium"
-                      >
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    {!email.isRead && (
-                      <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary ring-2 ring-background" />
-                    )}
-                  </div>
-                )}
+                <div className="relative flex-shrink-0">
+                  <Avatar className="w-11 h-11 ring-2 ring-border/30">
+                    <AvatarFallback 
+                      style={{ backgroundColor: email.avatarColor }}
+                      className="text-white text-sm font-medium"
+                    >
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!email.isRead && !isSelectionMode && (
+                    <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary ring-2 ring-background" />
+                  )}
+                  {isSelectionMode && isChecked && (
+                    <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-primary ring-2 ring-background flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
@@ -292,43 +285,43 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </Button>
             <button
               onClick={handleSelectAll}
-              className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/50 transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2"
               data-testid="button-select-all"
             >
-              <Checkbox 
-                checked={allSelected}
-                className="w-4 h-4 rounded"
-              />
+              {allSelected ? "Deselect all" : "Select all"}
             </button>
-            <span className="text-sm text-muted-foreground flex-1">
+            <span className="text-sm text-muted-foreground flex-1 text-right">
               {selectedIds.size} selected
             </span>
+            <div className="flex items-center">
+              <Button 
+                size="icon"
+                variant="ghost"
+                disabled={selectedIds.size === 0}
+                className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+                data-testid="button-archive-selected"
+              >
+                <Archive className="w-4 h-4" />
+              </Button>
+              <Button 
+                size="icon"
+                variant="ghost"
+                onClick={handleDeleteSelected}
+                disabled={selectedIds.size === 0 || isDeleting}
+                className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                data-testid="button-delete-selected"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              </Button>
+            </div>
             <Button 
               size="icon"
               variant="ghost"
               disabled={selectedIds.size === 0}
-              className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
-              data-testid="button-archive-selected"
-            >
-              <Archive className="w-4 h-4" />
-            </Button>
-            <Button 
-              size="icon"
-              variant="ghost"
-              disabled={selectedIds.size === 0}
-              className="h-10 w-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+              className="h-10 w-10 rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
               data-testid="button-ai-selected"
             >
               <Sparkles className="w-4 h-4" />
-            </Button>
-            <Button 
-              size="icon"
-              onClick={handleDeleteSelected}
-              disabled={selectedIds.size === 0 || isDeleting}
-              className="h-10 w-10 rounded-xl bg-red-600 hover:bg-red-500 text-white border-0 transition-all"
-              data-testid="button-delete-selected"
-            >
-              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             </Button>
           </div>
         ) : (
