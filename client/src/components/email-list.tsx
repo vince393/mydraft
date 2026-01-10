@@ -172,30 +172,32 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
       </ScrollArea>
 
       <div className="p-3 border-t border-border/30 bg-background/95 backdrop-blur-xl">
-        <div className="flex items-center gap-1">
-          <Button 
-            size="icon"
-            variant="ghost"
-            disabled={!selectedEmailId}
-            className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
-            data-testid="button-archive"
-          >
-            <Archive className="w-4 h-4" />
-          </Button>
-          <Button 
-            size="icon"
-            variant="ghost"
-            disabled={!selectedEmailId}
-            className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
-            data-testid="button-trash"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center">
+            <Button 
+              size="icon"
+              variant="ghost"
+              disabled={!selectedEmailId}
+              className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+              data-testid="button-archive"
+            >
+              <Archive className="w-4 h-4" />
+            </Button>
+            <Button 
+              size="icon"
+              variant="ghost"
+              disabled={!selectedEmailId}
+              className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
+              data-testid="button-trash"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
           <Button 
             onClick={onAiReply}
             disabled={!selectedEmailId || isAiLoading}
             variant="outline"
-            className="flex-1 gap-2 h-10 ml-2 rounded-xl border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/70 transition-all"
+            className="flex-1 gap-2 h-10 rounded-xl border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/70 transition-all"
             data-testid="button-ai-reply"
           >
             {isAiLoading ? (
