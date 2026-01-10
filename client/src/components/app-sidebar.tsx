@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Inbox, Send, FileText, Star, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Inbox, Send, FileText, Star, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -36,6 +36,8 @@ const defaultItems: FolderItem[] = [
   { title: "Sent", icon: Send },
   { title: "Drafts", icon: FileText },
   { title: "Starred", icon: Star },
+  { title: "Archived", icon: Archive },
+  { title: "Junk", icon: AlertCircle },
   { title: "Trash", icon: Trash2 },
 ];
 
