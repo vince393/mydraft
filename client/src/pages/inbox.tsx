@@ -70,23 +70,23 @@ export default function Inbox() {
         />
       </div>
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="flex items-center justify-end h-16 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
+        <header className="flex items-center justify-end h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-3 hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
-                <div className="text-right">
-                  <p className="text-sm font-medium">John Doe</p>
-                  <p className="text-xs text-muted-foreground">john@mailflow.com</p>
-                </div>
+              <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
                 <Avatar className="w-9 h-9 ring-2 ring-border/30">
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-white text-sm font-medium">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-medium">
                     JD
                   </AvatarFallback>
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="gap-2" data-testid="menu-profile">
+              <div className="px-3 py-2 border-b border-border/30">
+                <p className="text-sm font-medium">John Doe</p>
+                <p className="text-xs text-muted-foreground">john@mailflow.com</p>
+              </div>
+              <DropdownMenuItem className="gap-2 mt-1" data-testid="menu-profile">
                 <User className="w-4 h-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
