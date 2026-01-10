@@ -1,7 +1,8 @@
-import { formatDistanceToNow } from "date-fns";
-import { Star } from "lucide-react";
+import { formatDistanceToNowStrict } from "date-fns";
+import { Star, Search } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import type { Email } from "@shared/schema";
 
 interface EmailListProps {
@@ -57,8 +58,20 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
   }
 
   return (
-    <ScrollArea className="h-full scrollbar-thin">
-      <div className="space-y-0.5 p-3">
+    <div className="flex flex-col h-full">
+      <div className="p-4 border-b border-border/30">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
+          <Input 
+            type="search"
+            placeholder="Search emails..." 
+            className="pl-10 bg-muted/30 border-0 h-10 rounded-xl focus:bg-muted/50 transition-colors"
+            data-testid="input-search"
+          />
+        </div>
+      </div>
+      <ScrollArea className="flex-1 scrollbar-thin">
+        <div className="space-y-0.5 p-3">
         {emails.map((email) => {
           const isSelected = email.id === selectedEmailId;
           const initials = email.sender
@@ -103,7 +116,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
                       {email.sender}
                     </span>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNow(new Date(email.receivedAt), { addSuffix: false })}
+                      {formatDistanceToNowStrict(new Date(email.receivedAt))}
                     </span>
                   </div>
                   
@@ -135,7 +148,8 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
             </div>
           );
         })}
-      </div>
-    </ScrollArea>
+        </div>
+      </ScrollArea>
+    </div>
   );
 }

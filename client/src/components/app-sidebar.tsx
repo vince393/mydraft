@@ -1,4 +1,4 @@
-import { Inbox, Send, FileText, Star, Trash2, Settings, Search, PenSquare, Mail } from "lucide-react";
+import { Inbox, Send, FileText, Star, Trash2, Settings, PenSquare, Mail } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,7 +11,6 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 const mainItems = [
@@ -49,18 +48,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
       </SidebarHeader>
       
       <SidebarContent className="px-3">
-        <div className="px-2 mb-5">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
-            <Input 
-              type="search"
-              placeholder="Search emails..." 
-              className="pl-10 bg-muted/30 border-0 h-11 rounded-xl focus:bg-muted/50 transition-colors"
-              data-testid="input-search"
-            />
-          </div>
-        </div>
-
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
