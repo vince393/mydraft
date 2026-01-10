@@ -75,7 +75,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       setIsSelectionMode(true);
       setIsDragging(true);
       setSelectedIds(new Set([emailId]));
-    }, 300);
+    }, 1000);
   }, []);
 
   const handleLongPressEnd = useCallback(() => {
@@ -295,16 +295,19 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             >
               <X className="w-4 h-4" />
             </Button>
-            <button
+            <span className="text-sm text-muted-foreground">
+              {selectedIds.size}
+            </span>
+            <span className="flex-1" />
+            <Button
+              size="sm"
+              variant="ghost"
               onClick={handleSelectAll}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2"
+              className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
               data-testid="button-select-all"
             >
-              {allSelected ? "Deselect all" : "Select all"}
-            </button>
-            <span className="text-sm text-muted-foreground flex-1 text-right">
-              {selectedIds.size} selected
-            </span>
+              {allSelected ? "Deselect" : "All"}
+            </Button>
             <div className="flex items-center">
               <Button 
                 size="icon"
