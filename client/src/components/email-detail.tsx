@@ -34,6 +34,7 @@ interface EmailDetailProps {
   email: Email | null;
   generatedDraft?: Draft | null;
   onClearDraft?: () => void;
+  onDraftUpdate?: (draft: Draft) => void;
 }
 
 function EmailDetailEmpty() {
@@ -52,7 +53,7 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetailProps) {
+export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
@@ -78,7 +79,7 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
         description: `Your reply will be sent ${format(new Date(data.draft.scheduledAt), "MMM d 'at' h:mm a")}`,
       });
       setShowSchedulePicker(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+      onDraftUpdate?.(data.draft);
     },
     onError: () => {
       toast({
@@ -94,12 +95,19 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
       const response = await apiRequest("POST", `/api/drafts/${draftId}/cancel-schedule`, {});
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Schedule Cancelled",
         description: "Your email is back to draft status.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+      onDraftUpdate?.(data.draft);
+    },
+    onError: () => {
+      toast({
+        title: "Failed to cancel",
+        description: "Could not cancel the scheduled email. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 

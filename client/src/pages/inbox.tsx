@@ -172,7 +172,12 @@ export default function Inbox({ activeFolder }: InboxProps) {
           </DropdownMenu>
         </header>
         <div className="flex-1 overflow-auto">
-          <EmailDetail email={selectedEmail} generatedDraft={generatedDraft} onClearDraft={() => setGeneratedDraft(null)} />
+          <EmailDetail 
+            email={selectedEmail} 
+            generatedDraft={generatedDraft} 
+            onClearDraft={() => setGeneratedDraft(null)}
+            onDraftUpdate={(draft) => setGeneratedDraft(draft)}
+          />
         </div>
       </div>
     </div>
