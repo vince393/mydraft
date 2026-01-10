@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { EmailList } from "@/components/email-list";
@@ -15,14 +15,28 @@ import { Settings, LogOut, User, ChevronRight } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import type { Email, Draft } from "@shared/schema";
 
-export default function Inbox() {
+interface InboxProps {
+  activeFolder: string;
+}
+
+export default function Inbox({ activeFolder }: InboxProps) {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const { open: sidebarOpen, toggleSidebar } = useSidebar();
 
   const { data: emails = [], isLoading: isLoadingEmails } = useQuery<Email[]>({
-    queryKey: ["/api/emails"],
+    queryKey: ["/api/emails", activeFolder],
+    queryFn: async () => {
+      const response = await fetch(`/api/emails?folder=${activeFolder}`);
+      if (!response.ok) throw new Error("Failed to fetch emails");
+      return response.json();
+    },
   });
+
+  useEffect(() => {
+    setSelectedEmail(null);
+    setGeneratedDraft(null);
+  }, [activeFolder]);
 
   const markAsReadMutation = useMutation({
     mutationFn: async (emailId: number) => {

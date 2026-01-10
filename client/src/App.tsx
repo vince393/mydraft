@@ -35,7 +35,9 @@ function AppContent() {
         />
         <SidebarInset className="flex flex-1 min-w-0">
           <Switch>
-            <Route path="/" component={Inbox} />
+            <Route path="/">
+              <Inbox activeFolder={activeFolder} />
+            </Route>
             <Route component={NotFound} />
           </Switch>
         </SidebarInset>
