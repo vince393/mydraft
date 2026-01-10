@@ -70,18 +70,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
-                <SidebarMenuItem className="mb-2">
-                  <Button 
-                    variant="outline"
-                    onClick={() => setIsCreateOpen(true)}
-                    className="w-full justify-center gap-2 h-9 rounded-lg border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 hover:bg-muted/30 transition-all duration-200"
-                    data-testid="button-create-folder"
-                  >
-                    <FolderPlus className="w-4 h-4" />
-                    <span className="text-sm">New Folder</span>
-                  </Button>
-                </SidebarMenuItem>
-
                 {folders.map((item) => {
                   const isActive = activeFolder.toLowerCase() === item.title.toLowerCase();
                   const showCount = item.title === "Inbox" && unreadCount > 0;
@@ -111,6 +99,18 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
                     </SidebarMenuItem>
                   );
                 })}
+
+                <SidebarMenuItem className="mt-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => setIsCreateOpen(true)}
+                    className="w-full justify-center gap-2 h-9 rounded-lg border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 hover:bg-muted/30 transition-all duration-200"
+                    data-testid="button-create-folder"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    <span className="text-sm">Folder</span>
+                  </Button>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
