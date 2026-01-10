@@ -169,7 +169,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
             size="icon"
             variant="ghost"
             disabled={!selectedEmailId}
-            className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+            className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
             data-testid="button-trash"
           >
             <Trash2 className="w-4 h-4" />
