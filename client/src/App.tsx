@@ -43,10 +43,7 @@ function AppContent() {
           unreadCount={unreadCount}
         />
         <SidebarInset className="flex flex-col flex-1">
-          <header className="flex items-center justify-between h-16 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50">
-            <div className="flex items-center">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-sidebar-toggle" />
-            </div>
+          <header className="flex items-center justify-end h-16 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
