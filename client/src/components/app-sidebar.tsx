@@ -78,7 +78,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
       }
       hoverTimeoutRef.current = setTimeout(() => {
         setIsHoverExpanded(true);
-      }, 1000);
+      }, 250);
     }
   };
 
@@ -96,6 +96,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
 
   const handleSidebarClick = () => {
     if (isCollapsed && isHoverExpanded) {
+      setIsCollapsed(false);
       setIsHoverExpanded(false);
     }
   };
