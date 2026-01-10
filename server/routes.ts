@@ -219,12 +219,79 @@ Reply:`;
         return res.status(404).json({ error: "Draft not found" });
       }
 
-      const updated = await storage.updateDraft(id, { status: "sent" });
+      const updated = await storage.updateDraft(id, { status: "sent", scheduledAt: null });
       
       res.json({ success: true, message: "Reply sent successfully", draft: updated });
     } catch (error) {
       console.error("Error sending draft:", error);
       res.status(500).json({ error: "Failed to send draft" });
+    }
+  });
+
+  app.post("/api/drafts/:id/schedule", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { scheduledAt } = req.body;
+      
+      if (!scheduledAt) {
+        return res.status(400).json({ error: "scheduledAt is required" });
+      }
+
+      const draft = await storage.getDraft(id);
+      
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+
+      const scheduledDate = new Date(scheduledAt);
+      if (scheduledDate <= new Date()) {
+        return res.status(400).json({ error: "Scheduled time must be in the future" });
+      }
+
+      const updated = await storage.updateDraft(id, { 
+        status: "scheduled", 
+        scheduledAt: scheduledDate 
+      });
+      
+      res.json({ success: true, message: "Reply scheduled successfully", draft: updated });
+    } catch (error) {
+      console.error("Error scheduling draft:", error);
+      res.status(500).json({ error: "Failed to schedule draft" });
+    }
+  });
+
+  app.post("/api/drafts/:id/cancel-schedule", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const draft = await storage.getDraft(id);
+      
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+
+      if (draft.status !== "scheduled") {
+        return res.status(400).json({ error: "Draft is not scheduled" });
+      }
+
+      const updated = await storage.updateDraft(id, { 
+        status: "draft", 
+        scheduledAt: null 
+      });
+      
+      res.json({ success: true, message: "Schedule cancelled", draft: updated });
+    } catch (error) {
+      console.error("Error cancelling schedule:", error);
+      res.status(500).json({ error: "Failed to cancel schedule" });
+    }
+  });
+
+  app.get("/api/drafts/scheduled", async (req, res) => {
+    try {
+      const scheduled = await storage.getScheduledDrafts();
+      res.json(scheduled);
+    } catch (error) {
+      console.error("Error fetching scheduled drafts:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled drafts" });
     }
   });
 

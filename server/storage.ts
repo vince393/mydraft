@@ -17,6 +17,7 @@ export interface IStorage {
   createDraft(draft: InsertDraft): Promise<Draft>;
   updateDraft(id: number, updates: Partial<Draft>): Promise<Draft | undefined>;
   deleteDraft(id: number): Promise<boolean>;
+  getScheduledDrafts(): Promise<Draft[]>;
 }
 
 const avatarColors = [
@@ -483,6 +484,7 @@ Business Development`,
       isStarred: insertEmail.isStarred ?? false,
       folder: insertEmail.folder ?? "inbox",
       avatarColor: insertEmail.avatarColor ?? getRandomAvatarColor(),
+      threadId: insertEmail.threadId ?? null,
     };
     this.emails.set(id, email);
     return email;
@@ -516,6 +518,7 @@ Business Development`,
       id,
       isAiGenerated: insertDraft.isAiGenerated ?? true,
       status: insertDraft.status ?? "draft",
+      scheduledAt: insertDraft.scheduledAt ?? null,
       createdAt: now,
       updatedAt: now,
     };
@@ -533,6 +536,16 @@ Business Development`,
 
   async deleteDraft(id: number): Promise<boolean> {
     return this.drafts.delete(id);
+  }
+
+  async getScheduledDrafts(): Promise<Draft[]> {
+    return Array.from(this.drafts.values())
+      .filter(d => d.status === "scheduled" && d.scheduledAt)
+      .sort((a, b) => {
+        const timeA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+        const timeB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+        return timeA - timeB;
+      });
   }
 }
 
