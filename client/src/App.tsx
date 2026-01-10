@@ -23,8 +23,8 @@ function AppContent() {
   return (
     <SidebarProvider
       style={{
-        "--sidebar-width": "16rem",
-        "--sidebar-width-icon": "3rem",
+        "--sidebar-width": "17rem",
+        "--sidebar-width-icon": "3.5rem",
       } as React.CSSProperties}
     >
       <div className="flex h-screen w-full bg-background">
@@ -34,10 +34,10 @@ function AppContent() {
           unreadCount={unreadCount}
         />
         <SidebarInset className="flex flex-col flex-1">
-          <header className="flex items-center h-14 px-4 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="ml-4">
-              <h1 className="text-sm font-medium capitalize">{activeFolder}</h1>
+          <header className="flex items-center h-16 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50">
+            <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-sidebar-toggle" />
+            <div className="ml-5">
+              <h1 className="text-base font-medium capitalize tracking-tight">{activeFolder}</h1>
             </div>
           </header>
           <main className="flex-1 overflow-hidden">

@@ -13,18 +13,18 @@ interface EmailListProps {
 
 function EmailListSkeleton() {
   return (
-    <div className="space-y-1 p-2">
+    <div className="space-y-1 p-3">
       {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="p-4 rounded-lg animate-pulse">
+        <div key={i} className="p-4 rounded-xl animate-pulse">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-muted" />
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="h-4 w-24 bg-muted rounded" />
-                <div className="h-3 w-12 bg-muted rounded" />
+            <div className="w-11 h-11 rounded-full bg-muted/50" />
+            <div className="flex-1 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="h-4 w-28 bg-muted/50 rounded-full" />
+                <div className="h-3 w-14 bg-muted/50 rounded-full" />
               </div>
-              <div className="h-4 w-48 bg-muted rounded" />
-              <div className="h-3 w-full bg-muted rounded" />
+              <div className="h-4 w-48 bg-muted/50 rounded-full" />
+              <div className="h-3 w-full bg-muted/50 rounded-full" />
             </div>
           </div>
         </div>
@@ -36,12 +36,12 @@ function EmailListSkeleton() {
 function EmailListEmpty() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-8">
-      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-muted/80 to-muted/30 flex items-center justify-center mb-6">
+        <svg className="w-9 h-9 text-muted-foreground/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       </div>
-      <h3 className="font-medium text-lg mb-1">No emails yet</h3>
+      <h3 className="font-medium text-xl mb-2 tracking-tight">No emails yet</h3>
       <p className="text-sm text-muted-foreground">Your inbox is empty</p>
     </div>
   );
@@ -58,7 +58,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
 
   return (
     <ScrollArea className="h-full scrollbar-thin">
-      <div className="space-y-0.5 p-2">
+      <div className="space-y-0.5 p-3">
         {emails.map((email) => {
           const isSelected = email.id === selectedEmailId;
           const initials = email.sender
@@ -73,17 +73,18 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
               key={email.id}
               onClick={() => onSelectEmail(email)}
               className={`
-                group relative p-4 rounded-lg cursor-pointer transition-colors duration-150
+                group relative p-4 rounded-xl cursor-pointer
+                transition-all duration-200 ease-out
                 ${isSelected 
-                  ? "bg-sidebar-accent border-l-2 border-l-primary" 
-                  : "hover-elevate border-l-2 border-l-transparent"
+                  ? "bg-primary/10 ring-1 ring-primary/30" 
+                  : "hover:bg-muted/50"
                 }
               `}
               data-testid={`email-item-${email.id}`}
             >
               <div className="flex items-start gap-3">
-                <div className="relative">
-                  <Avatar className="w-10 h-10">
+                <div className="relative flex-shrink-0">
+                  <Avatar className="w-11 h-11 ring-2 ring-border/30">
                     <AvatarFallback 
                       style={{ backgroundColor: email.avatarColor }}
                       className="text-white text-sm font-medium"
@@ -92,13 +93,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
                     </AvatarFallback>
                   </Avatar>
                   {!email.isRead && (
-                    <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary border-2 border-background" />
+                    <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary ring-2 ring-background" />
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-0.5">
-                    <span className={`text-sm truncate ${!email.isRead ? "font-semibold" : "font-medium"}`}>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className={`text-sm truncate ${!email.isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
                       {email.sender}
                     </span>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -106,19 +107,22 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
                     </span>
                   </div>
                   
-                  <h4 className={`text-sm truncate mb-1 ${!email.isRead ? "font-medium" : "text-foreground"}`}>
+                  <h4 className={`text-sm truncate mb-1.5 ${!email.isRead ? "font-medium" : "text-foreground/80"}`}>
                     {email.subject}
                   </h4>
                   
-                  <p className="text-xs text-muted-foreground line-clamp-1">
+                  <p className="text-xs text-muted-foreground/80 line-clamp-1">
                     {email.preview}
                   </p>
                 </div>
 
                 <button 
                   className={`
-                    p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity
-                    ${email.isStarred ? "opacity-100 text-yellow-400" : "text-muted-foreground"}
+                    p-1.5 rounded-lg transition-all duration-200
+                    ${email.isStarred 
+                      ? "opacity-100 text-yellow-400" 
+                      : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
+                    }
                   `}
                   onClick={(e) => {
                     e.stopPropagation();

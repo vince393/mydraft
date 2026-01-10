@@ -1,80 +1,60 @@
-# Email Inbox Management Application - Design Guidelines
+# MailFlow - Design Guidelines
 
 ## Design Approach
-**Reference-Based:** Inspired by Hey.com and Superhuman - modern, minimalist black interface email clients with exceptional UX and AI integration.
+**Futuristic Minimalist:** Ultra-clean, smooth interfaces with subtle depth, refined animations, and a focus on content clarity. Inspired by modern email clients with emphasis on simplicity and elegance.
 
 ## Color System
-- **Primary Black:** #000000 (pure black)
-- **Secondary Dark:** #1A1A1A (dark grey surfaces)
 - **Background:** #0D0D0D (near black base)
-- **Text:** #FFFFFF (white, high contrast)
-- **Accent Blue:** #3B82F6 (CTAs, highlights, AI indicators)
-- **Hover State:** #262626 (lighter black)
-- **Gradients:** Subtle gradients for depth and modern feel
+- **Surface:** Subtle elevated surfaces with rgba overlays
+- **Text Primary:** #FAFAFA (high contrast white)
+- **Text Secondary:** #A3A3A3 (muted grey)
+- **Accent:** #3B82F6 (electric blue for highlights)
+- **Borders:** Very subtle, using rgba(255,255,255, 0.08) to 0.12
 
 ## Typography
-- **Font Families:** Inter or SF Pro Display (system fallback)
-- **Hierarchy:** 
-  - Email subjects: 16-18px semibold
-  - Sender names: 14px medium
-  - Preview text: 14px regular, 70% opacity
-  - Body text: 15px regular
-  - UI labels: 13px medium
+- **Font Family:** Inter with system fallbacks
+- **Tracking:** Tight letter-spacing for modern feel
+- **Weights:** 
+  - Regular (400) for body
+  - Medium (500) for emphasis
+  - Semibold (600) for headers
+- **Sizes:** Restrained hierarchy (13-20px range)
 
-## Layout System
-**Spacing:** Tailwind units of 4, 5, 6, 8 (p-4, p-5, p-6, p-8) for consistent rhythm and generous whitespace
-
-**Structure:**
-- Single-column email list (primary view)
-- Split-view: List (40%) + Email detail (60%) on wider screens
-- Card-based email previews with subtle borders or dividers
-- Spacious padding (20px+ between elements)
+## Layout Principles
+- **Generous Whitespace:** Ample padding and margins for breathing room
+- **Rounded Corners:** Larger radii (xl: 12px) for softer, modern feel
+- **Borders:** Ultra-subtle or replaced with background color shifts
+- **Split View:** Email list (400px) + Detail pane (fluid)
 
 ## Core Components
 
-### Navigation Sidebar
-- Narrow left rail (240px)
-- Inbox, Drafts, Sent, AI Suggestions sections
-- Minimal icons with labels
-- Active state: accent blue with subtle background
+### Sidebar
+- Clean navigation with icon + label
+- Active state: Primary color with subtle background
+- Hover states: Smooth background transitions
+- Compose button: Full-width, rounded, prominent
 
-### Email List View
-- Card-based items with hover states (#262626)
-- Each card displays: Sender (bold), Subject (semibold), Preview (muted), Timestamp
-- Unread indicator: accent blue dot
-- Divider lines: subtle grey (#1A1A1A)
-- Selection state: blue left border accent
+### Email List
+- Card-like items with generous padding
+- Selected state: Primary tint with ring outline
+- Hover: Subtle background elevation
+- Avatar with ring accent
+- Unread indicator: Subtle blue dot
 
-### Email Detail Pane
-- Clean header: Sender info, timestamp, actions (reply, archive)
-- Thread indicator for conversations
-- White text on black background for optimal readability
-- AI-drafted reply section: distinct card with blue accent border
-
-### AI Draft Reply Component
-- Prominent placement below email content
-- Editable text area with syntax highlighting
-- Action buttons: "Send AI Draft" (primary blue), "Edit Draft", "Regenerate"
-- Confidence indicator: subtle badge showing AI certainty
-
-### Action Buttons
-- Primary: Blue (#3B82F6) background, white text, rounded corners
-- Secondary: Transparent with blue border
-- Ghost: White text, hover to #262626 background
+### Email Detail
+- Centered content with max-width constraint
+- Clean header with action buttons
+- Body text with comfortable line-height (1.75)
+- Action buttons grouped at bottom
 
 ## Interactions
-- Smooth transitions (150-200ms) for hover states
-- Keyboard shortcuts prominently displayed
-- Focus states: blue outline for accessibility
-- Minimal animation - prioritize speed and clarity
+- **Transitions:** 200ms ease-out for smoothness
+- **Hover States:** Subtle background shifts
+- **Focus States:** Blue ring for accessibility
+- **Loading:** Skeleton states with soft animation
 
 ## Visual Treatments
-- High contrast white-on-black throughout
-- Subtle shadows for depth on cards (rgba(255,255,255,0.05))
-- No hero image needed - utility-focused application
-- Gradient accents sparingly for modern polish
-
-## Responsive Behavior
-- Mobile: Single column, stacked views with slide-in detail
-- Tablet: Collapsible sidebar, adjusted split ratios
-- Desktop: Full three-pane layout (sidebar + list + detail)
+- No harsh shadows
+- Gradient accents for depth (from-primary to-primary/70)
+- Backdrop blur for floating elements
+- Ring borders instead of solid borders for selected states
