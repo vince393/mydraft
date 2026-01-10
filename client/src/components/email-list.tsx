@@ -178,7 +178,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
             onClick={onAiReply}
             disabled={!selectedEmailId || isAiLoading}
             variant="outline"
-            className="flex-1 gap-2 h-10 rounded-xl border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500/70 transition-all"
+            className="flex-1 gap-2 h-10 rounded-xl border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/70 transition-all"
             data-testid="button-ai-reply"
           >
             {isAiLoading ? (

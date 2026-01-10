@@ -161,7 +161,7 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
           )}
 
           <div className="flex items-center gap-3 pt-6 border-t border-border/50">
-            <Button className="gap-2 px-5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 border-0" data-testid="button-reply">
+            <Button className="gap-2 px-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" data-testid="button-reply">
               <Reply className="w-4 h-4" />
               Reply
             </Button>
