@@ -242,13 +242,30 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1">
                     <span className={`text-sm truncate ${!email.isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
                       {email.sender}
                     </span>
+                    <span className="flex-1" />
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {formatDistanceToNowStrict(new Date(email.receivedAt))}
                     </span>
+                    <button 
+                      className={`
+                        p-1 rounded-lg transition-all duration-200 -mr-1
+                        ${email.isStarred 
+                          ? "opacity-100 text-yellow-400" 
+                          : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
+                        }
+                      `}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleStar(email.id);
+                      }}
+                      data-testid={`star-email-${email.id}`}
+                    >
+                      <Star className={`w-4 h-4 ${email.isStarred ? "fill-current" : ""}`} />
+                    </button>
                   </div>
                   
                   <h4 className={`text-sm truncate mb-1.5 ${!email.isRead ? "font-medium" : "text-foreground/80"}`}>
@@ -259,23 +276,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                     {email.preview}
                   </p>
                 </div>
-
-                <button 
-                  className={`
-                    p-1.5 rounded-lg transition-all duration-200
-                    ${email.isStarred 
-                      ? "opacity-100 text-yellow-400" 
-                      : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
-                    }
-                  `}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleStar(email.id);
-                  }}
-                  data-testid={`star-email-${email.id}`}
-                >
-                  <Star className={`w-4 h-4 ${email.isStarred ? "fill-current" : ""}`} />
-                </button>
               </div>
             </div>
           );
