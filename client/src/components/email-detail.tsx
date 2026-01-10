@@ -1,7 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Reply, 
   ReplyAll, 
@@ -12,7 +10,6 @@ import {
   Trash2,
   ChevronLeft,
   Sparkles,
-  Loader2,
   X
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,6 +20,8 @@ import type { Email, Draft } from "@shared/schema";
 
 interface EmailDetailProps {
   email: Email | null;
+  generatedDraft?: Draft | null;
+  onClearDraft?: () => void;
 }
 
 function EmailDetailEmpty() {
@@ -41,36 +40,20 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email }: EmailDetailProps) {
-  const [showDraft, setShowDraft] = useState(false);
+export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
 
-  const { data: existingDraft } = useQuery<Draft | null>({
-    queryKey: ["/api/drafts", email?.id],
-    enabled: !!email?.id,
-  });
+  const showDraft = !!generatedDraft;
 
-  const generateDraftMutation = useMutation({
-    mutationFn: async (emailId: number) => {
-      const response = await apiRequest("POST", "/api/drafts/generate", { emailId });
-      return response.json();
-    },
-    onSuccess: (draft: Draft) => {
-      setDraftContent(draft.content);
-      setShowDraft(true);
-      queryClient.invalidateQueries({ queryKey: ["/api/drafts", email?.id] });
-    },
-  });
-
-  const handleAiReply = () => {
-    if (email) {
-      generateDraftMutation.mutate(email.id);
+  useEffect(() => {
+    if (generatedDraft) {
+      setDraftContent(generatedDraft.content);
     }
-  };
+  }, [generatedDraft]);
 
   const handleCloseDraft = () => {
-    setShowDraft(false);
     setDraftContent("");
+    onClearDraft?.();
   };
 
   if (!email) {
@@ -173,33 +156,12 @@ export function EmailDetail({ email }: EmailDetailProps) {
                 <Button variant="default" className="gap-2" data-testid="button-send-draft">
                   Send Reply
                 </Button>
-                <Button variant="outline" onClick={handleAiReply} disabled={generateDraftMutation.isPending} data-testid="button-regenerate">
-                  {generateDraftMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Regenerate"
-                  )}
-                </Button>
               </div>
             </div>
           )}
 
           <div className="flex items-center gap-3 pt-6 border-t border-border/50">
-            <Button 
-              variant="default" 
-              className="gap-2 px-5" 
-              onClick={handleAiReply}
-              disabled={generateDraftMutation.isPending}
-              data-testid="button-ai-reply"
-            >
-              {generateDraftMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              AI Reply
-            </Button>
-            <Button variant="outline" className="gap-2" data-testid="button-reply">
+            <Button variant="default" className="gap-2 px-5" data-testid="button-reply">
               <Reply className="w-4 h-4" />
               Reply
             </Button>

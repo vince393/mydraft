@@ -12,10 +12,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, LogOut, User } from "lucide-react";
-import type { Email } from "@shared/schema";
+import type { Email, Draft } from "@shared/schema";
 
 export default function Inbox() {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
 
   const { data: emails = [], isLoading: isLoadingEmails } = useQuery<Email[]>({
     queryKey: ["/api/emails"],
@@ -31,10 +32,28 @@ export default function Inbox() {
     },
   });
 
+  const generateDraftMutation = useMutation({
+    mutationFn: async (emailId: number) => {
+      const response = await apiRequest("POST", "/api/drafts/generate", { emailId });
+      return response.json();
+    },
+    onSuccess: (draft: Draft) => {
+      setGeneratedDraft(draft);
+      queryClient.invalidateQueries({ queryKey: ["/api/drafts", selectedEmail?.id] });
+    },
+  });
+
   const handleSelectEmail = (email: Email) => {
     setSelectedEmail(email);
+    setGeneratedDraft(null);
     if (!email.isRead) {
       markAsReadMutation.mutate(email.id);
+    }
+  };
+
+  const handleAiReply = () => {
+    if (selectedEmail) {
+      generateDraftMutation.mutate(selectedEmail.id);
     }
   };
 
@@ -45,6 +64,8 @@ export default function Inbox() {
           emails={emails}
           selectedEmailId={selectedEmail?.id ?? null}
           onSelectEmail={handleSelectEmail}
+          onAiReply={handleAiReply}
+          isAiLoading={generateDraftMutation.isPending}
           isLoading={isLoadingEmails}
         />
       </div>
@@ -82,7 +103,7 @@ export default function Inbox() {
           </DropdownMenu>
         </header>
         <div className="flex-1 overflow-auto">
-          <EmailDetail email={selectedEmail} />
+          <EmailDetail email={selectedEmail} generatedDraft={generatedDraft} onClearDraft={() => setGeneratedDraft(null)} />
         </div>
       </div>
     </div>

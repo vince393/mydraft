@@ -1,14 +1,17 @@
 import { formatDistanceToNowStrict } from "date-fns";
-import { Star, Search } from "lucide-react";
+import { Star, Search, Sparkles, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { Email } from "@shared/schema";
 
 interface EmailListProps {
   emails: Email[];
   selectedEmailId: number | null;
   onSelectEmail: (email: Email) => void;
+  onAiReply: () => void;
+  isAiLoading?: boolean;
   isLoading?: boolean;
 }
 
@@ -48,7 +51,7 @@ function EmailListEmpty() {
   );
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, isAiLoading, isLoading }: EmailListProps) {
   if (isLoading) {
     return <EmailListSkeleton />;
   }
@@ -59,7 +62,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-border/30">
+      <div className="p-4 border-b border-border/30 space-y-3">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input 
@@ -69,6 +72,19 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, isLoading }:
             data-testid="input-search"
           />
         </div>
+        <Button 
+          onClick={onAiReply}
+          disabled={!selectedEmailId || isAiLoading}
+          className="w-full gap-2 h-10 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all"
+          data-testid="button-ai-reply"
+        >
+          {isAiLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Sparkles className="w-4 h-4" />
+          )}
+          AI Reply
+        </Button>
       </div>
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="space-y-0.5 p-3">
