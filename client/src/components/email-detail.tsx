@@ -96,8 +96,8 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
 
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="p-8 max-w-3xl mx-auto">
-          <div className="flex items-start gap-4 mb-8">
-            <Avatar className="w-12 h-12 ring-2 ring-border/50">
+          <div className="flex items-start gap-4 mb-6">
+            <Avatar className="w-11 h-11 ring-2 ring-border/50">
               <AvatarFallback 
                 style={{ backgroundColor: email.avatarColor }}
                 className="text-white font-medium text-sm"
@@ -107,16 +107,16 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
             </Avatar>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="font-semibold text-base tracking-tight" data-testid="email-sender">
                     {email.sender}
                   </h2>
-                  <p className="text-sm text-muted-foreground" data-testid="email-sender-address">
+                  <p className="text-xs text-muted-foreground" data-testid="email-sender-address">
                     {email.senderEmail}
                   </p>
                 </div>
-                <p className="text-sm text-muted-foreground whitespace-nowrap" data-testid="email-date">
+                <p className="text-xs text-muted-foreground whitespace-nowrap" data-testid="email-date">
                   {format(new Date(email.receivedAt), "MMM d, yyyy 'at' h:mm a")}
                 </p>
               </div>
@@ -124,13 +124,15 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
           </div>
 
           <div 
-            className="space-y-4 mb-10"
+            className="mb-8"
             data-testid="email-body"
           >
             {email.body.split("\n").map((paragraph, i) => (
-              <p key={i} className="text-foreground/90 leading-7 text-[15px]">
-                {paragraph}
-              </p>
+              paragraph.trim() ? (
+                <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
+                  {paragraph}
+                </p>
+              ) : null
             ))}
           </div>
 
