@@ -23,7 +23,7 @@ function AppContent() {
   return (
     <SidebarProvider
       style={{
-        "--sidebar-width": "12rem",
+        "--sidebar-width": "9rem",
         "--sidebar-width-icon": "3rem",
       } as React.CSSProperties}
     >
