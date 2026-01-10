@@ -72,6 +72,11 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   
   const { data: responseTime, isLoading: isLoadingTime } = useQuery<ResponseTimeEstimate>({
     queryKey: ['/api/response-time', activeFolder],
+    queryFn: async () => {
+      const response = await fetch(`/api/response-time?folder=${activeFolder}`);
+      if (!response.ok) throw new Error("Failed to fetch response time");
+      return response.json();
+    },
     refetchInterval: 60000,
   });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
