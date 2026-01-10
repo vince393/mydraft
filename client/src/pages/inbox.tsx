@@ -144,6 +144,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
           isAiLoading={generateDraftMutation.isPending}
           isMoving={moveEmailMutation.isPending}
           isLoading={isLoadingEmails}
+          activeFolder={activeFolder}
         />
       </div>
       <div className="flex-1 min-w-0 flex flex-col">

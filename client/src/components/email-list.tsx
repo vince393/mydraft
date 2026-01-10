@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,14 @@ interface EmailListProps {
   isAiLoading?: boolean;
   isMoving?: boolean;
   isLoading?: boolean;
+  activeFolder?: string;
+}
+
+interface ResponseTimeEstimate {
+  estimatedMinutes: number;
+  unreadCount: number;
+  totalWords: number;
+  message?: string;
 }
 
 function EmailListSkeleton() {
@@ -58,8 +67,13 @@ function EmailListEmpty() {
   );
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, isAiLoading, isMoving, isLoading }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, isAiLoading, isMoving, isLoading, activeFolder = "inbox" }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  
+  const { data: responseTime, isLoading: isLoadingTime } = useQuery<ResponseTimeEstimate>({
+    queryKey: ['/api/response-time', activeFolder],
+    refetchInterval: 60000,
+  });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -185,7 +199,17 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-900/40 backdrop-blur-sm rounded-md border border-blue-800/30">
           <Clock className="w-3.5 h-3.5 text-blue-400/80" />
-          <span className="text-sm text-blue-100/80">Est. response time: 6 min</span>
+          <span className="text-sm text-blue-100/80">
+            {isLoadingTime ? (
+              "Calculating..."
+            ) : responseTime?.message ? (
+              responseTime.message
+            ) : responseTime?.estimatedMinutes ? (
+              `Est. response time: ${responseTime.estimatedMinutes} min`
+            ) : (
+              "Est. response time: --"
+            )}
+          </span>
         </div>
       </div>
       <ScrollArea className="flex-1 scrollbar-thin">
