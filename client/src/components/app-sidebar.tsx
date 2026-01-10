@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Inbox, Send, FileText, Star, Trash2, PenSquare, FolderPlus } from "lucide-react";
+import { Inbox, Send, FileText, Star, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
   const [folders, setFolders] = useState<FolderItem[]>(defaultItems);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const { toggleSidebar, open } = useSidebar();
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -64,7 +66,16 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
 
   return (
     <>
-      <Sidebar className="border-r border-border/30">
+      <Sidebar collapsible="icon" className="border-r border-border/30">
+        <SidebarHeader className="px-3 py-2">
+          <button
+            onClick={toggleSidebar}
+            className="ml-auto flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200"
+            data-testid="button-toggle-sidebar"
+          >
+            {open ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+        </SidebarHeader>
         
         <SidebarContent className="px-3">
           <SidebarGroup>
