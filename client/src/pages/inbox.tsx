@@ -43,6 +43,17 @@ export default function Inbox() {
     },
   });
 
+  const deleteEmailMutation = useMutation({
+    mutationFn: async (emailId: number) => {
+      await apiRequest("DELETE", `/api/emails/${emailId}`);
+    },
+    onSuccess: () => {
+      setSelectedEmail(null);
+      setGeneratedDraft(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+    },
+  });
+
   const handleSelectEmail = (email: Email) => {
     setSelectedEmail(email);
     setGeneratedDraft(null);
@@ -57,6 +68,12 @@ export default function Inbox() {
     }
   };
 
+  const handleDeleteEmail = () => {
+    if (selectedEmail) {
+      deleteEmailMutation.mutate(selectedEmail.id);
+    }
+  };
+
   return (
     <div className="flex h-screen">
       <div className="w-[320px] border-r border-border/50 flex-shrink-0 flex flex-col">
@@ -65,7 +82,9 @@ export default function Inbox() {
           selectedEmailId={selectedEmail?.id ?? null}
           onSelectEmail={handleSelectEmail}
           onAiReply={handleAiReply}
+          onDeleteEmail={handleDeleteEmail}
           isAiLoading={generateDraftMutation.isPending}
+          isDeleting={deleteEmailMutation.isPending}
           isLoading={isLoadingEmails}
         />
       </div>

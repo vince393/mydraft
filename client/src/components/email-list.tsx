@@ -11,7 +11,9 @@ interface EmailListProps {
   selectedEmailId: number | null;
   onSelectEmail: (email: Email) => void;
   onAiReply: () => void;
+  onDeleteEmail: () => void;
   isAiLoading?: boolean;
+  isDeleting?: boolean;
   isLoading?: boolean;
 }
 
@@ -51,7 +53,7 @@ function EmailListEmpty() {
   );
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, isAiLoading, isLoading }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onDeleteEmail, isAiLoading, isDeleting, isLoading }: EmailListProps) {
   if (isLoading) {
     return <EmailListSkeleton />;
   }
@@ -183,11 +185,12 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
             <Button 
               size="icon"
               variant="ghost"
-              disabled={!selectedEmailId}
+              disabled={!selectedEmailId || isDeleting}
+              onClick={onDeleteEmail}
               className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
               data-testid="button-trash"
             >
-              <Trash2 className="w-4 h-4" />
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             </Button>
           </div>
           <Button 

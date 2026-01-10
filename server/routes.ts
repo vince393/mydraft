@@ -67,6 +67,20 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/emails/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteEmail(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Email not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting email:", error);
+      res.status(500).json({ error: "Failed to delete email" });
+    }
+  });
+
   app.get("/api/drafts/:emailId", async (req, res) => {
     try {
       const emailId = parseInt(req.params.emailId);
