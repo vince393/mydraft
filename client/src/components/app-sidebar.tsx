@@ -67,7 +67,13 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
 
   return (
     <>
-      <Sidebar collapsible="icon" className="border-r border-border/30">
+      <div 
+        className={`
+          flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
+          ${open ? "w-[11rem]" : "w-0"}
+        `}
+      >
+        <Sidebar collapsible="none" className="border-r border-border/30 w-[11rem]">
         <SidebarContent className="px-3">
           <SidebarGroup>
             <SidebarGroupContent>
@@ -138,7 +144,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
             Compose
           </Button>
         </SidebarFooter>
-      </Sidebar>
+        </Sidebar>
+      </div>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-[400px]">
