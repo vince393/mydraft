@@ -46,6 +46,7 @@ export const drafts = pgTable("drafts", {
   content: text("content").notNull(),
   isAiGenerated: boolean("is_ai_generated").default(true).notNull(),
   status: text("status").default("draft").notNull(),
+  scheduledAt: timestamp("scheduled_at"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
