@@ -95,7 +95,7 @@ export function EmailDetail({ email, generatedDraft, onClearDraft }: EmailDetail
       </div>
 
       <ScrollArea className="flex-1 scrollbar-thin">
-        <div className="px-8 pt-4 pb-8 max-w-3xl mx-auto">
+        <div className="pl-6 pr-8 pt-4 pb-8">
           <div className="flex items-start gap-4 mb-6">
             <Avatar className="w-11 h-11 ring-2 ring-border/50">
               <AvatarFallback 
