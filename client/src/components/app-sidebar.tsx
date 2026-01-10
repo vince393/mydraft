@@ -126,41 +126,52 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
               <SidebarMenu className="space-y-1">
                 <SidebarMenuItem className="mb-2">
                   <div className={`flex ${isExpanded ? "flex-row items-center gap-2" : "flex-col gap-1"}`}>
-                    <button
-                      onClick={handleToggleCollapse}
-                      className={`flex items-center justify-center h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200 ${isExpanded ? "w-10" : "w-10 self-center"}`}
-                      data-testid="button-toggle-sidebar"
-                    >
-                      {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-                    </button>
                     {showText ? (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsCreateOpen(true);
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                        data-testid="button-create-folder"
-                      >
-                        <FolderPlus className="w-4 h-4" />
-                        <span className="text-sm">Folder</span>
-                      </button>
+                      <>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsCreateOpen(true);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                          data-testid="button-create-folder"
+                        >
+                          <FolderPlus className="w-4 h-4" />
+                          <span className="text-sm">Folder</span>
+                        </button>
+                        <button
+                          onClick={handleToggleCollapse}
+                          className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                          data-testid="button-toggle-sidebar"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                      </>
                     ) : (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsCreateOpen(true);
-                            }}
-                            className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                            data-testid="button-create-folder"
-                          >
-                            <FolderPlus className="w-4 h-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">New Folder</TooltipContent>
-                      </Tooltip>
+                      <>
+                        <button
+                          onClick={handleToggleCollapse}
+                          className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                          data-testid="button-toggle-sidebar"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsCreateOpen(true);
+                              }}
+                              className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                              data-testid="button-create-folder"
+                            >
+                              <FolderPlus className="w-4 h-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">New Folder</TooltipContent>
+                        </Tooltip>
+                      </>
                     )}
                   </div>
                 </SidebarMenuItem>
