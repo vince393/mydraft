@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Inbox, Send, FileText, Star, Trash2, PenSquare, Mail, FolderPlus } from "lucide-react";
+import { Inbox, Send, FileText, Star, Trash2, PenSquare, FolderPlus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -65,14 +65,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
   return (
     <>
       <Sidebar className="border-r border-border/30">
-        <SidebarHeader className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-              <Mail className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-semibold text-lg tracking-tight">MailFlow</span>
-          </div>
-        </SidebarHeader>
         
         <SidebarContent className="px-3">
           <SidebarGroup>
