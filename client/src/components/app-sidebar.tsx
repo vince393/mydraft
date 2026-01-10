@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Inbox, Send, FileText, Star, Trash2, PenSquare, FolderPlus, Search, SlidersHorizontal } from "lucide-react";
+import { Inbox, Send, FileText, Star, Trash2, PenSquare, FolderPlus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -21,8 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 interface FolderItem {
   title: string;
@@ -69,27 +69,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
         <SidebarContent className="px-3">
           <SidebarGroup>
             <SidebarGroupContent>
-              <div className="mb-3">
-                <div className="relative flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
-                    <Input 
-                      type="search"
-                      placeholder="Search emails..." 
-                      className="pl-9 bg-muted/30 border-0 h-9 rounded-lg focus:bg-muted/50 transition-colors text-sm"
-                      data-testid="input-search"
-                    />
-                  </div>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground"
-                    data-testid="button-filter"
-                  >
-                    <SlidersHorizontal className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
               <SidebarMenu className="space-y-1">
                 {folders.map((item) => {
                   const isActive = activeFolder.toLowerCase() === item.title.toLowerCase();

@@ -1,8 +1,9 @@
 import { formatDistanceToNowStrict } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { Email } from "@shared/schema";
 
 interface EmailListProps {
@@ -61,7 +62,26 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-border/30">
+      <div className="p-4 border-b border-border/30">
+        <div className="relative flex items-center gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
+            <Input 
+              type="search"
+              placeholder="Search emails..." 
+              className="pl-10 bg-muted/30 border-0 h-10 rounded-xl focus:bg-muted/50 transition-colors"
+              data-testid="input-search"
+            />
+          </div>
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+            data-testid="button-filter"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </Button>
+        </div>
         <div className="flex items-center gap-2">
           <Clock className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Est. response time:</span>
