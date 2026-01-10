@@ -234,7 +234,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               onTouchStart={() => handleLongPressStart(email.id)}
               onTouchEnd={handleLongPressEnd}
               className={`
-                group relative p-4 rounded-xl cursor-pointer
+                group relative py-4 pl-4 pr-2 rounded-xl cursor-pointer
                 transition-all duration-200 ease-out select-none
                 ${isSelectionMode && isChecked
                   ? "bg-primary/20 ring-1 ring-primary/50"
