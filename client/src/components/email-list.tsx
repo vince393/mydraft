@@ -59,16 +59,21 @@ function EmailListEmpty() {
 export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onDeleteEmail, onDeleteMultipleEmails, isAiLoading, isDeleting, isLoading }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isDragging, setIsDragging] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef(false);
+  const dragStarted = useRef(false);
 
   const handleLongPressStart = useCallback((emailId: number) => {
     longPressTriggered.current = false;
+    dragStarted.current = false;
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
+      dragStarted.current = true;
       setIsSelectionMode(true);
+      setIsDragging(true);
       setSelectedIds(new Set([emailId]));
-    }, 500);
+    }, 300);
   }, []);
 
   const handleLongPressEnd = useCallback(() => {
@@ -76,7 +81,19 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+    setIsDragging(false);
+    dragStarted.current = false;
   }, []);
+
+  const handleMouseEnterWhileDragging = useCallback((emailId: number) => {
+    if (isDragging && isSelectionMode) {
+      setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(emailId);
+        return newSet;
+      });
+    }
+  }, [isDragging, isSelectionMode]);
 
   const handleEmailClick = useCallback((email: Email) => {
     if (longPressTriggered.current) {
@@ -107,6 +124,15 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     setSelectedIds(new Set());
   }, []);
 
+  const handleSelectAll = useCallback(() => {
+    if (selectedIds.size === emails.length) {
+      setSelectedIds(new Set());
+      setIsSelectionMode(false);
+    } else {
+      setSelectedIds(new Set(emails.map(e => e.id)));
+    }
+  }, [selectedIds.size, emails]);
+
   const handleDeleteSelected = useCallback(() => {
     if (selectedIds.size > 0) {
       onDeleteMultipleEmails(Array.from(selectedIds));
@@ -114,6 +140,8 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       setSelectedIds(new Set());
     }
   }, [selectedIds, onDeleteMultipleEmails]);
+
+  const allSelected = emails.length > 0 && selectedIds.size === emails.length;
 
   if (isLoading) {
     return <EmailListSkeleton />;
@@ -168,7 +196,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               onClick={() => handleEmailClick(email)}
               onMouseDown={() => handleLongPressStart(email.id)}
               onMouseUp={handleLongPressEnd}
-              onMouseLeave={handleLongPressEnd}
+              onMouseEnter={() => handleMouseEnterWhileDragging(email.id)}
               onTouchStart={() => handleLongPressStart(email.id)}
               onTouchEnd={handleLongPressEnd}
               className={`
@@ -262,17 +290,45 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             >
               <X className="w-4 h-4" />
             </Button>
+            <button
+              onClick={handleSelectAll}
+              className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/50 transition-colors"
+              data-testid="button-select-all"
+            >
+              <Checkbox 
+                checked={allSelected}
+                className="w-4 h-4 rounded"
+              />
+            </button>
             <span className="text-sm text-muted-foreground flex-1">
               {selectedIds.size} selected
             </span>
             <Button 
+              size="icon"
+              variant="ghost"
+              disabled={selectedIds.size === 0}
+              className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+              data-testid="button-archive-selected"
+            >
+              <Archive className="w-4 h-4" />
+            </Button>
+            <Button 
+              size="icon"
+              variant="ghost"
+              disabled={selectedIds.size === 0}
+              className="h-10 w-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+              data-testid="button-ai-selected"
+            >
+              <Sparkles className="w-4 h-4" />
+            </Button>
+            <Button 
+              size="icon"
               onClick={handleDeleteSelected}
               disabled={selectedIds.size === 0 || isDeleting}
-              className="gap-2 h-10 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white border-0 transition-all"
+              className="h-10 w-10 rounded-xl bg-red-600 hover:bg-red-500 text-white border-0 transition-all"
               data-testid="button-delete-selected"
             >
               {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              Delete
             </Button>
           </div>
         ) : (
