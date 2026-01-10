@@ -45,6 +45,16 @@ export default function Inbox() {
     },
   });
 
+  const toggleStarMutation = useMutation({
+    mutationFn: async (emailId: number) => {
+      const response = await apiRequest("PATCH", `/api/emails/${emailId}/star`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+    },
+  });
+
   const moveEmailMutation = useMutation({
     mutationFn: async ({ emailId, folder }: { emailId: number; folder: string }) => {
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
@@ -116,6 +126,7 @@ export default function Inbox() {
           onArchiveEmail={handleArchiveEmail}
           onTrashMultipleEmails={handleTrashMultipleEmails}
           onArchiveMultipleEmails={handleArchiveMultipleEmails}
+          onToggleStar={(emailId) => toggleStarMutation.mutate(emailId)}
           isAiLoading={generateDraftMutation.isPending}
           isMoving={moveEmailMutation.isPending}
           isLoading={isLoadingEmails}

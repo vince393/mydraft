@@ -16,6 +16,7 @@ interface EmailListProps {
   onArchiveEmail: () => void;
   onTrashMultipleEmails: (emailIds: number[]) => void;
   onArchiveMultipleEmails: (emailIds: number[]) => void;
+  onToggleStar: (emailId: number) => void;
   isAiLoading?: boolean;
   isMoving?: boolean;
   isLoading?: boolean;
@@ -57,7 +58,7 @@ function EmailListEmpty() {
   );
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, isAiLoading, isMoving, isLoading }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, isAiLoading, isMoving, isLoading }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
@@ -269,6 +270,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                   `}
                   onClick={(e) => {
                     e.stopPropagation();
+                    onToggleStar(email.id);
                   }}
                   data-testid={`star-email-${email.id}`}
                 >
