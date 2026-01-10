@@ -67,29 +67,28 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
   return (
     <>
       <Sidebar collapsible="icon" className="border-r border-border/30">
-        <SidebarHeader className="px-3 py-2">
-          <button
-            onClick={toggleSidebar}
-            className="ml-auto flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200"
-            data-testid="button-toggle-sidebar"
-          >
-            {open ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-        </SidebarHeader>
-        
         <SidebarContent className="px-3">
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
                 <SidebarMenuItem className="mb-2">
-                  <button 
-                    onClick={() => setIsCreateOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                    data-testid="button-create-folder"
-                  >
-                    <FolderPlus className="w-4 h-4" />
-                    <span className="text-sm">New Folder</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setIsCreateOpen(true)}
+                      className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                      data-testid="button-create-folder"
+                    >
+                      <FolderPlus className="w-4 h-4" />
+                      <span className="text-sm">New Folder</span>
+                    </button>
+                    <button
+                      onClick={toggleSidebar}
+                      className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                      data-testid="button-toggle-sidebar"
+                    >
+                      {open ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </SidebarMenuItem>
                 {folders.map((item) => {
                   const isActive = activeFolder.toLowerCase() === item.title.toLowerCase();
