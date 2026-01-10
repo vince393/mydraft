@@ -80,7 +80,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
                       data-testid="button-create-folder"
                     >
                       <FolderPlus className="w-4 h-4" />
-                      <span className="text-sm">New Folder</span>
+                      <span className="text-sm">Folder</span>
                     </button>
                     <button
                       onClick={toggleSidebar}
