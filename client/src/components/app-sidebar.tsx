@@ -92,18 +92,18 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
                         className={`
                           w-full justify-between h-11 rounded-xl transition-all duration-200
                           ${isActive 
-                            ? "bg-primary/10 text-primary" 
+                            ? "bg-muted/60 text-foreground" 
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                           }
                         `}
                         data-testid={`nav-${item.title.toLowerCase()}`}
                       >
                         <div className="flex items-center gap-3">
-                          <item.icon className={`w-[18px] h-[18px] ${isActive ? "text-primary" : ""}`} />
+                          <item.icon className="w-[18px] h-[18px]" />
                           <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
                         </div>
                         {showCount && (
-                          <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-primary/15 text-primary border-0">
+                          <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
                             {unreadCount}
                           </Badge>
                         )}
