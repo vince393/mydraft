@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
+import { AIDraftDialog } from "@/components/ai-draft-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ interface InboxProps {
 export default function Inbox({ activeFolder }: InboxProps) {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
+  const [showAiDialog, setShowAiDialog] = useState(false);
 
   const { data: emails = [], isLoading: isLoadingEmails } = useQuery<Email[]>({
     queryKey: ["/api/emails", activeFolder],
@@ -47,16 +49,6 @@ export default function Inbox({ activeFolder }: InboxProps) {
     },
   });
 
-  const generateDraftMutation = useMutation({
-    mutationFn: async (emailId: number) => {
-      const response = await apiRequest("POST", "/api/drafts/generate", { emailId });
-      return response.json();
-    },
-    onSuccess: (draft: Draft) => {
-      setGeneratedDraft(draft);
-      queryClient.invalidateQueries({ queryKey: ["/api/drafts", selectedEmail?.id] });
-    },
-  });
 
   const toggleStarMutation = useMutation({
     mutationFn: async (emailId: number) => {
@@ -91,8 +83,13 @@ export default function Inbox({ activeFolder }: InboxProps) {
 
   const handleAiReply = () => {
     if (selectedEmail) {
-      generateDraftMutation.mutate(selectedEmail.id);
+      setShowAiDialog(true);
     }
+  };
+
+  const handleDraftAccepted = (draft: Draft) => {
+    setGeneratedDraft(draft);
+    queryClient.invalidateQueries({ queryKey: ["/api/drafts", selectedEmail?.id] });
   };
 
   const handleTrashEmail = () => {
@@ -132,7 +129,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
           onTrashMultipleEmails={handleTrashMultipleEmails}
           onArchiveMultipleEmails={handleArchiveMultipleEmails}
           onToggleStar={(emailId) => toggleStarMutation.mutate(emailId)}
-          isAiLoading={generateDraftMutation.isPending}
+          isAiLoading={false}
           isMoving={moveEmailMutation.isPending}
           isLoading={isLoadingEmails}
           activeFolder={activeFolder}
@@ -180,6 +177,13 @@ export default function Inbox({ activeFolder }: InboxProps) {
           />
         </div>
       </div>
+
+      <AIDraftDialog
+        email={selectedEmail}
+        open={showAiDialog}
+        onOpenChange={setShowAiDialog}
+        onDraftAccepted={handleDraftAccepted}
+      />
     </div>
   );
 }

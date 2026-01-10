@@ -127,7 +127,7 @@ export async function registerRoutes(
 
   app.post("/api/drafts/generate", async (req, res) => {
     try {
-      const { emailId } = req.body;
+      const { emailId, tone = "professional" } = req.body;
       
       if (!emailId) {
         return res.status(400).json({ error: "Email ID is required" });
@@ -143,17 +143,27 @@ export async function registerRoutes(
         await storage.deleteDraft(existingDraft.id);
       }
 
-      const prompt = `You are a professional email assistant. Generate a professional, courteous reply to the following email. The reply should be concise, helpful, and maintain a professional tone suitable for business communication.
+      const toneDescriptions: Record<string, string> = {
+        professional: "professional, courteous, and business-appropriate",
+        friendly: "warm, friendly, and approachable while remaining respectful",
+        casual: "relaxed, conversational, and informal",
+        formal: "highly formal, respectful, and traditional business communication",
+        concise: "brief, direct, and to-the-point with minimal pleasantries",
+      };
+
+      const toneDesc = toneDescriptions[tone] || toneDescriptions.professional;
+
+      const prompt = `You are an email assistant. Generate a reply to the following email. The reply should be ${toneDesc}.
 
 From: ${email.sender} <${email.senderEmail}>
 Subject: ${email.subject}
 
 ${email.body}
 
-Please write a professional reply that:
+Please write a reply that:
 1. Acknowledges the sender's message
 2. Addresses any questions or action items
-3. Maintains a friendly but professional tone
+3. Uses a ${tone} tone throughout
 4. Is concise (2-4 paragraphs)
 
 Reply:`;
@@ -163,7 +173,7 @@ Reply:`;
         messages: [
           {
             role: "system",
-            content: "You are a professional email assistant that writes clear, concise, and professional email replies."
+            content: `You are an email assistant that writes clear, concise email replies with a ${tone} tone.`
           },
           {
             role: "user",
