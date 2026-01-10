@@ -175,6 +175,263 @@ David`,
         threadId: "thread-5",
         avatarColor: "#10B981",
       },
+      {
+        sender: "Emily Zhang",
+        senderEmail: "emily.zhang@designstudio.com",
+        subject: "New Brand Guidelines",
+        preview: "The updated brand guidelines are ready for...",
+        body: `Hi team,
+
+The updated brand guidelines are ready for review. I've attached the PDF with all the new specifications.
+
+Key changes include:
+- Updated color palette with accessibility improvements
+- New typography hierarchy
+- Revised logo usage guidelines
+- Social media template updates
+
+Please review and share any feedback by end of week.
+
+Thanks,
+Emily`,
+        receivedAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+        isRead: false,
+        isStarred: false,
+        folder: "inbox",
+        threadId: "thread-6",
+        avatarColor: "#06B6D4",
+      },
+      {
+        sender: "Robert Kim",
+        senderEmail: "robert.kim@analytics.io",
+        subject: "Monthly Analytics Report",
+        preview: "Here's the monthly performance report with...",
+        body: `Hello,
+
+Here's the monthly performance report with key metrics and insights.
+
+Highlights:
+- Website traffic up 23% month-over-month
+- Conversion rate improved to 4.2%
+- Average session duration increased by 45 seconds
+- Mobile traffic now accounts for 68% of total visits
+
+I'll be presenting these findings at Thursday's meeting.
+
+Best regards,
+Robert Kim
+Data Analytics Lead`,
+        receivedAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
+        isRead: true,
+        isStarred: true,
+        folder: "inbox",
+        threadId: "thread-7",
+        avatarColor: "#6366F1",
+      },
+      {
+        sender: "Amanda Foster",
+        senderEmail: "amanda.f@legal.co",
+        subject: "Contract Review Needed",
+        preview: "Could you please review the attached contract...",
+        body: `Hi,
+
+Could you please review the attached contract before our meeting with the vendor next week?
+
+There are a few clauses that need attention:
+1. Liability limitation in Section 4.2
+2. Payment terms in Section 7
+3. Termination clause modifications
+
+Let me know your availability for a quick call to discuss.
+
+Amanda Foster
+Legal Department`,
+        receivedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+        isRead: false,
+        isStarred: false,
+        folder: "inbox",
+        threadId: "thread-8",
+        avatarColor: "#EF4444",
+      },
+      {
+        sender: "Tom Richardson",
+        senderEmail: "tom.r@engineering.tech",
+        subject: "Server Maintenance Notice",
+        preview: "Scheduled maintenance this weekend will...",
+        body: `Team,
+
+Scheduled maintenance this weekend will affect the following services:
+
+Saturday 11 PM - Sunday 3 AM (EST):
+- Main application servers
+- Database backups
+- API endpoints
+
+Please plan accordingly and save any work in progress before the maintenance window.
+
+Contact IT support if you experience any issues.
+
+Tom Richardson
+Infrastructure Team`,
+        receivedAt: new Date(Date.now() - 18 * 60 * 60 * 1000),
+        isRead: true,
+        isStarred: false,
+        folder: "inbox",
+        threadId: "thread-9",
+        avatarColor: "#84CC16",
+      },
+      {
+        sender: "Lisa Thompson",
+        senderEmail: "lisa.t@marketing.com",
+        subject: "Campaign Launch Update",
+        preview: "Great news! Our Q4 campaign is performing...",
+        body: `Hi everyone,
+
+Great news! Our Q4 campaign is performing above expectations.
+
+Current metrics:
+- 2.3M impressions in first 48 hours
+- Click-through rate of 3.8%
+- Social engagement up 156%
+- Email open rate at 28.5%
+
+The creative team did an amazing job. Let's keep this momentum going!
+
+Lisa Thompson
+Marketing Director`,
+        receivedAt: new Date(Date.now() - 30 * 60 * 1000),
+        isRead: false,
+        isStarred: false,
+        folder: "inbox",
+        threadId: "thread-10",
+        avatarColor: "#F97316",
+      },
+      {
+        sender: "Kevin O'Brien",
+        senderEmail: "kevin.obrien@finance.net",
+        subject: "Expense Report Approval",
+        preview: "Your expense report has been approved and...",
+        body: `Hello,
+
+Your expense report for November has been approved and processed.
+
+Details:
+- Total amount: $1,247.50
+- Category: Travel & Entertainment
+- Reimbursement date: December 15th
+
+The funds will be deposited directly to your account.
+
+Kevin O'Brien
+Finance Department`,
+        receivedAt: new Date(Date.now() - 36 * 60 * 60 * 1000),
+        isRead: true,
+        isStarred: false,
+        folder: "inbox",
+        threadId: "thread-11",
+        avatarColor: "#3B82F6",
+      },
+      {
+        sender: "Nina Patel",
+        senderEmail: "nina.patel@product.io",
+        subject: "Feature Request Discussion",
+        preview: "I'd like to schedule a call to discuss the...",
+        body: `Hi,
+
+I'd like to schedule a call to discuss the new feature requests from our enterprise clients.
+
+Priority items:
+1. Advanced reporting dashboard
+2. API rate limit increases
+3. Custom workflow automation
+4. SSO integration improvements
+
+When works best for you this week?
+
+Nina Patel
+Product Manager`,
+        receivedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+        isRead: false,
+        isStarred: true,
+        folder: "inbox",
+        threadId: "thread-12",
+        avatarColor: "#8B5CF6",
+      },
+      {
+        sender: "Chris Morgan",
+        senderEmail: "chris.m@support.com",
+        subject: "Customer Feedback Summary",
+        preview: "Here's the weekly summary of customer feedback...",
+        body: `Team,
+
+Here's the weekly summary of customer feedback and support tickets.
+
+This week's highlights:
+- 94% customer satisfaction rate
+- Average response time: 2.3 hours
+- Most requested feature: Dark mode (already in development!)
+- Common issue: Login timeout (fix deployed yesterday)
+
+Full report attached for detailed analysis.
+
+Chris Morgan
+Customer Success`,
+        receivedAt: new Date(Date.now() - 6 * 60 * 60 * 1000),
+        isRead: false,
+        isStarred: false,
+        folder: "inbox",
+        threadId: "thread-13",
+        avatarColor: "#10B981",
+      },
+      {
+        sender: "Rachel Adams",
+        senderEmail: "rachel.a@hr.company.com",
+        subject: "Holiday Schedule Reminder",
+        preview: "Please submit your holiday time-off requests...",
+        body: `Hello everyone,
+
+Please submit your holiday time-off requests by December 10th.
+
+Important dates:
+- December 24-25: Company closed
+- December 31 - January 1: Company closed
+- January 2: Regular business hours resume
+
+If you have any questions about your remaining PTO balance, please reach out.
+
+Happy holidays!
+Rachel Adams
+Human Resources`,
+        receivedAt: new Date(Date.now() - 96 * 60 * 60 * 1000),
+        isRead: true,
+        isStarred: false,
+        folder: "inbox",
+        threadId: "thread-14",
+        avatarColor: "#EC4899",
+      },
+      {
+        sender: "James Wilson",
+        senderEmail: "james.w@partnerships.biz",
+        subject: "Partnership Opportunity",
+        preview: "I wanted to reach out about a potential...",
+        body: `Hi,
+
+I wanted to reach out about a potential partnership opportunity between our companies.
+
+We've been following your recent product launches and believe there's great synergy for collaboration.
+
+Would you be available for an introductory call next week? I'd love to explore how we might work together.
+
+Best regards,
+James Wilson
+Business Development`,
+        receivedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
+        isRead: false,
+        isStarred: false,
+        folder: "inbox",
+        threadId: "thread-15",
+        avatarColor: "#F59E0B",
+      },
     ];
 
     sampleEmails.forEach((email) => {
