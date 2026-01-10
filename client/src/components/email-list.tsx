@@ -1,5 +1,5 @@
 import { formatDistanceToNowStrict } from "date-fns";
-import { Star, Search, Sparkles, Loader2, Archive, Trash2 } from "lucide-react";
+import { Star, Search, Sparkles, Loader2, Archive, Trash2, SlidersHorizontal } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -63,14 +63,24 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border/30">
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
-          <Input 
-            type="search"
-            placeholder="Search emails..." 
-            className="pl-10 bg-muted/30 border-0 h-10 rounded-xl focus:bg-muted/50 transition-colors"
-            data-testid="input-search"
-          />
+        <div className="relative flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
+            <Input 
+              type="search"
+              placeholder="Search emails..." 
+              className="pl-10 bg-muted/30 border-0 h-10 rounded-xl focus:bg-muted/50 transition-colors"
+              data-testid="input-search"
+            />
+          </div>
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+            data-testid="button-filter"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </Button>
         </div>
       </div>
       <ScrollArea className="flex-1 scrollbar-thin">
