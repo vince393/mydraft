@@ -1,5 +1,5 @@
 import { formatDistanceToNowStrict } from "date-fns";
-import { Star, Search, Sparkles, Loader2, Archive, Trash2, SlidersHorizontal } from "lucide-react";
+import { Star, Search, Sparkles, Loader2, Archive, Trash2, SlidersHorizontal, Clock } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -81,6 +81,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
           >
             <SlidersHorizontal className="w-4 h-4" />
           </Button>
+        </div>
+      </div>
+      <div className="px-4 py-2 border-b border-border/30">
+        <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 rounded-lg">
+          <Clock className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Est. response time:</span>
+          <span className="text-sm font-medium text-foreground">4 min</span>
         </div>
       </div>
       <ScrollArea className="flex-1 scrollbar-thin">
