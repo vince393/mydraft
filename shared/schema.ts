@@ -1,7 +1,7 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, serial, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -16,3 +16,45 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const emails = pgTable("emails", {
+  id: serial("id").primaryKey(),
+  sender: text("sender").notNull(),
+  senderEmail: text("sender_email").notNull(),
+  subject: text("subject").notNull(),
+  preview: text("preview").notNull(),
+  body: text("body").notNull(),
+  receivedAt: timestamp("received_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  isStarred: boolean("is_starred").default(false).notNull(),
+  folder: text("folder").default("inbox").notNull(),
+  threadId: varchar("thread_id"),
+  avatarColor: text("avatar_color").default("#3B82F6").notNull(),
+});
+
+export const insertEmailSchema = createInsertSchema(emails).omit({
+  id: true,
+  receivedAt: true,
+});
+
+export type Email = typeof emails.$inferSelect;
+export type InsertEmail = z.infer<typeof insertEmailSchema>;
+
+export const drafts = pgTable("drafts", {
+  id: serial("id").primaryKey(),
+  emailId: integer("email_id").notNull(),
+  content: text("content").notNull(),
+  isAiGenerated: boolean("is_ai_generated").default(true).notNull(),
+  status: text("status").default("draft").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertDraftSchema = createInsertSchema(drafts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Draft = typeof drafts.$inferSelect;
+export type InsertDraft = z.infer<typeof insertDraftSchema>;
