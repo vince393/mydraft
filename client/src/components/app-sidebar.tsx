@@ -56,6 +56,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHoverExpanded, setIsHoverExpanded] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const justCollapsedRef = useRef(false);
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -71,7 +72,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
   };
 
   const handleMouseEnter = () => {
-    if (isCollapsed) {
+    if (isCollapsed && !justCollapsedRef.current) {
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
       }
@@ -80,6 +81,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
   };
 
   const handleMouseLeave = () => {
+    justCollapsedRef.current = false;
     if (isCollapsed) {
       hoverTimeoutRef.current = setTimeout(() => {
         setIsHoverExpanded(false);
@@ -102,6 +104,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
     } else {
       setIsCollapsed(true);
       setIsHoverExpanded(false);
+      justCollapsedRef.current = true;
     }
   };
 
