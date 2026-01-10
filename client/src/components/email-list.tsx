@@ -82,10 +82,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
             <SlidersHorizontal className="w-4 h-4" />
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Est. response time:</span>
-          <span className="text-sm font-medium text-foreground">4 min</span>
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-950/80 rounded-lg">
+          <Clock className="w-4 h-4 text-blue-400" />
+          <span className="text-sm text-white/90">Est. response time: 6 min</span>
         </div>
       </div>
       <ScrollArea className="flex-1 scrollbar-thin">
