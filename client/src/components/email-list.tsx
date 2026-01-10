@@ -1,5 +1,5 @@
 import { formatDistanceToNowStrict } from "date-fns";
-import { Star, Search, Sparkles, Loader2 } from "lucide-react";
+import { Star, Search, Sparkles, Loader2, Archive, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -62,7 +62,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-border/30 space-y-3">
+      <div className="p-4 border-b border-border/30">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input 
@@ -72,19 +72,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
             data-testid="input-search"
           />
         </div>
-        <Button 
-          onClick={onAiReply}
-          disabled={!selectedEmailId || isAiLoading}
-          className="w-full gap-2 h-10 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all"
-          data-testid="button-ai-reply"
-        >
-          {isAiLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Sparkles className="w-4 h-4" />
-          )}
-          AI Reply
-        </Button>
       </div>
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="space-y-0.5 p-3">
@@ -166,6 +153,42 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
         })}
         </div>
       </ScrollArea>
+
+      <div className="p-3 border-t border-border/30 bg-background/95 backdrop-blur-xl">
+        <div className="flex items-center gap-2">
+          <Button 
+            size="icon"
+            variant="ghost"
+            disabled={!selectedEmailId}
+            className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+            data-testid="button-archive"
+          >
+            <Archive className="w-4 h-4" />
+          </Button>
+          <Button 
+            size="icon"
+            variant="ghost"
+            disabled={!selectedEmailId}
+            className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+            data-testid="button-trash"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+          <Button 
+            onClick={onAiReply}
+            disabled={!selectedEmailId || isAiLoading}
+            className="flex-1 gap-2 h-10 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all"
+            data-testid="button-ai-reply"
+          >
+            {isAiLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            Draft with AI
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
