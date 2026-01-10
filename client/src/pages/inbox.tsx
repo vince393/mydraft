@@ -45,9 +45,10 @@ export default function Inbox() {
     },
   });
 
-  const deleteEmailMutation = useMutation({
-    mutationFn: async (emailId: number) => {
-      await apiRequest("DELETE", `/api/emails/${emailId}`);
+  const moveEmailMutation = useMutation({
+    mutationFn: async ({ emailId, folder }: { emailId: number; folder: string }) => {
+      const response = await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
+      return response.json();
     },
     onSuccess: () => {
       setSelectedEmail(null);
@@ -70,15 +71,27 @@ export default function Inbox() {
     }
   };
 
-  const handleDeleteEmail = () => {
+  const handleTrashEmail = () => {
     if (selectedEmail) {
-      deleteEmailMutation.mutate(selectedEmail.id);
+      moveEmailMutation.mutate({ emailId: selectedEmail.id, folder: "trash" });
     }
   };
 
-  const handleDeleteMultipleEmails = async (emailIds: number[]) => {
+  const handleArchiveEmail = () => {
+    if (selectedEmail) {
+      moveEmailMutation.mutate({ emailId: selectedEmail.id, folder: "archived" });
+    }
+  };
+
+  const handleTrashMultipleEmails = async (emailIds: number[]) => {
     for (const id of emailIds) {
-      await deleteEmailMutation.mutateAsync(id);
+      await moveEmailMutation.mutateAsync({ emailId: id, folder: "trash" });
+    }
+  };
+
+  const handleArchiveMultipleEmails = async (emailIds: number[]) => {
+    for (const id of emailIds) {
+      await moveEmailMutation.mutateAsync({ emailId: id, folder: "archived" });
     }
   };
 
@@ -99,10 +112,12 @@ export default function Inbox() {
           selectedEmailId={selectedEmail?.id ?? null}
           onSelectEmail={handleSelectEmail}
           onAiReply={handleAiReply}
-          onDeleteEmail={handleDeleteEmail}
-          onDeleteMultipleEmails={handleDeleteMultipleEmails}
+          onTrashEmail={handleTrashEmail}
+          onArchiveEmail={handleArchiveEmail}
+          onTrashMultipleEmails={handleTrashMultipleEmails}
+          onArchiveMultipleEmails={handleArchiveMultipleEmails}
           isAiLoading={generateDraftMutation.isPending}
-          isDeleting={deleteEmailMutation.isPending}
+          isMoving={moveEmailMutation.isPending}
           isLoading={isLoadingEmails}
         />
       </div>

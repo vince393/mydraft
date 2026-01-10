@@ -12,10 +12,12 @@ interface EmailListProps {
   selectedEmailId: number | null;
   onSelectEmail: (email: Email) => void;
   onAiReply: () => void;
-  onDeleteEmail: () => void;
-  onDeleteMultipleEmails: (emailIds: number[]) => void;
+  onTrashEmail: () => void;
+  onArchiveEmail: () => void;
+  onTrashMultipleEmails: (emailIds: number[]) => void;
+  onArchiveMultipleEmails: (emailIds: number[]) => void;
   isAiLoading?: boolean;
-  isDeleting?: boolean;
+  isMoving?: boolean;
   isLoading?: boolean;
 }
 
@@ -55,7 +57,7 @@ function EmailListEmpty() {
   );
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onDeleteEmail, onDeleteMultipleEmails, isAiLoading, isDeleting, isLoading }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, isAiLoading, isMoving, isLoading }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
@@ -132,13 +134,21 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     }
   }, [selectedIds.size, emails]);
 
-  const handleDeleteSelected = useCallback(() => {
+  const handleTrashSelected = useCallback(() => {
     if (selectedIds.size > 0) {
-      onDeleteMultipleEmails(Array.from(selectedIds));
+      onTrashMultipleEmails(Array.from(selectedIds));
       setIsSelectionMode(false);
       setSelectedIds(new Set());
     }
-  }, [selectedIds, onDeleteMultipleEmails]);
+  }, [selectedIds, onTrashMultipleEmails]);
+
+  const handleArchiveSelected = useCallback(() => {
+    if (selectedIds.size > 0) {
+      onArchiveMultipleEmails(Array.from(selectedIds));
+      setIsSelectionMode(false);
+      setSelectedIds(new Set());
+    }
+  }, [selectedIds, onArchiveMultipleEmails]);
 
   const allSelected = emails.length > 0 && selectedIds.size === emails.length;
 
@@ -297,21 +307,22 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               <Button 
                 size="icon"
                 variant="ghost"
-                disabled={selectedIds.size === 0}
+                onClick={handleArchiveSelected}
+                disabled={selectedIds.size === 0 || isMoving}
                 className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
                 data-testid="button-archive-selected"
               >
-                <Archive className="w-4 h-4" />
+                {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
               </Button>
               <Button 
                 size="icon"
                 variant="ghost"
-                onClick={handleDeleteSelected}
-                disabled={selectedIds.size === 0 || isDeleting}
+                onClick={handleTrashSelected}
+                disabled={selectedIds.size === 0 || isMoving}
                 className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
                 data-testid="button-delete-selected"
               >
-                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
             <Button 
@@ -330,21 +341,22 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               <Button 
                 size="icon"
                 variant="ghost"
-                disabled={!selectedEmailId}
+                disabled={!selectedEmailId || isMoving}
+                onClick={onArchiveEmail}
                 className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
                 data-testid="button-archive"
               >
-                <Archive className="w-4 h-4" />
+                {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
               </Button>
               <Button 
                 size="icon"
                 variant="ghost"
-                disabled={!selectedEmailId || isDeleting}
-                onClick={onDeleteEmail}
+                disabled={!selectedEmailId || isMoving}
+                onClick={onTrashEmail}
                 className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
                 data-testid="button-trash"
               >
-                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
             <Button 

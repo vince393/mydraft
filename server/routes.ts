@@ -52,6 +52,26 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/emails/:id/folder", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { folder } = req.body;
+      
+      if (!folder || !["inbox", "archived", "trash", "sent", "drafts", "junk"].includes(folder)) {
+        return res.status(400).json({ error: "Invalid folder" });
+      }
+      
+      const email = await storage.updateEmail(id, { folder });
+      if (!email) {
+        return res.status(404).json({ error: "Email not found" });
+      }
+      res.json(email);
+    } catch (error) {
+      console.error("Error moving email:", error);
+      res.status(500).json({ error: "Failed to move email" });
+    }
+  });
+
   app.patch("/api/emails/:id/star", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
