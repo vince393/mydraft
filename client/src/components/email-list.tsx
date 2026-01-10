@@ -83,9 +83,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, i
           </Button>
         </div>
       </div>
-      <div className="px-4 py-2 border-b border-border/30">
-        <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 rounded-lg">
-          <Clock className="w-4 h-4 text-muted-foreground" />
+      <div className="px-4 pb-2 pt-1 border-b border-border/30">
+        <div className="flex items-center gap-2">
+          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Est. response time:</span>
           <span className="text-sm font-medium text-foreground">4 min</span>
         </div>
