@@ -2,11 +2,20 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
+import * as nylas from "./nylas";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
+
+const MOCK_USER_ID = "demo-user";
+
+function getRedirectUri(req: any): string {
+  const protocol = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers.host;
+  return `${protocol}://${host}/api/nylas/callback`;
+}
 
 interface ResponseTimeCache {
   signature: string;
@@ -25,10 +34,115 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  app.get("/api/nylas/auth-url", async (req, res) => {
+    try {
+      const provider = req.query.provider as string;
+      if (!provider || !['google', 'microsoft'].includes(provider)) {
+        return res.status(400).json({ error: "Invalid provider. Use 'google' or 'microsoft'" });
+      }
+
+      const redirectUri = getRedirectUri(req);
+      const state = Buffer.from(JSON.stringify({ provider, userId: MOCK_USER_ID })).toString('base64');
+      const authUrl = await nylas.getAuthUrl(provider, redirectUri, state);
+      
+      res.json({ url: authUrl });
+    } catch (error) {
+      console.error("Error generating auth URL:", error);
+      res.status(500).json({ error: "Failed to generate auth URL" });
+    }
+  });
+
+  app.get("/api/nylas/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      
+      if (!code || typeof code !== 'string') {
+        return res.status(400).send("Missing authorization code");
+      }
+
+      let stateData = { userId: MOCK_USER_ID, provider: 'unknown' };
+      if (state && typeof state === 'string') {
+        try {
+          stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+        } catch (e) {}
+      }
+
+      const redirectUri = getRedirectUri(req);
+      const grant = await nylas.exchangeCodeForGrant(code, redirectUri);
+
+      const existingGrant = await storage.getNylasGrant(stateData.userId);
+      if (existingGrant) {
+        await storage.updateNylasGrant(stateData.userId, {
+          grantId: grant.id,
+          provider: grant.provider,
+          email: grant.email,
+        });
+      } else {
+        await storage.createNylasGrant({
+          userId: stateData.userId,
+          grantId: grant.id,
+          provider: grant.provider,
+          email: grant.email,
+        });
+      }
+
+      res.redirect('/?connected=true');
+    } catch (error) {
+      console.error("Error in OAuth callback:", error);
+      res.redirect('/?error=auth_failed');
+    }
+  });
+
+  app.get("/api/nylas/status", async (req, res) => {
+    try {
+      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      if (grant) {
+        res.json({ connected: true, email: grant.email, provider: grant.provider });
+      } else {
+        res.json({ connected: false });
+      }
+    } catch (error) {
+      console.error("Error checking Nylas status:", error);
+      res.status(500).json({ error: "Failed to check status" });
+    }
+  });
+
+  app.post("/api/nylas/disconnect", async (req, res) => {
+    try {
+      await storage.deleteNylasGrant(MOCK_USER_ID);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error disconnecting:", error);
+      res.status(500).json({ error: "Failed to disconnect" });
+    }
+  });
   
   app.get("/api/emails", async (req, res) => {
     try {
       const folder = req.query.folder as string | undefined;
+      
+      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      if (grant) {
+        const messages = await nylas.getMessages(grant.grantId, folder || "inbox");
+        const emails = messages.map((msg, index) => ({
+          id: index + 1,
+          nylasId: msg.id,
+          sender: msg.from,
+          senderEmail: msg.fromEmail,
+          subject: msg.subject,
+          preview: msg.preview,
+          body: "",
+          receivedAt: msg.date,
+          isRead: msg.isRead,
+          isStarred: msg.isStarred,
+          folder: folder || "inbox",
+          threadId: msg.threadId,
+          avatarColor: msg.avatarColor,
+        }));
+        return res.json(emails);
+      }
+      
       const emails = await storage.getEmails(folder || "inbox");
       res.json(emails);
     } catch (error) {
@@ -39,8 +153,32 @@ export async function registerRoutes(
 
   app.get("/api/emails/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const email = await storage.getEmail(id);
+      const id = req.params.id;
+      
+      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      if (grant && id.length > 10) {
+        const message = await nylas.getMessage(grant.grantId, id);
+        return res.json({
+          id: id,
+          nylasId: id,
+          sender: message.from,
+          senderEmail: message.fromEmail,
+          subject: message.subject,
+          preview: "",
+          body: message.body,
+          receivedAt: message.date,
+          isRead: message.isRead,
+          isStarred: message.isStarred,
+          folder: "inbox",
+          threadId: message.threadId,
+          avatarColor: "#3B82F6",
+          to: message.to,
+          cc: message.cc,
+        });
+      }
+      
+      const numericId = parseInt(id);
+      const email = await storage.getEmail(numericId);
       if (!email) {
         return res.status(404).json({ error: "Email not found" });
       }
@@ -53,8 +191,16 @@ export async function registerRoutes(
 
   app.patch("/api/emails/:id/read", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const email = await storage.updateEmail(id, { isRead: true });
+      const id = req.params.id;
+      
+      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      if (grant && id.length > 10) {
+        await nylas.markAsRead(grant.grantId, id);
+        return res.json({ success: true });
+      }
+      
+      const numericId = parseInt(id);
+      const email = await storage.updateEmail(numericId, { isRead: true });
       if (!email) {
         return res.status(404).json({ error: "Email not found" });
       }
@@ -67,14 +213,25 @@ export async function registerRoutes(
 
   app.patch("/api/emails/:id/folder", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const { folder } = req.body;
       
       if (!folder || !["inbox", "archived", "trash", "sent", "drafts", "junk"].includes(folder)) {
         return res.status(400).json({ error: "Invalid folder" });
       }
       
-      const email = await storage.updateEmail(id, { folder });
+      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      if (grant && id.length > 10) {
+        if (folder === "trash") {
+          await nylas.trashMessage(grant.grantId, id);
+        } else if (folder === "archived") {
+          await nylas.archiveMessage(grant.grantId, id);
+        }
+        return res.json({ success: true });
+      }
+      
+      const numericId = parseInt(id);
+      const email = await storage.updateEmail(numericId, { folder });
       if (!email) {
         return res.status(404).json({ error: "Email not found" });
       }
@@ -87,12 +244,21 @@ export async function registerRoutes(
 
   app.patch("/api/emails/:id/star", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const email = await storage.getEmail(id);
+      const id = req.params.id;
+      const { starred } = req.body;
+      
+      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      if (grant && id.length > 10) {
+        await nylas.toggleStar(grant.grantId, id, starred ?? true);
+        return res.json({ success: true });
+      }
+      
+      const numericId = parseInt(id);
+      const email = await storage.getEmail(numericId);
       if (!email) {
         return res.status(404).json({ error: "Email not found" });
       }
-      const updated = await storage.updateEmail(id, { isStarred: !email.isStarred });
+      const updated = await storage.updateEmail(numericId, { isStarred: !email.isStarred });
       res.json(updated);
     } catch (error) {
       console.error("Error toggling star:", error);
@@ -102,8 +268,16 @@ export async function registerRoutes(
 
   app.delete("/api/emails/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteEmail(id);
+      const id = req.params.id;
+      
+      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      if (grant && id.length > 10) {
+        await nylas.deleteMessage(grant.grantId, id);
+        return res.status(204).send();
+      }
+      
+      const numericId = parseInt(id);
+      const deleted = await storage.deleteEmail(numericId);
       if (!deleted) {
         return res.status(404).json({ error: "Email not found" });
       }
@@ -111,6 +285,30 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting email:", error);
       res.status(500).json({ error: "Failed to delete email" });
+    }
+  });
+
+  app.post("/api/send", async (req, res) => {
+    try {
+      const { to, subject, body, replyToMessageId } = req.body;
+      
+      if (!to || !Array.isArray(to) || to.length === 0) {
+        return res.status(400).json({ error: "Recipients required" });
+      }
+      if (!subject || !body) {
+        return res.status(400).json({ error: "Subject and body required" });
+      }
+      
+      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      if (!grant) {
+        return res.status(401).json({ error: "Not connected to email provider" });
+      }
+      
+      await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ error: "Failed to send email" });
     }
   });
 
