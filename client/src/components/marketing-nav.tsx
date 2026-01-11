@@ -62,23 +62,33 @@ export function MarketingNav() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          {isLoggedIn && (
-            <Link href="/inbox">
-              <Button variant="ghost" size="sm" data-testid="nav-inbox">
-                Go to inbox
-              </Button>
-            </Link>
+          {isLoggedIn ? (
+            <>
+              <Link href="/inbox">
+                <Button variant="ghost" size="sm" data-testid="nav-inbox">
+                  Go to inbox
+                </Button>
+              </Link>
+              <Link href="/settings">
+                <Button variant="ghost" size="sm" data-testid="nav-settings">
+                  Settings
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/login">
+                <Button variant="ghost" size="sm" data-testid="nav-signin">
+                  Sign in
+                </Button>
+              </Link>
+              <Link href={getStartedHref()}>
+                <Button size="sm" data-testid="nav-getstarted">
+                  Get started
+                </Button>
+              </Link>
+            </>
           )}
-          <Link href="/login">
-            <Button variant="ghost" size="sm" data-testid="nav-signin">
-              Sign in
-            </Button>
-          </Link>
-          <Link href={getStartedHref()}>
-            <Button size="sm" data-testid="nav-getstarted">
-              Get started
-            </Button>
-          </Link>
         </div>
 
         <Button 
@@ -107,23 +117,33 @@ export function MarketingNav() {
               </Link>
             ))}
             <div className="pt-2 border-t border-border/40 space-y-2">
-              {isLoggedIn && (
-                <Link href="/inbox">
-                  <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)}>
-                    Go to inbox
-                  </Button>
-                </Link>
+              {isLoggedIn ? (
+                <>
+                  <Link href="/inbox">
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-inbox">
+                      Go to inbox
+                    </Button>
+                  </Link>
+                  <Link href="/settings">
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-settings">
+                      Settings
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-signin">
+                      Sign in
+                    </Button>
+                  </Link>
+                  <Link href={getStartedHref()}>
+                    <Button className="w-full" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-getstarted">
+                      Get started
+                    </Button>
+                  </Link>
+                </>
               )}
-              <Link href="/login">
-                <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)}>
-                  Sign in
-                </Button>
-              </Link>
-              <Link href={getStartedHref()}>
-                <Button className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                  Get started
-                </Button>
-              </Link>
             </div>
           </div>
         </div>

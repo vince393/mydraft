@@ -66,7 +66,7 @@ export default function OnboardingPage() {
     if (prevIndex >= 0) {
       setStep(steps[prevIndex]);
     } else {
-      setLocation("/pricing");
+      setLocation("/select-plan");
     }
   };
 

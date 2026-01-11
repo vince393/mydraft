@@ -186,6 +186,7 @@ function DemoSection() {
               icon={<Brain className="w-5 h-5" />}
               title="AI Summaries"
               description="Click any email to get an instant summary of long threads"
+              testId="demo-toggle-summary"
             />
             <DemoToggle 
               active={activeDemo === 'draft'}
@@ -193,6 +194,7 @@ function DemoSection() {
               icon={<Sparkles className="w-5 h-5" />}
               title="Smart Drafts"
               description="Generate replies in your chosen tone: professional, friendly, or concise"
+              testId="demo-toggle-draft"
             />
             <DemoToggle 
               active={activeDemo === 'label'}
@@ -200,6 +202,7 @@ function DemoSection() {
               icon={<Tag className="w-5 h-5" />}
               title="Auto-Labels"
               description="Emails are automatically categorized so you can focus on what matters"
+              testId="demo-toggle-label"
             />
           </div>
 
@@ -220,16 +223,18 @@ function DemoSection() {
   );
 }
 
-function DemoToggle({ active, onClick, icon, title, description }: {
+function DemoToggle({ active, onClick, icon, title, description, testId }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   title: string;
   description: string;
+  testId: string;
 }) {
   return (
     <button
       onClick={onClick}
+      data-testid={testId}
       className={`w-full text-left p-4 rounded-lg border transition-all ${
         active 
           ? 'bg-primary/10 border-primary/30' 
@@ -298,6 +303,7 @@ function DemoDraft() {
             <button
               key={t}
               onClick={() => setTone(t)}
+              data-testid={`demo-tone-${t}`}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 tone === t 
                   ? 'bg-primary text-primary-foreground' 
@@ -650,6 +656,7 @@ function FAQSection() {
             <div key={i} className="border border-border/50 rounded-lg overflow-hidden">
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                data-testid={`faq-toggle-${i}`}
                 className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/30 transition-colors"
               >
                 <span className="font-medium pr-4">{faq.q}</span>

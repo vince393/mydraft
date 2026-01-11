@@ -392,7 +392,7 @@ function BillingTab({ settings }: { settings: Settings }) {
           <CardDescription>Change or cancel your plan</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={() => setLocation("/pricing")} data-testid="button-change-plan">
+          <Button onClick={() => setLocation("/select-plan")} data-testid="button-change-plan">
             Change Plan
           </Button>
           {settings.plan && settings.plan !== "free" && (

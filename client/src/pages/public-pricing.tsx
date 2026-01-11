@@ -288,6 +288,7 @@ function PricingFAQ() {
             <div key={i} className="border border-border/50 rounded-lg overflow-hidden">
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                data-testid={`pricing-faq-toggle-${i}`}
                 className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/30 transition-colors"
               >
                 <span className="font-medium pr-4">{faq.q}</span>
