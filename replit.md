@@ -40,22 +40,31 @@ Preferred communication style: Simple, everyday language.
 client/           # React frontend
   src/
     components/   # UI components including shadcn/ui
-    pages/        # Route pages (inbox, not-found)
+    pages/        # Route pages (inbox, login, pricing, onboarding, connect-email)
     hooks/        # Custom React hooks
     lib/          # Utilities and query client
 server/           # Express backend
-  routes.ts       # API route definitions
+  routes.ts       # API route definitions with authentication
   storage.ts      # Data access layer
+  index.ts        # Express app with session middleware
   replit_integrations/  # AI integration modules
 shared/           # Shared types and schemas
   schema.ts       # Drizzle database schema
 ```
 
 ### Key Data Models
-- **Users**: Authentication with username/password
+- **Users**: Authentication with email/password, plan selection (free/pro/business), onboarding status, AI preferences (JSONB)
 - **Emails**: Inbox messages with sender, subject, body, read status, folder organization
 - **Drafts**: AI-generated reply drafts linked to emails
+- **NylasGrants**: OAuth tokens linking users to their connected email accounts
 - **Conversations/Messages**: Chat history for AI interactions
+
+### Authentication & User Flow
+- **Session-based auth**: express-session with secure cookies (httpOnly, sameSite:lax, 7-day expiry)
+- **Password security**: scrypt hashing with random salt, timing-safe verification
+- **OAuth security**: Cryptographically secure state tokens with 10-minute expiration
+- **User flow**: Login/Register → Plan Selection → AI Preferences Onboarding → Email Connection → Inbox
+- **Route protection**: requireAuth middleware on all protected API routes, frontend route guards with redirects
 
 ## External Dependencies
 
