@@ -59,6 +59,8 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
   const [customTime, setCustomTime] = useState("");
+  const [showFormatted, setShowFormatted] = useState(true);
+  const [formattedBody, setFormattedBody] = useState<string | null>(null);
   const { toast } = useToast();
 
   const showDraft = !!generatedDraft;
@@ -68,6 +70,39 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
       setDraftContent(generatedDraft.content);
     }
   }, [generatedDraft]);
+
+  useEffect(() => {
+    setFormattedBody(null);
+  }, [email?.id]);
+
+  const formatMutation = useMutation({
+    mutationFn: async ({ emailId, body }: { emailId: string | number; body: string }) => {
+      const response = await apiRequest("POST", `/api/emails/${emailId}/format`, { body });
+      const data = await response.json();
+      return { ...data, emailId };
+    },
+    onSuccess: (data) => {
+      const currentEmailId = email ? ((email as any).nylasId || email.id) : null;
+      if (data.emailId === currentEmailId) {
+        setFormattedBody(data.formattedBody);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Formatting failed",
+        description: "Could not format this email. Showing original.",
+        variant: "destructive",
+      });
+      setShowFormatted(false);
+    },
+  });
+
+  useEffect(() => {
+    if (email && showFormatted && !formattedBody && !formatMutation.isPending) {
+      const emailId = (email as any).nylasId || email.id;
+      formatMutation.mutate({ emailId, body: email.body });
+    }
+  }, [email?.id, showFormatted, formattedBody]);
 
   const scheduleMutation = useMutation({
     mutationFn: async ({ draftId, scheduledAt }: { draftId: number; scheduledAt: Date }) => {
@@ -223,23 +258,66 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
             </div>
           </div>
 
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              onClick={() => setShowFormatted(true)}
+              className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                showFormatted 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+              data-testid="button-formatted-view"
+            >
+              <Sparkles className="w-3 h-3 inline mr-1" />
+              AI Formatted
+            </button>
+            <button
+              onClick={() => setShowFormatted(false)}
+              className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                !showFormatted 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+              data-testid="button-original-view"
+            >
+              Original
+            </button>
+          </div>
+
           <div 
-            className="mb-8 prose prose-sm dark:prose-invert max-w-none"
+            className="mb-8"
             data-testid="email-body"
           >
-            {email.body.includes('<') ? (
-              <div 
-                className="text-foreground/90 leading-relaxed text-[15px]"
-                dangerouslySetInnerHTML={{ __html: email.body }} 
-              />
+            {showFormatted ? (
+              formatMutation.isPending ? (
+                <div className="flex items-center gap-2 text-muted-foreground py-4">
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Formatting with AI...</span>
+                </div>
+              ) : formattedBody ? (
+                formattedBody.split("\n").map((paragraph, i) => (
+                  paragraph.trim() ? (
+                    <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
+                      {paragraph}
+                    </p>
+                  ) : <br key={i} />
+                ))
+              ) : null
             ) : (
-              email.body.split("\n").map((paragraph, i) => (
-                paragraph.trim() ? (
-                  <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
-                    {paragraph}
-                  </p>
-                ) : null
-              ))
+              email.body.includes('<') ? (
+                <div 
+                  className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px]"
+                  dangerouslySetInnerHTML={{ __html: email.body }} 
+                />
+              ) : (
+                email.body.split("\n").map((paragraph, i) => (
+                  paragraph.trim() ? (
+                    <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
+                      {paragraph}
+                    </p>
+                  ) : null
+                ))
+              )
             )}
           </div>
 

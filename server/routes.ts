@@ -72,6 +72,25 @@ interface ResponseTimeCache {
 
 const responseTimeCache: Map<string, ResponseTimeCache> = new Map();
 
+const formattedBodyCache: Map<string, { body: string; timestamp: number }> = new Map();
+const CACHE_MAX_SIZE = 100;
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+function cleanupFormattedBodyCache() {
+  const now = Date.now();
+  for (const [key, value] of Array.from(formattedBodyCache.entries())) {
+    if (now - value.timestamp > CACHE_TTL_MS) {
+      formattedBodyCache.delete(key);
+    }
+  }
+  if (formattedBodyCache.size > CACHE_MAX_SIZE) {
+    const entries = Array.from(formattedBodyCache.entries())
+      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toRemove = entries.slice(0, formattedBodyCache.size - CACHE_MAX_SIZE);
+    toRemove.forEach(([key]) => formattedBodyCache.delete(key));
+  }
+}
+
 function generateUnreadSignature(unreadEmailIds: number[]): string {
   return unreadEmailIds.sort((a, b) => a - b).join(",");
 }
@@ -595,6 +614,62 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting email:", error);
       res.status(500).json({ error: "Failed to delete email" });
+    }
+  });
+
+  app.post("/api/emails/:id/format", requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const { body } = req.body;
+
+      if (!body) {
+        return res.status(400).json({ error: "Email body is required" });
+      }
+
+      const cacheKey = `${req.session.userId}-${id}`;
+      cleanupFormattedBodyCache();
+      const cached = formattedBodyCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        return res.json({ formattedBody: cached.body });
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an email formatting assistant. Your job is to clean up and reformat email content to make it easier to read. 
+
+Rules:
+- Remove excessive whitespace, broken formatting, and messy HTML artifacts
+- Convert content to clean, well-structured plain text with proper paragraphs
+- Preserve the actual message content - don't change or summarize anything
+- Use clear paragraph breaks between sections
+- Format lists properly with bullet points or numbers
+- Remove email signatures, legal disclaimers, and repeated quoted text from previous emails
+- Remove tracking pixels, image placeholders, and broken links
+- Keep important links but remove tracking parameters
+- Output clean, readable text only - no HTML tags
+
+The goal is to show just the main message content in a clean, easy-to-read format.`
+          },
+          {
+            role: "user",
+            content: `Please clean up and format this email content:\n\n${body}`
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.3,
+      });
+
+      const formattedBody = completion.choices[0]?.message?.content || body;
+      
+      formattedBodyCache.set(cacheKey, { body: formattedBody, timestamp: Date.now() });
+      
+      res.json({ formattedBody });
+    } catch (error) {
+      console.error("Error formatting email:", error);
+      res.status(500).json({ error: "Failed to format email" });
     }
   });
 
