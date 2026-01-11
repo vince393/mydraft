@@ -2,6 +2,7 @@ import sanitizeHtml from "sanitize-html";
 
 const NYLAS_API_URL = "https://api.us.nylas.com";
 const NYLAS_API_KEY = process.env.NYLAS_API_KEY!;
+const NYLAS_CLIENT_ID = process.env.NYLAS_CLIENT_ID!;
 
 interface NylasEmailParticipant {
   email: string;
@@ -107,7 +108,7 @@ async function nylasRequest(path: string, options: RequestInit = {}): Promise<Re
 
 export async function getAuthUrl(provider: string, redirectUri: string, state: string): Promise<string> {
   const params = new URLSearchParams({
-    client_id: NYLAS_API_KEY,
+    client_id: NYLAS_CLIENT_ID,
     redirect_uri: redirectUri,
     response_type: 'code',
     state,
@@ -122,7 +123,7 @@ export async function exchangeCodeForGrant(code: string, redirectUri: string): P
   const response = await nylasRequest('/v3/connect/token', {
     method: 'POST',
     body: JSON.stringify({
-      client_id: NYLAS_API_KEY,
+      client_id: NYLAS_CLIENT_ID,
       client_secret: NYLAS_API_KEY,
       grant_type: 'authorization_code',
       code,
