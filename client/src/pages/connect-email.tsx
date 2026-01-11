@@ -2,28 +2,34 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Loader2, ArrowRight, CheckCircle } from "lucide-react";
+import { Mail, Loader2, ArrowRight, CheckCircle, Building2 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
-import { Building2 } from "lucide-react";
+import { useState } from "react";
 
 export default function ConnectEmailPage() {
   const [, setLocation] = useLocation();
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
   const { data: nylasStatus, isLoading: statusLoading } = useQuery<{ connected: boolean; email?: string }>({
     queryKey: ["/api/nylas/status"],
     retry: false,
   });
 
-  const { data: authUrlData, isLoading: authLoading } = useQuery<{ url: string; message?: string }>({
-    queryKey: ["/api/nylas/auth-url"],
-    retry: false,
-  });
-
   const isConnected = nylasStatus?.connected ?? false;
 
-  const handleConnect = () => {
-    if (authUrlData?.url) {
-      window.location.href = authUrlData.url;
+  const handleConnect = async (provider: 'google' | 'microsoft') => {
+    setConnectingProvider(provider);
+    try {
+      const response = await fetch(`/api/nylas/auth-url?provider=${provider}`, {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Failed to get auth URL:", error);
+      setConnectingProvider(null);
     }
   };
 
@@ -78,54 +84,34 @@ export default function ConnectEmailPage() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 gap-3"
-                    onClick={handleConnect}
-                    disabled={authLoading || !authUrlData?.url}
-                    data-testid="button-connect-google"
-                  >
-                    {authLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <SiGoogle className="w-5 h-5" />
-                    )}
-                    Connect with Google
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 gap-3"
-                    onClick={handleConnect}
-                    disabled={authLoading || !authUrlData?.url}
-                    data-testid="button-connect-microsoft"
-                  >
-                    {authLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Building2 className="w-5 h-5" />
-                    )}
-                    Connect with Microsoft
-                  </Button>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">or</span>
-                  </div>
-                </div>
-
+              <div className="space-y-3">
                 <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={handleContinue}
-                  data-testid="button-skip-connection"
+                  variant="outline"
+                  className="w-full h-12 gap-3"
+                  onClick={() => handleConnect('google')}
+                  disabled={connectingProvider !== null}
+                  data-testid="button-connect-google"
                 >
-                  Skip for now
+                  {connectingProvider === 'google' ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <SiGoogle className="w-5 h-5" />
+                  )}
+                  Connect with Google
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 gap-3"
+                  onClick={() => handleConnect('microsoft')}
+                  disabled={connectingProvider !== null}
+                  data-testid="button-connect-microsoft"
+                >
+                  {connectingProvider === 'microsoft' ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Building2 className="w-5 h-5" />
+                  )}
+                  Connect with Microsoft
                 </Button>
               </div>
             )}
