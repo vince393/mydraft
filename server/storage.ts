@@ -1,5 +1,7 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, users, nylasGrants } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -452,35 +454,23 @@ Business Development`,
   }
 
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email,
-    );
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { 
-      ...insertUser, 
-      id,
-      plan: null,
-      onboardingCompleted: false,
-      aiPreferences: null,
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    const updated = { ...user, ...updates };
-    this.users.set(id, updated);
-    return updated;
+    const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+    return user;
   }
 
   async getEmails(folder?: string): Promise<Email[]> {
@@ -574,30 +564,23 @@ Business Development`,
   }
 
   async getNylasGrant(userId: string): Promise<NylasGrant | undefined> {
-    return this.nylasGrants.get(userId);
+    const [grant] = await db.select().from(nylasGrants).where(eq(nylasGrants.userId, userId));
+    return grant;
   }
 
   async createNylasGrant(insertGrant: InsertNylasGrant): Promise<NylasGrant> {
-    const id = this.nylasGrantIdCounter++;
-    const grant: NylasGrant = {
-      ...insertGrant,
-      id,
-      createdAt: new Date(),
-    };
-    this.nylasGrants.set(insertGrant.userId, grant);
+    const [grant] = await db.insert(nylasGrants).values(insertGrant).returning();
     return grant;
   }
 
   async updateNylasGrant(userId: string, updates: Partial<NylasGrant>): Promise<NylasGrant | undefined> {
-    const grant = this.nylasGrants.get(userId);
-    if (!grant) return undefined;
-    const updated = { ...grant, ...updates };
-    this.nylasGrants.set(userId, updated);
-    return updated;
+    const [grant] = await db.update(nylasGrants).set(updates).where(eq(nylasGrants.userId, userId)).returning();
+    return grant;
   }
 
   async deleteNylasGrant(userId: string): Promise<boolean> {
-    return this.nylasGrants.delete(userId);
+    const result = await db.delete(nylasGrants).where(eq(nylasGrants.userId, userId)).returning();
+    return result.length > 0;
   }
 }
 
