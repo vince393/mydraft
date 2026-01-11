@@ -6,7 +6,6 @@ import * as nylas from "./nylas";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { aiPreferencesSchema } from "@shared/schema";
-import pLimit from "p-limit";
 
 const scryptAsync = promisify(scrypt);
 
@@ -94,74 +93,6 @@ function cleanupFormattedBodyCache() {
 
 function generateUnreadSignature(unreadEmailIds: number[]): string {
   return unreadEmailIds.sort((a, b) => a - b).join(",");
-}
-
-const formatLimit = pLimit(3); // Max 3 concurrent format requests
-const pendingFormats: Map<string, Promise<string>> = new Map();
-
-async function formatEmailBody(userId: string, emailId: string, body: string): Promise<string> {
-  const cacheKey = `${userId}-${emailId}`;
-  
-  // Check cache first
-  const cached = formattedBodyCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.body;
-  }
-  
-  // Check if already formatting this email
-  const pending = pendingFormats.get(cacheKey);
-  if (pending) {
-    return pending;
-  }
-  
-  // Create formatting promise with concurrency limit
-  const formatPromise = formatLimit(async () => {
-    try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are an email HTML cleanup assistant. Your ONLY job is to clean up messy HTML structure - you must NEVER change, rewrite, rephrase, summarize, or modify ANY words or content.
-
-STRICT RULES:
-- DO NOT change any words, sentences, or meaning - keep every word exactly as written
-- DO NOT remove or summarize email signatures, disclaimers, or quoted replies - keep them all
-- DO NOT add any new text or commentary
-
-Your only allowed changes:
-- Remove broken HTML tags, inline styles, and messy formatting artifacts
-- Structure content with clean <p> tags for paragraphs
-- Keep <b>, <strong>, <i>, <em>, and <a href="..."> tags
-- Remove tracking pixels and invisible elements
-- Remove empty tags and excessive whitespace
-- Convert messy nested tables/divs to clean paragraph structure
-
-Output the exact same text content, just with cleaner HTML structure.`
-          },
-          {
-            role: "user",
-            content: `Clean up this email HTML:\n\n${body}`
-          }
-        ],
-        max_tokens: 2000,
-        temperature: 0.1,
-      });
-      
-      const formattedBody = completion.choices[0]?.message?.content || body;
-      formattedBodyCache.set(cacheKey, { body: formattedBody, timestamp: Date.now() });
-      cleanupFormattedBodyCache();
-      return formattedBody;
-    } catch (error) {
-      console.error("Error formatting email:", error);
-      return body; // Return original on error
-    } finally {
-      pendingFormats.delete(cacheKey);
-    }
-  });
-  
-  pendingFormats.set(cacheKey, formatPromise);
-  return formatPromise;
 }
 
 export async function registerRoutes(
@@ -695,64 +626,53 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Email body is required" });
       }
 
-      const formattedBody = await formatEmailBody(req.session.userId!, id, body);
+      const cacheKey = `${req.session.userId}-${id}`;
+      cleanupFormattedBodyCache();
+      const cached = formattedBodyCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        return res.json({ formattedBody: cached.body });
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an email formatting assistant. Your job is to clean up and reformat email content to make it easier to read while preserving important formatting.
+
+Rules:
+- Remove excessive whitespace, broken formatting, and messy HTML artifacts
+- Clean up the structure with proper paragraphs using <p> tags
+- PRESERVE these HTML tags: <b>, <strong>, <i>, <em>, <a href="...">
+- Keep bold text wrapped in <strong> or <b> tags
+- Keep italic text wrapped in <em> or <i> tags  
+- Keep links as clickable <a href="url">text</a> tags
+- Use <br> for line breaks within paragraphs
+- Format lists using <ul>/<ol> and <li> tags
+- Remove email signatures, legal disclaimers, and repeated quoted text from previous emails
+- Remove tracking pixels, image placeholders, and broken links
+- Keep important links but remove tracking parameters from URLs
+- Remove any other HTML tags not mentioned above (tables, divs, spans, etc.)
+
+Output clean, well-formatted HTML that preserves bold, italic, and link formatting.`
+          },
+          {
+            role: "user",
+            content: `Please clean up and format this email content:\n\n${body}`
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.3,
+      });
+
+      const formattedBody = completion.choices[0]?.message?.content || body;
+      
+      formattedBodyCache.set(cacheKey, { body: formattedBody, timestamp: Date.now() });
+      
       res.json({ formattedBody });
     } catch (error) {
       console.error("Error formatting email:", error);
       res.status(500).json({ error: "Failed to format email" });
-    }
-  });
-
-  // Batch format multiple emails in the background
-  app.post("/api/emails/format-batch", requireAuth, async (req, res) => {
-    try {
-      const { emails } = req.body;
-
-      if (!emails || !Array.isArray(emails)) {
-        return res.status(400).json({ error: "Emails array is required" });
-      }
-
-      // Start formatting in background (don't await)
-      const userId = req.session.userId!;
-      emails.slice(0, 20).forEach((email: { id: string; body: string }) => {
-        if (email.id && email.body) {
-          formatEmailBody(userId, email.id, email.body).catch(console.error);
-        }
-      });
-
-      res.json({ started: true, count: Math.min(emails.length, 20) });
-    } catch (error) {
-      console.error("Error starting batch format:", error);
-      res.status(500).json({ error: "Failed to start batch format" });
-    }
-  });
-
-  // Get cached formatted bodies for multiple emails
-  app.post("/api/emails/format-status", requireAuth, async (req, res) => {
-    try {
-      const { emailIds } = req.body;
-
-      if (!emailIds || !Array.isArray(emailIds)) {
-        return res.status(400).json({ error: "Email IDs array is required" });
-      }
-
-      const userId = req.session.userId!;
-      const results: Record<string, string | null> = {};
-
-      for (const id of emailIds) {
-        const cacheKey = `${userId}-${id}`;
-        const cached = formattedBodyCache.get(cacheKey);
-        if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-          results[id] = cached.body;
-        } else {
-          results[id] = null;
-        }
-      }
-
-      res.json({ formatted: results });
-    } catch (error) {
-      console.error("Error checking format status:", error);
-      res.status(500).json({ error: "Failed to check format status" });
     }
   });
 
