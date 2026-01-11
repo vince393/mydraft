@@ -340,23 +340,11 @@ function PricingFAQ() {
 
 function Footer() {
   return (
-    <footer className="py-12 px-6 border-t border-white/[0.04]">
+    <footer className="py-8 px-6 border-t border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-              <Mail className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-semibold">MailFlow</span>
-          </Link>
-          <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground/70">
-            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-            <Link href="/security" className="hover:text-foreground transition-colors">Security</Link>
-            <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
-          </div>
-          <p className="text-xs text-muted-foreground/50">
-            © 2024 MailFlow. All rights reserved.
+        <div className="flex items-center justify-center">
+          <p className="text-sm text-muted-foreground/50">
+            © 2024 MailFlow
           </p>
         </div>
       </div>

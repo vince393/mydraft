@@ -238,21 +238,12 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 function Footer() {
   return (
-    <footer className="py-12 px-6 border-t border-border/30">
+    <footer className="py-8 px-6 border-t border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <Mail className="w-3 h-3 text-primary-foreground" />
-            </div>
-            <span className="text-sm font-medium">MailFlow</span>
-          </div>
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-            <Link href="/product" className="hover:text-foreground transition-colors">Product</Link>
-            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-            <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
-          </div>
+        <div className="flex items-center justify-center">
+          <p className="text-sm text-muted-foreground/50">
+            © 2024 MailFlow
+          </p>
         </div>
       </div>
     </footer>
