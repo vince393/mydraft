@@ -28,7 +28,7 @@ export default function LoginPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       if (!data.user.plan) {
-        setLocation("/pricing");
+        setLocation("/select-plan");
       } else if (!data.user.onboardingCompleted) {
         setLocation("/onboarding");
       } else if (!data.user.emailConnected) {
@@ -53,7 +53,7 @@ export default function LoginPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      setLocation("/pricing");
+      setLocation("/select-plan");
     },
     onError: (error: Error) => {
       toast({

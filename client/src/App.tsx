@@ -10,6 +10,9 @@ import Inbox from "@/pages/inbox";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
 import LandingPage from "@/pages/landing";
+import PublicPricingPage from "@/pages/public-pricing";
+import ProductPage from "@/pages/product";
+import SecurityPage from "@/pages/security";
 import PricingPage from "@/pages/pricing";
 import OnboardingPage from "@/pages/onboarding";
 import ConnectEmailPage from "@/pages/connect-email";
@@ -73,8 +76,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   const user = authData.user;
 
-  if (!user.plan && location !== "/pricing") {
-    return <Redirect to="/pricing" />;
+  if (!user.plan && location !== "/select-plan") {
+    return <Redirect to="/select-plan" />;
   }
 
   if (user.plan && !user.onboardingCompleted && location !== "/onboarding") {
@@ -104,7 +107,7 @@ function PublicRoute({ children, redirectIfAuthenticated = true }: { children: R
 
   if (redirectIfAuthenticated && authData?.user) {
     if (!authData.user.plan) {
-      return <Redirect to="/pricing" />;
+      return <Redirect to="/select-plan" />;
     }
     if (!authData.user.onboardingCompleted) {
       return <Redirect to="/onboarding" />;
@@ -127,6 +130,15 @@ function AppRoutes() {
         </PublicRoute>
       </Route>
       <Route path="/pricing">
+        <PublicPricingPage />
+      </Route>
+      <Route path="/product">
+        <ProductPage />
+      </Route>
+      <Route path="/security">
+        <SecurityPage />
+      </Route>
+      <Route path="/select-plan">
         <ProtectedRoute>
           <PricingPage />
         </ProtectedRoute>
