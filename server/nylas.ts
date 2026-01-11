@@ -147,18 +147,20 @@ export async function exchangeCodeForGrant(code: string, redirectUri: string): P
 export async function getMessages(grantId: string, folder?: string): Promise<EmailListItem[]> {
   let path = `/v3/grants/${grantId}/messages?limit=50`;
   
+  // Gmail uses uppercase labels
   if (folder === 'trash') {
-    path += '&in=trash';
+    path += '&in=TRASH';
   } else if (folder === 'sent') {
-    path += '&in=sent';
+    path += '&in=SENT';
   } else if (folder === 'drafts') {
-    path += '&in=drafts';
+    path += '&in=DRAFT';
   } else if (folder === 'archived') {
-    path += '&in=archive';
+    // Gmail doesn't have archive label - messages without INBOX label are considered archived
+    // Just fetch all messages without INBOX filter for now
   } else if (folder === 'junk') {
-    path += '&in=spam';
+    path += '&in=SPAM';
   } else {
-    path += '&in=inbox';
+    path += '&in=INBOX';
   }
 
   const response = await nylasRequest(path);
