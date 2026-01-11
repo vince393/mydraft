@@ -176,7 +176,11 @@ export default function Inbox({ activeFolder }: InboxProps) {
                 <User className="w-4 h-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2" data-testid="menu-settings">
+              <DropdownMenuItem 
+                className="gap-2" 
+                data-testid="menu-settings"
+                onClick={() => setLocation("/settings")}
+              >
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>
               </DropdownMenuItem>

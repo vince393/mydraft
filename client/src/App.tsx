@@ -12,6 +12,7 @@ import LoginPage from "@/pages/login";
 import PricingPage from "@/pages/pricing";
 import OnboardingPage from "@/pages/onboarding";
 import ConnectEmailPage from "@/pages/connect-email";
+import SettingsPage from "@/pages/settings";
 import type { Email, User } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 
@@ -137,6 +138,11 @@ function AppRoutes() {
       <Route path="/connect-email">
         <ProtectedRoute>
           <ConnectEmailPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/settings">
+        <ProtectedRoute>
+          <SettingsPage />
         </ProtectedRoute>
       </Route>
       <Route path="/">
