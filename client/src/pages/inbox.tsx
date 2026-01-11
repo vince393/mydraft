@@ -4,7 +4,6 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
 import { AIDraftDialog } from "@/components/ai-draft-dialog";
-import { ConnectionBanner } from "@/components/connection-banner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -32,10 +31,6 @@ export default function Inbox({ activeFolder }: InboxProps) {
   const [selectedEmail, setSelectedEmail] = useState<EmailWithNylasId | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
-
-  const { data: nylasStatus } = useQuery<{ connected: boolean }>({
-    queryKey: ["/api/nylas/status"],
-  });
 
   const { data: emails = [], isLoading: isLoadingEmails } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", activeFolder],
@@ -182,9 +177,6 @@ export default function Inbox({ activeFolder }: InboxProps) {
           </DropdownMenu>
         </header>
         <div className="flex-1 overflow-auto">
-          {!nylasStatus?.connected && !selectedEmail && (
-            <ConnectionBanner />
-          )}
           <EmailDetail 
             email={selectedEmail} 
             generatedDraft={generatedDraft} 
