@@ -118,7 +118,7 @@ export default function OnboardingPage() {
               >
                 {[
                   { value: "personal", label: "Personal email", icon: Mail, desc: "Friends, family, subscriptions" },
-                  { value: "professional", label: "Work email", icon: Zap, desc: "Clients, colleagues, projects" },
+                  { value: "work", label: "Work email", icon: Zap, desc: "Clients, colleagues, projects" },
                   { value: "both", label: "Both", icon: MessageSquare, desc: "Mix of personal and work" },
                 ].map((option) => (
                   <div key={option.value} className="flex items-center space-x-3">
@@ -144,10 +144,10 @@ export default function OnboardingPage() {
             {step === "ai-features" && (
               <div className="space-y-3">
                 {[
-                  { value: "reply-drafts", label: "AI Reply Drafts", desc: "Generate smart reply suggestions" },
-                  { value: "tone-matching", label: "Tone Matching", desc: "Match your writing style" },
-                  { value: "scheduling", label: "Smart Scheduling", desc: "Schedule emails for optimal times" },
-                  { value: "summarization", label: "Email Summaries", desc: "Get quick email summaries" },
+                  { value: "auto-draft", label: "AI Reply Drafts", desc: "Generate smart reply suggestions" },
+                  { value: "suggest-replies", label: "Tone Matching", desc: "Match your writing style" },
+                  { value: "auto-label", label: "Smart Labeling", desc: "Automatically organize emails" },
+                  { value: "summarize", label: "Email Summaries", desc: "Get quick email summaries" },
                 ].map((feature) => (
                   <button
                     key={feature.value}
@@ -174,9 +174,9 @@ export default function OnboardingPage() {
                 className="space-y-3"
               >
                 {[
-                  { value: "minimal", label: "Minimal", desc: "I'll write most replies myself" },
-                  { value: "balanced", label: "Balanced", desc: "Suggest drafts but let me review" },
-                  { value: "maximum", label: "Maximum", desc: "Automate as much as possible" },
+                  { value: "low", label: "Minimal", desc: "I'll write most replies myself" },
+                  { value: "medium", label: "Balanced", desc: "Suggest drafts but let me review" },
+                  { value: "high", label: "Maximum", desc: "Automate as much as possible" },
                 ].map((option) => (
                   <div key={option.value} className="flex items-center space-x-3">
                     <RadioGroupItem 
