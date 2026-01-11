@@ -138,7 +138,7 @@ export default function LoginPage() {
             
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <div className="relative">
+              <div className="relative flex items-center">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -149,20 +149,18 @@ export default function LoginPage() {
                   className="pr-10"
                   data-testid={isRegister ? "input-register-password" : "input-login-password"}
                 />
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
                   data-testid="button-toggle-password-visibility"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    <EyeOff className="h-4 w-4" />
                   ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Eye className="h-4 w-4" />
                   )}
-                </Button>
+                </button>
               </div>
               {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
             </div>
@@ -170,7 +168,7 @@ export default function LoginPage() {
             {isRegister && (
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <div className="relative">
+                <div className="relative flex items-center">
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
@@ -181,20 +179,18 @@ export default function LoginPage() {
                     className="pr-10"
                     data-testid="input-register-confirm-password"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     data-testid="button-toggle-confirm-password-visibility"
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
+                      <Eye className="h-4 w-4" />
                     )}
-                  </Button>
+                  </button>
                 </div>
                 {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
               </div>
