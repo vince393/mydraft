@@ -343,9 +343,17 @@ export async function registerRoutes(
 
   app.get("/api/nylas/callback", async (req, res) => {
     try {
-      const { code, state } = req.query;
+      console.log("OAuth callback received:", JSON.stringify(req.query));
+      
+      const { code, state, error, error_description } = req.query;
+      
+      if (error) {
+        console.error("OAuth error from provider:", error, error_description);
+        return res.redirect(`/connect-email?error=${encodeURIComponent(String(error_description || error))}`);
+      }
       
       if (!code || typeof code !== 'string') {
+        console.error("Missing authorization code. Query params:", req.query);
         return res.status(400).send("Missing authorization code");
       }
 
