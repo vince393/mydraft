@@ -52,7 +52,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
     },
     onSuccess: () => {
       queryClient.clear();
-      setLocation("/login");
+      setLocation("/");
     },
   });
 
