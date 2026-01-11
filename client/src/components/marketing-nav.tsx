@@ -29,20 +29,19 @@ export function MarketingNav() {
 
   const navLinks = [
     { href: "/", label: "Home" },
-    { href: "/product", label: "Product" },
     { href: "/pricing", label: "Pricing" },
     { href: "/security", label: "Security" },
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur-xl">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06] bg-background/80 backdrop-blur-2xl">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+        <div className="flex items-center gap-10">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
               <Mail className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold">MailFlow</span>
+            <span className="text-lg font-semibold tracking-tight">MailFlow</span>
           </Link>
           
           <div className="hidden md:flex items-center gap-1">
@@ -51,7 +50,7 @@ export function MarketingNav() {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  className={location === link.href ? "text-foreground" : "text-muted-foreground"}
+                  className={`px-4 transition-colors ${location === link.href ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                   data-testid={`nav-${link.label.toLowerCase()}`}
                 >
                   {link.label}
@@ -65,12 +64,12 @@ export function MarketingNav() {
           {isLoggedIn ? (
             <>
               <Link href="/inbox">
-                <Button variant="ghost" size="sm" data-testid="nav-inbox">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="nav-inbox">
                   Go to inbox
                 </Button>
               </Link>
               <Link href="/settings">
-                <Button variant="ghost" size="sm" data-testid="nav-settings">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="nav-settings">
                   Settings
                 </Button>
               </Link>
@@ -78,12 +77,12 @@ export function MarketingNav() {
           ) : (
             <>
               <Link href="/login">
-                <Button variant="ghost" size="sm" data-testid="nav-signin">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="nav-signin">
                   Sign in
                 </Button>
               </Link>
               <Link href={getStartedHref()}>
-                <Button size="sm" data-testid="nav-getstarted">
+                <Button size="sm" className="bg-primary hover:bg-primary/90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30" data-testid="nav-getstarted">
                   Get started
                 </Button>
               </Link>
@@ -94,7 +93,7 @@ export function MarketingNav() {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="md:hidden"
+          className="md:hidden text-muted-foreground"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           data-testid="nav-mobile-toggle"
         >
@@ -103,29 +102,29 @@ export function MarketingNav() {
       </div>
 
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border/40 bg-background/95 backdrop-blur-xl">
-          <div className="px-6 py-4 space-y-2">
+        <div className="md:hidden border-t border-white/[0.06] bg-background/95 backdrop-blur-2xl">
+          <div className="px-6 py-4 space-y-1">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href}>
                 <Button 
                   variant="ghost" 
-                  className="w-full justify-start"
+                  className={`w-full justify-start ${location === link.href ? "text-foreground" : "text-muted-foreground"}`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.label}
                 </Button>
               </Link>
             ))}
-            <div className="pt-2 border-t border-border/40 space-y-2">
+            <div className="pt-3 mt-3 border-t border-white/[0.06] space-y-1">
               {isLoggedIn ? (
                 <>
                   <Link href="/inbox">
-                    <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-inbox">
+                    <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-inbox">
                       Go to inbox
                     </Button>
                   </Link>
                   <Link href="/settings">
-                    <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-settings">
+                    <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-settings">
                       Settings
                     </Button>
                   </Link>
@@ -133,12 +132,12 @@ export function MarketingNav() {
               ) : (
                 <>
                   <Link href="/login">
-                    <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-signin">
+                    <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-signin">
                       Sign in
                     </Button>
                   </Link>
                   <Link href={getStartedHref()}>
-                    <Button className="w-full" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-getstarted">
+                    <Button className="w-full mt-2 shadow-md shadow-primary/25" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-getstarted">
                       Get started
                     </Button>
                   </Link>
