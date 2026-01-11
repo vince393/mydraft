@@ -7,13 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Mail, Loader2 } from "lucide-react";
+import { Mail, Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{email?: string; password?: string; confirmPassword?: string}>({});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -99,6 +101,8 @@ export default function LoginPage() {
     setEmail("");
     setPassword("");
     setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setErrors({});
   };
 
@@ -134,30 +138,64 @@ export default function LoginPage() {
             
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={isRegister ? "Create a password" : "Enter your password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={isRegister ? "new-password" : "current-password"}
-                data-testid={isRegister ? "input-register-password" : "input-login-password"}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={isRegister ? "Create a password" : "Enter your password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={isRegister ? "new-password" : "current-password"}
+                  className="pr-10"
+                  data-testid={isRegister ? "input-register-password" : "input-login-password"}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                  data-testid="button-toggle-password-visibility"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
               {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
             </div>
             
             {isRegister && (
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                  data-testid="input-register-confirm-password"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    className="pr-10"
+                    data-testid="input-register-confirm-password"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    data-testid="button-toggle-confirm-password-visibility"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
                 {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
               </div>
             )}
