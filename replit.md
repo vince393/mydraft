@@ -59,6 +59,17 @@ shared/           # Shared types and schemas
 
 ## External Dependencies
 
+### Nylas Email Integration
+- **Provider**: Nylas v3 API (US region, Sandbox)
+- **Authentication**: OAuth 2.0 flow for Google and Microsoft accounts
+- **API Key**: Requires `NYLAS_API_KEY` environment variable
+- **Features**: 
+  - Real email inbox access via OAuth
+  - Send/receive emails through connected accounts
+  - Message actions: read, star, archive, delete
+- **Files**: `server/nylas.ts` (API helper), OAuth routes in `server/routes.ts`
+- **Frontend**: `client/src/components/connection-banner.tsx` for account connection UI
+
 ### AI Services
 - **OpenAI API**: Accessed via Replit AI Integrations environment variables (`AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL`)
 - Used for generating email reply drafts and image generation
@@ -66,6 +77,7 @@ shared/           # Shared types and schemas
 ### Database
 - **PostgreSQL**: Primary database configured via `DATABASE_URL` environment variable
 - Migrations managed via Drizzle Kit (`drizzle-kit push`)
+- **Tables**: users, emails, drafts, nylas_grants
 
 ### Key NPM Dependencies
 - `@tanstack/react-query`: Server state management

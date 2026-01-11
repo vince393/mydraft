@@ -8,16 +8,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Email } from "@shared/schema";
 
+interface EmailWithNylasId extends Email {
+  nylasId?: string;
+}
+
+function getEmailId(email: EmailWithNylasId): string | number {
+  return email.nylasId || email.id;
+}
+
 interface EmailListProps {
-  emails: Email[];
+  emails: EmailWithNylasId[];
   selectedEmailId: number | null;
-  onSelectEmail: (email: Email) => void;
+  onSelectEmail: (email: EmailWithNylasId) => void;
   onAiReply: () => void;
   onTrashEmail: () => void;
   onArchiveEmail: () => void;
-  onTrashMultipleEmails: (emailIds: number[]) => void;
-  onArchiveMultipleEmails: (emailIds: number[]) => void;
-  onToggleStar: (emailId: number) => void;
+  onTrashMultipleEmails: (emailIds: (string | number)[]) => void;
+  onArchiveMultipleEmails: (emailIds: (string | number)[]) => void;
+  onToggleStar: (emailId: string | number) => void;
   isAiLoading?: boolean;
   isMoving?: boolean;
   isLoading?: boolean;
@@ -79,13 +87,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     },
     staleTime: Infinity,
   });
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef(false);
   const dragStarted = useRef(false);
 
-  const handleLongPressStart = useCallback((emailId: number) => {
+  const handleLongPressStart = useCallback((emailId: string | number) => {
     longPressTriggered.current = false;
     dragStarted.current = false;
     longPressTimer.current = setTimeout(() => {
@@ -106,7 +114,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     dragStarted.current = false;
   }, []);
 
-  const handleMouseEnterWhileDragging = useCallback((emailId: number) => {
+  const handleMouseEnterWhileDragging = useCallback((emailId: string | number) => {
     if (isDragging && isSelectionMode) {
       setSelectedIds(prev => {
         const newSet = new Set(prev);
@@ -116,19 +124,20 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     }
   }, [isDragging, isSelectionMode]);
 
-  const handleEmailClick = useCallback((email: Email) => {
+  const handleEmailClick = useCallback((email: EmailWithNylasId) => {
     if (longPressTriggered.current) {
       longPressTriggered.current = false;
       return;
     }
     
+    const id = getEmailId(email);
     if (isSelectionMode) {
       setSelectedIds(prev => {
         const newSet = new Set(prev);
-        if (newSet.has(email.id)) {
-          newSet.delete(email.id);
+        if (newSet.has(id)) {
+          newSet.delete(id);
         } else {
-          newSet.add(email.id);
+          newSet.add(id);
         }
         if (newSet.size === 0) {
           setIsSelectionMode(false);
@@ -150,7 +159,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       setSelectedIds(new Set());
       setIsSelectionMode(false);
     } else {
-      setSelectedIds(new Set(emails.map(e => e.id)));
+      setSelectedIds(new Set(emails.map(e => getEmailId(e))));
     }
   }, [selectedIds.size, emails]);
 
@@ -220,8 +229,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="space-y-0.5 p-3">
         {emails.map((email) => {
+          const emailId = getEmailId(email);
           const isSelected = email.id === selectedEmailId;
-          const isChecked = selectedIds.has(email.id);
+          const isChecked = selectedIds.has(emailId);
           const initials = email.sender
             .split(" ")
             .map((n) => n[0])
@@ -231,12 +241,12 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
 
           return (
             <div
-              key={email.id}
+              key={emailId}
               onClick={() => handleEmailClick(email)}
-              onMouseDown={() => handleLongPressStart(email.id)}
+              onMouseDown={() => handleLongPressStart(emailId)}
               onMouseUp={handleLongPressEnd}
-              onMouseEnter={() => handleMouseEnterWhileDragging(email.id)}
-              onTouchStart={() => handleLongPressStart(email.id)}
+              onMouseEnter={() => handleMouseEnterWhileDragging(emailId)}
+              onTouchStart={() => handleLongPressStart(emailId)}
               onTouchEnd={handleLongPressEnd}
               className={`
                 group relative py-4 pl-4 pr-2 rounded-xl cursor-pointer
@@ -248,7 +258,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                     : "hover:bg-muted/50"
                 }
               `}
-              data-testid={`email-item-${email.id}`}
+              data-testid={`email-item-${emailId}`}
             >
               <div className="flex items-start gap-3">
                 <div className="relative flex-shrink-0">
@@ -289,9 +299,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                       `}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onToggleStar(email.id);
+                        onToggleStar(emailId);
                       }}
-                      data-testid={`star-email-${email.id}`}
+                      data-testid={`star-email-${emailId}`}
                     >
                       <Star className={`w-4 h-4 ${email.isStarred ? "fill-current" : ""}`} />
                     </button>

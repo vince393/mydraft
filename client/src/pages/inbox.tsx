@@ -4,6 +4,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
 import { AIDraftDialog } from "@/components/ai-draft-dialog";
+import { ConnectionBanner } from "@/components/connection-banner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -15,16 +16,28 @@ import {
 import { Settings, LogOut, User } from "lucide-react";
 import type { Email, Draft } from "@shared/schema";
 
+interface EmailWithNylasId extends Email {
+  nylasId?: string;
+}
+
 interface InboxProps {
   activeFolder: string;
 }
 
+function getEmailId(email: EmailWithNylasId): string | number {
+  return email.nylasId || email.id;
+}
+
 export default function Inbox({ activeFolder }: InboxProps) {
-  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState<EmailWithNylasId | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
 
-  const { data: emails = [], isLoading: isLoadingEmails } = useQuery<Email[]>({
+  const { data: nylasStatus } = useQuery<{ connected: boolean }>({
+    queryKey: ["/api/nylas/status"],
+  });
+
+  const { data: emails = [], isLoading: isLoadingEmails } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", activeFolder],
     queryFn: async () => {
       const response = await fetch(`/api/emails?folder=${activeFolder}`);
@@ -39,7 +52,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
   }, [activeFolder]);
 
   const markAsReadMutation = useMutation({
-    mutationFn: async (emailId: number) => {
+    mutationFn: async (emailId: string | number) => {
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/read`, {});
       return response.json();
     },
@@ -51,7 +64,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
 
 
   const toggleStarMutation = useMutation({
-    mutationFn: async (emailId: number) => {
+    mutationFn: async (emailId: string | number) => {
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/star`, {});
       return response.json();
     },
@@ -61,7 +74,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
   });
 
   const moveEmailMutation = useMutation({
-    mutationFn: async ({ emailId, folder }: { emailId: number; folder: string }) => {
+    mutationFn: async ({ emailId, folder }: { emailId: string | number; folder: string }) => {
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
       return response.json();
     },
@@ -73,11 +86,11 @@ export default function Inbox({ activeFolder }: InboxProps) {
     },
   });
 
-  const handleSelectEmail = (email: Email) => {
+  const handleSelectEmail = (email: EmailWithNylasId) => {
     setSelectedEmail(email);
     setGeneratedDraft(null);
     if (!email.isRead) {
-      markAsReadMutation.mutate(email.id);
+      markAsReadMutation.mutate(getEmailId(email));
     }
   };
 
@@ -94,23 +107,23 @@ export default function Inbox({ activeFolder }: InboxProps) {
 
   const handleTrashEmail = () => {
     if (selectedEmail) {
-      moveEmailMutation.mutate({ emailId: selectedEmail.id, folder: "trash" });
+      moveEmailMutation.mutate({ emailId: getEmailId(selectedEmail), folder: "trash" });
     }
   };
 
   const handleArchiveEmail = () => {
     if (selectedEmail) {
-      moveEmailMutation.mutate({ emailId: selectedEmail.id, folder: "archived" });
+      moveEmailMutation.mutate({ emailId: getEmailId(selectedEmail), folder: "archived" });
     }
   };
 
-  const handleTrashMultipleEmails = async (emailIds: number[]) => {
+  const handleTrashMultipleEmails = async (emailIds: (string | number)[]) => {
     for (const id of emailIds) {
       await moveEmailMutation.mutateAsync({ emailId: id, folder: "trash" });
     }
   };
 
-  const handleArchiveMultipleEmails = async (emailIds: number[]) => {
+  const handleArchiveMultipleEmails = async (emailIds: (string | number)[]) => {
     for (const id of emailIds) {
       await moveEmailMutation.mutateAsync({ emailId: id, folder: "archived" });
     }
@@ -169,6 +182,9 @@ export default function Inbox({ activeFolder }: InboxProps) {
           </DropdownMenu>
         </header>
         <div className="flex-1 overflow-auto">
+          {!nylasStatus?.connected && !selectedEmail && (
+            <ConnectionBanner />
+          )}
           <EmailDetail 
             email={selectedEmail} 
             generatedDraft={generatedDraft} 

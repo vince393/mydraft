@@ -17,6 +17,23 @@ function getRedirectUri(req: any): string {
   return `${protocol}://${host}/api/nylas/callback`;
 }
 
+const pendingOAuthStates: Map<string, { userId: string; provider: string; expiresAt: number }> = new Map();
+
+function generateStateToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function cleanupExpiredStates(): void {
+  const now = Date.now();
+  for (const [token, data] of pendingOAuthStates.entries()) {
+    if (data.expiresAt < now) {
+      pendingOAuthStates.delete(token);
+    }
+  }
+}
+
 interface ResponseTimeCache {
   signature: string;
   estimatedMinutes: number;
@@ -42,9 +59,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid provider. Use 'google' or 'microsoft'" });
       }
 
+      cleanupExpiredStates();
+      
+      const stateToken = generateStateToken();
+      const expiresAt = Date.now() + 10 * 60 * 1000;
+      pendingOAuthStates.set(stateToken, { userId: MOCK_USER_ID, provider, expiresAt });
+      
       const redirectUri = getRedirectUri(req);
-      const state = Buffer.from(JSON.stringify({ provider, userId: MOCK_USER_ID })).toString('base64');
-      const authUrl = await nylas.getAuthUrl(provider, redirectUri, state);
+      const authUrl = await nylas.getAuthUrl(provider, redirectUri, stateToken);
       
       res.json({ url: authUrl });
     } catch (error) {
@@ -61,28 +83,42 @@ export async function registerRoutes(
         return res.status(400).send("Missing authorization code");
       }
 
-      let stateData = { userId: MOCK_USER_ID, provider: 'unknown' };
-      if (state && typeof state === 'string') {
-        try {
-          stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-        } catch (e) {}
+      if (!state || typeof state !== 'string') {
+        console.error("Missing state token in OAuth callback");
+        return res.redirect('/?error=invalid_state');
       }
+
+      const storedState = pendingOAuthStates.get(state);
+      if (!storedState) {
+        console.error("Unknown or expired state token");
+        return res.redirect('/?error=invalid_state');
+      }
+
+      if (storedState.expiresAt < Date.now()) {
+        pendingOAuthStates.delete(state);
+        console.error("State token expired");
+        return res.redirect('/?error=session_expired');
+      }
+
+      pendingOAuthStates.delete(state);
+      
+      const { userId, provider } = storedState;
 
       const redirectUri = getRedirectUri(req);
       const grant = await nylas.exchangeCodeForGrant(code, redirectUri);
 
-      const existingGrant = await storage.getNylasGrant(stateData.userId);
+      const existingGrant = await storage.getNylasGrant(userId);
       if (existingGrant) {
-        await storage.updateNylasGrant(stateData.userId, {
+        await storage.updateNylasGrant(userId, {
           grantId: grant.id,
-          provider: grant.provider,
+          provider: grant.provider || provider,
           email: grant.email,
         });
       } else {
         await storage.createNylasGrant({
-          userId: stateData.userId,
+          userId: userId,
           grantId: grant.id,
-          provider: grant.provider,
+          provider: grant.provider || provider,
           email: grant.email,
         });
       }
