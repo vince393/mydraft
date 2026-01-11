@@ -1,7 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { MarketingNav } from "@/components/marketing-nav";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -21,7 +20,11 @@ import {
   ChevronUp,
   Tag,
   Inbox,
-  Send
+  Send,
+  Archive,
+  MoreHorizontal,
+  Reply,
+  Forward
 } from "lucide-react";
 
 interface AuthResponse {
@@ -45,7 +48,6 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <MarketingNav />
-
       <HeroSection getStartedHref={getStartedHref()} />
       <DemoSection />
       <BenefitsSection />
@@ -60,70 +62,113 @@ export default function LandingPage() {
 
 function HeroSection({ getStartedHref }: { getStartedHref: string }) {
   return (
-    <section className="pt-32 pb-20 px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <Badge variant="secondary" className="mb-6">
+    <section className="pt-32 pb-24 px-6 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-transparent to-transparent pointer-events-none" />
+      <div className="absolute top-32 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/[0.08] rounded-full blur-[120px] pointer-events-none" />
+      
+      <div className="max-w-6xl mx-auto relative">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
+              <Sparkles className="w-3.5 h-3.5" />
               AI-Powered Email for Professionals
-            </Badge>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-6 leading-tight">
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.1] mb-6">
               Reply faster.
               <br />
-              <span className="text-primary">Stress less.</span>
+              <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
+                Stress less.
+              </span>
             </h1>
-            <p className="text-lg text-muted-foreground mb-8 max-w-lg">
+            <p className="text-lg text-muted-foreground leading-relaxed mb-10">
               MailFlow uses AI to draft replies in your voice, summarize long threads, 
               and organize your inbox automatically. Save 2+ hours every day.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href={getStartedHref}>
-                <Button size="lg" className="gap-2 w-full sm:w-auto" data-testid="hero-getstarted">
+                <Button size="lg" className="gap-2 w-full sm:w-auto h-12 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" data-testid="hero-getstarted">
                   Start free
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto" data-testid="hero-signin">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto h-12 px-8 text-base border-white/10 hover:bg-white/[0.03]" data-testid="hero-signin">
                   Sign in
                 </Button>
               </Link>
             </div>
-            <p className="text-sm text-muted-foreground mt-4">
+            <p className="text-sm text-muted-foreground/70 mt-5">
               Free forever. No credit card required.
             </p>
           </div>
           
-          <div className="relative">
-            <div className="rounded-xl border border-border/50 bg-card/50 overflow-hidden shadow-2xl">
-              <div className="bg-muted/30 px-4 py-3 border-b border-border/50 flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500/70" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
-                <div className="w-3 h-3 rounded-full bg-green-500/70" />
-                <span className="text-xs text-muted-foreground ml-2">MailFlow</span>
+          <div className="relative lg:ml-8">
+            <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent rounded-2xl blur-2xl opacity-60" />
+            <div className="relative rounded-2xl border border-white/[0.08] bg-card/40 backdrop-blur-sm overflow-hidden shadow-2xl shadow-black/40">
+              <div className="bg-white/[0.02] px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-white/10" />
+                  <div className="w-3 h-3 rounded-full bg-white/10" />
+                  <div className="w-3 h-3 rounded-full bg-white/10" />
+                </div>
+                <span className="text-xs text-muted-foreground/60">MailFlow</span>
+                <div className="w-16" />
               </div>
-              <div className="p-4 space-y-3">
-                <MockEmailItem 
-                  from="Sarah Chen" 
-                  subject="Q4 Report Review"
-                  preview="Could you review the attached report..."
-                  time="2m"
-                  unread
-                />
-                <MockEmailItem 
-                  from="James Wilson" 
-                  subject="Meeting Tomorrow"
-                  preview="Just confirming our 2pm call..."
-                  time="15m"
-                />
-                <div className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-primary">AI Draft Ready</span>
+              
+              <div className="flex">
+                <div className="w-12 border-r border-white/[0.04] py-3 flex flex-col items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <Inbox className="w-3.5 h-3.5 text-primary" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    "Hi Sarah, I've reviewed the Q4 report and it looks great. I have a few minor suggestions..."
-                  </p>
+                  <div className="w-7 h-7 rounded-lg hover:bg-white/[0.03] flex items-center justify-center text-muted-foreground/50">
+                    <Send className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="w-7 h-7 rounded-lg hover:bg-white/[0.03] flex items-center justify-center text-muted-foreground/50">
+                    <Archive className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+                
+                <div className="flex-1 p-4 space-y-2">
+                  <MockEmailItem 
+                    from="Sarah Chen" 
+                    subject="Q4 Report Review"
+                    preview="Could you review the attached report and..."
+                    time="2m"
+                    unread
+                    selected
+                  />
+                  <MockEmailItem 
+                    from="James Wilson" 
+                    subject="Meeting Tomorrow"
+                    preview="Just confirming our 2pm call regarding..."
+                    time="15m"
+                  />
+                  <MockEmailItem 
+                    from="HR Team" 
+                    subject="Benefits Enrollment"
+                    preview="Open enrollment period starts next..."
+                    time="1h"
+                  />
+                  
+                  <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-6 h-6 rounded-lg bg-primary/30 flex items-center justify-center">
+                        <Sparkles className="w-3 h-3 text-primary" />
+                      </div>
+                      <span className="text-sm font-medium text-primary">AI Draft Ready</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      "Hi Sarah, I've reviewed the Q4 report and it looks great. I have a few minor suggestions for the executive summary..."
+                    </p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button size="sm" className="h-7 text-xs px-3">
+                        Send
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs px-3 text-muted-foreground">
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -134,31 +179,32 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
   );
 }
 
-function MockEmailItem({ from, subject, preview, time, unread = false }: { 
+function MockEmailItem({ from, subject, preview, time, unread = false, selected = false }: { 
   from: string; 
   subject: string; 
   preview: string; 
   time: string;
   unread?: boolean;
+  selected?: boolean;
 }) {
   return (
-    <div className={`p-3 rounded-lg border ${unread ? 'bg-muted/20 border-border/50' : 'border-transparent'}`}>
+    <div className={`p-3 rounded-xl transition-colors ${selected ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-white/[0.02]'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${selected ? 'bg-primary/30 text-primary ring-2 ring-primary/20' : 'bg-white/[0.06] text-muted-foreground'}`}>
             {from.charAt(0)}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className={`text-sm ${unread ? 'font-semibold' : ''}`}>{from}</span>
-              {unread && <div className="w-2 h-2 rounded-full bg-primary" />}
+              <span className={`text-sm ${unread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>{from}</span>
+              {unread && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
             </div>
-            <p className={`text-sm truncate ${unread ? 'text-foreground' : 'text-muted-foreground'}`}>{subject}</p>
+            <p className={`text-sm truncate ${unread ? 'text-foreground/90' : 'text-muted-foreground/70'}`}>{subject}</p>
           </div>
         </div>
-        <span className="text-xs text-muted-foreground flex-shrink-0">{time}</span>
+        <span className="text-[11px] text-muted-foreground/50 flex-shrink-0">{time}</span>
       </div>
-      <p className="text-xs text-muted-foreground mt-1 pl-11 truncate">{preview}</p>
+      <p className="text-xs text-muted-foreground/50 mt-1.5 pl-11 truncate">{preview}</p>
     </div>
   );
 }
@@ -167,18 +213,18 @@ function DemoSection() {
   const [activeDemo, setActiveDemo] = useState<'summary' | 'draft' | 'label'>('summary');
 
   return (
-    <section className="py-20 px-6 border-t border-border/30">
+    <section className="py-24 px-6 border-t border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
             See it in action
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Experience how MailFlow transforms your email workflow
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 items-start">
+        <div className="grid lg:grid-cols-2 gap-10 items-start">
           <div className="space-y-3">
             <DemoToggle 
               active={activeDemo === 'summary'}
@@ -206,16 +252,10 @@ function DemoSection() {
             />
           </div>
 
-          <div className="rounded-xl border border-border/50 bg-card/30 overflow-hidden">
-            {activeDemo === 'summary' && (
-              <DemoSummary />
-            )}
-            {activeDemo === 'draft' && (
-              <DemoDraft />
-            )}
-            {activeDemo === 'label' && (
-              <DemoLabels />
-            )}
+          <div className="rounded-2xl border border-white/[0.08] bg-card/30 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/20">
+            {activeDemo === 'summary' && <DemoSummary />}
+            {activeDemo === 'draft' && <DemoDraft />}
+            {activeDemo === 'label' && <DemoLabels />}
           </div>
         </div>
       </div>
@@ -235,19 +275,19 @@ function DemoToggle({ active, onClick, icon, title, description, testId }: {
     <button
       onClick={onClick}
       data-testid={testId}
-      className={`w-full text-left p-4 rounded-lg border transition-all ${
+      className={`w-full text-left p-5 rounded-xl border transition-all duration-200 ${
         active 
-          ? 'bg-primary/10 border-primary/30' 
-          : 'border-border/50 hover:border-border'
+          ? 'bg-primary/10 border-primary/30 shadow-lg shadow-primary/5' 
+          : 'border-white/[0.06] hover:border-white/[0.1] hover:bg-white/[0.02]'
       }`}
     >
-      <div className="flex items-start gap-3">
-        <div className={`p-2 rounded-lg ${active ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+      <div className="flex items-start gap-4">
+        <div className={`p-2.5 rounded-xl transition-colors ${active ? 'bg-primary/20 text-primary' : 'bg-white/[0.04] text-muted-foreground'}`}>
           {icon}
         </div>
         <div>
-          <h3 className={`font-medium ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{title}</h3>
-          <p className="text-sm text-muted-foreground mt-1">{description}</p>
+          <h3 className={`font-medium text-base ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{title}</h3>
+          <p className="text-sm text-muted-foreground/70 mt-1 leading-relaxed">{description}</p>
         </div>
       </div>
     </button>
@@ -257,27 +297,29 @@ function DemoToggle({ active, onClick, icon, title, description, testId }: {
 function DemoSummary() {
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <h4 className="font-medium mb-1">Re: Q4 Marketing Budget Review</h4>
-        <p className="text-sm text-muted-foreground">15 messages in thread</p>
+      <div className="mb-5 pb-5 border-b border-white/[0.06]">
+        <h4 className="font-medium text-base mb-1">Re: Q4 Marketing Budget Review</h4>
+        <p className="text-sm text-muted-foreground/60">15 messages in thread</p>
       </div>
-      <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-        <div className="flex items-center gap-2 mb-3">
-          <Brain className="w-4 h-4 text-primary" />
+      <div className="p-5 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-7 h-7 rounded-lg bg-primary/30 flex items-center justify-center">
+            <Brain className="w-3.5 h-3.5 text-primary" />
+          </div>
           <span className="text-sm font-medium text-primary">Thread Summary</span>
         </div>
-        <ul className="text-sm space-y-2 text-muted-foreground">
-          <li className="flex items-start gap-2">
+        <ul className="text-sm space-y-3 text-muted-foreground">
+          <li className="flex items-start gap-3">
             <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-            Marketing team requests 15% budget increase for Q4 campaigns
+            <span>Marketing team requests 15% budget increase for Q4 campaigns</span>
           </li>
-          <li className="flex items-start gap-2">
+          <li className="flex items-start gap-3">
             <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-            Finance approved 10% with condition on ROI metrics
+            <span>Finance approved 10% with condition on ROI metrics</span>
           </li>
-          <li className="flex items-start gap-2">
+          <li className="flex items-start gap-3">
             <Clock className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-            Awaiting your approval on the revised proposal
+            <span>Awaiting your approval on the revised proposal</span>
           </li>
         </ul>
       </div>
@@ -296,18 +338,18 @@ function DemoDraft() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-sm text-muted-foreground">Tone:</span>
+      <div className="flex items-center gap-3 mb-5">
+        <span className="text-sm text-muted-foreground/60">Tone:</span>
         <div className="flex gap-2">
           {(['professional', 'friendly', 'concise'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTone(t)}
               data-testid={`demo-tone-${t}`}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                 tone === t 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25' 
+                  : 'bg-white/[0.04] text-muted-foreground hover:bg-white/[0.06]'
               }`}
             >
               {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -315,16 +357,18 @@ function DemoDraft() {
           ))}
         </div>
       </div>
-      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-4 h-4 text-primary" />
+      <div className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+          </div>
           <span className="text-sm font-medium">AI Draft</span>
         </div>
-        <p className="text-sm whitespace-pre-line text-muted-foreground">
+        <p className="text-sm whitespace-pre-line text-muted-foreground leading-relaxed">
           {drafts[tone]}
         </p>
       </div>
-      <p className="text-xs text-muted-foreground mt-3">
+      <p className="text-xs text-muted-foreground/50 mt-4">
         Edit freely before sending. Your voice, perfected.
       </p>
     </div>
@@ -337,27 +381,27 @@ function DemoLabels() {
       <MockLabeledEmail 
         from="HR Team" 
         subject="Benefits Enrollment Reminder"
-        labels={[{ name: "Action Required", color: "bg-red-500/20 text-red-400" }]}
+        labels={[{ name: "Action Required", color: "bg-red-500/20 text-red-400 border-red-500/20" }]}
       />
       <MockLabeledEmail 
         from="Newsletter" 
         subject="Weekly Tech Digest"
-        labels={[{ name: "Newsletter", color: "bg-blue-500/20 text-blue-400" }]}
+        labels={[{ name: "Newsletter", color: "bg-blue-500/20 text-blue-400 border-blue-500/20" }]}
       />
       <MockLabeledEmail 
         from="Sarah Chen" 
         subject="Q4 Report Review"
         labels={[
-          { name: "Work", color: "bg-purple-500/20 text-purple-400" },
-          { name: "Needs Reply", color: "bg-yellow-500/20 text-yellow-400" }
+          { name: "Work", color: "bg-purple-500/20 text-purple-400 border-purple-500/20" },
+          { name: "Needs Reply", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/20" }
         ]}
       />
       <MockLabeledEmail 
         from="Amazon" 
         subject="Your order has shipped"
-        labels={[{ name: "Receipts", color: "bg-green-500/20 text-green-400" }]}
+        labels={[{ name: "Receipts", color: "bg-green-500/20 text-green-400 border-green-500/20" }]}
       />
-      <p className="text-xs text-muted-foreground pt-2">
+      <p className="text-xs text-muted-foreground/50 pt-3">
         Labels are applied automatically as emails arrive
       </p>
     </div>
@@ -370,20 +414,20 @@ function MockLabeledEmail({ from, subject, labels }: {
   labels: { name: string; color: string }[];
 }) {
   return (
-    <div className="p-3 rounded-lg border border-border/50 bg-card/30">
+    <div className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.02] transition-colors">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+          <div className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium text-muted-foreground">
             {from.charAt(0)}
           </div>
           <div className="min-w-0">
             <span className="text-sm font-medium">{from}</span>
-            <p className="text-sm text-muted-foreground truncate">{subject}</p>
+            <p className="text-sm text-muted-foreground/70 truncate">{subject}</p>
           </div>
         </div>
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex gap-1.5 flex-shrink-0">
           {labels.map((label, i) => (
-            <span key={i} className={`px-2 py-0.5 rounded text-xs font-medium ${label.color}`}>
+            <span key={i} className={`px-2.5 py-1 rounded-md text-[11px] font-medium border ${label.color}`}>
               {label.name}
             </span>
           ))}
@@ -428,25 +472,25 @@ function BenefitsSection() {
   ];
 
   return (
-    <section className="py-20 px-6 border-t border-border/30">
+    <section className="py-24 px-6 border-t border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
             Why professionals choose MailFlow
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Built for people who get hundreds of emails a day
           </p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {benefits.map((benefit, i) => (
-            <Card key={i} className="bg-card/30 border-border/50">
-              <CardContent className="pt-6">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4 text-primary">
+            <Card key={i} className="bg-white/[0.02] border-white/[0.06] hover:border-white/[0.1] transition-colors">
+              <CardContent className="p-6">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-5 text-primary">
                   {benefit.icon}
                 </div>
-                <h3 className="font-medium mb-2">{benefit.title}</h3>
-                <p className="text-sm text-muted-foreground">{benefit.description}</p>
+                <h3 className="font-medium text-base mb-2">{benefit.title}</h3>
+                <p className="text-sm text-muted-foreground/70 leading-relaxed">{benefit.description}</p>
               </CardContent>
             </Card>
           ))}
@@ -459,73 +503,73 @@ function BenefitsSection() {
 function TestimonialsSection() {
   const testimonials = [
     {
-      quote: "I used to spend 3 hours on email every morning. Now it's under an hour. MailFlow's AI drafts are surprisingly good - I usually just tweak a word or two.",
+      quote: "I used to spend 3 hours on email every morning. Now it's under an hour. MailFlow's AI drafts are surprisingly good.",
       name: "Rachel Torres",
-      role: "VP of Sales, SaaS Company",
-      metric: "Saves 2+ hours/day"
+      role: "VP of Sales",
+      metric: "2+ hrs saved/day"
     },
     {
-      quote: "The thread summaries alone are worth it. I can jump into any conversation and know exactly what's happening without reading 50 messages.",
+      quote: "The thread summaries alone are worth it. I can jump into any conversation and know exactly what's happening.",
       name: "David Park",
       role: "Product Manager",
       metric: null
     },
     {
-      quote: "Finally, an email tool that doesn't try to do too much. It's fast, clean, and the AI actually helps instead of getting in the way.",
+      quote: "Finally, an email tool that doesn't try to do too much. It's fast, clean, and the AI actually helps.",
       name: "Maria Santos",
       role: "Founder & CEO",
       metric: null
     },
     {
-      quote: "I was skeptical about AI writing my emails, but the tone customization is great. My replies still sound like me, just faster.",
+      quote: "I was skeptical about AI writing my emails, but the tone customization is great. My replies still sound like me.",
       name: "James Chen",
       role: "Account Executive",
-      metric: "40% faster responses"
+      metric: "40% faster"
     },
     {
-      quote: "The auto-labeling saved my sanity. No more digging through newsletters to find client emails. Everything's organized the moment it arrives.",
+      quote: "The auto-labeling saved my sanity. No more digging through newsletters to find client emails.",
       name: "Emma Williams",
-      role: "Customer Success Lead",
+      role: "Customer Success",
       metric: null
     },
     {
-      quote: "We rolled this out to our exec team and they're hooked. Clean interface, smart features, and it just works with our existing Google Workspace.",
+      quote: "We rolled this out to our exec team and they're hooked. Clean interface, smart features, just works.",
       name: "Michael Brown",
       role: "IT Director",
-      metric: "Team of 12 users"
+      metric: "Team of 12"
     }
   ];
 
   return (
-    <section className="py-20 px-6 border-t border-border/30">
+    <section className="py-24 px-6 border-t border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
             Trusted by busy professionals
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Join thousands who've reclaimed their inbox
           </p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {testimonials.map((t, i) => (
-            <Card key={i} className="bg-card/30 border-border/50">
-              <CardContent className="pt-6">
-                <div className="flex gap-1 mb-4">
+            <Card key={i} className="bg-white/[0.02] border-white/[0.06]">
+              <CardContent className="p-6">
+                <div className="flex gap-0.5 mb-4">
                   {[...Array(5)].map((_, j) => (
                     <Star key={j} className="w-4 h-4 fill-primary text-primary" />
                   ))}
                 </div>
-                <p className="text-sm text-muted-foreground mb-4">"{t.quote}"</p>
-                <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground leading-relaxed mb-5">"{t.quote}"</p>
+                <div className="flex items-center justify-between pt-4 border-t border-white/[0.04]">
                   <div>
                     <p className="text-sm font-medium">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.role}</p>
+                    <p className="text-xs text-muted-foreground/60">{t.role}</p>
                   </div>
                   {t.metric && (
-                    <Badge variant="secondary" className="text-xs">
+                    <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium">
                       {t.metric}
-                    </Badge>
+                    </span>
                   )}
                 </div>
               </CardContent>
@@ -539,22 +583,22 @@ function TestimonialsSection() {
 
 function SecuritySection() {
   return (
-    <section className="py-20 px-6 border-t border-border/30">
-      <div className="max-w-4xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+    <section className="py-24 px-6 border-t border-white/[0.04]">
+      <div className="max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-16 items-center">
           <div>
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
-              <Shield className="w-6 h-6 text-primary" />
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-8">
+              <Shield className="w-7 h-7 text-primary" />
             </div>
-            <h2 className="text-3xl font-semibold mb-4">
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-5">
               Your privacy, protected
             </h2>
-            <p className="text-muted-foreground mb-6">
-              We built MailFlow with security-first principles. Your emails are yours - 
+            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+              We built MailFlow with security-first principles. Your emails are yours — 
               we're just here to help you manage them better.
             </p>
             <Link href="/security">
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2 border-white/10 hover:bg-white/[0.03]">
                 Learn more about security
                 <ArrowRight className="w-4 h-4" />
               </Button>
@@ -590,13 +634,13 @@ function SecuritySection() {
 
 function SecurityItem({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="flex items-start gap-4 p-4 rounded-lg border border-border/50 bg-card/30">
-      <div className="p-2 rounded-lg bg-green-500/10 text-green-500">
+    <div className="flex items-start gap-4 p-5 rounded-xl border border-white/[0.06] bg-white/[0.01]">
+      <div className="p-2.5 rounded-xl bg-green-500/10 text-green-500">
         {icon}
       </div>
       <div>
         <h4 className="font-medium mb-1">{title}</h4>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="text-sm text-muted-foreground/70">{description}</p>
       </div>
     </div>
   );
@@ -610,67 +654,57 @@ function FAQSection() {
     },
     {
       q: "Can I edit AI-generated replies?",
-      a: "Absolutely. AI drafts are suggestions, not final versions. You have full control to edit, rewrite, or discard any suggestion before sending."
+      a: "Absolutely! AI drafts are just a starting point. Edit them however you like before sending, or regenerate with a different tone."
     },
     {
-      q: "Does it work with Gmail and Outlook?",
-      a: "Yes. MailFlow works with Gmail, Google Workspace, Microsoft 365, and Outlook. We're adding support for more providers soon."
+      q: "Which email providers do you support?",
+      a: "MailFlow works with Gmail, Google Workspace, Outlook, and Microsoft 365. We use secure OAuth authentication for all providers."
+    },
+    {
+      q: "Is there a free plan?",
+      a: "Yes! Our free plan includes 1 email account and 10 AI replies per day. It's free forever with no credit card required."
     },
     {
       q: "Can I cancel anytime?",
-      a: "Yes. No contracts, no cancellation fees. You can downgrade to our free plan or delete your account at any time."
+      a: "Yes, you can cancel your subscription at any time. No contracts, no cancellation fees. Your account will remain active until the end of your billing period."
     },
     {
-      q: "How does auto-labeling work?",
-      a: "Our AI analyzes email content and metadata to categorize messages into labels like 'Needs Reply', 'Newsletter', 'Receipts', etc. You can customize labels and rules."
-    },
-    {
-      q: "Is my data safe?",
-      a: "We use OAuth for authentication (we never see your password), encrypt all data in transit and at rest, and follow industry security best practices."
-    },
-    {
-      q: "How accurate are the AI drafts?",
-      a: "Very. Our AI learns from context and your writing style over time. Most users find they only need minor tweaks before sending."
-    },
-    {
-      q: "Can I use it for multiple email accounts?",
-      a: "Free users can connect 1 account. Pro supports 3 accounts, and Business offers unlimited accounts."
+      q: "What makes MailFlow different from other email apps?",
+      a: "MailFlow is designed specifically for busy professionals who receive hundreds of emails daily. Our AI understands context and tone, helping you reply faster while maintaining your voice."
     }
   ];
 
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="py-20 px-6 border-t border-border/30" id="faq">
+    <section className="py-24 px-6 border-t border-white/[0.04]">
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
             Frequently asked questions
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-lg">
             Everything you need to know about MailFlow
           </p>
         </div>
         <div className="space-y-3">
           {faqs.map((faq, i) => (
-            <div key={i} className="border border-border/50 rounded-lg overflow-hidden">
+            <div key={i} className="border border-white/[0.06] rounded-xl overflow-hidden">
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
                 data-testid={`faq-toggle-${i}`}
-                className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/30 transition-colors"
+                className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] transition-colors"
               >
                 <span className="font-medium pr-4">{faq.q}</span>
-                {openIndex === i ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                )}
-              </button>
-              {openIndex === i && (
-                <div className="px-4 pb-4">
-                  <p className="text-sm text-muted-foreground">{faq.a}</p>
+                <div className={`p-1.5 rounded-lg bg-white/[0.04] transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`}>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </div>
-              )}
+              </button>
+              <div className={`overflow-hidden transition-all duration-200 ${openIndex === i ? 'max-h-40' : 'max-h-0'}`}>
+                <div className="px-5 pb-5">
+                  <p className="text-sm text-muted-foreground/70 leading-relaxed">{faq.a}</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -681,27 +715,24 @@ function FAQSection() {
 
 function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
   return (
-    <section className="py-20 px-6 border-t border-border/30">
-      <div className="max-w-3xl mx-auto text-center">
-        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-8">
-          <Mail className="w-8 h-8 text-primary" />
-        </div>
-        <h2 className="text-3xl md:text-4xl font-semibold mb-4">
-          Ready to transform your inbox?
+    <section className="py-24 px-6 border-t border-white/[0.04] relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.05] via-transparent to-transparent pointer-events-none" />
+      <div className="max-w-2xl mx-auto text-center relative">
+        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-5">
+          Ready to reclaim your inbox?
         </h2>
-        <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-          Join thousands of professionals who've reclaimed hours of their day. 
-          Start free, upgrade when you're ready.
+        <p className="text-lg text-muted-foreground mb-10">
+          Start free today. No credit card required.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href={getStartedHref}>
-            <Button size="lg" className="gap-2 w-full sm:w-auto" data-testid="cta-getstarted">
-              Start free
+            <Button size="lg" className="gap-2 h-12 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" data-testid="cta-getstarted">
+              Get started free
               <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
           <Link href="/pricing">
-            <Button variant="outline" size="lg" className="w-full sm:w-auto" data-testid="cta-pricing">
+            <Button variant="outline" size="lg" className="h-12 px-8 text-base border-white/10 hover:bg-white/[0.03]" data-testid="cta-pricing">
               View pricing
             </Button>
           </Link>
@@ -713,23 +744,23 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
 
 function Footer() {
   return (
-    <footer className="py-12 px-6 border-t border-border/30">
+    <footer className="py-12 px-6 border-t border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <Mail className="w-3 h-3 text-primary-foreground" />
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+              <Mail className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="text-sm font-medium">MailFlow</span>
-          </div>
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-            <Link href="/product" className="hover:text-foreground transition-colors">Product</Link>
+            <span className="font-semibold">MailFlow</span>
+          </Link>
+          <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground/70">
+            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
             <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <Link href="/security" className="hover:text-foreground transition-colors">Security</Link>
             <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Your inbox, reimagined with AI.
+          <p className="text-xs text-muted-foreground/50">
+            © 2024 MailFlow. All rights reserved.
           </p>
         </div>
       </div>
