@@ -119,8 +119,13 @@ export default function LoginPage() {
                         <Input 
                           type="email"
                           placeholder="Enter your email" 
+                          autoComplete="email"
                           data-testid="input-register-email"
-                          {...field} 
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormMessage />
@@ -137,8 +142,13 @@ export default function LoginPage() {
                         <Input 
                           type="password" 
                           placeholder="Create a password"
+                          autoComplete="new-password"
                           data-testid="input-register-password"
-                          {...field} 
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormMessage />
@@ -155,8 +165,13 @@ export default function LoginPage() {
                         <Input 
                           type="password" 
                           placeholder="Confirm your password"
+                          autoComplete="new-password"
                           data-testid="input-register-confirm-password"
-                          {...field} 
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormMessage />
@@ -187,8 +202,13 @@ export default function LoginPage() {
                         <Input 
                           type="email"
                           placeholder="Enter your email"
+                          autoComplete="email"
                           data-testid="input-login-email"
-                          {...field} 
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormMessage />
@@ -205,8 +225,13 @@ export default function LoginPage() {
                         <Input 
                           type="password" 
                           placeholder="Enter your password"
+                          autoComplete="current-password"
                           data-testid="input-login-password"
-                          {...field} 
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormMessage />
