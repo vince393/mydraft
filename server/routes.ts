@@ -654,7 +654,8 @@ Rules:
 - Keep important links but remove tracking parameters from URLs
 - Remove any other HTML tags not mentioned above (tables, divs, spans, etc.)
 
-Output clean, well-formatted HTML that preserves bold, italic, and link formatting.`
+Output clean, well-formatted HTML that preserves bold, italic, and link formatting.
+IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code blocks like \`\`\`html. Do NOT include any markdown formatting.`
           },
           {
             role: "user",
@@ -665,7 +666,10 @@ Output clean, well-formatted HTML that preserves bold, italic, and link formatti
         temperature: 0.3,
       });
 
-      const formattedBody = completion.choices[0]?.message?.content || body;
+      let formattedBody = completion.choices[0]?.message?.content || body;
+      
+      // Strip markdown code block markers if present
+      formattedBody = formattedBody.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
       
       formattedBodyCache.set(cacheKey, { body: formattedBody, timestamp: Date.now() });
       
