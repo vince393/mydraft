@@ -36,6 +36,8 @@ interface EmailDetailProps {
   onClearDraft?: () => void;
   onDraftUpdate?: (draft: Draft) => void;
   isLoading?: boolean;
+  cachedFormattedBody?: string;
+  onFormattedBody?: (emailId: string, body: string) => void;
 }
 
 function EmailDetailEmpty() {
@@ -54,7 +56,7 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading }: EmailDetailProps) {
+export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading, cachedFormattedBody, onFormattedBody }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
@@ -62,6 +64,9 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
   const [showFormatted, setShowFormatted] = useState(true);
   const [formattedBody, setFormattedBody] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Use cached formatted body if available
+  const displayFormattedBody = cachedFormattedBody || formattedBody;
 
   const showDraft = !!generatedDraft;
 
@@ -85,6 +90,10 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
       const currentEmailId = email ? ((email as any).nylasId || email.id) : null;
       if (data.emailId === currentEmailId) {
         setFormattedBody(data.formattedBody);
+        // Cache the formatted body in parent for instant access later
+        if (onFormattedBody && data.formattedBody) {
+          onFormattedBody(String(data.emailId), data.formattedBody);
+        }
       }
     },
     onError: () => {
@@ -98,11 +107,12 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
   });
 
   useEffect(() => {
-    if (email && showFormatted && !formattedBody && !formatMutation.isPending) {
+    // Skip formatting if we already have cached content
+    if (email && showFormatted && !displayFormattedBody && !formatMutation.isPending) {
       const emailId = (email as any).nylasId || email.id;
       formatMutation.mutate({ emailId, body: email.body });
     }
-  }, [email?.id, showFormatted, formattedBody]);
+  }, [email?.id, showFormatted, displayFormattedBody]);
 
   const scheduleMutation = useMutation({
     mutationFn: async ({ draftId, scheduledAt }: { draftId: number; scheduledAt: Date }) => {
@@ -289,15 +299,15 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
             data-testid="email-body"
           >
             {showFormatted ? (
-              formatMutation.isPending ? (
+              formatMutation.isPending && !displayFormattedBody ? (
                 <div className="flex items-center gap-2 text-muted-foreground py-4">
                   <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   <span className="text-sm">Formatting with AI...</span>
                 </div>
-              ) : formattedBody ? (
+              ) : displayFormattedBody ? (
                 <div 
                   className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline"
-                  dangerouslySetInnerHTML={{ __html: formattedBody }} 
+                  dangerouslySetInnerHTML={{ __html: displayFormattedBody }} 
                 />
               ) : null
             ) : (

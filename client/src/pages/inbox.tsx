@@ -65,6 +65,13 @@ export default function Inbox({ activeFolder }: InboxProps) {
     },
   });
 
+  const [formattedBodies, setFormattedBodies] = useState<Record<string, string>>({});
+
+  // Store formatted body when email detail component formats one
+  const handleFormattedBody = (emailId: string, body: string) => {
+    setFormattedBodies(prev => ({ ...prev, [emailId]: body }));
+  };
+
   useEffect(() => {
     setSelectedEmailId(null);
     setGeneratedDraft(null);
@@ -216,6 +223,8 @@ export default function Inbox({ activeFolder }: InboxProps) {
             onClearDraft={() => setGeneratedDraft(null)}
             onDraftUpdate={(draft) => setGeneratedDraft(draft)}
             isLoading={isLoadingEmail}
+            cachedFormattedBody={selectedEmail ? formattedBodies[String((selectedEmail as any).nylasId || selectedEmail.id)] : undefined}
+            onFormattedBody={handleFormattedBody}
           />
         </div>
       </div>
