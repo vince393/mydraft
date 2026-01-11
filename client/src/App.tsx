@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import Inbox from "@/pages/inbox";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
+import LandingPage from "@/pages/landing";
 import PricingPage from "@/pages/pricing";
 import OnboardingPage from "@/pages/onboarding";
 import ConnectEmailPage from "@/pages/connect-email";
@@ -87,7 +88,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
+function PublicRoute({ children, redirectIfAuthenticated = true }: { children: React.ReactNode; redirectIfAuthenticated?: boolean }) {
   const { data: authData, isLoading } = useQuery<AuthResponse>({
     queryKey: ["/api/auth/me"],
     retry: false,
@@ -101,7 +102,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (authData?.user) {
+  if (redirectIfAuthenticated && authData?.user) {
     if (!authData.user.plan) {
       return <Redirect to="/pricing" />;
     }
@@ -111,7 +112,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     if (!authData.user.emailConnected) {
       return <Redirect to="/connect-email" />;
     }
-    return <Redirect to="/" />;
+    return <Redirect to="/inbox" />;
   }
 
   return <>{children}</>;
@@ -145,10 +146,15 @@ function AppRoutes() {
           <SettingsPage />
         </ProtectedRoute>
       </Route>
-      <Route path="/">
+      <Route path="/inbox">
         <ProtectedRoute>
           <AuthenticatedApp />
         </ProtectedRoute>
+      </Route>
+      <Route path="/">
+        <PublicRoute redirectIfAuthenticated={true}>
+          <LandingPage />
+        </PublicRoute>
       </Route>
       <Route component={NotFound} />
     </Switch>

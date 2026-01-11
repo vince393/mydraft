@@ -34,7 +34,7 @@ export default function ConnectEmailPage() {
   };
 
   const handleContinue = () => {
-    setLocation("/");
+    setLocation("/inbox");
   };
 
   if (statusLoading) {

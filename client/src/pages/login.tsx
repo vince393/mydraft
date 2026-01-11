@@ -31,8 +31,10 @@ export default function LoginPage() {
         setLocation("/pricing");
       } else if (!data.user.onboardingCompleted) {
         setLocation("/onboarding");
+      } else if (!data.user.emailConnected) {
+        setLocation("/connect-email");
       } else {
-        setLocation("/");
+        setLocation("/inbox");
       }
     },
     onError: (error: Error) => {
