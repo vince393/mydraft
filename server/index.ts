@@ -1,5 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -28,8 +30,18 @@ if (!sessionSecret) {
   throw new Error("SESSION_SECRET environment variable is required");
 }
 
+const PgStore = connectPgSimple(session);
+const pgPool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
 app.use(
   session({
+    store: new PgStore({
+      pool: pgPool,
+      tableName: "user_sessions",
+      createTableIfMissing: true,
+    }),
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
