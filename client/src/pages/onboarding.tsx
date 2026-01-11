@@ -65,6 +65,8 @@ export default function OnboardingPage() {
     const prevIndex = currentStepIndex - 1;
     if (prevIndex >= 0) {
       setStep(steps[prevIndex]);
+    } else {
+      setLocation("/pricing");
     }
   };
 
@@ -236,7 +238,6 @@ export default function OnboardingPage() {
           <Button
             variant="ghost"
             onClick={goBack}
-            disabled={currentStepIndex === 0}
             data-testid="button-onboarding-back"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
