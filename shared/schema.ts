@@ -20,6 +20,8 @@ export const users = pgTable("users", {
   plan: text("plan"),
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   aiPreferences: jsonb("ai_preferences").$type<AiPreferences>(),
+  emailSignature: text("email_signature"),
+  signatureEnabled: boolean("signature_enabled").default(false).notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
