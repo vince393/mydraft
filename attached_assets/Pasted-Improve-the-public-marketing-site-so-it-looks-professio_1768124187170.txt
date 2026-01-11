@@ -1,0 +1,64 @@
+Improve the public marketing site so it looks professional and conversion-focused.
+
+Context:
+Right now the start page is /login and the landing UI isn’t convincing. I want a real SaaS marketing site with navigation, demos, testimonials, and a separate pricing page. Keep the existing dark/modern theme consistent with the product UI.
+
+Goal:
+- Default route "/" becomes a professional landing page (not login).
+- Add top navigation with multiple pages/tabs (Home, Product, Pricing, Security, FAQ, Sign in).
+- Pricing must be its own page at "/pricing".
+- Landing page must include real-feeling demonstrations (interactive or animated mock sections) and social proof/testimonials.
+- Primary conversion actions: "Start free" (or "Get started") and "Sign in".
+- If user is logged in, clicking Get started should route them to the next gated step (pricing/onboarding/connect-email/inbox) using existing guard logic.
+
+Use proven structure and UX principles:
+- Above the fold: instantly communicate what the product is and what users can do (clear value proposition + 1 primary CTA + 1 secondary CTA). (NN/g homepage principle)
+- Add credibility cues: clean design quality, clear disclosure, comprehensive content, connection to the rest of the web. (NN/g credibility factors)
+- Add social proof near CTAs and friction points (testimonials/logos). (NN/g social proof)
+- Follow a proven landing structure: hero -> problem/promise -> product demo -> benefits -> social proof -> pricing teaser -> FAQ -> final CTA. (CXL/Unbounce structure)
+
+Pages to implement:
+1) "/" Landing
+   Sections:
+   - Hero with headline, subhead, primary CTA, secondary CTA, and a product screenshot (or polished mock) of the inbox with AI reply.
+   - “Live demo” style section: show 2–3 interactive toggles or mini-simulations:
+     (a) Click an email -> AI summary appears
+     (b) Click “Draft reply” -> AI drafts in chosen tone
+     (c) Toggle “Auto-label” -> labels appear on list
+     These can be fake data but should look real and match the app theme.
+   - Benefits grid (3–6 cards) focused on outcomes.
+   - Testimonials (3–6) with realistic names/roles (no fake company logos). Include one quantified claim-style testimonial (e.g., “saved me X minutes/day”) but keep it believable.
+   - “Security & privacy” teaser with bullets (OAuth, least access, no ads) and link to /security.
+   - FAQ (6–10) addressing concerns: “Do you read my emails?”, “Can I edit AI replies?”, “Works with Gmail/Outlook?”, “Cancel anytime?”, “How does sorting work?”
+   - Final CTA band.
+
+2) "/pricing"
+   - Dedicated pricing table with 3 tiers (Free / Pro / Business) with a “Most popular” highlight.
+   - Include feature comparison rows.
+   - Include monthly toggle (optional).
+   - Include FAQ under pricing.
+   - CTA buttons should route into signup/checkout flow you already have.
+
+3) "/product" (or "/features")
+   - Deeper feature page with 2–4 feature sections, each with a screenshot/mock and short text.
+
+4) "/security"
+   - Security & privacy page with clear language and trust cues.
+
+Nav behavior:
+- Show “Sign in” always.
+- Show “Get started” always.
+- If logged in, nav shows “Go to inbox” and “Settings” too.
+
+Implementation requirements:
+- Keep styling consistent with the current app (dark, modern, clean, minimal).
+- Use good spacing/typography and a professional layout (grid, max-width, consistent sections).
+- Make it responsive for mobile and desktop.
+- Do not break existing auth, payments, onboarding, and inbox.
+- Do not expose secrets.
+- Keep copy concise and not “marketing cringe”.
+
+Deliverable:
+- Create the new pages/routes and update routing so "/" is landing.
+- Improve the UI to look modern and credible (high-quality components, consistent spacing).
+- Use placeholder demo/testimonial content but make it realistic and not childish.
