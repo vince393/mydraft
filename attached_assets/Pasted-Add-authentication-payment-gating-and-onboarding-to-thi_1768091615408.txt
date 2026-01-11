@@ -1,0 +1,75 @@
+Add authentication, payment gating, and onboarding to this app.
+
+GOAL:
+Users should NOT land on the inbox immediately.
+First-time users must:
+1) Create an account / log in
+2) Choose a payment plan
+3) Complete onboarding (AI preferences interview)
+4) Connect their email (Gmail / Outlook)
+5) THEN access the inbox
+
+Do NOT break the existing inbox or Nylas integration.
+
+AUTH:
+- Add basic authentication (email + password or OAuth if already present)
+- Persist user sessions
+- Redirect unauthenticated users to /login
+
+PAYMENT GATING:
+- Add a pricing page with 3 plans:
+  - Free (limited features)
+  - Pro
+  - Business
+- User must select a plan before accessing the inbox
+- Store selected plan on the user record
+- Block inbox routes if no plan is selected
+
+ONBOARDING FLOW (FIRST LOGIN ONLY):
+After signup + payment, show onboarding popups/screens (interview style):
+
+Ask these questions one-by-one:
+- What is your primary email use? (work / personal / both)
+- Do you want AI to:
+  - auto-draft replies
+  - suggest replies only
+  - summarize emails
+  - auto-label / sort emails
+- How aggressive should AI automation be? (low / medium / high)
+- Preferred tone for AI replies (professional / friendly / concise / custom)
+
+Store all answers on the user profile.
+
+EMAIL CONNECTION:
+- After onboarding, prompt the user to connect their email
+- Show buttons:
+  - Connect Gmail
+  - Connect Outlook
+- Use the existing Nylas OAuth flow
+- Do not allow inbox access until email is connected
+
+ROUTING RULES:
+- If NOT logged in → redirect to /login
+- If logged in but NO plan → redirect to /pricing
+- If plan selected but onboarding incomplete → redirect to /onboarding
+- If onboarding done but email not connected → redirect to /connect-email
+- Only allow /inbox when all steps are completed
+
+UI RULES:
+- Do not redesign the inbox
+- Add only necessary pages/modals:
+  /login
+  /pricing
+  /onboarding
+  /connect-email
+- Keep UI minimal and functional
+
+DATA:
+- Extend user model with:
+  - plan
+  - onboardingCompleted
+  - aiPreferences
+  - nylasGrantId
+
+Do not expose secrets.
+Keep implementation clean and working.

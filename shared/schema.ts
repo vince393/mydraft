@@ -1,16 +1,30 @@
-import { pgTable, text, varchar, timestamp, boolean, serial, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, serial, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 
+export const aiPreferencesSchema = z.object({
+  primaryUse: z.enum(["work", "personal", "both"]).optional(),
+  aiFeatures: z.array(z.enum(["auto-draft", "suggest-replies", "summarize", "auto-label"])).optional(),
+  automationLevel: z.enum(["low", "medium", "high"]).optional(),
+  replyTone: z.enum(["professional", "friendly", "concise", "custom"]).optional(),
+  customTone: z.string().optional(),
+});
+
+export type AiPreferences = z.infer<typeof aiPreferencesSchema>;
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  plan: text("plan"),
+  onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
+  aiPreferences: jsonb("ai_preferences").$type<AiPreferences>(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
+  email: true,
   password: true,
 });
 
