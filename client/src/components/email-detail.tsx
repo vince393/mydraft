@@ -295,13 +295,10 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
                   <span className="text-sm">Formatting with AI...</span>
                 </div>
               ) : formattedBody ? (
-                formattedBody.split("\n").map((paragraph, i) => (
-                  paragraph.trim() ? (
-                    <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
-                      {paragraph}
-                    </p>
-                  ) : <br key={i} />
-                ))
+                <div 
+                  className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline"
+                  dangerouslySetInnerHTML={{ __html: formattedBody }} 
+                />
               ) : null
             ) : (
               email.body.includes('<') ? (

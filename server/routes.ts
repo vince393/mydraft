@@ -638,20 +638,23 @@ export async function registerRoutes(
         messages: [
           {
             role: "system",
-            content: `You are an email formatting assistant. Your job is to clean up and reformat email content to make it easier to read. 
+            content: `You are an email formatting assistant. Your job is to clean up and reformat email content to make it easier to read while preserving important formatting.
 
 Rules:
 - Remove excessive whitespace, broken formatting, and messy HTML artifacts
-- Convert content to clean, well-structured plain text with proper paragraphs
-- Preserve the actual message content - don't change or summarize anything
-- Use clear paragraph breaks between sections
-- Format lists properly with bullet points or numbers
+- Clean up the structure with proper paragraphs using <p> tags
+- PRESERVE these HTML tags: <b>, <strong>, <i>, <em>, <a href="...">
+- Keep bold text wrapped in <strong> or <b> tags
+- Keep italic text wrapped in <em> or <i> tags  
+- Keep links as clickable <a href="url">text</a> tags
+- Use <br> for line breaks within paragraphs
+- Format lists using <ul>/<ol> and <li> tags
 - Remove email signatures, legal disclaimers, and repeated quoted text from previous emails
 - Remove tracking pixels, image placeholders, and broken links
-- Keep important links but remove tracking parameters
-- Output clean, readable text only - no HTML tags
+- Keep important links but remove tracking parameters from URLs
+- Remove any other HTML tags not mentioned above (tables, divs, spans, etc.)
 
-The goal is to show just the main message content in a clean, easy-to-read format.`
+Output clean, well-formatted HTML that preserves bold, italic, and link formatting.`
           },
           {
             role: "user",
