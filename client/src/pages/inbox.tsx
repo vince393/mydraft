@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
@@ -31,6 +32,17 @@ export default function Inbox({ activeFolder }: InboxProps) {
   const [selectedEmail, setSelectedEmail] = useState<EmailWithNylasId | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
+  const [, setLocation] = useLocation();
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout", {});
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      setLocation("/login");
+    },
+  });
 
   const { data: emails = [], isLoading: isLoadingEmails } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", activeFolder],
@@ -169,7 +181,11 @@ export default function Inbox({ activeFolder }: InboxProps) {
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2 text-destructive" data-testid="menu-logout">
+              <DropdownMenuItem 
+                className="gap-2 text-destructive" 
+                data-testid="menu-logout"
+                onClick={() => logoutMutation.mutate()}
+              >
                 <LogOut className="w-4 h-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
