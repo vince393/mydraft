@@ -1,15 +1,44 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 import * as nylas from "./nylas";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+import { aiPreferencesSchema } from "@shared/schema";
+
+const scryptAsync = promisify(scrypt);
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const MOCK_USER_ID = "demo-user";
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${salt}:${buf.toString("hex")}`;
+}
+
+async function verifyPassword(storedPassword: string, suppliedPassword: string): Promise<boolean> {
+  const [salt, hashedPassword] = storedPassword.split(":");
+  const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
+  const suppliedPasswordBuf = (await scryptAsync(suppliedPassword, salt, 64)) as Buffer;
+  return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
+}
+
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
+  }
+}
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+}
 
 function getRedirectUri(req: any): string {
   const protocol = req.headers['x-forwarded-proto'] || 'https';
@@ -52,7 +81,151 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  app.get("/api/nylas/auth-url", async (req, res) => {
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+
+      const hashedPassword = await hashPassword(password);
+      const user = await storage.createUser({ email, password: hashedPassword });
+      
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ error: "Session error" });
+        }
+        req.session.userId = user.id;
+        res.json({ 
+          user: { 
+            id: user.id, 
+            email: user.email, 
+            plan: user.plan,
+            onboardingCompleted: user.onboardingCompleted 
+          } 
+        });
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const isValid = await verifyPassword(user.password, password);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ error: "Session error" });
+        }
+        req.session.userId = user.id;
+        res.json({ 
+          user: { 
+            id: user.id, 
+            email: user.email, 
+            plan: user.plan,
+            onboardingCompleted: user.onboardingCompleted 
+          } 
+        });
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) {
+      return res.json({ user: null });
+    }
+
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      return res.json({ user: null });
+    }
+
+    const grant = await storage.getNylasGrant(user.id);
+    
+    res.json({ 
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        plan: user.plan,
+        onboardingCompleted: user.onboardingCompleted,
+        aiPreferences: user.aiPreferences,
+        emailConnected: !!grant
+      } 
+    });
+  });
+
+  app.post("/api/user/plan", requireAuth, async (req, res) => {
+    try {
+      const { plan } = req.body;
+      if (!plan || !["free", "pro", "business"].includes(plan)) {
+        return res.status(400).json({ error: "Invalid plan" });
+      }
+
+      const user = await storage.updateUser(req.session.userId!, { plan });
+      res.json({ user: { id: user!.id, email: user!.email, plan: user!.plan } });
+    } catch (error) {
+      console.error("Plan update error:", error);
+      res.status(500).json({ error: "Failed to update plan" });
+    }
+  });
+
+  app.post("/api/user/onboarding", requireAuth, async (req, res) => {
+    try {
+      const { aiPreferences } = req.body;
+      const parsed = aiPreferencesSchema.safeParse(aiPreferences);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid AI preferences" });
+      }
+
+      const user = await storage.updateUser(req.session.userId!, { 
+        aiPreferences: parsed.data,
+        onboardingCompleted: true 
+      });
+      res.json({ user: { id: user!.id, email: user!.email, onboardingCompleted: user!.onboardingCompleted } });
+    } catch (error) {
+      console.error("Onboarding error:", error);
+      res.status(500).json({ error: "Failed to save onboarding" });
+    }
+  });
+
+  app.get("/api/nylas/auth-url", requireAuth, async (req, res) => {
     try {
       const provider = req.query.provider as string;
       if (!provider || !['google', 'microsoft'].includes(provider)) {
@@ -63,7 +236,7 @@ export async function registerRoutes(
       
       const stateToken = generateStateToken();
       const expiresAt = Date.now() + 10 * 60 * 1000;
-      pendingOAuthStates.set(stateToken, { userId: MOCK_USER_ID, provider, expiresAt });
+      pendingOAuthStates.set(stateToken, { userId: req.session.userId!, provider, expiresAt });
       
       const redirectUri = getRedirectUri(req);
       const authUrl = await nylas.getAuthUrl(provider, redirectUri, stateToken);
@@ -130,9 +303,9 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/nylas/status", async (req, res) => {
+  app.get("/api/nylas/status", requireAuth, async (req, res) => {
     try {
-      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant) {
         res.json({ connected: true, email: grant.email, provider: grant.provider });
       } else {
@@ -144,9 +317,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/nylas/disconnect", async (req, res) => {
+  app.post("/api/nylas/disconnect", requireAuth, async (req, res) => {
     try {
-      await storage.deleteNylasGrant(MOCK_USER_ID);
+      await storage.deleteNylasGrant(req.session.userId!);
       res.json({ success: true });
     } catch (error) {
       console.error("Error disconnecting:", error);
@@ -154,11 +327,11 @@ export async function registerRoutes(
     }
   });
   
-  app.get("/api/emails", async (req, res) => {
+  app.get("/api/emails", requireAuth, async (req, res) => {
     try {
       const folder = req.query.folder as string | undefined;
       
-      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant) {
         const messages = await nylas.getMessages(grant.grantId, folder || "inbox");
         const emails = messages.map((msg, index) => ({
@@ -187,11 +360,11 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/emails/:id", async (req, res) => {
+  app.get("/api/emails/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
       
-      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         const message = await nylas.getMessage(grant.grantId, id);
         return res.json({
@@ -225,11 +398,11 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/emails/:id/read", async (req, res) => {
+  app.patch("/api/emails/:id/read", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
       
-      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         await nylas.markAsRead(grant.grantId, id);
         return res.json({ success: true });
@@ -247,7 +420,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/emails/:id/folder", async (req, res) => {
+  app.patch("/api/emails/:id/folder", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
       const { folder } = req.body;
@@ -256,7 +429,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid folder" });
       }
       
-      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         if (folder === "trash") {
           await nylas.trashMessage(grant.grantId, id);
@@ -278,12 +451,12 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/emails/:id/star", async (req, res) => {
+  app.patch("/api/emails/:id/star", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
       const { starred } = req.body;
       
-      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         await nylas.toggleStar(grant.grantId, id, starred ?? true);
         return res.json({ success: true });
@@ -302,11 +475,11 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/emails/:id", async (req, res) => {
+  app.delete("/api/emails/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
       
-      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         await nylas.deleteMessage(grant.grantId, id);
         return res.status(204).send();
@@ -324,7 +497,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/send", async (req, res) => {
+  app.post("/api/send", requireAuth, async (req, res) => {
     try {
       const { to, subject, body, replyToMessageId } = req.body;
       
@@ -335,7 +508,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Subject and body required" });
       }
       
-      const grant = await storage.getNylasGrant(MOCK_USER_ID);
+      const grant = await storage.getNylasGrant(req.session.userId!);
       if (!grant) {
         return res.status(401).json({ error: "Not connected to email provider" });
       }
@@ -348,7 +521,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/drafts/:emailId", async (req, res) => {
+  app.get("/api/drafts/:emailId", requireAuth, async (req, res) => {
     try {
       const emailId = parseInt(req.params.emailId);
       const draft = await storage.getDraftByEmailId(emailId);
@@ -359,7 +532,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/drafts/generate", async (req, res) => {
+  app.post("/api/drafts/generate", requireAuth, async (req, res) => {
     try {
       const { emailId, tone = "professional" } = req.body;
       
@@ -433,7 +606,7 @@ Reply:`;
     }
   });
 
-  app.patch("/api/drafts/:id", async (req, res) => {
+  app.patch("/api/drafts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { content } = req.body;
@@ -454,7 +627,7 @@ Reply:`;
     }
   });
 
-  app.post("/api/drafts/:id/send", async (req, res) => {
+  app.post("/api/drafts/:id/send", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const draft = await storage.getDraft(id);
@@ -472,7 +645,7 @@ Reply:`;
     }
   });
 
-  app.post("/api/drafts/:id/schedule", async (req, res) => {
+  app.post("/api/drafts/:id/schedule", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { scheduledAt } = req.body;
@@ -504,7 +677,7 @@ Reply:`;
     }
   });
 
-  app.post("/api/drafts/:id/cancel-schedule", async (req, res) => {
+  app.post("/api/drafts/:id/cancel-schedule", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const draft = await storage.getDraft(id);
@@ -529,7 +702,7 @@ Reply:`;
     }
   });
 
-  app.get("/api/drafts/scheduled", async (req, res) => {
+  app.get("/api/drafts/scheduled", requireAuth, async (req, res) => {
     try {
       const scheduled = await storage.getScheduledDrafts();
       res.json(scheduled);
@@ -539,7 +712,7 @@ Reply:`;
     }
   });
 
-  app.delete("/api/drafts/:id", async (req, res) => {
+  app.delete("/api/drafts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteDraft(id);
@@ -555,7 +728,7 @@ Reply:`;
     }
   });
 
-  app.get("/api/response-time", async (req, res) => {
+  app.get("/api/response-time", requireAuth, async (req, res) => {
     try {
       const folder = req.query.folder as string | undefined;
       const targetFolder = folder || "inbox";
