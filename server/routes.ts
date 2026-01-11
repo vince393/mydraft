@@ -309,6 +309,7 @@ export async function registerRoutes(
         if (err) {
           console.error("Session destruction error:", err);
         }
+        res.clearCookie("connect.sid");
         res.json({ success: true });
       });
     } catch (error) {
