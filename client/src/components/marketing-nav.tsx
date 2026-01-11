@@ -61,33 +61,16 @@ export function MarketingNav() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          {isLoggedIn ? (
-            <>
-              <Link href="/inbox">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="nav-inbox">
-                  Go to inbox
-                </Button>
-              </Link>
-              <Link href="/settings">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="nav-settings">
-                  Settings
-                </Button>
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link href="/login">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="nav-signin">
-                  Sign in
-                </Button>
-              </Link>
-              <Link href={getStartedHref()}>
-                <Button size="sm" className="bg-primary hover:bg-primary/90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30" data-testid="nav-getstarted">
-                  Get started
-                </Button>
-              </Link>
-            </>
-          )}
+          <Link href="/login">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="nav-signin">
+              Sign in
+            </Button>
+          </Link>
+          <Link href={getStartedHref()}>
+            <Button size="sm" className="bg-primary hover:bg-primary/90 shadow-md shadow-primary/25 transition-all hover:shadow-lg hover:shadow-primary/30" data-testid="nav-getstarted">
+              {isLoggedIn ? "Go to inbox" : "Get started"}
+            </Button>
+          </Link>
         </div>
 
         <Button 
@@ -116,33 +99,16 @@ export function MarketingNav() {
               </Link>
             ))}
             <div className="pt-3 mt-3 border-t border-white/[0.06] space-y-1">
-              {isLoggedIn ? (
-                <>
-                  <Link href="/inbox">
-                    <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-inbox">
-                      Go to inbox
-                    </Button>
-                  </Link>
-                  <Link href="/settings">
-                    <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-settings">
-                      Settings
-                    </Button>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/login">
-                    <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-signin">
-                      Sign in
-                    </Button>
-                  </Link>
-                  <Link href={getStartedHref()}>
-                    <Button className="w-full mt-2 shadow-md shadow-primary/25" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-getstarted">
-                      Get started
-                    </Button>
-                  </Link>
-                </>
-              )}
+              <Link href="/login">
+                <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-signin">
+                  Sign in
+                </Button>
+              </Link>
+              <Link href={getStartedHref()}>
+                <Button className="w-full mt-2 shadow-md shadow-primary/25" onClick={() => setMobileMenuOpen(false)} data-testid="mobile-nav-getstarted">
+                  {isLoggedIn ? "Go to inbox" : "Get started"}
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
