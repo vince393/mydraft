@@ -35,6 +35,7 @@ interface EmailDetailProps {
   generatedDraft?: Draft | null;
   onClearDraft?: () => void;
   onDraftUpdate?: (draft: Draft) => void;
+  isLoading?: boolean;
 }
 
 function EmailDetailEmpty() {
@@ -53,7 +54,7 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate }: EmailDetailProps) {
+export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
@@ -138,8 +139,17 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
     onClearDraft?.();
   };
 
-  if (!email) {
+  if (!email && !isLoading) {
     return <EmailDetailEmpty />;
+  }
+
+  if (isLoading || !email) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground mt-4">Loading email...</p>
+      </div>
+    );
   }
 
   const initials = email.sender
@@ -214,16 +224,23 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
           </div>
 
           <div 
-            className="mb-8"
+            className="mb-8 prose prose-sm dark:prose-invert max-w-none"
             data-testid="email-body"
           >
-            {email.body.split("\n").map((paragraph, i) => (
-              paragraph.trim() ? (
-                <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
-                  {paragraph}
-                </p>
-              ) : null
-            ))}
+            {email.body.includes('<') ? (
+              <div 
+                className="text-foreground/90 leading-relaxed text-[15px]"
+                dangerouslySetInnerHTML={{ __html: email.body }} 
+              />
+            ) : (
+              email.body.split("\n").map((paragraph, i) => (
+                paragraph.trim() ? (
+                  <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
+                    {paragraph}
+                  </p>
+                ) : null
+              ))
+            )}
           </div>
 
           {showDraft && (

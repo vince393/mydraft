@@ -29,10 +29,22 @@ function getEmailId(email: EmailWithNylasId): string | number {
 }
 
 export default function Inbox({ activeFolder }: InboxProps) {
-  const [selectedEmail, setSelectedEmail] = useState<EmailWithNylasId | null>(null);
+  const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [, setLocation] = useLocation();
+
+  // Fetch full email details when an email is selected
+  const { data: selectedEmail, isLoading: isLoadingEmail } = useQuery<EmailWithNylasId>({
+    queryKey: ["/api/emails", selectedEmailId],
+    queryFn: async () => {
+      if (!selectedEmailId) return null;
+      const response = await fetch(`/api/emails/${selectedEmailId}`);
+      if (!response.ok) throw new Error("Failed to fetch email");
+      return response.json();
+    },
+    enabled: !!selectedEmailId,
+  });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -54,7 +66,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
   });
 
   useEffect(() => {
-    setSelectedEmail(null);
+    setSelectedEmailId(null);
     setGeneratedDraft(null);
   }, [activeFolder]);
 
@@ -86,7 +98,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
       return response.json();
     },
     onSuccess: () => {
-      setSelectedEmail(null);
+      setSelectedEmailId(null);
       setGeneratedDraft(null);
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
       queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
@@ -94,10 +106,11 @@ export default function Inbox({ activeFolder }: InboxProps) {
   });
 
   const handleSelectEmail = (email: EmailWithNylasId) => {
-    setSelectedEmail(email);
+    const emailId = getEmailId(email);
+    setSelectedEmailId(emailId);
     setGeneratedDraft(null);
     if (!email.isRead) {
-      markAsReadMutation.mutate(getEmailId(email));
+      markAsReadMutation.mutate(emailId);
     }
   };
 
@@ -198,16 +211,17 @@ export default function Inbox({ activeFolder }: InboxProps) {
         </header>
         <div className="flex-1 overflow-auto">
           <EmailDetail 
-            email={selectedEmail} 
+            email={selectedEmail ?? null} 
             generatedDraft={generatedDraft} 
             onClearDraft={() => setGeneratedDraft(null)}
             onDraftUpdate={(draft) => setGeneratedDraft(draft)}
+            isLoading={isLoadingEmail}
           />
         </div>
       </div>
 
       <AIDraftDialog
-        email={selectedEmail}
+        email={selectedEmail ?? null}
         open={showAiDialog}
         onOpenChange={setShowAiDialog}
         onDraftAccepted={handleDraftAccepted}
