@@ -1,7 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { MarketingNav } from "@/components/marketing-nav";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -9,8 +8,9 @@ import {
   CheckCircle,
   X,
   ChevronDown,
-  ChevronUp,
-  HelpCircle
+  ArrowRight,
+  Mail,
+  Sparkles
 } from "lucide-react";
 
 interface AuthResponse {
@@ -35,21 +35,31 @@ export default function PublicPricingPage() {
     <div className="min-h-screen bg-background text-foreground">
       <MarketingNav />
 
-      <section className="pt-32 pb-12 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <Badge variant="secondary" className="mb-6">Pricing</Badge>
-          <h1 className="text-4xl md:text-5xl font-semibold mb-6">
-            Simple, transparent pricing
+      <section className="pt-32 pb-16 px-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-transparent to-transparent pointer-events-none" />
+        <div className="absolute top-32 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/[0.06] rounded-full blur-[100px] pointer-events-none" />
+        
+        <div className="max-w-4xl mx-auto text-center relative">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
+            <Sparkles className="w-3.5 h-3.5" />
+            Simple Pricing
+          </div>
+          <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.1] mb-6">
+            Simple, transparent
+            <br />
+            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
+              pricing
+            </span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
             Start free, upgrade when you need more. No hidden fees, no surprises.
           </p>
         </div>
       </section>
 
-      <section className="pb-20 px-6">
+      <section className="pb-24 px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-6 mb-16">
+          <div className="grid md:grid-cols-3 gap-6 mb-20">
             <PricingCard
               name="Free"
               price="$0"
@@ -107,15 +117,19 @@ export default function PublicPricingPage() {
 
       <PricingFAQ />
 
-      <section className="py-16 px-6 border-t border-border/30">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl font-semibold mb-4">Still have questions?</h2>
-          <p className="text-muted-foreground mb-6">
-            We're here to help. Reach out and we'll get back to you within 24 hours.
+      <section className="py-20 px-6 border-t border-white/[0.04] relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.05] via-transparent to-transparent pointer-events-none" />
+        <div className="max-w-2xl mx-auto text-center relative">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-5">
+            Ready to get started?
+          </h2>
+          <p className="text-muted-foreground text-lg mb-8">
+            Start free today. No credit card required.
           </p>
           <Link href={getStartedHref()}>
-            <Button size="lg">
+            <Button size="lg" className="gap-2 h-12 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all">
               Start free trial
+              <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
         </div>
@@ -144,32 +158,38 @@ function PricingCard({
   highlighted?: boolean;
 }) {
   return (
-    <Card className={`relative ${highlighted ? 'border-primary ring-1 ring-primary' : 'border-border/50'}`}>
+    <Card className={`relative transition-all duration-300 ${
+      highlighted 
+        ? 'border-primary/50 bg-gradient-to-b from-primary/[0.08] to-transparent shadow-2xl shadow-primary/10 scale-[1.02]' 
+        : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]'
+    }`}>
       {highlighted && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+          <span className="px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold shadow-lg shadow-primary/30">
+            Most Popular
+          </span>
         </div>
       )}
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-2 pt-8">
         <div className="text-center">
-          <CardTitle className="text-lg mb-1">{name}</CardTitle>
-          <p className="text-sm text-muted-foreground mb-4">{description}</p>
+          <CardTitle className="text-lg font-medium mb-1">{name}</CardTitle>
+          <p className="text-sm text-muted-foreground/70 mb-5">{description}</p>
           <div className="flex items-baseline justify-center gap-1">
-            <span className="text-4xl font-bold">{price}</span>
-            {price !== "$0" && <span className="text-muted-foreground">/month</span>}
+            <span className="text-5xl font-semibold tracking-tight">{price}</span>
+            {price !== "$0" && <span className="text-muted-foreground/60">/mo</span>}
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <ul className="space-y-3 mb-6">
+      <CardContent className="pt-6">
+        <ul className="space-y-3.5 mb-8">
           {features.map((feature, i) => (
             <li key={i} className="flex items-center gap-3 text-sm">
               {feature.included ? (
                 <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
               ) : (
-                <X className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                <X className="w-4 h-4 text-muted-foreground/30 flex-shrink-0" />
               )}
-              <span className={feature.included ? '' : 'text-muted-foreground/50'}>
+              <span className={feature.included ? 'text-foreground/90' : 'text-muted-foreground/40'}>
                 {feature.text}
               </span>
             </li>
@@ -178,7 +198,11 @@ function PricingCard({
         <Link href={href}>
           <Button 
             variant={highlighted ? "default" : "outline"} 
-            className="w-full"
+            className={`w-full h-11 ${
+              highlighted 
+                ? 'shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30' 
+                : 'border-white/10 hover:bg-white/[0.03]'
+            }`}
             data-testid={`pricing-${name.toLowerCase()}-cta`}
           >
             {buttonText}
@@ -204,28 +228,32 @@ function FeatureComparison() {
   ];
 
   return (
-    <div className="border border-border/50 rounded-xl overflow-hidden">
+    <div className="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.01]">
+      <div className="p-6 border-b border-white/[0.06]">
+        <h3 className="text-xl font-semibold">Compare plans</h3>
+        <p className="text-sm text-muted-foreground/60 mt-1">See what's included in each plan</p>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border/50">
-              <th className="text-left p-4 font-medium">Features</th>
-              <th className="text-center p-4 font-medium">Free</th>
-              <th className="text-center p-4 font-medium bg-primary/5">Pro</th>
-              <th className="text-center p-4 font-medium">Business</th>
+            <tr className="border-b border-white/[0.06]">
+              <th className="text-left p-5 font-medium text-muted-foreground/70">Features</th>
+              <th className="text-center p-5 font-medium text-muted-foreground/70 w-28">Free</th>
+              <th className="text-center p-5 font-medium text-primary w-28 bg-primary/[0.03]">Pro</th>
+              <th className="text-center p-5 font-medium text-muted-foreground/70 w-28">Business</th>
             </tr>
           </thead>
           <tbody>
             {features.map((feature, i) => (
-              <tr key={i} className="border-b border-border/30 last:border-0">
-                <td className="p-4 text-sm">{feature.name}</td>
-                <td className="p-4 text-center text-sm">
+              <tr key={i} className="border-b border-white/[0.04] last:border-0">
+                <td className="p-5 text-sm">{feature.name}</td>
+                <td className="p-5 text-center text-sm">
                   <FeatureValue value={feature.free} />
                 </td>
-                <td className="p-4 text-center text-sm bg-primary/5">
-                  <FeatureValue value={feature.pro} />
+                <td className="p-5 text-center text-sm bg-primary/[0.03]">
+                  <FeatureValue value={feature.pro} highlight />
                 </td>
-                <td className="p-4 text-center text-sm">
+                <td className="p-5 text-center text-sm">
                   <FeatureValue value={feature.business} />
                 </td>
               </tr>
@@ -237,14 +265,14 @@ function FeatureComparison() {
   );
 }
 
-function FeatureValue({ value }: { value: string }) {
+function FeatureValue({ value, highlight = false }: { value: string; highlight?: boolean }) {
   if (value === "check") {
-    return <CheckCircle className="w-4 h-4 text-green-500 mx-auto" />;
+    return <CheckCircle className={`w-4 h-4 mx-auto ${highlight ? 'text-primary' : 'text-green-500'}`} />;
   }
   if (value === "x") {
-    return <X className="w-4 h-4 text-muted-foreground/30 mx-auto" />;
+    return <X className="w-4 h-4 text-muted-foreground/20 mx-auto" />;
   }
-  return <span className="text-muted-foreground">{value}</span>;
+  return <span className={highlight ? 'text-primary font-medium' : 'text-muted-foreground/70'}>{value}</span>;
 }
 
 function PricingFAQ() {
@@ -278,31 +306,30 @@ function PricingFAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="py-16 px-6 border-t border-border/30">
+    <section className="py-20 px-6 border-t border-white/[0.04]">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-2xl font-semibold mb-4">Pricing FAQ</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">Pricing FAQ</h2>
+          <p className="text-muted-foreground">Common questions about our plans</p>
         </div>
         <div className="space-y-3">
           {faqs.map((faq, i) => (
-            <div key={i} className="border border-border/50 rounded-lg overflow-hidden">
+            <div key={i} className="border border-white/[0.06] rounded-xl overflow-hidden bg-white/[0.01]">
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
                 data-testid={`pricing-faq-toggle-${i}`}
-                className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/30 transition-colors"
+                className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] transition-colors"
               >
                 <span className="font-medium pr-4">{faq.q}</span>
-                {openIndex === i ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                )}
-              </button>
-              {openIndex === i && (
-                <div className="px-4 pb-4">
-                  <p className="text-sm text-muted-foreground">{faq.a}</p>
+                <div className={`p-1.5 rounded-lg bg-white/[0.04] transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`}>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </div>
-              )}
+              </button>
+              <div className={`overflow-hidden transition-all duration-200 ${openIndex === i ? 'max-h-40' : 'max-h-0'}`}>
+                <div className="px-5 pb-5">
+                  <p className="text-sm text-muted-foreground/70 leading-relaxed">{faq.a}</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -313,21 +340,24 @@ function PricingFAQ() {
 
 function Footer() {
   return (
-    <footer className="py-12 px-6 border-t border-border/30">
+    <footer className="py-12 px-6 border-t border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <HelpCircle className="w-3 h-3 text-primary-foreground" />
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+              <Mail className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="text-sm font-medium">MailFlow</span>
-          </div>
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
+            <span className="font-semibold">MailFlow</span>
+          </Link>
+          <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground/70">
             <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-            <Link href="/product" className="hover:text-foreground transition-colors">Product</Link>
+            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <Link href="/security" className="hover:text-foreground transition-colors">Security</Link>
             <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
           </div>
+          <p className="text-xs text-muted-foreground/50">
+            © 2024 MailFlow. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>
