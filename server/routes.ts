@@ -225,6 +225,98 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/settings", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const grant = await storage.getNylasGrant(user.id);
+      res.json({
+        email: user.email,
+        plan: user.plan,
+        aiPreferences: user.aiPreferences,
+        emailSignature: user.emailSignature,
+        signatureEnabled: user.signatureEnabled,
+        connectedEmail: grant ? { email: grant.email, provider: grant.provider } : null,
+      });
+    } catch (error) {
+      console.error("Settings fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  app.put("/api/settings/password", requireAuth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Current and new password are required" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const isValid = await verifyPassword(user.password, currentPassword);
+      if (!isValid) {
+        return res.status(400).json({ error: "Current password is incorrect" });
+      }
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(req.session.userId!, { password: hashedPassword });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Password change error:", error);
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+
+  app.put("/api/settings/signature", requireAuth, async (req, res) => {
+    try {
+      const { emailSignature, signatureEnabled } = req.body;
+      await storage.updateUser(req.session.userId!, { 
+        emailSignature: emailSignature ?? null,
+        signatureEnabled: signatureEnabled ?? false
+      });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Signature update error:", error);
+      res.status(500).json({ error: "Failed to update signature" });
+    }
+  });
+
+  app.put("/api/settings/ai-preferences", requireAuth, async (req, res) => {
+    try {
+      const { aiPreferences } = req.body;
+      const parsed = aiPreferencesSchema.safeParse(aiPreferences);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid AI preferences" });
+      }
+      await storage.updateUser(req.session.userId!, { aiPreferences: parsed.data });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("AI preferences update error:", error);
+      res.status(500).json({ error: "Failed to update AI preferences" });
+    }
+  });
+
+  app.delete("/api/user", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteNylasGrant(req.session.userId!);
+      await storage.deleteUser(req.session.userId!);
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destruction error:", err);
+        }
+        res.json({ success: true });
+      });
+    } catch (error) {
+      console.error("Account deletion error:", error);
+      res.status(500).json({ error: "Failed to delete account" });
+    }
+  });
+
   app.get("/api/nylas/auth-url", requireAuth, async (req, res) => {
     try {
       const provider = req.query.provider as string;

@@ -8,6 +8,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
   
   getEmails(folder?: string): Promise<Email[]>;
   getEmail(id: number): Promise<Email | undefined>;
@@ -471,6 +472,11 @@ Business Development`,
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
     const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
     return user;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
   }
 
   async getEmails(folder?: string): Promise<Email[]> {
