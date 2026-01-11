@@ -8,23 +8,16 @@ import {
   Sparkles, 
   Clock, 
   Shield, 
-  Zap, 
   CheckCircle,
   ArrowRight,
   Brain,
   Mail,
   Star,
-  Lock,
-  Eye,
   ChevronDown,
-  ChevronUp,
   Tag,
   Inbox,
   Send,
-  Archive,
-  MoreHorizontal,
-  Reply,
-  Forward
+  Archive
 } from "lucide-react";
 
 interface AuthResponse {
@@ -52,7 +45,6 @@ export default function LandingPage() {
       <DemoSection />
       <BenefitsSection />
       <TestimonialsSection />
-      <SecuritySection />
       <FAQSection />
       <FinalCTASection getStartedHref={getStartedHref()} />
       <Footer />
@@ -81,8 +73,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               </span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed mb-10">
-              MailFlow uses AI to draft replies in your voice, summarize long threads, 
-              and organize your inbox automatically. Save 2+ hours every day.
+              AI drafts replies in your voice and organizes your inbox. Save 2+ hours daily.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href={getStartedHref}>
@@ -98,7 +89,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               </Link>
             </div>
             <p className="text-sm text-muted-foreground/70 mt-5">
-              Free forever. No credit card required.
+              14 day free trial. No credit card required.
             </p>
           </div>
           
@@ -501,148 +492,114 @@ function BenefitsSection() {
 }
 
 function TestimonialsSection() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
   const testimonials = [
     {
       quote: "I used to spend 3 hours on email every morning. Now it's under an hour. MailFlow's AI drafts are surprisingly good.",
       name: "Rachel Torres",
-      role: "VP of Sales",
-      metric: "2+ hrs saved/day"
+      role: "VP of Sales"
     },
     {
       quote: "The thread summaries alone are worth it. I can jump into any conversation and know exactly what's happening.",
       name: "David Park",
-      role: "Product Manager",
-      metric: null
+      role: "Product Manager"
     },
     {
       quote: "Finally, an email tool that doesn't try to do too much. It's fast, clean, and the AI actually helps.",
       name: "Maria Santos",
-      role: "Founder & CEO",
-      metric: null
+      role: "Founder & CEO"
     },
     {
       quote: "I was skeptical about AI writing my emails, but the tone customization is great. My replies still sound like me.",
       name: "James Chen",
-      role: "Account Executive",
-      metric: "40% faster"
+      role: "Account Executive"
     },
     {
       quote: "The auto-labeling saved my sanity. No more digging through newsletters to find client emails.",
       name: "Emma Williams",
-      role: "Customer Success",
-      metric: null
-    },
-    {
-      quote: "We rolled this out to our exec team and they're hooked. Clean interface, smart features, just works.",
-      name: "Michael Brown",
-      role: "IT Director",
-      metric: "Team of 12"
+      role: "Customer Success"
     }
   ];
 
+  const nextSlide = () => {
+    setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  };
+
   return (
-    <section className="py-24 px-6 border-t border-white/[0.04]">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
+    <section className="py-24 px-6 border-t border-white/[0.04] overflow-hidden">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
             Trusted by busy professionals
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg">
             Join thousands who've reclaimed their inbox
           </p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {testimonials.map((t, i) => (
-            <Card key={i} className="bg-white/[0.02] border-white/[0.06]">
-              <CardContent className="p-6">
-                <div className="flex gap-0.5 mb-4">
-                  {[...Array(5)].map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-primary text-primary" />
-                  ))}
+        
+        <div className="relative">
+          <div className="overflow-hidden">
+            <div 
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+            >
+              {testimonials.map((t, i) => (
+                <div key={i} className="w-full flex-shrink-0 px-4">
+                  <Card className="bg-white/[0.02] border-white/[0.06] max-w-2xl mx-auto">
+                    <CardContent className="p-8 text-center">
+                      <div className="flex justify-center gap-1 mb-6">
+                        {[...Array(5)].map((_, j) => (
+                          <Star key={j} className="w-5 h-5 fill-primary text-primary" />
+                        ))}
+                      </div>
+                      <p className="text-lg text-muted-foreground leading-relaxed mb-6">"{t.quote}"</p>
+                      <div>
+                        <p className="font-medium">{t.name}</p>
+                        <p className="text-sm text-muted-foreground/60">{t.role}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-5">"{t.quote}"</p>
-                <div className="flex items-center justify-between pt-4 border-t border-white/[0.04]">
-                  <div>
-                    <p className="text-sm font-medium">{t.name}</p>
-                    <p className="text-xs text-muted-foreground/60">{t.role}</p>
-                  </div>
-                  {t.metric && (
-                    <span className="px-2.5 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                      {t.metric}
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function SecuritySection() {
-  return (
-    <section className="py-24 px-6 border-t border-white/[0.04]">
-      <div className="max-w-5xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-16 items-center">
-          <div>
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-8">
-              <Shield className="w-7 h-7 text-primary" />
+              ))}
             </div>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-5">
-              Your privacy, protected
-            </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-              We built MailFlow with security-first principles. Your emails are yours — 
-              we're just here to help you manage them better.
-            </p>
-            <Link href="/security">
-              <Button variant="outline" className="gap-2 border-white/10 hover:bg-white/[0.03]">
-                Learn more about security
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
           </div>
-          <div className="space-y-4">
-            <SecurityItem 
-              icon={<Lock className="w-4 h-4" />}
-              title="OAuth-only access"
-              description="We never see or store your email password"
-            />
-            <SecurityItem 
-              icon={<Eye className="w-4 h-4" />}
-              title="Minimal permissions"
-              description="We only request access we need to function"
-            />
-            <SecurityItem 
-              icon={<Shield className="w-4 h-4" />}
-              title="No data selling"
-              description="Your data is never sold to advertisers. Ever."
-            />
-            <SecurityItem 
-              icon={<Zap className="w-4 h-4" />}
-              title="Process, don't store"
-              description="Emails are processed in real-time, not retained"
-            />
+          
+          <div className="flex justify-center items-center gap-4 mt-8">
+            <button
+              onClick={prevSlide}
+              className="w-10 h-10 rounded-full border border-white/[0.1] flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-white/[0.2] transition-colors"
+              data-testid="testimonial-prev"
+            >
+              <ChevronDown className="w-5 h-5 rotate-90" />
+            </button>
+            <div className="flex gap-2">
+              {testimonials.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentIndex(i)}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    i === currentIndex ? 'bg-primary' : 'bg-white/20 hover:bg-white/30'
+                  }`}
+                  data-testid={`testimonial-dot-${i}`}
+                />
+              ))}
+            </div>
+            <button
+              onClick={nextSlide}
+              className="w-10 h-10 rounded-full border border-white/[0.1] flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-white/[0.2] transition-colors"
+              data-testid="testimonial-next"
+            >
+              <ChevronDown className="w-5 h-5 -rotate-90" />
+            </button>
           </div>
         </div>
       </div>
     </section>
-  );
-}
-
-function SecurityItem({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
-  return (
-    <div className="flex items-start gap-4 p-5 rounded-xl border border-white/[0.06] bg-white/[0.01]">
-      <div className="p-2.5 rounded-xl bg-green-500/10 text-green-500">
-        {icon}
-      </div>
-      <div>
-        <h4 className="font-medium mb-1">{title}</h4>
-        <p className="text-sm text-muted-foreground/70">{description}</p>
-      </div>
-    </div>
   );
 }
 
@@ -661,8 +618,8 @@ function FAQSection() {
       a: "MailFlow works with Gmail, Google Workspace, Outlook, and Microsoft 365. We use secure OAuth authentication for all providers."
     },
     {
-      q: "Is there a free plan?",
-      a: "Yes! Our free plan includes 1 email account and 10 AI replies per day. It's free forever with no credit card required."
+      q: "Is there a free trial?",
+      a: "Yes! Start with a 14 day free trial - no credit card required. Experience all features before choosing a plan."
     },
     {
       q: "Can I cancel anytime?",
@@ -722,7 +679,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
           Ready to reclaim your inbox?
         </h2>
         <p className="text-lg text-muted-foreground mb-10">
-          Start free today. No credit card required.
+          14 day free trial. No credit card required.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href={getStartedHref}>

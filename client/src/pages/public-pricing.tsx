@@ -52,7 +52,7 @@ export default function PublicPricingPage() {
             </span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Start free, upgrade when you need more. No hidden fees, no surprises.
+            14 day free trial. No credit card required.
           </p>
         </div>
       </section>
@@ -124,7 +124,7 @@ export default function PublicPricingPage() {
             Ready to get started?
           </h2>
           <p className="text-muted-foreground text-lg mb-8">
-            Start free today. No credit card required.
+            14 day free trial. No credit card required.
           </p>
           <Link href={getStartedHref()}>
             <Button size="lg" className="gap-2 h-12 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all">
