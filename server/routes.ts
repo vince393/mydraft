@@ -434,7 +434,7 @@ export async function registerRoutes(
       
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant) {
-        const messages = await nylas.getMessages(grant.grantId, folder || "inbox");
+        const messages = await nylas.getMessages(grant.grantId, folder || "inbox", grant.provider);
         const emails = messages.map((msg, index) => ({
           id: index + 1,
           nylasId: msg.id,

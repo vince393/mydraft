@@ -144,25 +144,79 @@ export async function exchangeCodeForGrant(code: string, redirectUri: string): P
   };
 }
 
-export async function getMessages(grantId: string, folder?: string): Promise<EmailListItem[]> {
+interface NylasFolder {
+  id: string;
+  name: string;
+  system_folder?: string;
+}
+
+async function getFolders(grantId: string): Promise<NylasFolder[]> {
+  const response = await nylasRequest(`/v3/grants/${grantId}/folders`);
+  if (!response.ok) {
+    console.error("Failed to fetch folders:", await response.text());
+    return [];
+  }
+  const data = await response.json();
+  return data.data || [];
+}
+
+async function getFolderIdByName(grantId: string, folderName: string): Promise<string | null> {
+  const folders = await getFolders(grantId);
+  
+  // Map common folder names to system folder types
+  const systemFolderMap: Record<string, string[]> = {
+    'inbox': ['inbox', 'Inbox', 'INBOX'],
+    'sent': ['sent', 'Sent', 'SENT', 'Sent Items', 'sentitems'],
+    'trash': ['trash', 'Trash', 'TRASH', 'Deleted Items', 'deleteditems'],
+    'drafts': ['drafts', 'Drafts', 'DRAFTS', 'Draft'],
+    'junk': ['junk', 'Junk', 'JUNK', 'Spam', 'SPAM', 'Junk Email', 'junkemail'],
+    'archived': ['archive', 'Archive', 'ARCHIVE', 'All Mail'],
+  };
+  
+  const namesToMatch = systemFolderMap[folderName] || [folderName];
+  
+  for (const folder of folders) {
+    if (namesToMatch.includes(folder.name) || 
+        (folder.system_folder && namesToMatch.includes(folder.system_folder.toLowerCase()))) {
+      return folder.id;
+    }
+  }
+  
+  console.log(`Folder "${folderName}" not found. Available folders:`, folders.map(f => f.name));
+  return null;
+}
+
+export async function getMessages(grantId: string, folder?: string, provider?: string): Promise<EmailListItem[]> {
   let path = `/v3/grants/${grantId}/messages?limit=50`;
   
-  // Gmail uses uppercase labels
-  if (folder === 'trash') {
-    path += '&in=TRASH';
-  } else if (folder === 'sent') {
-    path += '&in=SENT';
-  } else if (folder === 'drafts') {
-    path += '&in=DRAFT';
-  } else if (folder === 'archived') {
-    // Gmail doesn't have archive label - messages without INBOX label are considered archived
-    // Just fetch all messages without INBOX filter for now
-  } else if (folder === 'junk') {
-    path += '&in=SPAM';
+  const isMicrosoft = provider === 'microsoft';
+  
+  if (isMicrosoft) {
+    // Microsoft requires folder IDs, not names
+    const targetFolder = folder || 'inbox';
+    const folderId = await getFolderIdByName(grantId, targetFolder);
+    if (folderId) {
+      path += `&in=${encodeURIComponent(folderId)}`;
+    }
+    // If no folder ID found, fetch all messages
   } else {
-    path += '&in=INBOX';
+    // Gmail uses uppercase labels
+    if (folder === 'trash') {
+      path += '&in=TRASH';
+    } else if (folder === 'sent') {
+      path += '&in=SENT';
+    } else if (folder === 'drafts') {
+      path += '&in=DRAFT';
+    } else if (folder === 'archived') {
+      // Gmail: messages without INBOX label
+    } else if (folder === 'junk') {
+      path += '&in=SPAM';
+    } else {
+      path += '&in=INBOX';
+    }
   }
 
+  console.log(`Fetching messages from: ${path}`);
   const response = await nylasRequest(path);
   
   if (!response.ok) {
