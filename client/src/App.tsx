@@ -16,7 +16,7 @@ import type { Email, User } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 
 interface AuthResponse {
-  user: User | null;
+  user: (User & { emailConnected?: boolean }) | null;
 }
 
 function AuthenticatedApp() {
@@ -79,6 +79,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Redirect to="/onboarding" />;
   }
 
+  if (user.plan && user.onboardingCompleted && !user.emailConnected && location !== "/connect-email") {
+    return <Redirect to="/connect-email" />;
+  }
+
   return <>{children}</>;
 }
 
@@ -102,6 +106,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     }
     if (!authData.user.onboardingCompleted) {
       return <Redirect to="/onboarding" />;
+    }
+    if (!authData.user.emailConnected) {
+      return <Redirect to="/connect-email" />;
     }
     return <Redirect to="/" />;
   }
