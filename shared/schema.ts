@@ -59,3 +59,20 @@ export const insertDraftSchema = createInsertSchema(drafts).omit({
 
 export type Draft = typeof drafts.$inferSelect;
 export type InsertDraft = z.infer<typeof insertDraftSchema>;
+
+export const nylasGrants = pgTable("nylas_grants", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  grantId: varchar("grant_id").notNull(),
+  provider: text("provider").notNull(),
+  email: text("email").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertNylasGrantSchema = createInsertSchema(nylasGrants).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type NylasGrant = typeof nylasGrants.$inferSelect;
+export type InsertNylasGrant = z.infer<typeof insertNylasGrantSchema>;

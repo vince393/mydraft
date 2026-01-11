@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -18,6 +18,11 @@ export interface IStorage {
   updateDraft(id: number, updates: Partial<Draft>): Promise<Draft | undefined>;
   deleteDraft(id: number): Promise<boolean>;
   getScheduledDrafts(): Promise<Draft[]>;
+
+  getNylasGrant(userId: string): Promise<NylasGrant | undefined>;
+  createNylasGrant(grant: InsertNylasGrant): Promise<NylasGrant>;
+  updateNylasGrant(userId: string, updates: Partial<NylasGrant>): Promise<NylasGrant | undefined>;
+  deleteNylasGrant(userId: string): Promise<boolean>;
 }
 
 const avatarColors = [
@@ -33,15 +38,19 @@ export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private emails: Map<number, Email>;
   private drafts: Map<number, Draft>;
+  private nylasGrants: Map<string, NylasGrant>;
   private emailIdCounter: number;
   private draftIdCounter: number;
+  private nylasGrantIdCounter: number;
 
   constructor() {
     this.users = new Map();
     this.emails = new Map();
     this.drafts = new Map();
+    this.nylasGrants = new Map();
     this.emailIdCounter = 1;
     this.draftIdCounter = 1;
+    this.nylasGrantIdCounter = 1;
     
     this.seedEmails();
   }
@@ -546,6 +555,33 @@ Business Development`,
         const timeB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
         return timeA - timeB;
       });
+  }
+
+  async getNylasGrant(userId: string): Promise<NylasGrant | undefined> {
+    return this.nylasGrants.get(userId);
+  }
+
+  async createNylasGrant(insertGrant: InsertNylasGrant): Promise<NylasGrant> {
+    const id = this.nylasGrantIdCounter++;
+    const grant: NylasGrant = {
+      ...insertGrant,
+      id,
+      createdAt: new Date(),
+    };
+    this.nylasGrants.set(insertGrant.userId, grant);
+    return grant;
+  }
+
+  async updateNylasGrant(userId: string, updates: Partial<NylasGrant>): Promise<NylasGrant | undefined> {
+    const grant = this.nylasGrants.get(userId);
+    if (!grant) return undefined;
+    const updated = { ...grant, ...updates };
+    this.nylasGrants.set(userId, updated);
+    return updated;
+  }
+
+  async deleteNylasGrant(userId: string): Promise<boolean> {
+    return this.nylasGrants.delete(userId);
   }
 }
 
