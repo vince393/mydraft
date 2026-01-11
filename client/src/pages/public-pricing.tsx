@@ -79,7 +79,7 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Pro"
               price="$12"
-              description="For professionals"
+              description="For power users"
               features={[
                 { text: "3 email accounts", included: true },
                 { text: "Unlimited AI replies", included: true },

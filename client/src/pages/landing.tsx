@@ -63,7 +63,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
           <div className="max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
               <Sparkles className="w-3.5 h-3.5" />
-              AI-Powered Email for Professionals
+              AI-Powered Email Management
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.1] mb-6">
               Reply faster.
@@ -467,10 +467,10 @@ function BenefitsSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Why professionals choose MailFlow
+            Why people love MailFlow
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Built for people who get hundreds of emails a day
+            Spend less time in your inbox, more time on what matters
           </p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -535,7 +535,7 @@ function TestimonialsSection() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Trusted by busy professionals
+            Trusted by thousands
           </h2>
           <p className="text-muted-foreground text-lg">
             Join thousands who've reclaimed their inbox
@@ -627,7 +627,7 @@ function FAQSection() {
     },
     {
       q: "What makes MailFlow different from other email apps?",
-      a: "MailFlow is designed specifically for busy professionals who receive hundreds of emails daily. Our AI understands context and tone, helping you reply faster while maintaining your voice."
+      a: "MailFlow is designed for anyone who wants to spend less time on email. Our AI understands context and tone, helping you reply faster while maintaining your voice."
     }
   ];
 
