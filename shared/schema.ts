@@ -92,3 +92,19 @@ export const insertNylasGrantSchema = createInsertSchema(nylasGrants).omit({
 
 export type NylasGrant = typeof nylasGrants.$inferSelect;
 export type InsertNylasGrant = z.infer<typeof insertNylasGrantSchema>;
+
+export const supportMessages = pgTable("support_messages", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertSupportMessageSchema = createInsertSchema(supportMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SupportMessage = typeof supportMessages.$inferSelect;
+export type InsertSupportMessage = z.infer<typeof insertSupportMessageSchema>;

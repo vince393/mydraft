@@ -31,6 +31,7 @@ export function MarketingNav() {
     { href: "/", label: "Home" },
     { href: "/pricing", label: "Pricing" },
     { href: "/security", label: "Security" },
+    { href: "/help", label: "Help" },
   ];
 
   return (

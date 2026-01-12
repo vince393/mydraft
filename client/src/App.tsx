@@ -13,6 +13,7 @@ import LandingPage from "@/pages/landing";
 import PublicPricingPage from "@/pages/public-pricing";
 import ProductPage from "@/pages/product";
 import SecurityPage from "@/pages/security";
+import HelpPage from "@/pages/help";
 import PricingPage from "@/pages/pricing";
 import OnboardingPage from "@/pages/onboarding";
 import ConnectEmailPage from "@/pages/connect-email";
@@ -152,6 +153,9 @@ function AppRoutes() {
       </Route>
       <Route path="/security">
         <SecurityPage />
+      </Route>
+      <Route path="/help">
+        <HelpPage />
       </Route>
       <Route path="/select-plan">
         <ProtectedRoute>

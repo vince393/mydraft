@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, users, nylasGrants } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, users, nylasGrants, supportMessages } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -27,6 +27,8 @@ export interface IStorage {
   createNylasGrant(grant: InsertNylasGrant): Promise<NylasGrant>;
   updateNylasGrant(userId: string, updates: Partial<NylasGrant>): Promise<NylasGrant | undefined>;
   deleteNylasGrant(userId: string): Promise<boolean>;
+
+  createSupportMessage(message: InsertSupportMessage): Promise<SupportMessage>;
 }
 
 const avatarColors = [
@@ -587,6 +589,11 @@ Business Development`,
   async deleteNylasGrant(userId: string): Promise<boolean> {
     const result = await db.delete(nylasGrants).where(eq(nylasGrants.userId, userId)).returning();
     return result.length > 0;
+  }
+
+  async createSupportMessage(message: InsertSupportMessage): Promise<SupportMessage> {
+    const [created] = await db.insert(supportMessages).values(message).returning();
+    return created;
   }
 }
 

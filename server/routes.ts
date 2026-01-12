@@ -186,6 +186,38 @@ export async function registerRoutes(
     });
   });
 
+  app.post("/api/support/contact", async (req, res) => {
+    try {
+      const { name, email, message } = req.body;
+      
+      if (!name || !email || !message) {
+        return res.status(400).json({ error: "Name, email, and message are required" });
+      }
+
+      if (typeof name !== "string" || typeof email !== "string" || typeof message !== "string") {
+        return res.status(400).json({ error: "Invalid input format" });
+      }
+
+      if (name.length > 100 || email.length > 255 || message.length > 5000) {
+        return res.status(400).json({ error: "Input too long" });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Invalid email format" });
+      }
+
+      await storage.createSupportMessage({ name, email, message });
+      
+      console.log(`Support message received from ${email}: ${name}`);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Support contact error:", error);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
   app.get("/api/auth/me", async (req, res) => {
     if (!req.session.userId) {
       return res.json({ user: null });
