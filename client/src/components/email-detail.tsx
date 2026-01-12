@@ -42,7 +42,6 @@ interface EmailDetailProps {
   onReply?: () => void;
   onReplyAll?: () => void;
   onForward?: () => void;
-  onAiDraft?: () => void;
 }
 
 function EmailDetailEmpty() {
@@ -61,7 +60,7 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward, onAiDraft }: EmailDetailProps) {
+export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
@@ -322,33 +321,34 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
             className="mb-8"
             data-testid="email-body"
           >
-            {showFormatted ? (
-              formatMutation.isPending ? (
-                <div className="flex items-center gap-2 text-muted-foreground py-4">
-                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm">Formatting with AI...</span>
-                </div>
-              ) : formattedBody ? (
-                <div 
-                  className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline"
-                  dangerouslySetInnerHTML={{ __html: formattedBody }} 
-                />
-              ) : null
+            {showFormatted && formattedBody ? (
+              <div 
+                className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline"
+                dangerouslySetInnerHTML={{ __html: formattedBody }} 
+              />
             ) : (
-              email.body.includes('<') ? (
-                <div 
-                  className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px]"
-                  dangerouslySetInnerHTML={{ __html: email.body }} 
-                />
-              ) : (
-                email.body.split("\n").map((paragraph, i) => (
-                  paragraph.trim() ? (
-                    <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
-                      {paragraph}
-                    </p>
-                  ) : null
-                ))
-              )
+              <>
+                {formatMutation.isPending && (
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs mb-3">
+                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span>Formatting...</span>
+                  </div>
+                )}
+                {email.body.includes('<') ? (
+                  <div 
+                    className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px]"
+                    dangerouslySetInnerHTML={{ __html: email.body }} 
+                  />
+                ) : (
+                  email.body.split("\n").map((paragraph, i) => (
+                    paragraph.trim() ? (
+                      <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
+                        {paragraph}
+                      </p>
+                    ) : null
+                  ))
+                )}
+              </>
             )}
           </div>
 
@@ -496,15 +496,6 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
             <Button variant="outline" className="gap-2" data-testid="button-forward" onClick={onForward}>
               <Forward className="w-4 h-4" />
               Forward
-            </Button>
-            <Button 
-              variant="outline" 
-              className="gap-2 ml-auto border-primary/30 text-primary hover:bg-primary/10 hover:text-primary" 
-              data-testid="button-ai-draft"
-              onClick={onAiDraft}
-            >
-              <Sparkles className="w-4 h-4" />
-              Draft with AI
             </Button>
           </div>
         </div>
