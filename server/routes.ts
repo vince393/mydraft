@@ -1305,5 +1305,465 @@ STRICT RULES:
     }
   });
 
+  // ============ AI MAILBOX ACTION ENDPOINTS ============
+
+  // Get AI context (user profile + preferences + allowed actions)
+  app.get("/api/ai/context", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      const grant = await storage.getNylasGrant(userId);
+      const styleProfile = await storage.getUserStyleProfile(userId);
+      const pendingActions = await storage.getPendingAssistantActions(userId);
+      
+      const defaultProfile = {
+        tone: "professional",
+        length: "medium",
+        greetingStyle: "hi",
+        signOff: "Best regards",
+        formattingPreference: "paragraphs",
+        allowedActions: "draft-only",
+        customInstructions: undefined
+      };
+
+      res.json({
+        user: {
+          id: user?.id,
+          email: user?.email,
+          plan: user?.plan,
+          connectedEmail: grant?.email,
+          provider: grant?.provider
+        },
+        styleProfile: styleProfile?.profile || defaultProfile,
+        pendingActions: pendingActions.map(a => ({
+          id: a.id,
+          actionType: a.actionType,
+          status: a.status,
+          metadata: a.metadata,
+          createdAt: a.createdAt
+        })),
+        capabilities: {
+          canDraft: true,
+          canSend: !!grant,
+          canArchive: !!grant,
+          canTrash: !!grant,
+          canSearch: !!grant
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching AI context:", error);
+      res.status(500).json({ error: "Failed to fetch AI context" });
+    }
+  });
+
+  // Update user style profile
+  app.post("/api/ai/style-profile", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { tone, length, greetingStyle, signOff, formattingPreference, allowedActions, customInstructions } = req.body;
+      
+      const profile = await storage.upsertUserStyleProfile(userId, {
+        tone,
+        length,
+        greetingStyle,
+        signOff,
+        formattingPreference,
+        allowedActions,
+        customInstructions
+      });
+      
+      res.json(profile);
+    } catch (error) {
+      console.error("Error updating style profile:", error);
+      res.status(500).json({ error: "Failed to update style profile" });
+    }
+  });
+
+  // Generate AI draft (compose/reply/reply-all/forward)
+  app.post("/api/ai/draft", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { actionType, messageId, instructions, to, cc, bcc, subject } = req.body;
+      
+      if (!actionType || !["compose", "reply", "reply-all", "forward"].includes(actionType)) {
+        return res.status(400).json({ error: "Valid actionType required: compose, reply, reply-all, forward" });
+      }
+
+      const user = await storage.getUser(userId);
+      const grant = await storage.getNylasGrant(userId);
+      const styleProfile = await storage.getUserStyleProfile(userId);
+      
+      const profile = styleProfile?.profile || {
+        tone: "professional",
+        length: "medium",
+        greetingStyle: "hi",
+        signOff: "Best regards",
+        formattingPreference: "paragraphs"
+      };
+
+      let originalMessage: any = null;
+      let originalBody = "";
+      let recipientEmail = "";
+      let recipientName = "";
+      let originalSubject = "";
+
+      // For reply/forward, fetch the original message
+      if (messageId && actionType !== "compose") {
+        if (grant) {
+          try {
+            const messages = await nylas.getMessages(grant.grantId);
+            originalMessage = messages.find((m: any) => m.id === messageId);
+            if (originalMessage) {
+              originalBody = typeof originalMessage.body === "string" ? originalMessage.body : "";
+              recipientEmail = originalMessage.from?.[0]?.email || "";
+              recipientName = originalMessage.from?.[0]?.name || "";
+              originalSubject = originalMessage.subject || "";
+            }
+          } catch (e) {
+            console.error("Error fetching original message:", e);
+          }
+        }
+      }
+
+      // Build the draft prompt
+      const toneGuide = {
+        professional: "formal, business-appropriate language",
+        friendly: "warm and approachable tone",
+        concise: "brief and to-the-point",
+        casual: "relaxed and conversational",
+        custom: profile.customInstructions || "professional tone"
+      };
+
+      const lengthGuide = {
+        short: "1-2 short paragraphs maximum",
+        medium: "2-3 paragraphs",
+        long: "detailed response with multiple paragraphs"
+      };
+
+      const greetingGuide = {
+        none: "No greeting, start directly with content",
+        hi: "Start with 'Hi' or 'Hello'",
+        name: `Start with 'Hi ${recipientName}' or 'Hello ${recipientName}'`,
+        formal: `Start with 'Dear ${recipientName || "Sir/Madam"}'`
+      };
+
+      let systemPrompt = `You are an email drafting assistant. Generate a professional email draft.
+
+STYLE REQUIREMENTS:
+- Tone: ${toneGuide[profile.tone as keyof typeof toneGuide] || toneGuide.professional}
+- Length: ${lengthGuide[profile.length as keyof typeof lengthGuide] || lengthGuide.medium}
+- Greeting: ${greetingGuide[profile.greetingStyle as keyof typeof greetingGuide] || greetingGuide.hi}
+- Sign-off: End with "${profile.signOff}"
+- Format: ${profile.formattingPreference === "bullets" ? "Use bullet points where appropriate" : profile.formattingPreference === "mixed" ? "Mix paragraphs and bullet points as needed" : "Use flowing paragraphs"}
+
+RULES:
+- Write only the email body, no subject line
+- Do not add [Your Name] or similar placeholders
+- Be direct and clear
+- Match the context and intent provided`;
+
+      let userPrompt = "";
+      
+      if (actionType === "compose") {
+        userPrompt = `Write a new email${to ? ` to ${to}` : ""}${subject ? ` about "${subject}"` : ""}.
+${instructions ? `\nInstructions: ${instructions}` : ""}`;
+      } else if (actionType === "reply" || actionType === "reply-all") {
+        userPrompt = `Write a reply to this email:
+
+FROM: ${recipientName} <${recipientEmail}>
+SUBJECT: ${originalSubject}
+BODY:
+${originalBody.substring(0, 2000)}
+
+${instructions ? `\nInstructions: ${instructions}` : ""}`;
+      } else if (actionType === "forward") {
+        userPrompt = `Write a forwarding message for this email${to ? ` to ${to}` : ""}:
+
+ORIGINAL EMAIL:
+FROM: ${recipientName} <${recipientEmail}>
+SUBJECT: ${originalSubject}
+BODY:
+${originalBody.substring(0, 1500)}
+
+${instructions ? `\nInstructions: ${instructions}` : "Include a brief note explaining why you're forwarding this."}`;
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        max_tokens: 800,
+        temperature: 0.7,
+      });
+
+      const draftBody = completion.choices[0]?.message?.content || "";
+
+      // Create a pending action for this draft
+      const action = await storage.createAssistantAction({
+        userId,
+        actionType: actionType === "compose" ? "send" : actionType,
+        status: "pending",
+        metadata: {
+          messageId: messageId || undefined,
+          to: to ? [to] : (recipientEmail ? [recipientEmail] : undefined),
+          cc: cc || undefined,
+          bcc: bcc || undefined,
+          subject: subject || (actionType === "reply" || actionType === "reply-all" ? `Re: ${originalSubject}` : actionType === "forward" ? `Fwd: ${originalSubject}` : undefined),
+          body: draftBody,
+          originalMessageId: messageId || undefined
+        }
+      });
+
+      res.json({
+        actionId: action.id,
+        actionType,
+        draft: {
+          to: to || recipientEmail,
+          cc,
+          bcc,
+          subject: action.metadata?.subject,
+          body: draftBody
+        },
+        status: "pending"
+      });
+    } catch (error) {
+      console.error("Error generating AI draft:", error);
+      res.status(500).json({ error: "Failed to generate draft" });
+    }
+  });
+
+  // Review/improve an existing draft
+  app.post("/api/ai/review", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { draft, improvementType, customInstructions } = req.body;
+      
+      if (!draft || typeof draft !== "string") {
+        return res.status(400).json({ error: "Draft content is required" });
+      }
+
+      const styleProfile = await storage.getUserStyleProfile(userId);
+      const profile = styleProfile?.profile || { tone: "professional", length: "medium" };
+
+      const improvementPrompts: Record<string, string> = {
+        shorter: "Make this email more concise while keeping the key points.",
+        longer: "Expand this email with more detail and context.",
+        formal: "Make this email more professional and formal.",
+        casual: "Make this email more friendly and casual.",
+        clearer: "Improve the clarity and readability of this email.",
+        grammar: "Fix any grammar, spelling, or punctuation errors.",
+        tone: `Adjust the tone to be more ${profile.tone}.`,
+        custom: customInstructions || "Improve this email."
+      };
+
+      const instruction = improvementPrompts[improvementType] || improvementPrompts.clearer;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { 
+            role: "system", 
+            content: "You are an email editing assistant. Improve the provided email draft according to the instructions. Return only the improved email body, no explanations." 
+          },
+          { 
+            role: "user", 
+            content: `${instruction}\n\nOriginal draft:\n${draft}` 
+          }
+        ],
+        max_tokens: 800,
+        temperature: 0.7,
+      });
+
+      const improvedDraft = completion.choices[0]?.message?.content || draft;
+
+      res.json({
+        original: draft,
+        improved: improvedDraft,
+        improvementType
+      });
+    } catch (error) {
+      console.error("Error reviewing draft:", error);
+      res.status(500).json({ error: "Failed to review draft" });
+    }
+  });
+
+  // Confirm and execute an action (send/trash/archive)
+  app.post("/api/ai/confirm-action", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { actionId, modifications } = req.body;
+      
+      if (!actionId) {
+        return res.status(400).json({ error: "actionId is required" });
+      }
+
+      const action = await storage.getAssistantAction(actionId);
+      if (!action) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+
+      if (action.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      if (action.status !== "pending") {
+        return res.status(400).json({ error: `Action already ${action.status}` });
+      }
+
+      const grant = await storage.getNylasGrant(userId);
+      if (!grant) {
+        return res.status(400).json({ error: "No email account connected" });
+      }
+
+      // Apply any modifications to the action metadata
+      const finalMetadata = modifications 
+        ? { ...action.metadata, ...modifications }
+        : action.metadata;
+
+      let result: any = { success: false };
+
+      try {
+        switch (action.actionType) {
+          case "send":
+          case "reply":
+          case "reply-all":
+          case "forward":
+            // Send the email via Nylas
+            if (finalMetadata?.to && finalMetadata?.body) {
+              await nylas.sendMessage(grant.grantId, {
+                to: (finalMetadata.to as string[]).map(email => ({ email })),
+                cc: finalMetadata.cc?.map((email: string) => ({ email })),
+                bcc: finalMetadata.bcc?.map((email: string) => ({ email })),
+                subject: finalMetadata.subject || "",
+                body: finalMetadata.body,
+                replyToMessageId: action.actionType !== "send" ? finalMetadata.originalMessageId : undefined
+              });
+              result = { success: true, message: "Email sent successfully" };
+            } else {
+              result = { success: false, error: "Missing recipient or body" };
+            }
+            break;
+
+          case "trash":
+            if (finalMetadata?.messageId) {
+              await nylas.trashMessage(grant.grantId, finalMetadata.messageId);
+              result = { success: true, message: "Email moved to trash" };
+            } else {
+              result = { success: false, error: "Missing messageId" };
+            }
+            break;
+
+          case "archive":
+            if (finalMetadata?.messageId) {
+              await nylas.archiveMessage(grant.grantId, finalMetadata.messageId);
+              result = { success: true, message: "Email archived" };
+            } else {
+              result = { success: false, error: "Missing messageId" };
+            }
+            break;
+
+          default:
+            result = { success: false, error: `Unknown action type: ${action.actionType}` };
+        }
+      } catch (nylasError) {
+        console.error("Nylas action error:", nylasError);
+        result = { success: false, error: "Failed to execute email action" };
+      }
+
+      // Update action status
+      const newStatus = result.success ? "executed" : "pending";
+      await storage.updateAssistantActionStatus(
+        actionId, 
+        newStatus, 
+        result.success ? new Date() : undefined
+      );
+
+      res.json({
+        ...result,
+        actionId,
+        status: newStatus
+      });
+    } catch (error) {
+      console.error("Error confirming action:", error);
+      res.status(500).json({ error: "Failed to confirm action" });
+    }
+  });
+
+  // Cancel a pending action
+  app.post("/api/ai/cancel-action", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { actionId } = req.body;
+      
+      if (!actionId) {
+        return res.status(400).json({ error: "actionId is required" });
+      }
+
+      const action = await storage.getAssistantAction(actionId);
+      if (!action) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+
+      if (action.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      await storage.updateAssistantActionStatus(actionId, "cancelled");
+      res.json({ success: true, actionId, status: "cancelled" });
+    } catch (error) {
+      console.error("Error cancelling action:", error);
+      res.status(500).json({ error: "Failed to cancel action" });
+    }
+  });
+
+  // Store feedback and update user profile
+  app.post("/api/ai/feedback", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { assistantMessageId, rating, tags, comment } = req.body;
+      
+      if (!assistantMessageId) {
+        return res.status(400).json({ error: "assistantMessageId is required" });
+      }
+
+      // Create feedback record
+      const feedback = await storage.createAssistantFeedback({
+        userId,
+        assistantMessageId,
+        rating: rating || null,
+        tags: tags || null,
+        comment: comment || null
+      });
+
+      // Update style profile based on feedback tags
+      if (tags && Array.isArray(tags) && tags.length > 0) {
+        await storage.updateStyleProfileFromFeedback(userId, tags);
+      }
+
+      res.json({ success: true, feedbackId: feedback.id });
+    } catch (error) {
+      console.error("Error storing feedback:", error);
+      res.status(500).json({ error: "Failed to store feedback" });
+    }
+  });
+
+  // Get feedback for a specific message
+  app.get("/api/ai/feedback/:messageId", requireAuth, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      if (isNaN(messageId)) {
+        return res.status(400).json({ error: "Invalid messageId" });
+      }
+
+      const feedback = await storage.getAssistantFeedbackByMessage(messageId);
+      res.json(feedback || null);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+      res.status(500).json({ error: "Failed to fetch feedback" });
+    }
+  });
+
   return httpServer;
 }
