@@ -717,14 +717,14 @@ Business Development`,
         // Update session title from first user message
         if (role === "user" && activeSession.title === "New Chat") {
           const title = content.length > 40 ? content.substring(0, 40) + "..." : content;
-          await this.updateSessionTitle(activeSession.id, title);
+          await this.updateSessionTitle(userId, activeSession.id, title);
         }
       } else {
         const newSession = await this.createChatSession(userId);
         actualSessionId = newSession.id;
         if (role === "user") {
           const title = content.length > 40 ? content.substring(0, 40) + "..." : content;
-          await this.updateSessionTitle(newSession.id, title);
+          await this.updateSessionTitle(userId, newSession.id, title);
         }
       }
     }

@@ -193,6 +193,21 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     },
   });
 
+  const renameSessionMutation = useMutation({
+    mutationFn: async ({ sessionId, title }: { sessionId: number; title: string }) => {
+      const response = await apiRequest("PATCH", `/api/assistant/sessions/${sessionId}`, { title });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assistant/sessions"] });
+      setEditingSessionId(null);
+      setEditingTitle("");
+    },
+  });
+
+  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+
   const activeSession = sessions.find(s => s.isActive);
 
   const { data: aiContext } = useQuery<{
@@ -415,26 +430,98 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                       <History className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuContent align="end" className="w-72">
                     <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Chat History</div>
                     {sessions.slice(0, 10).map((session) => (
-                      <DropdownMenuItem
+                      <div
                         key={session.id}
                         className={cn(
-                          "flex items-center justify-between gap-2 cursor-pointer",
+                          "flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm hover-elevate",
                           session.isActive && "bg-primary/10"
                         )}
-                        onClick={() => switchSessionMutation.mutate(session.id)}
                         data-testid={`session-${session.id}`}
                       >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <MessageSquare className="w-3 h-3 shrink-0 text-muted-foreground" />
-                          <span className="truncate text-sm">{session.title}</span>
-                        </div>
-                        {session.isActive && (
-                          <Check className="w-3 h-3 shrink-0 text-primary" />
+                        {editingSessionId === session.id ? (
+                          <div className="flex items-center gap-1 flex-1">
+                            <Input
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              className="h-6 text-xs flex-1"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  renameSessionMutation.mutate({ sessionId: session.id, title: editingTitle });
+                                } else if (e.key === "Escape") {
+                                  setEditingSessionId(null);
+                                  setEditingTitle("");
+                                }
+                              }}
+                              data-testid={`input-rename-session-${session.id}`}
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-5 w-5"
+                              onClick={() => renameSessionMutation.mutate({ sessionId: session.id, title: editingTitle })}
+                              disabled={renameSessionMutation.isPending}
+                            >
+                              <Check className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-5 w-5"
+                              onClick={() => {
+                                setEditingSessionId(null);
+                                setEditingTitle("");
+                              }}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <div 
+                              className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
+                              onClick={() => switchSessionMutation.mutate(session.id)}
+                            >
+                              <MessageSquare className="w-3 h-3 shrink-0 text-muted-foreground" />
+                              <span className="truncate text-sm">{session.title}</span>
+                            </div>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              {session.isActive && (
+                                <Check className="w-3 h-3 text-primary mr-1" />
+                              )}
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-5 w-5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingSessionId(session.id);
+                                  setEditingTitle(session.title);
+                                }}
+                                data-testid={`button-rename-session-${session.id}`}
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-5 w-5 text-destructive hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteSessionMutation.mutate(session.id);
+                                }}
+                                disabled={deleteSessionMutation.isPending}
+                                data-testid={`button-delete-session-${session.id}`}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </>
                         )}
-                      </DropdownMenuItem>
+                      </div>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>

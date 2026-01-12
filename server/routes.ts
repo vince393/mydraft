@@ -1303,6 +1303,25 @@ Return ONLY a JSON object with this exact format:
     }
   });
 
+  // Rename a chat session
+  app.patch("/api/assistant/sessions/:sessionId", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { title } = req.body;
+      if (!title || typeof title !== "string") {
+        return res.status(400).json({ error: "Title is required" });
+      }
+      const updated = await storage.updateSessionTitle(req.session.userId!, sessionId, title);
+      if (!updated) {
+        return res.status(404).json({ error: "Chat session not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error renaming chat session:", error);
+      res.status(500).json({ error: "Failed to rename chat session" });
+    }
+  });
+
   // Chat with assistant - Full email capabilities
   app.post("/api/assistant/chat", requireAuth, async (req, res) => {
     try {
