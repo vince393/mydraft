@@ -4,6 +4,8 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Mic, 
   MicOff, 
@@ -25,10 +33,53 @@ import {
   Send,
   User,
   Loader2,
-  X
+  X,
+  ThumbsUp,
+  ThumbsDown,
+  Check,
+  Pencil,
+  Trash2,
+  Mail,
+  Archive,
+  Forward,
+  Reply,
+  ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AssistantMessage, AssistantSettings } from "@shared/schema";
+
+interface ProposedAction {
+  id: number;
+  actionType: string;
+  status: string;
+  metadata: {
+    to?: string[];
+    cc?: string[];
+    subject?: string;
+    body?: string;
+    messageId?: string;
+  };
+  createdAt: string;
+}
+
+const FEEDBACK_TAGS = [
+  { id: "too_long", label: "Too long" },
+  { id: "too_short", label: "Too short" },
+  { id: "too_formal", label: "Too formal" },
+  { id: "too_casual", label: "Too casual" },
+  { id: "wrong_intent", label: "Wrong intent" },
+  { id: "hallucinated", label: "Made things up" },
+  { id: "great", label: "Great!" },
+] as const;
+
+const ACTION_ICONS: Record<string, typeof Mail> = {
+  send: Mail,
+  reply: Reply,
+  "reply-all": Reply,
+  forward: Forward,
+  trash: Trash2,
+  archive: Archive,
+};
 
 interface SpeechRecognitionEvent {
   results: { [key: number]: { [key: number]: { transcript: string } } };
@@ -62,6 +113,9 @@ interface AssistantModalProps {
 export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [feedbackMessageId, setFeedbackMessageId] = useState<number | null>(null);
+  const [editingAction, setEditingAction] = useState<ProposedAction | null>(null);
+  const [editedBody, setEditedBody] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -93,6 +147,22 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     enabled: open,
   });
 
+  const { data: aiContext } = useQuery<{
+    pendingActions: ProposedAction[];
+    capabilities: { canDraft: boolean; canSend: boolean };
+  }>({
+    queryKey: ["/api/ai/context"],
+    queryFn: async () => {
+      const response = await fetch("/api/ai/context");
+      if (!response.ok) throw new Error("Failed to fetch AI context");
+      return response.json();
+    },
+    enabled: open,
+    refetchInterval: 5000,
+  });
+
+  const pendingActions = aiContext?.pendingActions?.filter(a => a.status === "pending") || [];
+
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: { selectedVoice?: string; voiceOutputEnabled?: boolean }) => {
       const response = await apiRequest("POST", "/api/assistant/settings", data);
@@ -113,9 +183,46 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/assistant/messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/context"] });
       if (voiceOutputEnabled && data.response) {
         speakResponse(data.response);
       }
+    },
+  });
+
+  const confirmActionMutation = useMutation({
+    mutationFn: async ({ actionId, modifications }: { actionId: number; modifications?: { body?: string } }) => {
+      const response = await apiRequest("POST", "/api/ai/confirm-action", { actionId, modifications });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/context"] });
+      setEditingAction(null);
+      setEditedBody("");
+    },
+  });
+
+  const cancelActionMutation = useMutation({
+    mutationFn: async (actionId: number) => {
+      const response = await apiRequest("POST", "/api/ai/cancel-action", { actionId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/context"] });
+    },
+  });
+
+  const feedbackMutation = useMutation({
+    mutationFn: async ({ messageId, rating, tags }: { messageId: number; rating?: string; tags?: string[] }) => {
+      const response = await apiRequest("POST", "/api/ai/feedback", { 
+        assistantMessageId: messageId, 
+        rating, 
+        tags 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      setFeedbackMessageId(null);
     },
   });
 
@@ -301,19 +408,189 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
               </div>
             ) : (
               messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "text-sm rounded-xl px-4 py-3 max-w-[85%]",
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground ml-auto"
-                      : "bg-muted/60 border border-border/30"
+                <div key={msg.id} className={cn("flex flex-col gap-1", msg.role === "user" && "items-end")}>
+                  <div
+                    className={cn(
+                      "text-sm rounded-xl px-4 py-3 max-w-[85%]",
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/60 border border-border/30"
+                    )}
+                    data-testid={`message-${msg.role}-${msg.id}`}
+                  >
+                    {msg.content}
+                  </div>
+                  {msg.role === "assistant" && (
+                    <div className="flex items-center gap-1 px-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                        onClick={() => feedbackMutation.mutate({ messageId: msg.id, rating: "positive" })}
+                        disabled={feedbackMutation.isPending}
+                        data-testid={`button-feedback-up-${msg.id}`}
+                      >
+                        <ThumbsUp className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                        onClick={() => setFeedbackMessageId(feedbackMessageId === msg.id ? null : msg.id)}
+                        disabled={feedbackMutation.isPending}
+                        data-testid={`button-feedback-down-${msg.id}`}
+                      >
+                        <ThumbsDown className="w-3 h-3" />
+                      </Button>
+                      {feedbackMessageId === msg.id && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline" className="h-6 text-xs gap-1">
+                              What's wrong?
+                              <ChevronDown className="w-3 h-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {FEEDBACK_TAGS.filter(t => t.id !== "great").map((tag) => (
+                              <DropdownMenuItem
+                                key={tag.id}
+                                onClick={() => feedbackMutation.mutate({ 
+                                  messageId: msg.id, 
+                                  rating: "negative", 
+                                  tags: [tag.id] 
+                                })}
+                                data-testid={`feedback-tag-${tag.id}`}
+                              >
+                                {tag.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
                   )}
-                  data-testid={`message-${msg.role}-${msg.id}`}
-                >
-                  {msg.content}
                 </div>
               ))
+            )}
+            
+            {pendingActions.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <p className="text-xs text-muted-foreground font-medium">Pending Actions</p>
+                {pendingActions.map((action) => {
+                  const ActionIcon = ACTION_ICONS[action.actionType] || Mail;
+                  const isEditing = editingAction?.id === action.id;
+                  
+                  return (
+                    <Card key={action.id} className="p-3 border-primary/30" data-testid={`action-card-${action.id}`}>
+                      <div className="flex items-start gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <ActionIcon className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium capitalize">{action.actionType}</span>
+                            {action.metadata?.to && (
+                              <span className="text-xs text-muted-foreground truncate">
+                                to {action.metadata.to.join(", ")}
+                              </span>
+                            )}
+                          </div>
+                          {action.metadata?.subject && (
+                            <p className="text-xs text-muted-foreground mb-2">
+                              Subject: {action.metadata.subject}
+                            </p>
+                          )}
+                          {isEditing ? (
+                            <Textarea
+                              value={editedBody}
+                              onChange={(e) => setEditedBody(e.target.value)}
+                              className="text-xs min-h-[100px] mb-2"
+                              data-testid="textarea-edit-draft"
+                            />
+                          ) : (
+                            action.metadata?.body && (
+                              <p className="text-xs text-muted-foreground line-clamp-3 mb-2 whitespace-pre-wrap">
+                                {action.metadata.body}
+                              </p>
+                            )
+                          )}
+                          <div className="flex items-center gap-2">
+                            {isEditing ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs gap-1"
+                                  onClick={() => confirmActionMutation.mutate({ 
+                                    actionId: action.id, 
+                                    modifications: { body: editedBody } 
+                                  })}
+                                  disabled={confirmActionMutation.isPending}
+                                  data-testid="button-save-draft"
+                                >
+                                  <Check className="w-3 h-3" />
+                                  Send
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    setEditingAction(null);
+                                    setEditedBody("");
+                                  }}
+                                  data-testid="button-cancel-edit"
+                                >
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs gap-1"
+                                  onClick={() => confirmActionMutation.mutate({ actionId: action.id })}
+                                  disabled={confirmActionMutation.isPending}
+                                  data-testid={`button-confirm-action-${action.id}`}
+                                >
+                                  {confirmActionMutation.isPending ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Check className="w-3 h-3" />
+                                  )}
+                                  Confirm
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1"
+                                  onClick={() => {
+                                    setEditingAction(action);
+                                    setEditedBody(action.metadata?.body || "");
+                                  }}
+                                  data-testid={`button-edit-action-${action.id}`}
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  Edit
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 text-xs text-destructive hover:text-destructive"
+                                  onClick={() => cancelActionMutation.mutate(action.id)}
+                                  disabled={cancelActionMutation.isPending}
+                                  data-testid={`button-cancel-action-${action.id}`}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
