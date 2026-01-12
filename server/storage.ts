@@ -43,8 +43,8 @@ export interface IStorage {
   getActiveSession(userId: string): Promise<ChatSession | undefined>;
   createChatSession(userId: string, title?: string): Promise<ChatSession>;
   setActiveSession(userId: string, sessionId: number): Promise<void>;
-  updateSessionTitle(sessionId: number, title: string): Promise<ChatSession | undefined>;
-  deleteSession(sessionId: number): Promise<void>;
+  updateSessionTitle(userId: string, sessionId: number, title: string): Promise<ChatSession | undefined>;
+  deleteSession(userId: string, sessionId: number): Promise<boolean>;
 
   // Feedback methods
   createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback>;
@@ -770,28 +770,36 @@ Business Development`,
   }
 
   async setActiveSession(userId: string, sessionId: number): Promise<void> {
-    // Deactivate all sessions
+    // Deactivate all sessions for this user
     await db.update(chatSessions)
       .set({ isActive: false })
       .where(eq(chatSessions.userId, userId));
     
-    // Activate the requested session
+    // Activate the requested session only if it belongs to this user
     await db.update(chatSessions)
       .set({ isActive: true, updatedAt: new Date() })
-      .where(eq(chatSessions.id, sessionId));
+      .where(and(eq(chatSessions.id, sessionId), eq(chatSessions.userId, userId)));
   }
 
-  async updateSessionTitle(sessionId: number, title: string): Promise<ChatSession | undefined> {
+  async updateSessionTitle(userId: string, sessionId: number, title: string): Promise<ChatSession | undefined> {
     const [updated] = await db.update(chatSessions)
       .set({ title, updatedAt: new Date() })
-      .where(eq(chatSessions.id, sessionId))
+      .where(and(eq(chatSessions.id, sessionId), eq(chatSessions.userId, userId)))
       .returning();
     return updated;
   }
 
-  async deleteSession(sessionId: number): Promise<void> {
+  async deleteSession(userId: string, sessionId: number): Promise<boolean> {
+    // First verify the session belongs to the user
+    const [session] = await db.select().from(chatSessions)
+      .where(and(eq(chatSessions.id, sessionId), eq(chatSessions.userId, userId)));
+    
+    if (!session) return false;
+    
     await db.delete(assistantMessages).where(eq(assistantMessages.sessionId, sessionId));
-    await db.delete(chatSessions).where(eq(chatSessions.id, sessionId));
+    await db.delete(chatSessions)
+      .where(and(eq(chatSessions.id, sessionId), eq(chatSessions.userId, userId)));
+    return true;
   }
 
   // Feedback methods

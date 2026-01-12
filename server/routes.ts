@@ -1243,7 +1243,10 @@ Return ONLY a JSON object with this exact format:
   app.delete("/api/assistant/sessions/:sessionId", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.sessionId);
-      await storage.deleteSession(sessionId);
+      const deleted = await storage.deleteSession(req.session.userId!, sessionId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Chat session not found" });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting chat session:", error);
