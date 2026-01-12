@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, userStyleProfileSchema } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, userStyleProfileSchema, assistantPermissionsSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -60,6 +60,14 @@ export interface IStorage {
   // Message summary cache methods
   getMessageSummary(userId: string, messageId: string): Promise<MessageSummaryCache | undefined>;
   cacheMessageSummary(userId: string, messageId: string, summary: string): Promise<MessageSummaryCache>;
+
+  // Assistant permissions methods
+  getAssistantPermissions(userId: string): Promise<AssistantPermissionsRecord | undefined>;
+  upsertAssistantPermissions(userId: string, permissions: Partial<AssistantPermissions>): Promise<AssistantPermissionsRecord>;
+
+  // Audit log methods
+  createAuditLog(userId: string, actionType: string, status: string, targetMessageId?: string, details?: string): Promise<AssistantAuditLogRecord>;
+  getRecentAuditLogs(userId: string, limit?: number): Promise<AssistantAuditLogRecord[]>;
 }
 
 const avatarColors = [
@@ -796,6 +804,50 @@ Business Development`,
       .values({ userId, messageId, summary })
       .returning();
     return created;
+  }
+
+  // Assistant permissions methods
+  async getAssistantPermissions(userId: string): Promise<AssistantPermissionsRecord | undefined> {
+    const [perms] = await db.select()
+      .from(assistantPermissions)
+      .where(eq(assistantPermissions.userId, userId));
+    return perms;
+  }
+
+  async upsertAssistantPermissions(userId: string, permissions: Partial<AssistantPermissions>): Promise<AssistantPermissionsRecord> {
+    const existing = await this.getAssistantPermissions(userId);
+    const defaultPerms = assistantPermissionsSchema.parse({});
+    
+    if (existing) {
+      const merged = { ...existing.permissions, ...permissions };
+      const [updated] = await db.update(assistantPermissions)
+        .set({ permissions: merged, updatedAt: new Date() })
+        .where(eq(assistantPermissions.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const merged = { ...defaultPerms, ...permissions };
+      const [created] = await db.insert(assistantPermissions)
+        .values({ userId, permissions: merged })
+        .returning();
+      return created;
+    }
+  }
+
+  // Audit log methods
+  async createAuditLog(userId: string, actionType: string, status: string, targetMessageId?: string, details?: string): Promise<AssistantAuditLogRecord> {
+    const [created] = await db.insert(assistantAuditLog)
+      .values({ userId, actionType, status, targetMessageId, details })
+      .returning();
+    return created;
+  }
+
+  async getRecentAuditLogs(userId: string, limit: number = 50): Promise<AssistantAuditLogRecord[]> {
+    return db.select()
+      .from(assistantAuditLog)
+      .where(eq(assistantAuditLog.userId, userId))
+      .orderBy(desc(assistantAuditLog.createdAt))
+      .limit(limit);
   }
 }
 

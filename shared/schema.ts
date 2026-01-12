@@ -251,3 +251,39 @@ export const messageSummaryCache = pgTable("message_summary_cache", {
 });
 
 export type MessageSummaryCache = typeof messageSummaryCache.$inferSelect;
+
+// Assistant permissions for security controls
+export const assistantPermissionsSchema = z.object({
+  canReadEmails: z.boolean().default(true),
+  canSendEmails: z.boolean().default(false),
+  canArchive: z.boolean().default(false),
+  canTrash: z.boolean().default(false),
+  canSearch: z.boolean().default(true),
+  requireConfirmation: z.boolean().default(true),
+  maxEmailsPerDay: z.number().default(10),
+});
+
+export type AssistantPermissions = z.infer<typeof assistantPermissionsSchema>;
+
+export const assistantPermissions = pgTable("assistant_permissions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(),
+  permissions: jsonb("permissions").$type<AssistantPermissions>().notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type AssistantPermissionsRecord = typeof assistantPermissions.$inferSelect;
+
+// Audit log for security tracking
+export const assistantAuditLog = pgTable("assistant_audit_log", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  actionType: text("action_type").notNull(), // "read", "send", "archive", "trash", "search"
+  targetMessageId: varchar("target_message_id"),
+  targetThreadId: varchar("target_thread_id"),
+  status: text("status").notNull(), // "initiated", "confirmed", "executed", "cancelled", "failed"
+  details: text("details"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type AssistantAuditLogRecord = typeof assistantAuditLog.$inferSelect;

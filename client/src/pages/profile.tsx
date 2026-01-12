@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import { 
   ArrowLeft, 
   User, 
@@ -32,10 +33,26 @@ import {
   Crown,
   CheckCircle2,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  Bot,
+  Shield,
+  Send,
+  Archive,
+  Search,
+  Eye
 } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { FeedbackModal } from "@/components/feedback-modal";
+
+interface AssistantPermissions {
+  canReadEmails: boolean;
+  canSendEmails: boolean;
+  canArchive: boolean;
+  canTrash: boolean;
+  canSearch: boolean;
+  requireConfirmation: boolean;
+  maxEmailsPerDay: number;
+}
 
 interface UserData {
   id: string;
@@ -54,6 +71,40 @@ export default function Profile() {
 
   const { data: userData, isLoading } = useQuery<{ user: UserData | null }>({
     queryKey: ["/api/auth/me"],
+  });
+
+  const { data: permissions } = useQuery<AssistantPermissions>({
+    queryKey: ["/api/ai/permissions"],
+  });
+
+  const updatePermissionsMutation = useMutation({
+    mutationFn: async (updates: Partial<AssistantPermissions>) => {
+      const current = permissions || {
+        canReadEmails: true,
+        canSendEmails: false,
+        canArchive: false,
+        canTrash: false,
+        canSearch: true,
+        requireConfirmation: true,
+        maxEmailsPerDay: 10
+      };
+      const response = await apiRequest("POST", "/api/ai/permissions", { ...current, ...updates });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/permissions"] });
+      toast({
+        title: "Permissions updated",
+        description: "Your AI assistant permissions have been saved.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update permissions.",
+        variant: "destructive",
+      });
+    },
   });
 
   const logoutMutation = useMutation({
@@ -233,6 +284,122 @@ export default function Profile() {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <Bot className="w-5 h-5" />
+                AI Assistant Permissions
+              </CardTitle>
+              <CardDescription>Control what your AI assistant can do with your emails</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-center gap-2 text-sm">
+                  <Shield className="w-4 h-4 text-blue-500" />
+                  <span className="text-blue-600 dark:text-blue-400 font-medium">All actions are encrypted and logged for security</span>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-3">
+                    <Eye className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Read Emails</p>
+                      <p className="text-xs text-muted-foreground">Allow assistant to read email content</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={permissions?.canReadEmails ?? true}
+                    onCheckedChange={(checked) => updatePermissionsMutation.mutate({ canReadEmails: checked })}
+                    disabled={updatePermissionsMutation.isPending}
+                    data-testid="switch-can-read"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-3">
+                    <Send className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Send Emails</p>
+                      <p className="text-xs text-muted-foreground">Allow assistant to send emails on your behalf</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={permissions?.canSendEmails ?? false}
+                    onCheckedChange={(checked) => updatePermissionsMutation.mutate({ canSendEmails: checked })}
+                    disabled={updatePermissionsMutation.isPending}
+                    data-testid="switch-can-send"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-3">
+                    <Archive className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Archive Emails</p>
+                      <p className="text-xs text-muted-foreground">Allow assistant to archive emails</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={permissions?.canArchive ?? false}
+                    onCheckedChange={(checked) => updatePermissionsMutation.mutate({ canArchive: checked })}
+                    disabled={updatePermissionsMutation.isPending}
+                    data-testid="switch-can-archive"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-3">
+                    <Trash2 className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Delete Emails</p>
+                      <p className="text-xs text-muted-foreground">Allow assistant to move emails to trash</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={permissions?.canTrash ?? false}
+                    onCheckedChange={(checked) => updatePermissionsMutation.mutate({ canTrash: checked })}
+                    disabled={updatePermissionsMutation.isPending}
+                    data-testid="switch-can-trash"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-3">
+                    <Search className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Search Emails</p>
+                      <p className="text-xs text-muted-foreground">Allow assistant to search through emails</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={permissions?.canSearch ?? true}
+                    onCheckedChange={(checked) => updatePermissionsMutation.mutate({ canSearch: checked })}
+                    disabled={updatePermissionsMutation.isPending}
+                    data-testid="switch-can-search"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-4 h-4 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium">Require Confirmation</p>
+                      <p className="text-xs text-muted-foreground">All actions require your approval before executing</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={permissions?.requireConfirmation ?? true}
+                    onCheckedChange={(checked) => updatePermissionsMutation.mutate({ requireConfirmation: checked })}
+                    disabled={updatePermissionsMutation.isPending}
+                    data-testid="switch-require-confirmation"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 

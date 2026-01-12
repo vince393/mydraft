@@ -1192,7 +1192,7 @@ Return ONLY a JSON object with this exact format:
     }
   });
 
-  // Chat with assistant
+  // Chat with assistant - Full email capabilities
   app.post("/api/assistant/chat", requireAuth, async (req, res) => {
     try {
       const { message, voiceId = "vince" } = req.body;
@@ -1208,7 +1208,37 @@ Return ONLY a JSON object with this exact format:
       // Gather context for the assistant
       const user = await storage.getUser(userId);
       const grant = await storage.getNylasGrant(userId);
-      const emails = await storage.getEmails("inbox");
+      const permissions = await storage.getAssistantPermissions(userId);
+      const defaultPerms = { canReadEmails: true, canSendEmails: false, canArchive: false, canTrash: false, canSearch: true, requireConfirmation: true };
+      const perms = permissions?.permissions || defaultPerms;
+      
+      // Fetch real emails from Nylas if connected
+      let nylasMessages: any[] = [];
+      let emailContext = "";
+      
+      if (grant && perms.canReadEmails) {
+        try {
+          nylasMessages = await nylas.getMessages(grant.grantId);
+          // Log the read action
+          await storage.createAuditLog(userId, "read", "executed", undefined, `Fetched ${nylasMessages.length} emails for context`);
+          
+          // Build detailed email context
+          const recentEmails = nylasMessages.slice(0, 15);
+          emailContext = recentEmails.map((m: any, i: number) => {
+            const from = m.from?.[0]?.email || "unknown";
+            const name = m.from?.[0]?.name || from;
+            const subject = m.subject || "(no subject)";
+            const date = m.date ? new Date(m.date * 1000).toLocaleString() : "unknown date";
+            const unread = m.unread ? "[UNREAD]" : "";
+            const starred = m.starred ? "[STARRED]" : "";
+            const snippet = m.snippet?.substring(0, 150) || "";
+            return `${i + 1}. ${unread}${starred} FROM: ${name} <${from}>\n   SUBJECT: ${subject}\n   DATE: ${date}\n   PREVIEW: ${snippet}...`;
+          }).join("\n\n");
+        } catch (e) {
+          console.error("Error fetching Nylas messages:", e);
+          emailContext = "Unable to fetch emails at this time.";
+        }
+      }
       
       const voiceNames: Record<string, string> = {
         vince: "Vince",
@@ -1219,12 +1249,12 @@ Return ONLY a JSON object with this exact format:
 
       const assistantName = voiceNames[voiceId] || "Vince";
 
-      // Build context about user's account and emails
-      const unreadCount = emails.filter(e => !e.isRead).length;
+      // Build stats from Nylas data
+      const unreadCount = nylasMessages.filter((m: any) => m.unread).length;
+      const starredCount = nylasMessages.filter((m: any) => m.starred).length;
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
-      const todayEmails = emails.filter(e => new Date(e.receivedAt) >= todayStart);
-      const starredCount = emails.filter(e => e.isStarred).length;
+      const todayEmails = nylasMessages.filter((m: any) => m.date && new Date(m.date * 1000) >= todayStart);
 
       // Get recent conversation history for context
       const recentMessages = await storage.getAssistantMessages(userId);
@@ -1233,51 +1263,53 @@ Return ONLY a JSON object with this exact format:
         content: m.content
       }));
 
-      const systemPrompt = `You are ${assistantName}, a friendly and thoughtful personal assistant for MailFlow, an email inbox application.
+      const systemPrompt = `You are ${assistantName}, a powerful and friendly AI email assistant for MailFlow. You have FULL ACCESS to the user's email inbox and can perform any email action they request.
 
 PERSONALITY:
-- Warm, approachable, and genuinely helpful - like a trusted colleague
-- Take a moment to understand what the user really needs before responding
-- Use natural, conversational language - not robotic or overly formal
-- Show personality - you can be lightly warm and personable
-- Be encouraging and supportive, especially when users seem stressed about their inbox
-- Acknowledge the user's situation before jumping to answers
-- Keep responses concise but not curt - 2-4 sentences is ideal
+- Warm, capable, and proactive - like having a trusted executive assistant
+- Confident in your abilities to help manage their inbox
+- Natural and conversational, not robotic
+- Encouraging and supportive about email management
+
+YOUR CAPABILITIES (what you CAN do):
+${perms.canReadEmails ? "- READ emails: You can see and read all their emails in detail" : "- READ: Disabled by user"}
+${perms.canSendEmails ? "- SEND emails: You can compose and send new emails (with confirmation)" : "- SEND: Disabled - user must enable in settings"}
+${perms.canArchive ? "- ARCHIVE emails: You can archive emails (with confirmation)" : "- ARCHIVE: Disabled - user must enable in settings"}  
+${perms.canTrash ? "- TRASH emails: You can delete emails (with confirmation)" : "- TRASH: Disabled - user must enable in settings"}
+${perms.canSearch ? "- SEARCH emails: You can search and find specific emails" : "- SEARCH: Disabled by user"}
+
+ACTION COMMANDS - When the user asks you to perform an action, respond with a special format:
+- To send/reply/forward: Include [ACTION:SEND] and the draft content
+- To archive: Include [ACTION:ARCHIVE:messageId]
+- To trash: Include [ACTION:TRASH:messageId]
+- The system will create a pending action that requires user confirmation
+
+SECURITY:
+- All actions require user confirmation before execution
+- You never share email content with anyone except the user
+- All your actions are logged for security
+
+USER ACCOUNT:
+- User email: ${user?.email || "Unknown"}
+- Connected email: ${grant?.email || "Not connected"}
+- Email provider: ${grant?.provider || "None"}
+- Plan: ${user?.plan || "free"}
+
+INBOX STATUS:
+- Total emails visible: ${nylasMessages.length}
+- Unread emails: ${unreadCount}
+- Starred emails: ${starredCount}
+- Emails today: ${todayEmails.length}
+
+${emailContext ? `CURRENT INBOX (most recent 15 emails):
+${emailContext}` : "No emails loaded - user may need to connect their email account."}
 
 RESPONSE STYLE:
-- Start by briefly acknowledging what they asked (shows you understood)
-- Then provide your helpful answer
-- If relevant, offer a quick follow-up suggestion
-- Example: "Looking at your inbox now... You've got ${unreadCount} unread emails. The most recent ones are from [senders]. Want me to help you prioritize them?"
-
-YOUR KNOWLEDGE:
-1. PRODUCT KNOWLEDGE - You know how MailFlow works:
-   - Users can view, read, star, archive, and trash emails
-   - AI can generate reply drafts with different tones
-   - Users connect their email (Gmail/Outlook) via OAuth
-   - Plans: Free, Pro ($12/mo), Business ($29/mo) with 14-day trials
-   - Features: AI drafts, smart inbox, email scheduling
-
-2. USER ACCOUNT INFO:
-   - User email: ${user?.email || "Unknown"}
-   - Connected email: ${grant?.email || "Not connected"}
-   - Email provider: ${grant?.provider || "None"}
-   - Plan: ${user?.plan || "free"}
-   - Onboarding completed: ${user?.onboardingCompleted ? "Yes" : "No"}
-
-3. USER'S EMAIL DATA (current state):
-   - Total emails in inbox: ${emails.length}
-   - Unread emails: ${unreadCount}
-   - Starred emails: ${starredCount}
-   - Emails received today: ${todayEmails.length}
-   ${todayEmails.length > 0 ? `- Today's senders: ${[...new Set(todayEmails.map(e => e.sender))].slice(0, 5).join(", ")}` : ""}
-   ${unreadCount > 0 ? `- Recent unread subjects: ${emails.filter(e => !e.isRead).slice(0, 3).map(e => `"${e.subject}"`).join(", ")}` : ""}
-
-IMPORTANT RULES:
-- Only answer inbox questions using the real data provided above
-- If you don't have specific data, be honest about it in a friendly way
-- Never guess or make up email content
-- Be helpful and suggest next steps when appropriate`;
+- Be specific when discussing emails - reference senders, subjects, and content
+- When asked about an email, quote relevant parts
+- Proactively offer to help with actions: "Would you like me to reply to this?" or "I can archive that for you"
+- For action requests, explain what you'll do and ask for confirmation
+- Keep responses conversational but informative`;
 
       // Add a brief thinking delay for more natural conversation feel (800-1500ms)
       const thinkingDelay = 800 + Math.random() * 700;
@@ -1290,11 +1322,52 @@ IMPORTANT RULES:
           ...conversationHistory,
           { role: "user", content: message }
         ],
-        max_tokens: 500,
+        max_tokens: 800,
         temperature: 0.8,
       });
 
-      const responseContent = completion.choices[0]?.message?.content || "I apologize, I couldn't process that request.";
+      let responseContent = completion.choices[0]?.message?.content || "I apologize, I couldn't process that request.";
+      
+      // Check for action commands in the response and create pending actions
+      const actionMatch = responseContent.match(/\[ACTION:(SEND|ARCHIVE|TRASH)(?::([^\]]+))?\]/);
+      if (actionMatch) {
+        const actionType = actionMatch[1].toLowerCase();
+        const messageId = actionMatch[2];
+        
+        // Create pending action for user confirmation
+        if (actionType === "send" && perms.canSendEmails) {
+          // Extract draft content from response
+          const draftMatch = responseContent.match(/(?:draft|email):\s*([\s\S]*?)(?:\[ACTION|$)/i);
+          const draftBody = draftMatch?.[1]?.trim() || "";
+          
+          await storage.createAssistantAction({
+            userId,
+            actionType: "send",
+            status: "pending",
+            metadata: { body: draftBody }
+          });
+          await storage.createAuditLog(userId, "send", "initiated", undefined, "Draft created for user confirmation");
+        } else if (actionType === "archive" && messageId && perms.canArchive) {
+          await storage.createAssistantAction({
+            userId,
+            actionType: "archive",
+            status: "pending",
+            metadata: { messageId }
+          });
+          await storage.createAuditLog(userId, "archive", "initiated", messageId, "Archive action pending confirmation");
+        } else if (actionType === "trash" && messageId && perms.canTrash) {
+          await storage.createAssistantAction({
+            userId,
+            actionType: "trash",
+            status: "pending",
+            metadata: { messageId }
+          });
+          await storage.createAuditLog(userId, "trash", "initiated", messageId, "Trash action pending confirmation");
+        }
+        
+        // Remove action tags from displayed response
+        responseContent = responseContent.replace(/\[ACTION:[^\]]+\]/g, "").trim();
+      }
       
       // Save assistant response
       await storage.addAssistantMessage(userId, "assistant", responseContent);
@@ -1388,6 +1461,67 @@ IMPORTANT RULES:
     } catch (error) {
       console.error("Error updating style profile:", error);
       res.status(500).json({ error: "Failed to update style profile" });
+    }
+  });
+
+  // Get assistant permissions
+  app.get("/api/ai/permissions", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const perms = await storage.getAssistantPermissions(userId);
+      const defaultPerms = { 
+        canReadEmails: true, 
+        canSendEmails: false, 
+        canArchive: false, 
+        canTrash: false, 
+        canSearch: true, 
+        requireConfirmation: true,
+        maxEmailsPerDay: 10
+      };
+      res.json(perms?.permissions || defaultPerms);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ error: "Failed to fetch permissions" });
+    }
+  });
+
+  // Update assistant permissions
+  app.post("/api/ai/permissions", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { canReadEmails, canSendEmails, canArchive, canTrash, canSearch, requireConfirmation, maxEmailsPerDay } = req.body;
+      
+      const result = await storage.upsertAssistantPermissions(userId, {
+        canReadEmails,
+        canSendEmails,
+        canArchive,
+        canTrash,
+        canSearch,
+        requireConfirmation,
+        maxEmailsPerDay
+      });
+      
+      // Log permission changes for security
+      await storage.createAuditLog(userId, "permissions_update", "executed", undefined, 
+        `Updated permissions: send=${canSendEmails}, archive=${canArchive}, trash=${canTrash}`);
+      
+      res.json(result.permissions);
+    } catch (error) {
+      console.error("Error updating permissions:", error);
+      res.status(500).json({ error: "Failed to update permissions" });
+    }
+  });
+
+  // Get audit log history
+  app.get("/api/ai/audit-log", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const logs = await storage.getRecentAuditLogs(userId, limit);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit log:", error);
+      res.status(500).json({ error: "Failed to fetch audit log" });
     }
   });
 
