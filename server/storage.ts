@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, userStyleProfileSchema, assistantPermissionsSchema } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, userStyleProfileSchema, assistantPermissionsSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -34,9 +34,17 @@ export interface IStorage {
   // Assistant methods
   getAssistantSettings(userId: string): Promise<AssistantSettings | undefined>;
   upsertAssistantSettings(userId: string, updates: Partial<AssistantSettings>): Promise<AssistantSettings>;
-  getAssistantMessages(userId: string): Promise<AssistantMessage[]>;
-  addAssistantMessage(userId: string, role: string, content: string): Promise<AssistantMessage>;
-  clearAssistantMessages(userId: string): Promise<void>;
+  getAssistantMessages(userId: string, sessionId?: number): Promise<AssistantMessage[]>;
+  addAssistantMessage(userId: string, role: string, content: string, sessionId?: number): Promise<AssistantMessage>;
+  clearAssistantMessages(userId: string, sessionId?: number): Promise<void>;
+
+  // Chat session methods
+  getChatSessions(userId: string): Promise<ChatSession[]>;
+  getActiveSession(userId: string): Promise<ChatSession | undefined>;
+  createChatSession(userId: string, title?: string): Promise<ChatSession>;
+  setActiveSession(userId: string, sessionId: number): Promise<void>;
+  updateSessionTitle(sessionId: number, title: string): Promise<ChatSession | undefined>;
+  deleteSession(sessionId: number): Promise<void>;
 
   // Feedback methods
   createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback>;
@@ -668,22 +676,122 @@ Business Development`,
     }
   }
 
-  async getAssistantMessages(userId: string): Promise<AssistantMessage[]> {
+  async getAssistantMessages(userId: string, sessionId?: number): Promise<AssistantMessage[]> {
+    if (sessionId) {
+      return db.select()
+        .from(assistantMessages)
+        .where(and(eq(assistantMessages.userId, userId), eq(assistantMessages.sessionId, sessionId)))
+        .orderBy(assistantMessages.createdAt);
+    }
+    // Get messages for the active session or all if no session
+    const activeSession = await this.getActiveSession(userId);
+    if (activeSession) {
+      return db.select()
+        .from(assistantMessages)
+        .where(and(eq(assistantMessages.userId, userId), eq(assistantMessages.sessionId, activeSession.id)))
+        .orderBy(assistantMessages.createdAt);
+    }
+    // Fallback: get messages without session (legacy)
     return db.select()
       .from(assistantMessages)
       .where(eq(assistantMessages.userId, userId))
       .orderBy(assistantMessages.createdAt);
   }
 
-  async addAssistantMessage(userId: string, role: string, content: string): Promise<AssistantMessage> {
+  async addAssistantMessage(userId: string, role: string, content: string, sessionId?: number): Promise<AssistantMessage> {
+    let actualSessionId = sessionId;
+    if (!actualSessionId) {
+      const activeSession = await this.getActiveSession(userId);
+      if (activeSession) {
+        actualSessionId = activeSession.id;
+        // Update session title from first user message
+        if (role === "user" && activeSession.title === "New Chat") {
+          const title = content.length > 40 ? content.substring(0, 40) + "..." : content;
+          await this.updateSessionTitle(activeSession.id, title);
+        }
+      } else {
+        const newSession = await this.createChatSession(userId);
+        actualSessionId = newSession.id;
+        if (role === "user") {
+          const title = content.length > 40 ? content.substring(0, 40) + "..." : content;
+          await this.updateSessionTitle(newSession.id, title);
+        }
+      }
+    }
     const [message] = await db.insert(assistantMessages)
-      .values({ userId, role, content })
+      .values({ userId, role, content, sessionId: actualSessionId })
       .returning();
     return message;
   }
 
-  async clearAssistantMessages(userId: string): Promise<void> {
-    await db.delete(assistantMessages).where(eq(assistantMessages.userId, userId));
+  async clearAssistantMessages(userId: string, sessionId?: number): Promise<void> {
+    if (sessionId) {
+      await db.delete(assistantMessages).where(
+        and(eq(assistantMessages.userId, userId), eq(assistantMessages.sessionId, sessionId))
+      );
+    } else {
+      const activeSession = await this.getActiveSession(userId);
+      if (activeSession) {
+        await db.delete(assistantMessages).where(
+          and(eq(assistantMessages.userId, userId), eq(assistantMessages.sessionId, activeSession.id))
+        );
+      } else {
+        await db.delete(assistantMessages).where(eq(assistantMessages.userId, userId));
+      }
+    }
+  }
+
+  // Chat session methods
+  async getChatSessions(userId: string): Promise<ChatSession[]> {
+    return db.select()
+      .from(chatSessions)
+      .where(eq(chatSessions.userId, userId))
+      .orderBy(desc(chatSessions.updatedAt));
+  }
+
+  async getActiveSession(userId: string): Promise<ChatSession | undefined> {
+    const [session] = await db.select()
+      .from(chatSessions)
+      .where(and(eq(chatSessions.userId, userId), eq(chatSessions.isActive, true)));
+    return session;
+  }
+
+  async createChatSession(userId: string, title?: string): Promise<ChatSession> {
+    // Deactivate all existing sessions
+    await db.update(chatSessions)
+      .set({ isActive: false })
+      .where(eq(chatSessions.userId, userId));
+    
+    // Create new active session
+    const [session] = await db.insert(chatSessions)
+      .values({ userId, title: title || "New Chat", isActive: true })
+      .returning();
+    return session;
+  }
+
+  async setActiveSession(userId: string, sessionId: number): Promise<void> {
+    // Deactivate all sessions
+    await db.update(chatSessions)
+      .set({ isActive: false })
+      .where(eq(chatSessions.userId, userId));
+    
+    // Activate the requested session
+    await db.update(chatSessions)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(eq(chatSessions.id, sessionId));
+  }
+
+  async updateSessionTitle(sessionId: number, title: string): Promise<ChatSession | undefined> {
+    const [updated] = await db.update(chatSessions)
+      .set({ title, updatedAt: new Date() })
+      .where(eq(chatSessions.id, sessionId))
+      .returning();
+    return updated;
+  }
+
+  async deleteSession(sessionId: number): Promise<void> {
+    await db.delete(assistantMessages).where(eq(assistantMessages.sessionId, sessionId));
+    await db.delete(chatSessions).where(eq(chatSessions.id, sessionId));
   }
 
   // Feedback methods

@@ -126,10 +126,30 @@ export const insertAssistantSettingsSchema = createInsertSchema(assistantSetting
 export type AssistantSettings = typeof assistantSettings.$inferSelect;
 export type InsertAssistantSettings = z.infer<typeof insertAssistantSettingsSchema>;
 
+// Chat sessions for conversation history
+export const chatSessions = pgTable("chat_sessions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  title: text("title").default("New Chat").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertChatSessionSchema = createInsertSchema(chatSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ChatSession = typeof chatSessions.$inferSelect;
+export type InsertChatSession = z.infer<typeof insertChatSessionSchema>;
+
 // Assistant conversation messages
 export const assistantMessages = pgTable("assistant_messages", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull(),
+  sessionId: integer("session_id"),
   role: text("role").notNull(), // "user" or "assistant"
   content: text("content").notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),

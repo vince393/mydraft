@@ -1195,11 +1195,59 @@ Return ONLY a JSON object with this exact format:
   // Get assistant conversation history
   app.get("/api/assistant/messages", requireAuth, async (req, res) => {
     try {
-      const messages = await storage.getAssistantMessages(req.session.userId!);
+      const sessionId = req.query.sessionId ? parseInt(req.query.sessionId as string) : undefined;
+      const messages = await storage.getAssistantMessages(req.session.userId!, sessionId);
       res.json(messages);
     } catch (error) {
       console.error("Error fetching assistant messages:", error);
       res.status(500).json({ error: "Failed to fetch assistant messages" });
+    }
+  });
+
+  // Get chat sessions (history)
+  app.get("/api/assistant/sessions", requireAuth, async (req, res) => {
+    try {
+      const sessions = await storage.getChatSessions(req.session.userId!);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching chat sessions:", error);
+      res.status(500).json({ error: "Failed to fetch chat sessions" });
+    }
+  });
+
+  // Create new chat session (restart chat)
+  app.post("/api/assistant/sessions", requireAuth, async (req, res) => {
+    try {
+      const { title } = req.body;
+      const session = await storage.createChatSession(req.session.userId!, title);
+      res.json(session);
+    } catch (error) {
+      console.error("Error creating chat session:", error);
+      res.status(500).json({ error: "Failed to create chat session" });
+    }
+  });
+
+  // Switch to a different chat session
+  app.post("/api/assistant/sessions/:sessionId/activate", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      await storage.setActiveSession(req.session.userId!, sessionId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error switching chat session:", error);
+      res.status(500).json({ error: "Failed to switch chat session" });
+    }
+  });
+
+  // Delete a chat session
+  app.delete("/api/assistant/sessions/:sessionId", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      await storage.deleteSession(sessionId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting chat session:", error);
+      res.status(500).json({ error: "Failed to delete chat session" });
     }
   });
 

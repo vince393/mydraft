@@ -43,10 +43,13 @@ import {
   Archive,
   Forward,
   Reply,
-  ChevronDown
+  ChevronDown,
+  Plus,
+  History,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AssistantMessage, AssistantSettings } from "@shared/schema";
+import type { AssistantMessage, AssistantSettings, ChatSession } from "@shared/schema";
 
 interface ProposedAction {
   id: number;
@@ -137,6 +140,16 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   const selectedVoice = settings?.selectedVoice || "vince";
   const voiceOutputEnabled = settings?.voiceOutputEnabled ?? true;
 
+  const { data: sessions = [] } = useQuery<ChatSession[]>({
+    queryKey: ["/api/assistant/sessions"],
+    queryFn: async () => {
+      const response = await fetch("/api/assistant/sessions");
+      if (!response.ok) throw new Error("Failed to fetch sessions");
+      return response.json();
+    },
+    enabled: open,
+  });
+
   const { data: messages = [], isLoading: isLoadingMessages } = useQuery<AssistantMessage[]>({
     queryKey: ["/api/assistant/messages"],
     queryFn: async () => {
@@ -146,6 +159,41 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     },
     enabled: open,
   });
+
+  const createSessionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/assistant/sessions", {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assistant/sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assistant/messages"] });
+    },
+  });
+
+  const switchSessionMutation = useMutation({
+    mutationFn: async (sessionId: number) => {
+      const response = await apiRequest("POST", `/api/assistant/sessions/${sessionId}/activate`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assistant/sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assistant/messages"] });
+    },
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: async (sessionId: number) => {
+      const response = await apiRequest("DELETE", `/api/assistant/sessions/${sessionId}`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/assistant/sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assistant/messages"] });
+    },
+  });
+
+  const activeSession = sessions.find(s => s.isActive);
 
   const { data: aiContext } = useQuery<{
     pendingActions: ProposedAction[];
@@ -343,6 +391,55 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
             </div>
             
             <div className="flex items-center gap-1 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs gap-1"
+                onClick={() => createSessionMutation.mutate()}
+                disabled={createSessionMutation.isPending}
+                data-testid="button-new-chat"
+              >
+                <Plus className="w-3 h-3" />
+                New
+              </Button>
+
+              {sessions.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      data-testid="button-chat-history"
+                    >
+                      <History className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Chat History</div>
+                    {sessions.slice(0, 10).map((session) => (
+                      <DropdownMenuItem
+                        key={session.id}
+                        className={cn(
+                          "flex items-center justify-between gap-2 cursor-pointer",
+                          session.isActive && "bg-primary/10"
+                        )}
+                        onClick={() => switchSessionMutation.mutate(session.id)}
+                        data-testid={`session-${session.id}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <MessageSquare className="w-3 h-3 shrink-0 text-muted-foreground" />
+                          <span className="truncate text-sm">{session.title}</span>
+                        </div>
+                        {session.isActive && (
+                          <Check className="w-3 h-3 shrink-0 text-primary" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              
               <Select 
                 value={selectedVoice} 
                 onValueChange={(value: VoiceId) => updateSettingsMutation.mutate({ selectedVoice: value })}
