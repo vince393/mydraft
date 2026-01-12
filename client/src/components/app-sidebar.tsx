@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle } from "lucide-react";
+import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -27,7 +27,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AssistantPanel } from "./assistant-panel";
+import { AssistantModal } from "./assistant-modal";
 
 interface FolderItem {
   title: string;
@@ -57,6 +57,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompos
   const [newFolderName, setNewFolderName] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHoverExpanded, setIsHoverExpanded] = useState(false);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const justCollapsedRef = useRef(false);
 
@@ -259,11 +260,41 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompos
           </SidebarGroup>
         </SidebarContent>
 
-        {isExpanded && (
-          <AssistantPanel className="mx-2 mb-2" />
-        )}
-
-        <SidebarFooter className={`${isExpanded ? "p-4" : "p-2"} transition-all duration-300`}>
+        <SidebarFooter className={`${isExpanded ? "p-3" : "p-2"} transition-all duration-300 space-y-2`}>
+          {/* Assistant Button */}
+          {showText ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsAssistantOpen(true);
+              }}
+              className="w-full flex items-center gap-3 px-3 h-10 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors"
+              data-testid="button-open-assistant"
+            >
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
+                <User className="w-3 h-3 text-white" />
+              </div>
+              <span className="text-sm text-muted-foreground">Vince</span>
+            </button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsAssistantOpen(true);
+                  }}
+                  className="w-10 h-10 mx-auto flex items-center justify-center rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors"
+                  data-testid="button-open-assistant"
+                >
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <User className="w-3 h-3 text-white" />
+                  </div>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Vince - Assistant</TooltipContent>
+            </Tooltip>
+          )}
           {showText ? (
             <Button 
               size="lg"
@@ -329,6 +360,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompos
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AssistantModal open={isAssistantOpen} onOpenChange={setIsAssistantOpen} />
     </>
   );
 }
