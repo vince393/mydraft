@@ -145,6 +145,44 @@ export const insertChatSessionSchema = createInsertSchema(chatSessions).omit({
 export type ChatSession = typeof chatSessions.$inferSelect;
 export type InsertChatSession = z.infer<typeof insertChatSessionSchema>;
 
+// Pending email sends for undo functionality
+export const pendingSendPayloadSchema = z.object({
+  to: z.array(z.string()),
+  cc: z.array(z.string()).optional(),
+  bcc: z.array(z.string()).optional(),
+  subject: z.string(),
+  body: z.string(),
+  threadId: z.string().optional(),
+  replyToMessageId: z.string().optional(),
+});
+
+export type PendingSendPayload = z.infer<typeof pendingSendPayloadSchema>;
+
+export const pendingSends = pgTable("pending_sends", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  grantId: varchar("grant_id").notNull(),
+  payload: jsonb("payload").$type<PendingSendPayload>().notNull(),
+  scheduledSendAt: timestamp("scheduled_send_at").notNull(),
+  delaySeconds: integer("delay_seconds").default(5).notNull(),
+  status: text("status").default("pending").notNull(), // pending, cancelled, sent, failed
+  sentAt: timestamp("sent_at"),
+  failedAt: timestamp("failed_at"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertPendingSendSchema = createInsertSchema(pendingSends).omit({
+  id: true,
+  sentAt: true,
+  failedAt: true,
+  errorMessage: true,
+  createdAt: true,
+});
+
+export type PendingSend = typeof pendingSends.$inferSelect;
+export type InsertPendingSend = z.infer<typeof insertPendingSendSchema>;
+
 // Assistant conversation messages
 export const assistantMessages = pgTable("assistant_messages", {
   id: serial("id").primaryKey(),
