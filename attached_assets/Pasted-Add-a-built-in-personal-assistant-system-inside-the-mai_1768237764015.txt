@@ -1,0 +1,92 @@
+Add a built-in personal assistant system inside the mailbox called assistants (default assistant: Vince).
+
+IMPORTANT:
+- Do NOT add a button that says “Ask Vince”.
+- Do NOT modify the inbox layout, message list, reading pane, login, or signup pages.
+- The assistant must live naturally in the LEFT sidebar under the folders/tabs.
+
+PLACEMENT & UI:
+- Add a dedicated assistant panel in the LEFT COLUMN, directly under the folder list.
+- The panel should look native to the sidebar (same spacing, colors, typography).
+- Collapsible design:
+  - Collapsed: shows assistant name + subtle icon
+  - Expanded: shows chat + voice interface
+- No flashy UI, no gimmicks.
+
+ASSISTANT MODES:
+Users can interact with the assistant via:
+1) Text chat
+2) Voice chat (push-to-talk)
+
+VOICE SYSTEM:
+- Allow users to choose between multiple assistant voices.
+- Each voice has:
+  - A unique personal name (e.g. Vince, Alex, Leo, etc.)
+  - A consistent voice personality (professional, calm, concise)
+- Voice selection should be accessible from within the assistant panel (small dropdown or settings icon).
+- Remember the user’s selected voice across sessions.
+
+VOICE INPUT:
+- Push-to-talk mic button.
+- Convert speech to text and send as a normal message.
+- Gracefully handle unsupported browsers.
+
+VOICE OUTPUT:
+- Read assistant responses aloud when voice output is enabled.
+- Use browser text-to-speech if available.
+- Prefer male voices when available, but support multiple voice options.
+- Allow toggling voice output on/off.
+
+ASSISTANT KNOWLEDGE & CAPABILITIES:
+Each assistant voice must have access to the same underlying intelligence and can answer questions about:
+
+1) PRODUCT / SITE KNOWLEDGE
+- How the app works
+- Features, pricing, settings
+- Security and privacy
+- “How do I…?” questions
+
+2) USER ACCOUNT INFORMATION
+- Connected email providers
+- Plan status
+- Onboarding preferences
+- AI settings
+- Account-related questions
+
+3) USER’S EMAIL DATA (STRICT RULES)
+- Inbox summaries (e.g. “What did I miss today?”)
+- Counts (e.g. “How many emails did I get today?”)
+- Urgency detection
+- Sender/topic queries
+- Thread summaries
+- Drafting help
+
+TRUST & SAFETY RULES:
+- The assistant must ONLY answer inbox questions using real, verifiable data.
+- No guessing, no hallucination.
+- If data is missing or unclear, explicitly say so.
+- Responses must clearly distinguish between:
+  - Product help
+  - Account info
+  - Inbox analysis
+
+INTERACTION STYLE:
+- Calm, professional, executive-assistant tone.
+- Short, clear responses by default.
+- No emojis, jokes, or casual slang.
+- Feels like a personal assistant, not a chatbot.
+
+PERSISTENCE:
+- Persist conversation history per user session.
+- Persist selected assistant voice per user.
+- Remember short-term context within a session (“that email”, “today”).
+
+IMPLEMENTATION RULES:
+- Do NOT touch inbox UI or logic.
+- Do NOT change routing, auth, or onboarding flows.
+- Do NOT add unnecessary new pages.
+- Integrate safely with existing email data and auth.
+- Keep everything consistent with the current dark/modern theme.
+
+FUTURE-READY (do not implement yet):
+- Structure code so server-based TTS voices can be swapped in later.

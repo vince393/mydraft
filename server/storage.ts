@@ -1,7 +1,7 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, users, nylasGrants, supportMessages } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, users, nylasGrants, supportMessages, assistantSettings, assistantMessages } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -29,6 +29,13 @@ export interface IStorage {
   deleteNylasGrant(userId: string): Promise<boolean>;
 
   createSupportMessage(message: InsertSupportMessage): Promise<SupportMessage>;
+
+  // Assistant methods
+  getAssistantSettings(userId: string): Promise<AssistantSettings | undefined>;
+  upsertAssistantSettings(userId: string, updates: Partial<AssistantSettings>): Promise<AssistantSettings>;
+  getAssistantMessages(userId: string): Promise<AssistantMessage[]>;
+  addAssistantMessage(userId: string, role: string, content: string): Promise<AssistantMessage>;
+  clearAssistantMessages(userId: string): Promise<void>;
 }
 
 const avatarColors = [
@@ -594,6 +601,50 @@ Business Development`,
   async createSupportMessage(message: InsertSupportMessage): Promise<SupportMessage> {
     const [created] = await db.insert(supportMessages).values(message).returning();
     return created;
+  }
+
+  // Assistant methods
+  async getAssistantSettings(userId: string): Promise<AssistantSettings | undefined> {
+    const [settings] = await db.select().from(assistantSettings).where(eq(assistantSettings.userId, userId));
+    return settings;
+  }
+
+  async upsertAssistantSettings(userId: string, updates: Partial<AssistantSettings>): Promise<AssistantSettings> {
+    const existing = await this.getAssistantSettings(userId);
+    if (existing) {
+      const [updated] = await db.update(assistantSettings)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(assistantSettings.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(assistantSettings)
+        .values({
+          userId,
+          selectedVoice: updates.selectedVoice || "vince",
+          voiceOutputEnabled: updates.voiceOutputEnabled ?? true,
+        })
+        .returning();
+      return created;
+    }
+  }
+
+  async getAssistantMessages(userId: string): Promise<AssistantMessage[]> {
+    return db.select()
+      .from(assistantMessages)
+      .where(eq(assistantMessages.userId, userId))
+      .orderBy(assistantMessages.createdAt);
+  }
+
+  async addAssistantMessage(userId: string, role: string, content: string): Promise<AssistantMessage> {
+    const [message] = await db.insert(assistantMessages)
+      .values({ userId, role, content })
+      .returning();
+    return message;
+  }
+
+  async clearAssistantMessages(userId: string): Promise<void> {
+    await db.delete(assistantMessages).where(eq(assistantMessages.userId, userId));
   }
 }
 

@@ -27,6 +27,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { AssistantPanel } from "./assistant-panel";
 
 interface FolderItem {
   title: string;
@@ -257,6 +258,10 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompos
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+
+        {isExpanded && (
+          <AssistantPanel className="mx-2 mb-2" />
+        )}
 
         <SidebarFooter className={`${isExpanded ? "p-4" : "p-2"} transition-all duration-300`}>
           {showText ? (

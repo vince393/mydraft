@@ -108,3 +108,37 @@ export const insertSupportMessageSchema = createInsertSchema(supportMessages).om
 
 export type SupportMessage = typeof supportMessages.$inferSelect;
 export type InsertSupportMessage = z.infer<typeof insertSupportMessageSchema>;
+
+// Assistant settings per user
+export const assistantSettings = pgTable("assistant_settings", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  selectedVoice: text("selected_voice").default("vince").notNull(),
+  voiceOutputEnabled: boolean("voice_output_enabled").default(true).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertAssistantSettingsSchema = createInsertSchema(assistantSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type AssistantSettings = typeof assistantSettings.$inferSelect;
+export type InsertAssistantSettings = z.infer<typeof insertAssistantSettingsSchema>;
+
+// Assistant conversation messages
+export const assistantMessages = pgTable("assistant_messages", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  role: text("role").notNull(), // "user" or "assistant"
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertAssistantMessageSchema = createInsertSchema(assistantMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AssistantMessage = typeof assistantMessages.$inferSelect;
+export type InsertAssistantMessage = z.infer<typeof insertAssistantMessageSchema>;

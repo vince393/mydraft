@@ -1062,5 +1062,160 @@ Return ONLY a JSON object with this exact format:
     }
   });
 
+  // ============ ASSISTANT ENDPOINTS ============
+
+  // Get assistant settings
+  app.get("/api/assistant/settings", requireAuth, async (req, res) => {
+    try {
+      const settings = await storage.getAssistantSettings(req.session.userId!);
+      if (!settings) {
+        return res.json({ selectedVoice: "vince", voiceOutputEnabled: true });
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching assistant settings:", error);
+      res.status(500).json({ error: "Failed to fetch assistant settings" });
+    }
+  });
+
+  // Update assistant settings
+  app.post("/api/assistant/settings", requireAuth, async (req, res) => {
+    try {
+      const { selectedVoice, voiceOutputEnabled } = req.body;
+      const settings = await storage.upsertAssistantSettings(req.session.userId!, {
+        selectedVoice,
+        voiceOutputEnabled
+      });
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating assistant settings:", error);
+      res.status(500).json({ error: "Failed to update assistant settings" });
+    }
+  });
+
+  // Get assistant conversation history
+  app.get("/api/assistant/messages", requireAuth, async (req, res) => {
+    try {
+      const messages = await storage.getAssistantMessages(req.session.userId!);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching assistant messages:", error);
+      res.status(500).json({ error: "Failed to fetch assistant messages" });
+    }
+  });
+
+  // Chat with assistant
+  app.post("/api/assistant/chat", requireAuth, async (req, res) => {
+    try {
+      const { message, voiceId = "vince" } = req.body;
+      const userId = req.session.userId!;
+
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      // Save user message
+      await storage.addAssistantMessage(userId, "user", message);
+
+      // Gather context for the assistant
+      const user = await storage.getUser(userId);
+      const grant = await storage.getNylasGrant(userId);
+      const emails = await storage.getEmails("inbox");
+      
+      const voiceNames: Record<string, string> = {
+        vince: "Vince",
+        alex: "Alex",
+        leo: "Leo",
+        max: "Max"
+      };
+
+      const assistantName = voiceNames[voiceId] || "Vince";
+
+      // Build context about user's account and emails
+      const unreadCount = emails.filter(e => !e.isRead).length;
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEmails = emails.filter(e => new Date(e.receivedAt) >= todayStart);
+      const starredCount = emails.filter(e => e.isStarred).length;
+
+      // Get recent conversation history for context
+      const recentMessages = await storage.getAssistantMessages(userId);
+      const conversationHistory = recentMessages.slice(-10).map(m => ({
+        role: m.role as "user" | "assistant",
+        content: m.content
+      }));
+
+      const systemPrompt = `You are ${assistantName}, a professional personal assistant for an email inbox application called MailFlow.
+
+PERSONALITY:
+- Professional, calm, concise
+- No emojis, no jokes, no casual slang
+- Executive assistant tone
+- Short, clear responses by default
+
+YOUR KNOWLEDGE:
+1. PRODUCT KNOWLEDGE - You know how MailFlow works:
+   - Users can view, read, star, archive, and trash emails
+   - AI can generate reply drafts with different tones
+   - Users connect their email (Gmail/Outlook) via OAuth
+   - Plans: Free, Pro ($12/mo), Business ($29/mo) with 14-day trials
+   - Features: AI drafts, smart inbox, email scheduling
+
+2. USER ACCOUNT INFO:
+   - User email: ${user?.email || "Unknown"}
+   - Connected email: ${grant?.email || "Not connected"}
+   - Email provider: ${grant?.provider || "None"}
+   - Plan: ${user?.plan || "free"}
+   - Onboarding completed: ${user?.onboardingCompleted ? "Yes" : "No"}
+
+3. USER'S EMAIL DATA (current state):
+   - Total emails in inbox: ${emails.length}
+   - Unread emails: ${unreadCount}
+   - Starred emails: ${starredCount}
+   - Emails received today: ${todayEmails.length}
+   ${todayEmails.length > 0 ? `- Today's senders: ${[...new Set(todayEmails.map(e => e.sender))].slice(0, 5).join(", ")}` : ""}
+   ${unreadCount > 0 ? `- Recent unread subjects: ${emails.filter(e => !e.isRead).slice(0, 3).map(e => `"${e.subject}"`).join(", ")}` : ""}
+
+STRICT RULES:
+- Only answer inbox questions using the real data provided above
+- If you don't have data, say so explicitly
+- Never guess or make up email content
+- Distinguish between product help, account info, and inbox analysis
+- Keep responses under 3 sentences unless more detail is specifically requested`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...conversationHistory,
+          { role: "user", content: message }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      });
+
+      const responseContent = completion.choices[0]?.message?.content || "I apologize, I couldn't process that request.";
+      
+      // Save assistant response
+      await storage.addAssistantMessage(userId, "assistant", responseContent);
+
+      res.json({ response: responseContent });
+    } catch (error) {
+      console.error("Error in assistant chat:", error);
+      res.status(500).json({ error: "Failed to process message" });
+    }
+  });
+
+  // Clear assistant conversation
+  app.delete("/api/assistant/messages", requireAuth, async (req, res) => {
+    try {
+      await storage.clearAssistantMessages(req.session.userId!);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error clearing assistant messages:", error);
+      res.status(500).json({ error: "Failed to clear messages" });
+    }
+  });
+
   return httpServer;
 }
