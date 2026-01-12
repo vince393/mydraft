@@ -14,7 +14,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown } from "lucide-react";
+import { SiGmail } from "react-icons/si";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { Email, Draft } from "@shared/schema";
 
@@ -44,7 +46,12 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const { toast } = useToast();
 
   // Fetch current user info including connected email
-  const { data: userData } = useQuery<{ user: { email: string; connectedEmail: string | null } | null }>({
+  const { data: userData } = useQuery<{ user: { 
+    email: string; 
+    connectedEmail: string | null;
+    connectedProvider: string | null;
+    plan: string | null;
+  } | null }>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
       const response = await fetch("/api/auth/me");
@@ -54,6 +61,34 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   });
   
   const currentUserEmail = userData?.user?.connectedEmail || userData?.user?.email || "";
+  const userEmail = userData?.user?.email || "";
+  const userName = userEmail.split("@")[0] || "User";
+  const userInitials = userName.slice(0, 2).toUpperCase();
+  const userPlan = userData?.user?.plan || "free";
+  const connectedProvider = userData?.user?.connectedProvider;
+
+  const getProviderIcon = () => {
+    if (!connectedProvider) return null;
+    const provider = connectedProvider.toLowerCase();
+    if (provider === "google" || provider === "gmail") {
+      return <SiGmail className="w-4 h-4 text-red-500" />;
+    }
+    if (provider === "microsoft" || provider === "outlook") {
+      return <Mail className="w-4 h-4 text-blue-500" />;
+    }
+    return <Mail className="w-4 h-4 text-muted-foreground" />;
+  };
+
+  const getPlanBadge = () => {
+    switch (userPlan) {
+      case "business":
+        return <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 text-[10px] px-1.5 py-0">Business</Badge>;
+      case "pro":
+        return <Badge className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-0 text-[10px] px-1.5 py-0">Pro</Badge>;
+      default:
+        return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Free</Badge>;
+    }
+  };
 
   // Fetch full email details when an email is selected
   const { data: selectedEmail, isLoading: isLoadingEmail } = useQuery<EmailWithNylasId>({
@@ -248,17 +283,39 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
               <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
                 <Avatar className="w-9 h-9 ring-2 ring-border/30">
                   <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-medium">
-                    JD
+                    {userInitials}
                   </AvatarFallback>
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="px-3 py-2 border-b border-border/30">
-                <p className="text-sm font-medium">John Doe</p>
-                <p className="text-xs text-muted-foreground">john@mailflow.com</p>
+            <DropdownMenuContent align="end" className="w-64">
+              <div className="px-3 py-3 border-b border-border/30">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10 ring-2 ring-border/30">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-medium">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{userName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                  </div>
+                </div>
+                {currentUserEmail && (
+                  <div className="flex items-center gap-2 mt-3 px-2 py-1.5 rounded-md bg-muted/50">
+                    {getProviderIcon()}
+                    <span className="text-xs text-muted-foreground truncate flex-1">{currentUserEmail}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mt-2">
+                  {getPlanBadge()}
+                </div>
               </div>
-              <DropdownMenuItem className="gap-2 mt-1" data-testid="menu-profile">
+              <DropdownMenuItem 
+                className="gap-2 mt-1" 
+                data-testid="menu-profile"
+                onClick={() => setLocation("/profile")}
+              >
                 <User className="w-4 h-4" />
                 <span>Profile</span>
               </DropdownMenuItem>

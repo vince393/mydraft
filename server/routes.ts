@@ -206,7 +206,9 @@ export async function registerRoutes(
         onboardingCompleted: user.onboardingCompleted,
         aiPreferences: user.aiPreferences,
         emailConnected: !!grant,
-        connectedEmail: grant?.email || null
+        connectedEmail: grant?.email || null,
+        connectedProvider: grant?.provider || null,
+        createdAt: user.createdAt
       } 
     });
   });
