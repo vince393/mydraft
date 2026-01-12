@@ -219,14 +219,15 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
       <DialogContent 
         className="sm:max-w-md md:max-w-lg max-h-[85vh] flex flex-col p-0 gap-0"
         data-testid="modal-assistant"
+        hideCloseButton
       >
         <DialogHeader className="px-4 py-3 border-b border-border/50 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
                 <User className="w-5 h-5 text-white" />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <DialogTitle className="text-base font-semibold">
                   {currentVoiceName}
                 </DialogTitle>
@@ -234,12 +235,12 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 shrink-0">
               <Select 
                 value={selectedVoice} 
                 onValueChange={(value: VoiceId) => updateSettingsMutation.mutate({ selectedVoice: value })}
               >
-                <SelectTrigger className="w-28 h-8 text-xs" data-testid="select-assistant-voice">
+                <SelectTrigger className="w-24 h-8 text-xs" data-testid="select-assistant-voice">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -265,6 +266,16 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 ) : (
                   <VolumeX className="w-4 h-4 text-muted-foreground" />
                 )}
+              </Button>
+              
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={() => onOpenChange(false)}
+                data-testid="button-close-assistant"
+              >
+                <X className="w-4 h-4" />
               </Button>
             </div>
           </div>
