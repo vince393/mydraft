@@ -1,7 +1,7 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, userStyleProfileSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -41,6 +41,25 @@ export interface IStorage {
   // Feedback methods
   createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback>;
   getUserFeedback(userId: string): Promise<UserFeedback[]>;
+
+  // Style profile methods
+  getUserStyleProfile(userId: string): Promise<UserStyleProfileRecord | undefined>;
+  upsertUserStyleProfile(userId: string, profile: Partial<UserStyleProfile>): Promise<UserStyleProfileRecord>;
+  updateStyleProfileFromFeedback(userId: string, tags: string[]): Promise<void>;
+
+  // Assistant actions methods
+  createAssistantAction(action: InsertAssistantAction): Promise<AssistantAction>;
+  getAssistantAction(id: number): Promise<AssistantAction | undefined>;
+  getPendingAssistantActions(userId: string): Promise<AssistantAction[]>;
+  updateAssistantActionStatus(id: number, status: string, executedAt?: Date): Promise<AssistantAction | undefined>;
+
+  // Assistant feedback methods
+  createAssistantFeedback(feedback: InsertAssistantFeedback): Promise<AssistantFeedbackRecord>;
+  getAssistantFeedbackByMessage(assistantMessageId: number): Promise<AssistantFeedbackRecord | undefined>;
+
+  // Message summary cache methods
+  getMessageSummary(userId: string, messageId: string): Promise<MessageSummaryCache | undefined>;
+  cacheMessageSummary(userId: string, messageId: string, summary: string): Promise<MessageSummaryCache>;
 }
 
 const avatarColors = [
@@ -670,6 +689,113 @@ Business Development`,
       .from(userFeedback)
       .where(eq(userFeedback.userId, userId))
       .orderBy(desc(userFeedback.createdAt));
+  }
+
+  // Style profile methods
+  async getUserStyleProfile(userId: string): Promise<UserStyleProfileRecord | undefined> {
+    const [profile] = await db.select().from(userStyleProfiles).where(eq(userStyleProfiles.userId, userId));
+    return profile;
+  }
+
+  async upsertUserStyleProfile(userId: string, profileUpdates: Partial<UserStyleProfile>): Promise<UserStyleProfileRecord> {
+    const existing = await this.getUserStyleProfile(userId);
+    const defaultProfile = userStyleProfileSchema.parse({});
+    
+    if (existing) {
+      const mergedProfile = { ...existing.profile, ...profileUpdates };
+      const [updated] = await db.update(userStyleProfiles)
+        .set({ profile: mergedProfile, updatedAt: new Date() })
+        .where(eq(userStyleProfiles.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const newProfile = { ...defaultProfile, ...profileUpdates };
+      const [created] = await db.insert(userStyleProfiles)
+        .values({ userId, profile: newProfile, feedbackScore: 0 })
+        .returning();
+      return created;
+    }
+  }
+
+  async updateStyleProfileFromFeedback(userId: string, tags: string[]): Promise<void> {
+    const profile = await this.getUserStyleProfile(userId);
+    if (!profile) return;
+    
+    const updates: Partial<UserStyleProfile> = {};
+    
+    if (tags.includes("too_long")) {
+      updates.length = profile.profile.length === "long" ? "medium" : "short";
+    }
+    if (tags.includes("too_short")) {
+      updates.length = profile.profile.length === "short" ? "medium" : "long";
+    }
+    if (tags.includes("too_formal")) {
+      updates.tone = profile.profile.tone === "professional" ? "friendly" : "casual";
+    }
+    if (tags.includes("too_casual")) {
+      updates.tone = profile.profile.tone === "casual" ? "friendly" : "professional";
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      await this.upsertUserStyleProfile(userId, updates);
+    }
+  }
+
+  // Assistant actions methods
+  async createAssistantAction(action: InsertAssistantAction): Promise<AssistantAction> {
+    const [created] = await db.insert(assistantActions).values(action).returning();
+    return created;
+  }
+
+  async getAssistantAction(id: number): Promise<AssistantAction | undefined> {
+    const [action] = await db.select().from(assistantActions).where(eq(assistantActions.id, id));
+    return action;
+  }
+
+  async getPendingAssistantActions(userId: string): Promise<AssistantAction[]> {
+    return db.select()
+      .from(assistantActions)
+      .where(and(eq(assistantActions.userId, userId), eq(assistantActions.status, "pending")))
+      .orderBy(desc(assistantActions.createdAt));
+  }
+
+  async updateAssistantActionStatus(id: number, status: string, executedAt?: Date): Promise<AssistantAction | undefined> {
+    const updates: Partial<AssistantAction> = { status };
+    if (executedAt) updates.executedAt = executedAt;
+    
+    const [updated] = await db.update(assistantActions)
+      .set(updates)
+      .where(eq(assistantActions.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Assistant feedback methods
+  async createAssistantFeedback(feedback: InsertAssistantFeedback): Promise<AssistantFeedbackRecord> {
+    const [created] = await db.insert(assistantFeedback).values(feedback).returning();
+    return created;
+  }
+
+  async getAssistantFeedbackByMessage(assistantMessageId: number): Promise<AssistantFeedbackRecord | undefined> {
+    const [feedback] = await db.select()
+      .from(assistantFeedback)
+      .where(eq(assistantFeedback.assistantMessageId, assistantMessageId));
+    return feedback;
+  }
+
+  // Message summary cache methods
+  async getMessageSummary(userId: string, messageId: string): Promise<MessageSummaryCache | undefined> {
+    const [cached] = await db.select()
+      .from(messageSummaryCache)
+      .where(and(eq(messageSummaryCache.userId, userId), eq(messageSummaryCache.messageId, messageId)));
+    return cached;
+  }
+
+  async cacheMessageSummary(userId: string, messageId: string, summary: string): Promise<MessageSummaryCache> {
+    const [created] = await db.insert(messageSummaryCache)
+      .values({ userId, messageId, summary })
+      .returning();
+    return created;
   }
 }
 

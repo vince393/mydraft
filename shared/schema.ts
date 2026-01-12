@@ -162,3 +162,92 @@ export const insertUserFeedbackSchema = createInsertSchema(userFeedback).omit({
 
 export type UserFeedback = typeof userFeedback.$inferSelect;
 export type InsertUserFeedback = z.infer<typeof insertUserFeedbackSchema>;
+
+// User style profile for AI personalization
+export const userStyleProfileSchema = z.object({
+  tone: z.enum(["professional", "friendly", "concise", "casual", "custom"]).default("professional"),
+  length: z.enum(["short", "medium", "long"]).default("medium"),
+  greetingStyle: z.enum(["none", "hi", "name", "formal"]).default("hi"),
+  signOff: z.string().default("Best regards"),
+  formattingPreference: z.enum(["bullets", "paragraphs", "mixed"]).default("paragraphs"),
+  allowedActions: z.enum(["draft-only", "can-queue-actions"]).default("draft-only"),
+  customInstructions: z.string().optional(),
+});
+
+export type UserStyleProfile = z.infer<typeof userStyleProfileSchema>;
+
+export const userStyleProfiles = pgTable("user_style_profiles", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(),
+  profile: jsonb("profile").$type<UserStyleProfile>().notNull(),
+  feedbackScore: integer("feedback_score").default(0).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertUserStyleProfileSchema = createInsertSchema(userStyleProfiles).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type UserStyleProfileRecord = typeof userStyleProfiles.$inferSelect;
+export type InsertUserStyleProfile = z.infer<typeof insertUserStyleProfileSchema>;
+
+// Assistant actions for confirmation workflow
+export const assistantActions = pgTable("assistant_actions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  assistantMessageId: integer("assistant_message_id"),
+  actionType: text("action_type").notNull(), // "send", "reply", "reply-all", "forward", "compose", "trash", "archive", "mark-read"
+  status: text("status").default("pending").notNull(), // "pending", "confirmed", "cancelled", "executed"
+  metadata: jsonb("metadata").$type<{
+    messageId?: string;
+    threadId?: string;
+    to?: string[];
+    cc?: string[];
+    bcc?: string[];
+    subject?: string;
+    body?: string;
+    originalMessageId?: string;
+  }>(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  executedAt: timestamp("executed_at"),
+});
+
+export const insertAssistantActionSchema = createInsertSchema(assistantActions).omit({
+  id: true,
+  createdAt: true,
+  executedAt: true,
+});
+
+export type AssistantAction = typeof assistantActions.$inferSelect;
+export type InsertAssistantAction = z.infer<typeof insertAssistantActionSchema>;
+
+// Assistant message feedback for learning
+export const assistantFeedback = pgTable("assistant_feedback", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  assistantMessageId: integer("assistant_message_id").notNull(),
+  rating: text("rating"), // "up", "down"
+  tags: text("tags").array(), // ["too_long", "too_short", "too_formal", "too_casual", "wrong_intent", "hallucinated", "great"]
+  comment: text("comment"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertAssistantFeedbackSchema = createInsertSchema(assistantFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AssistantFeedbackRecord = typeof assistantFeedback.$inferSelect;
+export type InsertAssistantFeedback = z.infer<typeof insertAssistantFeedbackSchema>;
+
+// Message summary cache for AI performance
+export const messageSummaryCache = pgTable("message_summary_cache", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  messageId: varchar("message_id").notNull(),
+  summary: text("summary").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type MessageSummaryCache = typeof messageSummaryCache.$inferSelect;

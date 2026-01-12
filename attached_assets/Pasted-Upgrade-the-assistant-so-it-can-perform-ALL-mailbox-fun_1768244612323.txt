@@ -1,0 +1,94 @@
+Upgrade the assistant so it can perform ALL mailbox functions safely and learn user preferences over time.
+
+IMPORTANT RULES:
+- Do NOT change inbox UI layout.
+- Add AI actions without breaking existing Nylas actions (send/reply/forward/trash/archive).
+- The AI must NOT silently send/delete/archive emails without user confirmation by default.
+
+ASSISTANT CAPABILITIES:
+Add tools/actions that the assistant can call through backend endpoints:
+
+Read:
+- Fetch message list by tab (inbox/sent/trash/archive)
+- Fetch a full message/thread by id
+- Search messages by query (sender, subject keywords, date range)
+
+Write:
+- Draft reply
+- Draft reply-all
+- Draft forward
+- Draft new email (compose)
+- Review/edit an existing draft (tone, length, clarity, correctness)
+
+Act (must require confirmation):
+- Send draft
+- Trash message
+- Archive message
+- Mark read/unread (optional)
+- Move between tabs if supported
+
+UX FLOW (must feel like a real mailbox):
+1) When user asks the assistant to do something (e.g. “reply to this”, “send an email to…”, “archive all newsletters”):
+   - Assistant produces a “Proposed Action” card:
+     - Shows the drafted content (for send/reply/forward/compose)
+     - Shows the target (message/thread id, recipients, subject)
+     - Shows what will happen (send/trash/archive)
+   - Include buttons:
+     - Confirm
+     - Edit
+     - Cancel
+   - Only perform the action after Confirm.
+
+2) For simple drafting requests:
+   - Put the draft into the existing compose/reply UI fields so the user can edit.
+   - Provide a single “Send” action that still requires the user click Send (or Confirm).
+
+LEARNING / PERSONALIZATION:
+Implement per-user preference learning with explicit controls:
+- Store a user “style profile” in DB:
+  - tone (professional/friendly/concise/custom)
+  - typical length (short/medium/long)
+  - greeting style (none/hi/name)
+  - sign-off preference
+  - formatting preference (bullets vs paragraphs)
+  - allowed actions (draft-only vs can auto-queue actions)
+- Learn from:
+  - user edits to AI drafts (diff-based signal)
+  - explicit feedback buttons (see below)
+- Do NOT learn across users. Preferences are per-user only.
+
+FEEDBACK (non-annoying, after every AI-generated message/draft):
+Under each AI message/draft, show a compact feedback row:
+- 👍 / 👎
+- Quick tags: “Too long”, “Too short”, “Too formal”, “Too casual”, “Wrong intent”, “Hallucinated/incorrect”, “Great”
+- Optional “Add note” link (small textarea)
+
+Use feedback to update the user style profile:
+- If “Too formal” clicked often -> lower formality
+- If “Too long” clicked -> reduce length
+- If “Wrong intent” -> ask a clarifying follow-up next time for similar cases
+
+ACCURACY / SAFETY:
+- For any question like “how many emails today”, the assistant must compute from real message data (no guessing).
+- For summarization, cite which messages/threads were used (internally) and be deterministic.
+- If unsure, say “I can’t confirm that from your inbox data.”
+
+MODEL / PERFORMANCE (fast + best):
+- Implement a two-stage approach:
+  1) Fast model for classification/routing/summaries where acceptable
+  2) Best model only for drafting important replies or complex tasks
+- Cache summaries per message/thread so repeated asks are instant.
+- Keep latency low by avoiding unnecessary calls.
+
+ENGINEERING REQUIREMENTS:
+- Add backend endpoints the assistant uses (do not expose secrets):
+  - GET /api/ai/context (user profile + allowed actions)
+  - POST /api/ai/draft (compose/reply/reply-all/forward)
+  - POST /api/ai/review (improve draft)
+  - POST /api/ai/confirm-action (send/trash/archive/etc after confirm)
+  - POST /api/ai/feedback (store feedback + update user profile)
+- Ensure all actions use the logged-in user’s Nylas grant and are permission-checked.
+- Persist user preferences in DB and load on assistant init.
+
+DELIVERABLE:
+Make the assistant able to draft, review, and execute mailbox actions with confirmations, and personalize writing style using lightweight feedback after each AI output.
