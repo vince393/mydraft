@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2 } from "lucide-react";
 
 interface ComposeDialogProps {
   open: boolean;
@@ -112,6 +112,105 @@ export function ComposeDialog({
     }
   }, [open, mode, originalEmail, currentUserEmail]);
 
+  const cancelMutation = useMutation({
+    mutationFn: async (pendingSendId: number) => {
+      const response = await apiRequest("POST", `/api/pending-sends/${pendingSendId}/cancel`);
+      return response.json();
+    },
+  });
+
+  const showUndoToast = useCallback((pendingSendId: number, delaySeconds: number, toRecipients: string[]) => {
+    let remaining = delaySeconds;
+    const recipientText = toRecipients.length > 1 
+      ? `${toRecipients[0]} and ${toRecipients.length - 1} other${toRecipients.length > 2 ? 's' : ''}`
+      : toRecipients[0];
+    
+    const { id: toastId, dismiss, update } = toast({
+      title: "Sending email...",
+      description: (
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-sm">To: {recipientText} ({remaining}s)</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              clearInterval(intervalId);
+              dismiss();
+              try {
+                await cancelMutation.mutateAsync(pendingSendId);
+                toast({
+                  title: "Email cancelled",
+                  description: "Your message was not sent.",
+                });
+              } catch {
+                toast({
+                  title: "Could not cancel",
+                  description: "The email may have already been sent.",
+                  variant: "destructive",
+                });
+              }
+            }}
+            data-testid="button-undo-send"
+          >
+            <Undo2 className="w-3 h-3 mr-1" />
+            Undo
+          </Button>
+        </div>
+      ),
+      duration: (delaySeconds + 1) * 1000,
+    });
+
+    const intervalId = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(intervalId);
+        update({
+          id: toastId,
+          title: "Email sent",
+          description: `Your message to ${recipientText} was sent.`,
+          duration: 3000,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        return;
+      }
+      update({
+        id: toastId,
+        title: "Sending email...",
+        description: (
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm">To: {recipientText} ({remaining}s)</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                clearInterval(intervalId);
+                dismiss();
+                try {
+                  await cancelMutation.mutateAsync(pendingSendId);
+                  toast({
+                    title: "Email cancelled",
+                    description: "Your message was not sent.",
+                  });
+                } catch {
+                  toast({
+                    title: "Could not cancel",
+                    description: "The email may have already been sent.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              data-testid="button-undo-send"
+            >
+              <Undo2 className="w-3 h-3 mr-1" />
+              Undo
+            </Button>
+          </div>
+        ),
+        duration: (remaining + 1) * 1000,
+      });
+    }, 1000);
+  }, [toast, cancelMutation]);
+
   const sendMutation = useMutation({
     mutationFn: async () => {
       const toRecipients = to.split(",").map(e => e.trim()).filter(Boolean);
@@ -128,6 +227,7 @@ export function ComposeDialog({
         bcc: bccRecipients,
         subject,
         body,
+        delaySeconds: 5,
       };
       
       if ((mode === "reply" || mode === "replyAll") && originalEmail) {
@@ -135,16 +235,22 @@ export function ComposeDialog({
       }
 
       const response = await apiRequest("POST", "/api/send", payload);
-      return response.json();
+      const data = await response.json();
+      return { ...data, toRecipients };
     },
-    onSuccess: () => {
-      toast({
-        title: "Email sent",
-        description: "Your message has been sent successfully.",
-      });
+    onSuccess: (data) => {
       onOpenChange(false);
       resetForm();
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      
+      if (data.pendingSendId) {
+        showUndoToast(data.pendingSendId, data.delaySeconds || 5, data.toRecipients);
+      } else {
+        toast({
+          title: "Email sent",
+          description: "Your message has been sent successfully.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      }
     },
     onError: (error: Error) => {
       toast({

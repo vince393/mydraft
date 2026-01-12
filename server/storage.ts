@@ -83,6 +83,7 @@ export interface IStorage {
   getPendingSendsByUser(userId: string): Promise<PendingSend[]>;
   getPendingSendsReady(): Promise<PendingSend[]>;
   cancelPendingSend(userId: string, id: number): Promise<boolean>;
+  claimPendingSendForProcessing(id: number): Promise<PendingSend | undefined>;
   markPendingSendSent(id: number): Promise<PendingSend | undefined>;
   markPendingSendFailed(id: number, errorMessage: string): Promise<PendingSend | undefined>;
 }
@@ -1018,6 +1019,14 @@ Business Development`,
       .where(eq(pendingSends.id, id))
       .returning();
     return updated;
+  }
+
+  async claimPendingSendForProcessing(id: number): Promise<PendingSend | undefined> {
+    const [claimed] = await db.update(pendingSends)
+      .set({ status: "sending" })
+      .where(and(eq(pendingSends.id, id), eq(pendingSends.status, "pending")))
+      .returning();
+    return claimed;
   }
 
   async markPendingSendFailed(id: number, errorMessage: string): Promise<PendingSend | undefined> {

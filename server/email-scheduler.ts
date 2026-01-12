@@ -9,10 +9,17 @@ async function processPendingSends() {
     
     for (const send of readySends) {
       try {
-        const { to, cc, bcc, subject, body, replyToMessageId } = send.payload;
-        await nylas.sendMessage(send.grantId, to, subject, body, replyToMessageId, cc, bcc);
-        await storage.markPendingSendSent(send.id);
-        console.log(`[EmailScheduler] Successfully sent email ${send.id} to ${to.join(", ")}`);
+        const claimed = await storage.claimPendingSendForProcessing(send.id);
+        
+        if (!claimed) {
+          console.log(`[EmailScheduler] Skipping email ${send.id} - already cancelled or processed`);
+          continue;
+        }
+        
+        const { to, cc, bcc, subject, body, replyToMessageId } = claimed.payload;
+        await nylas.sendMessage(claimed.grantId, to, subject, body, replyToMessageId, cc, bcc);
+        await storage.markPendingSendSent(claimed.id);
+        console.log(`[EmailScheduler] Successfully sent email ${claimed.id} to ${to.join(", ")}`);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         await storage.markPendingSendFailed(send.id, errorMessage);
