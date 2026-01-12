@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from "react";
-import { formatDistanceToNowStrict } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,21 @@ interface EmailWithNylasId extends Email {
 
 function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
+}
+
+function getAvatarUrl(email: string, name: string): string {
+  const seed = encodeURIComponent(email || name);
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=3b82f6,8b5cf6,ec4899,f97316,84cc16,06b6d4,10b981`;
+}
+
+function formatEmailTime(date: Date): string {
+  if (isToday(date)) {
+    return format(date, "h:mm a");
+  } else if (isYesterday(date)) {
+    return "Yesterday";
+  } else {
+    return format(date, "MMM d");
+  }
 }
 
 interface EmailListProps {
@@ -263,6 +278,10 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               <div className="flex items-start gap-3">
                 <div className="relative flex-shrink-0">
                   <Avatar className="w-11 h-11 ring-2 ring-border/30">
+                    <AvatarImage 
+                      src={getAvatarUrl(email.senderEmail, email.sender)} 
+                      alt={email.sender}
+                    />
                     <AvatarFallback 
                       style={{ backgroundColor: email.avatarColor }}
                       className="text-white text-sm font-medium"
@@ -287,7 +306,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                     </span>
                     <span className="flex-1" />
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNowStrict(new Date(email.receivedAt))}
+                      {formatEmailTime(new Date(email.receivedAt))}
                     </span>
                     <button 
                       className={`

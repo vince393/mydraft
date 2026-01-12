@@ -15,7 +15,7 @@ import {
   Calendar,
   ChevronDown
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -200,6 +200,11 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
     .toUpperCase()
     .slice(0, 2);
 
+  const getAvatarUrl = (emailAddr: string, name: string): string => {
+    const seed = encodeURIComponent(emailAddr || name);
+    return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=3b82f6,8b5cf6,ec4899,f97316,84cc16,06b6d4,10b981`;
+  };
+
   const formatSmartDate = (date: Date) => {
     if (isToday(date)) {
       return format(date, "h:mm a");
@@ -258,10 +263,14 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="pl-6 pr-8 pt-4 pb-8">
           <div className="flex items-start gap-3 mb-5">
-            <Avatar className="w-8 h-8 ring-1 ring-border/40">
+            <Avatar className="w-10 h-10 ring-2 ring-border/30">
+              <AvatarImage 
+                src={getAvatarUrl(email.senderEmail, email.sender)} 
+                alt={email.sender}
+              />
               <AvatarFallback 
                 style={{ backgroundColor: email.avatarColor }}
-                className="text-white font-medium text-xs"
+                className="text-white font-medium text-sm"
               >
                 {initials}
               </AvatarFallback>
@@ -276,7 +285,7 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
                   {formatSmartDate(new Date(email.receivedAt))}
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground" data-testid="email-sender-address">
+              <p className="text-xs text-muted-foreground" data-testid="email-sender-address">
                 {email.senderEmail}
               </p>
             </div>
