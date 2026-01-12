@@ -462,8 +462,13 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                               size="icon"
                               variant="ghost"
                               className="h-5 w-5"
-                              onClick={() => renameSessionMutation.mutate({ sessionId: session.id, title: editingTitle })}
-                              disabled={renameSessionMutation.isPending}
+                              onClick={() => {
+                                const trimmed = editingTitle.trim();
+                                if (trimmed) {
+                                  renameSessionMutation.mutate({ sessionId: session.id, title: trimmed });
+                                }
+                              }}
+                              disabled={renameSessionMutation.isPending || !editingTitle.trim()}
                             >
                               <Check className="w-3 h-3" />
                             </Button>
