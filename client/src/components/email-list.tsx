@@ -299,18 +299,17 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                   )}
                 </div>
 
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-sm truncate ${!email.isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
+                    <span className={`text-sm truncate flex-1 min-w-0 ${!email.isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
                       {email.sender}
                     </span>
-                    <span className="flex-1" />
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                       {formatEmailTime(new Date(email.receivedAt))}
                     </span>
                     <button 
                       className={`
-                        p-1 rounded-lg transition-all duration-200 -mr-1
+                        p-1 rounded-lg transition-all duration-200 -mr-1 flex-shrink-0
                         ${email.isStarred 
                           ? "opacity-100 text-yellow-400" 
                           : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
