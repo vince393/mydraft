@@ -816,7 +816,7 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
 
   app.post("/api/send", requireAuth, async (req, res) => {
     try {
-      const { to, cc, bcc, subject, body, replyToMessageId } = req.body;
+      const { to, cc, bcc, subject, body, replyToMessageId, delaySeconds = 5, immediate = false } = req.body;
       
       if (!to || !Array.isArray(to) || to.length === 0) {
         return res.status(400).json({ error: "Recipients required" });
@@ -829,12 +829,61 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
       if (!grant) {
         return res.status(401).json({ error: "Not connected to email provider" });
       }
+
+      // If immediate send is requested (e.g., from undo confirmation), send now
+      if (immediate) {
+        await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId, cc, bcc);
+        return res.json({ success: true, sent: true });
+      }
       
-      await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId, cc, bcc);
+      // Otherwise, queue for delayed send with undo window
+      const delay = Math.min(Math.max(delaySeconds, 1), 30); // Clamp between 1-30 seconds
+      const scheduledSendAt = new Date(Date.now() + delay * 1000);
+      
+      const pendingSend = await storage.createPendingSend({
+        userId: req.session.userId!,
+        grantId: grant.grantId,
+        payload: { to, cc, bcc, subject, body, replyToMessageId },
+        scheduledSendAt,
+        delaySeconds: delay,
+        status: "pending",
+      });
+      
+      res.json({ 
+        success: true, 
+        pendingSendId: pendingSend.id, 
+        scheduledSendAt: pendingSend.scheduledSendAt,
+        delaySeconds: delay 
+      });
+    } catch (error) {
+      console.error("Error scheduling email:", error);
+      res.status(500).json({ error: "Failed to schedule email" });
+    }
+  });
+
+  // Get pending sends for current user (for restoring undo state on page reload)
+  app.get("/api/pending-sends", requireAuth, async (req, res) => {
+    try {
+      const pending = await storage.getPendingSendsByUser(req.session.userId!);
+      res.json(pending);
+    } catch (error) {
+      console.error("Error fetching pending sends:", error);
+      res.status(500).json({ error: "Failed to fetch pending sends" });
+    }
+  });
+
+  // Cancel a pending send (undo)
+  app.post("/api/pending-sends/:id/cancel", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const cancelled = await storage.cancelPendingSend(req.session.userId!, id);
+      if (!cancelled) {
+        return res.status(404).json({ error: "Pending send not found or already sent" });
+      }
       res.json({ success: true });
     } catch (error) {
-      console.error("Error sending email:", error);
-      res.status(500).json({ error: "Failed to send email" });
+      console.error("Error canceling pending send:", error);
+      res.status(500).json({ error: "Failed to cancel pending send" });
     }
   });
 
