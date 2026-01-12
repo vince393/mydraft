@@ -450,7 +450,10 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
-                                  renameSessionMutation.mutate({ sessionId: session.id, title: editingTitle });
+                                  const trimmed = editingTitle.trim();
+                                  if (trimmed) {
+                                    renameSessionMutation.mutate({ sessionId: session.id, title: trimmed });
+                                  }
                                 } else if (e.key === "Escape") {
                                   setEditingSessionId(null);
                                   setEditingTitle("");
