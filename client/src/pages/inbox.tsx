@@ -7,7 +7,6 @@ import { EmailDetail } from "@/components/email-detail";
 import { AIDraftDialog } from "@/components/ai-draft-dialog";
 import { ComposeDialog } from "@/components/compose-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, PenSquare } from "lucide-react";
+import { Settings, LogOut, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Email, Draft } from "@shared/schema";
 
@@ -27,18 +26,20 @@ interface EmailWithNylasId extends Email {
 
 interface InboxProps {
   activeFolder: string;
+  showComposeDialog: boolean;
+  setShowComposeDialog: (show: boolean) => void;
+  composeMode: "new" | "reply" | "replyAll" | "forward";
+  setComposeMode: (mode: "new" | "reply" | "replyAll" | "forward") => void;
 }
 
 function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
 }
 
-export default function Inbox({ activeFolder }: InboxProps) {
+export default function Inbox({ activeFolder, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode }: InboxProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
-  const [showComposeDialog, setShowComposeDialog] = useState(false);
-  const [composeMode, setComposeMode] = useState<"new" | "reply" | "replyAll" | "forward">("new");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -199,10 +200,12 @@ export default function Inbox({ activeFolder }: InboxProps) {
     }
   };
 
-  const handleCompose = () => {
-    setComposeMode("new");
-    setShowComposeDialog(true);
-  };
+  // When dialog opens from sidebar (without reply/forward context), reset to new mode
+  useEffect(() => {
+    if (showComposeDialog && composeMode !== "new" && !selectedEmail) {
+      setComposeMode("new");
+    }
+  }, [showComposeDialog, composeMode, selectedEmail]);
 
   // Memoize compose email to prevent unnecessary re-renders and reinitializations
   const composeEmail = useMemo(() => {
@@ -239,15 +242,7 @@ export default function Inbox({ activeFolder }: InboxProps) {
         />
       </div>
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="flex items-center justify-between h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
-          <Button 
-            onClick={handleCompose} 
-            className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0"
-            data-testid="button-compose"
-          >
-            <PenSquare className="w-4 h-4" />
-            Compose
-          </Button>
+        <header className="flex items-center justify-end h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">

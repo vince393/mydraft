@@ -47,9 +47,10 @@ interface AppSidebarProps {
   activeFolder: string;
   onFolderChange: (folder: string) => void;
   unreadCount: number;
+  onCompose?: () => void;
 }
 
-export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSidebarProps) {
+export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompose }: AppSidebarProps) {
   const [folders, setFolders] = useState<FolderItem[]>(defaultItems);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -263,6 +264,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
               size="lg"
               className="w-full justify-center gap-2 rounded-xl font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
               data-testid="button-compose"
+              onClick={onCompose}
             >
               <PenSquare className="w-4 h-4" />
               Compose
@@ -274,6 +276,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount }: AppSid
                   size="icon"
                   className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
                   data-testid="button-compose"
+                  onClick={onCompose}
                 >
                   <PenSquare className="w-4 h-4" />
                 </Button>

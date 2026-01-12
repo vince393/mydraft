@@ -26,12 +26,19 @@ interface AuthResponse {
 
 function AuthenticatedApp() {
   const [activeFolder, setActiveFolder] = useState("inbox");
+  const [showComposeDialog, setShowComposeDialog] = useState(false);
+  const [composeMode, setComposeMode] = useState<"new" | "reply" | "replyAll" | "forward">("new");
 
   const { data: emails = [] } = useQuery<Email[]>({
     queryKey: ["/api/emails"],
   });
 
   const unreadCount = emails.filter((e) => !e.isRead).length;
+
+  const handleCompose = () => {
+    setComposeMode("new");
+    setShowComposeDialog(true);
+  };
 
   return (
     <SidebarProvider
@@ -45,9 +52,16 @@ function AuthenticatedApp() {
           activeFolder={activeFolder}
           onFolderChange={setActiveFolder}
           unreadCount={unreadCount}
+          onCompose={handleCompose}
         />
         <SidebarInset className="flex flex-1 min-w-0">
-          <Inbox activeFolder={activeFolder} />
+          <Inbox 
+            activeFolder={activeFolder} 
+            showComposeDialog={showComposeDialog}
+            setShowComposeDialog={setShowComposeDialog}
+            composeMode={composeMode}
+            setComposeMode={setComposeMode}
+          />
         </SidebarInset>
       </div>
     </SidebarProvider>
