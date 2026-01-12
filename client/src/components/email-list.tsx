@@ -300,11 +300,10 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 </div>
 
                 <div className="flex-1 min-w-0 overflow-hidden">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-sm truncate min-w-0 max-w-[120px] ${!email.isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
+                  <div className="flex items-center gap-2 mb-1 min-w-0">
+                    <span className={`text-sm truncate flex-1 min-w-0 ${!email.isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
                       {email.sender}
                     </span>
-                    <span className="flex-1" />
                     <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                       {formatEmailTime(new Date(email.receivedAt))}
                     </span>
