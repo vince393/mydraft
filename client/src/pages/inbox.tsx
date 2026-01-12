@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
 import { AIDraftDialog } from "@/components/ai-draft-dialog";
+import { ComposeDialog } from "@/components/compose-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,11 +15,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User } from "lucide-react";
+import { Settings, LogOut, User, PenSquare } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { Email, Draft } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
   nylasId?: string;
+  to?: string[];
+  cc?: string[];
 }
 
 interface InboxProps {
@@ -32,7 +37,22 @@ export default function Inbox({ activeFolder }: InboxProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
+  const [showComposeDialog, setShowComposeDialog] = useState(false);
+  const [composeMode, setComposeMode] = useState<"new" | "reply" | "replyAll" | "forward">("new");
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  // Fetch current user info including connected email
+  const { data: userData } = useQuery<{ user: { email: string; connectedEmail: string | null } | null }>({
+    queryKey: ["/api/auth/me"],
+    queryFn: async () => {
+      const response = await fetch("/api/auth/me");
+      if (!response.ok) throw new Error("Failed to fetch user");
+      return response.json();
+    },
+  });
+  
+  const currentUserEmail = userData?.user?.connectedEmail || userData?.user?.email || "";
 
   // Fetch full email details when an email is selected
   const { data: selectedEmail, isLoading: isLoadingEmail } = useQuery<EmailWithNylasId>({
@@ -149,6 +169,56 @@ export default function Inbox({ activeFolder }: InboxProps) {
     }
   };
 
+  const handleStarEmail = () => {
+    if (selectedEmail) {
+      toggleStarMutation.mutate(getEmailId(selectedEmail));
+    }
+  };
+
+  // Check if email detail is fully loaded (has to/cc arrays from server)
+  const isEmailDetailReady = selectedEmail && !isLoadingEmail && Array.isArray(selectedEmail.to);
+
+  const handleReply = () => {
+    if (isEmailDetailReady) {
+      setComposeMode("reply");
+      setShowComposeDialog(true);
+    }
+  };
+
+  const handleReplyAll = () => {
+    if (isEmailDetailReady) {
+      setComposeMode("replyAll");
+      setShowComposeDialog(true);
+    }
+  };
+
+  const handleForward = () => {
+    if (isEmailDetailReady) {
+      setComposeMode("forward");
+      setShowComposeDialog(true);
+    }
+  };
+
+  const handleCompose = () => {
+    setComposeMode("new");
+    setShowComposeDialog(true);
+  };
+
+  // Memoize compose email to prevent unnecessary re-renders and reinitializations
+  const composeEmail = useMemo(() => {
+    if (!selectedEmail || composeMode === "new") return undefined;
+    return {
+      id: String(getEmailId(selectedEmail)),
+      subject: selectedEmail.subject,
+      from: selectedEmail.sender,
+      fromEmail: selectedEmail.senderEmail,
+      to: selectedEmail.to || [],
+      cc: selectedEmail.cc || [],
+      body: selectedEmail.body,
+      date: new Date(selectedEmail.receivedAt),
+    };
+  }, [selectedEmail, composeMode]);
+
   return (
     <div className="flex h-screen">
       <div className="w-[320px] border-r border-border/50 flex-shrink-0 flex flex-col">
@@ -169,7 +239,15 @@ export default function Inbox({ activeFolder }: InboxProps) {
         />
       </div>
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="flex items-center justify-end h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
+        <header className="flex items-center justify-between h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
+          <Button 
+            onClick={handleCompose} 
+            className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0"
+            data-testid="button-compose"
+          >
+            <PenSquare className="w-4 h-4" />
+            Compose
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
@@ -216,6 +294,12 @@ export default function Inbox({ activeFolder }: InboxProps) {
             onClearDraft={() => setGeneratedDraft(null)}
             onDraftUpdate={(draft) => setGeneratedDraft(draft)}
             isLoading={isLoadingEmail}
+            onArchive={handleArchiveEmail}
+            onTrash={handleTrashEmail}
+            onStar={handleStarEmail}
+            onReply={handleReply}
+            onReplyAll={handleReplyAll}
+            onForward={handleForward}
           />
         </div>
       </div>
@@ -225,6 +309,14 @@ export default function Inbox({ activeFolder }: InboxProps) {
         open={showAiDialog}
         onOpenChange={setShowAiDialog}
         onDraftAccepted={handleDraftAccepted}
+      />
+
+      <ComposeDialog
+        open={showComposeDialog}
+        onOpenChange={setShowComposeDialog}
+        mode={composeMode}
+        originalEmail={composeEmail}
+        currentUserEmail={currentUserEmail}
       />
     </div>
   );

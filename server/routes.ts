@@ -205,7 +205,8 @@ export async function registerRoutes(
         plan: user.plan,
         onboardingCompleted: user.onboardingCompleted,
         aiPreferences: user.aiPreferences,
-        emailConnected: !!grant
+        emailConnected: !!grant,
+        connectedEmail: grant?.email || null
       } 
     });
   });
@@ -682,7 +683,7 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
 
   app.post("/api/send", requireAuth, async (req, res) => {
     try {
-      const { to, subject, body, replyToMessageId } = req.body;
+      const { to, cc, bcc, subject, body, replyToMessageId } = req.body;
       
       if (!to || !Array.isArray(to) || to.length === 0) {
         return res.status(400).json({ error: "Recipients required" });
@@ -696,7 +697,7 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
         return res.status(401).json({ error: "Not connected to email provider" });
       }
       
-      await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId);
+      await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId, cc, bcc);
       res.json({ success: true });
     } catch (error) {
       console.error("Error sending email:", error);

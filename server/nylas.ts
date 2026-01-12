@@ -267,13 +267,17 @@ export async function getMessage(grantId: string, messageId: string): Promise<Em
     body = sanitizeEmailHtml(body);
   }
 
+  // Safely extract email addresses, handling undefined arrays - always return arrays
+  const toEmails = (msg.to ?? []).map(p => p.email).filter(Boolean) as string[];
+  const ccEmails = (msg.cc ?? []).map(p => p.email).filter(Boolean) as string[];
+
   return {
     id: msg.id,
     subject: msg.subject || '(No Subject)',
     from: fromName,
     fromEmail,
-    to: msg.to?.map(p => p.name || p.email) || [],
-    cc: msg.cc?.map(p => p.name || p.email),
+    to: toEmails,
+    cc: ccEmails,
     body,
     date: new Date(msg.date * 1000),
     threadId: msg.thread_id,
@@ -287,13 +291,23 @@ export async function sendMessage(
   to: string[], 
   subject: string, 
   body: string, 
-  replyToMessageId?: string
+  replyToMessageId?: string,
+  cc?: string[],
+  bcc?: string[]
 ): Promise<void> {
   const payload: Record<string, unknown> = {
     to: to.map(email => ({ email })),
     subject,
     body,
   };
+
+  if (cc && cc.length > 0) {
+    payload.cc = cc.map(email => ({ email }));
+  }
+  
+  if (bcc && bcc.length > 0) {
+    payload.bcc = bcc.map(email => ({ email }));
+  }
 
   if (replyToMessageId) {
     payload.reply_to_message_id = replyToMessageId;

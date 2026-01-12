@@ -36,6 +36,12 @@ interface EmailDetailProps {
   onClearDraft?: () => void;
   onDraftUpdate?: (draft: Draft) => void;
   isLoading?: boolean;
+  onArchive?: () => void;
+  onTrash?: () => void;
+  onStar?: () => void;
+  onReply?: () => void;
+  onReplyAll?: () => void;
+  onForward?: () => void;
 }
 
 function EmailDetailEmpty() {
@@ -54,7 +60,7 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading }: EmailDetailProps) {
+export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
@@ -216,13 +222,31 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
           </h1>
         </div>
         <div className="flex items-center gap-0.5">
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-archive">
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            className="text-muted-foreground hover:text-foreground transition-colors" 
+            data-testid="button-archive"
+            onClick={onArchive}
+          >
             <Archive className="w-4 h-4" />
           </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-trash">
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            className="text-muted-foreground hover:text-foreground transition-colors" 
+            data-testid="button-trash"
+            onClick={onTrash}
+          >
             <Trash2 className="w-4 h-4" />
           </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-star">
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            className="text-muted-foreground hover:text-foreground transition-colors" 
+            data-testid="button-star"
+            onClick={onStar}
+          >
             <Star className={`w-4 h-4 ${email.isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
           </Button>
           <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-more">
@@ -447,15 +471,19 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
           )}
 
           <div className="flex items-center gap-3 pt-6 border-t border-border/50">
-            <Button className="gap-2 px-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" data-testid="button-reply">
+            <Button 
+              className="gap-2 px-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
+              data-testid="button-reply"
+              onClick={onReply}
+            >
               <Reply className="w-4 h-4" />
               Reply
             </Button>
-            <Button variant="outline" className="gap-2" data-testid="button-reply-all">
+            <Button variant="outline" className="gap-2" data-testid="button-reply-all" onClick={onReplyAll}>
               <ReplyAll className="w-4 h-4" />
               Reply All
             </Button>
-            <Button variant="outline" className="gap-2" data-testid="button-forward">
+            <Button variant="outline" className="gap-2" data-testid="button-forward" onClick={onForward}>
               <Forward className="w-4 h-4" />
               Forward
             </Button>

@@ -1,0 +1,102 @@
+Make the mailbox actions work like a normal email client. Do NOT change the UI layout or styling—only make the buttons actually work and persist correctly.
+
+Context:
+We already connect to real user inboxes (Gmail/Outlook via Nylas). Right now buttons exist but behavior is incomplete.
+
+Goal:
+Implement these actions end-to-end so they WORK:
+- Compose (new email)
+- Send
+- Reply
+- Reply all
+- Forward
+- Trash (move to trash)
+- Archive
+Also make the “tabs” system work and persist across refresh.
+
+REQUIRED BEHAVIOR (NORMAL MAILBOX):
+
+1) Compose
+- Clicking “Compose” opens the compose UI (or existing compose panel/modal).
+- Fields: To, Cc, Bcc (optional), Subject, Body.
+- Default “From” is the connected account.
+- “Send” sends a NEW message.
+- After send: show success state, close compose, and update the correct tab/inbox list.
+
+2) Reply
+- Reply replies to the currently opened email/thread.
+- “To” should be the original sender (not me).
+- Subject should be "Re: <original subject>" if not already.
+- Body should include quoted original message (can be minimal).
+- Send should send within the SAME conversation/thread if provider supports it.
+
+3) Reply all
+- Reply all includes:
+  - To: original sender
+  - Cc: everyone else on the thread EXCEPT the current user
+- Avoid duplicates across To/Cc.
+- Keep thread/conversation linkage.
+
+4) Forward
+- Forward opens compose with:
+  - empty To
+  - Subject: "Fwd: <original subject>"
+  - Body: forwarded content (include original message inline)
+- Does NOT keep the same recipients.
+
+5) Trash button
+- Moves the selected message/thread to Trash (provider-appropriate action).
+- Remove it from current list immediately (optimistic UI) then confirm with API response.
+- Trash tab should show trashed items.
+
+6) Archive button
+- Archives the selected message/thread (remove from Inbox, keep in All Mail/Archive).
+- Remove from Inbox immediately (optimistic UI).
+- Archive tab should show archived items.
+
+TABS (VERY IMPORTANT):
+We have “tabs” in the UI (like Inbox / Important / Drafts / Sent / Trash / Archive or similar).
+Make tabs actually work:
+
+- Each tab should map to a deterministic filter/query against the provider (via Nylas) OR a stored local categorization:
+  * Inbox: non-archived, non-trash items (main inbox)
+  * Sent: sent messages
+  * Drafts: drafts (if supported)
+  * Trash: trashed items
+  * Archive: archived items
+  * (Any custom tabs): define clear filter rules
+
+- When the user moves an email (trash/archive), it must move to the correct tab immediately.
+- After a page refresh, the items must still appear in the correct tabs (no “reset”).
+  * Implement persistence: store per-user tab state rules and/or store message IDs per tab in DB.
+  * Prefer provider truth when possible (labels/folders), but ensure refresh consistency.
+
+DATA + API ROUTES:
+- Ensure backend has routes that the frontend can call for:
+  - POST /api/mail/send (new)
+  - POST /api/mail/reply
+  - POST /api/mail/reply-all
+  - POST /api/mail/forward
+  - POST /api/mail/trash
+  - POST /api/mail/archive
+  - GET /api/mail/list?tab=INBOX|SENT|TRASH|ARCHIVE|... (tab-aware)
+  - GET /api/mail/message/:id (full message)
+- Each route must use the logged-in user’s stored Nylas grant and should never expose secrets.
+
+PERSISTENCE REQUIREMENTS:
+- Store per-user:
+  - nylas grant id
+  - connected email address
+  - tab definitions (if custom)
+  - any local message-to-tab mappings ONLY if provider cannot represent it
+- After refresh, tab content must match what the user saw before.
+
+EDGE CASES:
+- Handle HTML vs text body safely.
+- Prevent sending if To is empty.
+- Show clear error messages if an action fails.
+- Avoid breaking existing auth/onboarding/payments/inbox layout.
+
+DELIVERABLE:
+- Implement missing backend functions and frontend wiring so every button works.
+- Keep code minimal, correct, and tested by clicking each action.
