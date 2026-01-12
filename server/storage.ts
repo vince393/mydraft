@@ -1,7 +1,7 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, userStyleProfileSchema, assistantPermissionsSchema } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, lte } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -76,6 +76,15 @@ export interface IStorage {
   // Audit log methods
   createAuditLog(userId: string, actionType: string, status: string, targetMessageId?: string, details?: string): Promise<AssistantAuditLogRecord>;
   getRecentAuditLogs(userId: string, limit?: number): Promise<AssistantAuditLogRecord[]>;
+
+  // Pending sends methods (undo send)
+  createPendingSend(send: InsertPendingSend): Promise<PendingSend>;
+  getPendingSend(id: number): Promise<PendingSend | undefined>;
+  getPendingSendsByUser(userId: string): Promise<PendingSend[]>;
+  getPendingSendsReady(): Promise<PendingSend[]>;
+  cancelPendingSend(userId: string, id: number): Promise<boolean>;
+  markPendingSendSent(id: number): Promise<PendingSend | undefined>;
+  markPendingSendFailed(id: number, errorMessage: string): Promise<PendingSend | undefined>;
 }
 
 const avatarColors = [
@@ -964,6 +973,59 @@ Business Development`,
       .where(eq(assistantAuditLog.userId, userId))
       .orderBy(desc(assistantAuditLog.createdAt))
       .limit(limit);
+  }
+
+  // Pending sends methods (undo send)
+  async createPendingSend(send: InsertPendingSend): Promise<PendingSend> {
+    const [created] = await db.insert(pendingSends).values(send).returning();
+    return created;
+  }
+
+  async getPendingSend(id: number): Promise<PendingSend | undefined> {
+    const [send] = await db.select().from(pendingSends).where(eq(pendingSends.id, id));
+    return send;
+  }
+
+  async getPendingSendsByUser(userId: string): Promise<PendingSend[]> {
+    return db.select()
+      .from(pendingSends)
+      .where(and(eq(pendingSends.userId, userId), eq(pendingSends.status, "pending")))
+      .orderBy(desc(pendingSends.createdAt));
+  }
+
+  async getPendingSendsReady(): Promise<PendingSend[]> {
+    const now = new Date();
+    return db.select()
+      .from(pendingSends)
+      .where(and(eq(pendingSends.status, "pending"), lte(pendingSends.scheduledSendAt, now)));
+  }
+
+  async cancelPendingSend(userId: string, id: number): Promise<boolean> {
+    const [send] = await db.select().from(pendingSends)
+      .where(and(eq(pendingSends.id, id), eq(pendingSends.userId, userId), eq(pendingSends.status, "pending")));
+    
+    if (!send) return false;
+    
+    await db.update(pendingSends)
+      .set({ status: "cancelled" })
+      .where(eq(pendingSends.id, id));
+    return true;
+  }
+
+  async markPendingSendSent(id: number): Promise<PendingSend | undefined> {
+    const [updated] = await db.update(pendingSends)
+      .set({ status: "sent", sentAt: new Date() })
+      .where(eq(pendingSends.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markPendingSendFailed(id: number, errorMessage: string): Promise<PendingSend | undefined> {
+    const [updated] = await db.update(pendingSends)
+      .set({ status: "failed", failedAt: new Date(), errorMessage })
+      .where(eq(pendingSends.id, id))
+      .returning();
+    return updated;
   }
 }
 
