@@ -42,6 +42,7 @@ interface EmailDetailProps {
   onReply?: () => void;
   onReplyAll?: () => void;
   onForward?: () => void;
+  onAiDraft?: () => void;
 }
 
 function EmailDetailEmpty() {
@@ -60,7 +61,7 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward }: EmailDetailProps) {
+export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward, onAiDraft }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
@@ -495,6 +496,15 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
             <Button variant="outline" className="gap-2" data-testid="button-forward" onClick={onForward}>
               <Forward className="w-4 h-4" />
               Forward
+            </Button>
+            <Button 
+              variant="outline" 
+              className="gap-2 ml-auto border-primary/30 text-primary hover:bg-primary/10 hover:text-primary" 
+              data-testid="button-ai-draft"
+              onClick={onAiDraft}
+            >
+              <Sparkles className="w-4 h-4" />
+              Draft with AI
             </Button>
           </div>
         </div>

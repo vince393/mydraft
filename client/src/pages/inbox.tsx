@@ -352,6 +352,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             onReply={handleReply}
             onReplyAll={handleReplyAll}
             onForward={handleForward}
+            onAiDraft={handleAiReply}
           />
         </div>
       </div>
