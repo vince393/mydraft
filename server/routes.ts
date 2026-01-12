@@ -1233,13 +1233,22 @@ Return ONLY a JSON object with this exact format:
         content: m.content
       }));
 
-      const systemPrompt = `You are ${assistantName}, a professional personal assistant for an email inbox application called MailFlow.
+      const systemPrompt = `You are ${assistantName}, a friendly and thoughtful personal assistant for MailFlow, an email inbox application.
 
 PERSONALITY:
-- Professional, calm, concise
-- No emojis, no jokes, no casual slang
-- Executive assistant tone
-- Short, clear responses by default
+- Warm, approachable, and genuinely helpful - like a trusted colleague
+- Take a moment to understand what the user really needs before responding
+- Use natural, conversational language - not robotic or overly formal
+- Show personality - you can be lightly warm and personable
+- Be encouraging and supportive, especially when users seem stressed about their inbox
+- Acknowledge the user's situation before jumping to answers
+- Keep responses concise but not curt - 2-4 sentences is ideal
+
+RESPONSE STYLE:
+- Start by briefly acknowledging what they asked (shows you understood)
+- Then provide your helpful answer
+- If relevant, offer a quick follow-up suggestion
+- Example: "Looking at your inbox now... You've got ${unreadCount} unread emails. The most recent ones are from [senders]. Want me to help you prioritize them?"
 
 YOUR KNOWLEDGE:
 1. PRODUCT KNOWLEDGE - You know how MailFlow works:
@@ -1264,12 +1273,15 @@ YOUR KNOWLEDGE:
    ${todayEmails.length > 0 ? `- Today's senders: ${[...new Set(todayEmails.map(e => e.sender))].slice(0, 5).join(", ")}` : ""}
    ${unreadCount > 0 ? `- Recent unread subjects: ${emails.filter(e => !e.isRead).slice(0, 3).map(e => `"${e.subject}"`).join(", ")}` : ""}
 
-STRICT RULES:
+IMPORTANT RULES:
 - Only answer inbox questions using the real data provided above
-- If you don't have data, say so explicitly
+- If you don't have specific data, be honest about it in a friendly way
 - Never guess or make up email content
-- Distinguish between product help, account info, and inbox analysis
-- Keep responses under 3 sentences unless more detail is specifically requested`;
+- Be helpful and suggest next steps when appropriate`;
+
+      // Add a brief thinking delay for more natural conversation feel (800-1500ms)
+      const thinkingDelay = 800 + Math.random() * 700;
+      await new Promise(resolve => setTimeout(resolve, thinkingDelay));
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -1279,7 +1291,7 @@ STRICT RULES:
           { role: "user", content: message }
         ],
         max_tokens: 500,
-        temperature: 0.7,
+        temperature: 0.8,
       });
 
       const responseContent = completion.choices[0]?.message?.content || "I apologize, I couldn't process that request.";
@@ -1426,12 +1438,13 @@ STRICT RULES:
       }
 
       // Build the draft prompt
+      const profileWithCustom = profile as typeof profile & { customInstructions?: string };
       const toneGuide = {
         professional: "formal, business-appropriate language",
         friendly: "warm and approachable tone",
         concise: "brief and to-the-point",
         casual: "relaxed and conversational",
-        custom: profile.customInstructions || "professional tone"
+        custom: profileWithCustom.customInstructions || "professional tone"
       };
 
       const lengthGuide = {
@@ -1632,14 +1645,15 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           case "forward":
             // Send the email via Nylas
             if (finalMetadata?.to && finalMetadata?.body) {
-              await nylas.sendMessage(grant.grantId, {
-                to: (finalMetadata.to as string[]).map(email => ({ email })),
-                cc: finalMetadata.cc?.map((email: string) => ({ email })),
-                bcc: finalMetadata.bcc?.map((email: string) => ({ email })),
-                subject: finalMetadata.subject || "",
-                body: finalMetadata.body,
-                replyToMessageId: action.actionType !== "send" ? finalMetadata.originalMessageId : undefined
-              });
+              await nylas.sendMessage(
+                grant.grantId,
+                finalMetadata.to as string[],
+                finalMetadata.subject || "",
+                finalMetadata.body as string,
+                action.actionType !== "send" ? finalMetadata.originalMessageId : undefined,
+                finalMetadata.cc as string[] | undefined,
+                finalMetadata.bcc as string[] | undefined
+              );
               result = { success: true, message: "Email sent successfully" };
             } else {
               result = { success: false, error: "Missing recipient or body" };
