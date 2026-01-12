@@ -6,6 +6,17 @@ import * as nylas from "./nylas";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { aiPreferencesSchema } from "@shared/schema";
+import { z } from "zod";
+
+const assistantPermissionsUpdateSchema = z.object({
+  canReadEmails: z.boolean().optional(),
+  canSendEmails: z.boolean().optional(),
+  canArchive: z.boolean().optional(),
+  canTrash: z.boolean().optional(),
+  canSearch: z.boolean().optional(),
+  requireConfirmation: z.boolean().optional(),
+  maxEmailsPerDay: z.number().int().min(0).max(100).optional()
+}).strict();
 
 const scryptAsync = promisify(scrypt);
 
@@ -1489,21 +1500,67 @@ RESPONSE STYLE:
   app.post("/api/ai/permissions", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      const { canReadEmails, canSendEmails, canArchive, canTrash, canSearch, requireConfirmation, maxEmailsPerDay } = req.body;
       
-      const result = await storage.upsertAssistantPermissions(userId, {
-        canReadEmails,
-        canSendEmails,
-        canArchive,
-        canTrash,
-        canSearch,
-        requireConfirmation,
-        maxEmailsPerDay
-      });
+      // Validate request body with strict schema
+      const parseResult = assistantPermissionsUpdateSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid permissions data",
+          details: parseResult.error.errors.map(e => e.message)
+        });
+      }
       
-      // Log permission changes for security
+      const validatedData = parseResult.data;
+      
+      // Reject empty updates
+      if (Object.keys(validatedData).length === 0) {
+        return res.status(400).json({ error: "No permission updates provided" });
+      }
+      
+      // Get current permissions to merge with updates
+      const currentPerms = await storage.getAssistantPermissions(userId);
+      const defaultPerms = {
+        canReadEmails: true,
+        canSendEmails: false,
+        canArchive: false,
+        canTrash: false,
+        canSearch: true,
+        requireConfirmation: true,
+        maxEmailsPerDay: 10
+      };
+      
+      const currentPermissions = currentPerms?.permissions || defaultPerms;
+      
+      // SECURITY: Enforce that requireConfirmation cannot be disabled if destructive permissions are enabled
+      const sensitivePerms = ['canSendEmails', 'canArchive', 'canTrash'];
+      const hasDestructiveEnabled = sensitivePerms.some(p => 
+        (validatedData as any)[p] === true || 
+        (currentPermissions as any)[p] === true && (validatedData as any)[p] !== false
+      );
+      
+      if (validatedData.requireConfirmation === false && hasDestructiveEnabled) {
+        return res.status(403).json({ 
+          error: "Security policy requires confirmation for accounts with send, archive, or trash permissions enabled",
+          code: "CONFIRMATION_REQUIRED"
+        });
+      }
+      
+      // SECURITY: When enabling destructive permissions, ensure confirmation stays on
+      const enablingDestructive = sensitivePerms.some(p => (validatedData as any)[p] === true);
+      const newPermissions = { ...currentPermissions, ...validatedData };
+      
+      if (enablingDestructive && !newPermissions.requireConfirmation) {
+        newPermissions.requireConfirmation = true;
+      }
+      
+      const result = await storage.upsertAssistantPermissions(userId, newPermissions);
+      
+      // Log permission changes with before/after values for security audit
+      const changes = Object.entries(validatedData)
+        .map(([key, value]) => `${key}: ${(currentPermissions as any)[key]} → ${value}`)
+        .join(", ");
       await storage.createAuditLog(userId, "permissions_update", "executed", undefined, 
-        `Updated permissions: send=${canSendEmails}, archive=${canArchive}, trash=${canTrash}`);
+        `Permission changes: ${changes}`);
       
       res.json(result.permissions);
     } catch (error) {
