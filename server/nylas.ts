@@ -4,6 +4,15 @@ const NYLAS_API_URL = "https://api.us.nylas.com";
 const NYLAS_API_KEY = process.env.NYLAS_API_KEY!;
 const NYLAS_CLIENT_ID = process.env.NYLAS_CLIENT_ID!;
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const messagesCache = new Map<string, CacheEntry<EmailListItem[]>>();
+const pendingRequests = new Map<string, Promise<EmailListItem[]>>();
+const CACHE_TTL = 30000;
+
 interface NylasEmailParticipant {
   email: string;
   name?: string;
@@ -94,16 +103,28 @@ function sanitizeEmailHtml(html: string): string {
   });
 }
 
-async function nylasRequest(path: string, options: RequestInit = {}): Promise<Response> {
-  const response = await fetch(`${NYLAS_API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${NYLAS_API_KEY}`,
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-  return response;
+async function nylasRequest(path: string, options: RequestInit = {}, retries = 3): Promise<Response> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    const response = await fetch(`${NYLAS_API_URL}${path}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${NYLAS_API_KEY}`,
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+    
+    if (response.status === 429 && attempt < retries - 1) {
+      const delay = Math.pow(2, attempt) * 1000;
+      console.log(`Rate limited by Nylas, retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      continue;
+    }
+    
+    return response;
+  }
+  
+  throw new Error('Max retries exceeded for Nylas request');
 }
 
 export async function getAuthUrl(provider: string, redirectUri: string, state: string): Promise<string> {
@@ -187,20 +208,47 @@ async function getFolderIdByName(grantId: string, folderName: string): Promise<s
 }
 
 export async function getMessages(grantId: string, folder?: string, provider?: string): Promise<EmailListItem[]> {
-  let path = `/v3/grants/${grantId}/messages?limit=50`;
+  const cacheKey = `${grantId}:${folder || 'inbox'}`;
+  
+  const cached = messagesCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  
+  const pending = pendingRequests.get(cacheKey);
+  if (pending) {
+    return pending;
+  }
+  
+  const fetchPromise = fetchMessagesFromNylas(grantId, folder, provider);
+  pendingRequests.set(cacheKey, fetchPromise);
+  
+  try {
+    const result = await fetchPromise;
+    messagesCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    return result;
+  } finally {
+    pendingRequests.delete(cacheKey);
+  }
+}
+
+export function invalidateMessagesCache(grantId: string, folder?: string): void {
+  const cacheKey = `${grantId}:${folder || 'inbox'}`;
+  messagesCache.delete(cacheKey);
+}
+
+async function fetchMessagesFromNylas(grantId: string, folder?: string, provider?: string): Promise<EmailListItem[]> {
+  let path = `/v3/grants/${grantId}/messages?limit=20`;
   
   const isMicrosoft = provider === 'microsoft';
   
   if (isMicrosoft) {
-    // Microsoft requires folder IDs, not names
     const targetFolder = folder || 'inbox';
     const folderId = await getFolderIdByName(grantId, targetFolder);
     if (folderId) {
       path += `&in=${encodeURIComponent(folderId)}`;
     }
-    // If no folder ID found, fetch all messages
   } else {
-    // Gmail uses uppercase labels
     if (folder === 'trash') {
       path += '&in=TRASH';
     } else if (folder === 'sent') {
@@ -208,7 +256,6 @@ export async function getMessages(grantId: string, folder?: string, provider?: s
     } else if (folder === 'drafts') {
       path += '&in=DRAFT';
     } else if (folder === 'archived') {
-      // Gmail: messages without INBOX label
     } else if (folder === 'junk') {
       path += '&in=SPAM';
     } else {

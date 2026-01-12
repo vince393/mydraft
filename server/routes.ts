@@ -659,6 +659,7 @@ export async function registerRoutes(
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         await nylas.markAsRead(grant.grantId, id);
+        nylas.invalidateMessagesCache(grant.grantId);
         return res.json({ success: true });
       }
       
@@ -690,6 +691,7 @@ export async function registerRoutes(
         } else if (folder === "archived") {
           await nylas.archiveMessage(grant.grantId, id);
         }
+        nylas.invalidateMessagesCache(grant.grantId);
         return res.json({ success: true });
       }
       
@@ -713,6 +715,7 @@ export async function registerRoutes(
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         await nylas.toggleStar(grant.grantId, id, starred ?? true);
+        nylas.invalidateMessagesCache(grant.grantId);
         return res.json({ success: true });
       }
       
@@ -736,6 +739,7 @@ export async function registerRoutes(
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         await nylas.deleteMessage(grant.grantId, id);
+        nylas.invalidateMessagesCache(grant.grantId);
         return res.status(204).send();
       }
       
@@ -833,6 +837,7 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
       // If immediate send is requested (e.g., from undo confirmation), send now
       if (immediate) {
         await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId, cc, bcc);
+        nylas.invalidateMessagesCache(grant.grantId);
         return res.json({ success: true, sent: true });
       }
       
@@ -1964,6 +1969,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
                 finalMetadata.cc as string[] | undefined,
                 finalMetadata.bcc as string[] | undefined
               );
+              nylas.invalidateMessagesCache(grant.grantId);
               result = { success: true, message: "Email sent successfully" };
             } else {
               result = { success: false, error: "Missing recipient or body" };
@@ -1973,6 +1979,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           case "trash":
             if (finalMetadata?.messageId) {
               await nylas.trashMessage(grant.grantId, finalMetadata.messageId);
+              nylas.invalidateMessagesCache(grant.grantId);
               result = { success: true, message: "Email moved to trash" };
             } else {
               result = { success: false, error: "Missing messageId" };
@@ -1982,6 +1989,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           case "archive":
             if (finalMetadata?.messageId) {
               await nylas.archiveMessage(grant.grantId, finalMetadata.messageId);
+              nylas.invalidateMessagesCache(grant.grantId);
               result = { success: true, message: "Email archived" };
             } else {
               result = { success: false, error: "Missing messageId" };
