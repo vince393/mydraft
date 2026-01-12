@@ -31,9 +31,11 @@ import {
   Trash2,
   Crown,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  MessageSquare
 } from "lucide-react";
 import { SiGmail } from "react-icons/si";
+import { FeedbackModal } from "@/components/feedback-modal";
 
 interface UserData {
   id: string;
@@ -48,6 +50,7 @@ export default function Profile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const { data: userData, isLoading } = useQuery<{ user: UserData | null }>({
     queryKey: ["/api/auth/me"],
@@ -288,6 +291,15 @@ export default function Profile() {
               </Button>
               <Button 
                 variant="ghost" 
+                className="w-full justify-start gap-3"
+                onClick={() => setShowFeedbackModal(true)}
+                data-testid="button-feedback"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Feedback
+              </Button>
+              <Button 
+                variant="ghost" 
                 className="w-full justify-start gap-3 text-destructive hover:text-destructive"
                 onClick={() => logoutMutation.mutate()}
                 data-testid="button-logout"
@@ -347,6 +359,12 @@ export default function Profile() {
           </Card>
         </div>
       </div>
+
+      <FeedbackModal 
+        open={showFeedbackModal} 
+        onOpenChange={setShowFeedbackModal}
+        userEmail={user.email}
+      />
     </div>
   );
 }

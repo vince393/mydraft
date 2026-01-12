@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, users, nylasGrants, supportMessages, assistantSettings, assistantMessages } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -37,6 +37,10 @@ export interface IStorage {
   getAssistantMessages(userId: string): Promise<AssistantMessage[]>;
   addAssistantMessage(userId: string, role: string, content: string): Promise<AssistantMessage>;
   clearAssistantMessages(userId: string): Promise<void>;
+
+  // Feedback methods
+  createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback>;
+  getUserFeedback(userId: string): Promise<UserFeedback[]>;
 }
 
 const avatarColors = [
@@ -653,6 +657,19 @@ Business Development`,
 
   async clearAssistantMessages(userId: string): Promise<void> {
     await db.delete(assistantMessages).where(eq(assistantMessages.userId, userId));
+  }
+
+  // Feedback methods
+  async createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback> {
+    const [created] = await db.insert(userFeedback).values(feedback).returning();
+    return created;
+  }
+
+  async getUserFeedback(userId: string): Promise<UserFeedback[]> {
+    return db.select()
+      .from(userFeedback)
+      .where(eq(userFeedback.userId, userId))
+      .orderBy(desc(userFeedback.createdAt));
   }
 }
 

@@ -142,3 +142,23 @@ export const insertAssistantMessageSchema = createInsertSchema(assistantMessages
 
 export type AssistantMessage = typeof assistantMessages.$inferSelect;
 export type InsertAssistantMessage = z.infer<typeof insertAssistantMessageSchema>;
+
+// User feedback submissions
+export const userFeedback = pgTable("user_feedback", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  userEmail: text("user_email").notNull(),
+  feedbackType: text("feedback_type").notNull(), // "feature_request", "bug_report", "general"
+  message: text("message").notNull(),
+  status: text("status").default("pending").notNull(), // "pending", "reviewed", "resolved"
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertUserFeedbackSchema = createInsertSchema(userFeedback).omit({
+  id: true,
+  status: true,
+  createdAt: true,
+});
+
+export type UserFeedback = typeof userFeedback.$inferSelect;
+export type InsertUserFeedback = z.infer<typeof insertUserFeedbackSchema>;

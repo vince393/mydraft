@@ -224,6 +224,55 @@ export async function registerRoutes(
     }
   });
 
+  // User feedback endpoints
+  app.post("/api/feedback", requireAuth, async (req, res) => {
+    try {
+      const { feedbackType, message } = req.body;
+      
+      if (!feedbackType || !message) {
+        return res.status(400).json({ error: "Feedback type and message are required" });
+      }
+
+      const validTypes = ["feature_request", "bug_report", "general"];
+      if (!validTypes.includes(feedbackType)) {
+        return res.status(400).json({ error: "Invalid feedback type" });
+      }
+
+      if (typeof message !== "string" || message.length > 5000) {
+        return res.status(400).json({ error: "Message too long or invalid" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const feedback = await storage.createUserFeedback({
+        userId: user.id,
+        userEmail: user.email,
+        feedbackType,
+        message: message.trim(),
+      });
+
+      console.log(`Feedback received from ${user.email}: ${feedbackType}`);
+
+      res.json({ success: true, feedback });
+    } catch (error) {
+      console.error("Feedback submission error:", error);
+      res.status(500).json({ error: "Failed to submit feedback" });
+    }
+  });
+
+  app.get("/api/feedback", requireAuth, async (req, res) => {
+    try {
+      const feedback = await storage.getUserFeedback(req.session.userId!);
+      res.json(feedback);
+    } catch (error) {
+      console.error("Feedback fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch feedback" });
+    }
+  });
+
   app.get("/api/auth/me", async (req, res) => {
     if (!req.session.userId) {
       return res.json({ user: null });
