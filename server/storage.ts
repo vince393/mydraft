@@ -24,6 +24,7 @@ export interface IStorage {
   getScheduledDrafts(): Promise<Draft[]>;
 
   getNylasGrant(userId: string): Promise<NylasGrant | undefined>;
+  getNylasGrantByEmail(email: string): Promise<NylasGrant | undefined>;
   createNylasGrant(grant: InsertNylasGrant): Promise<NylasGrant>;
   updateNylasGrant(userId: string, updates: Partial<NylasGrant>): Promise<NylasGrant | undefined>;
   deleteNylasGrant(userId: string): Promise<boolean>;
@@ -469,7 +470,8 @@ Business Development`,
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const normalizedEmail = email.toLowerCase().trim();
+    const [user] = await db.select().from(users).where(eq(users.email, normalizedEmail));
     return user;
   }
 
@@ -580,6 +582,12 @@ Business Development`,
 
   async getNylasGrant(userId: string): Promise<NylasGrant | undefined> {
     const [grant] = await db.select().from(nylasGrants).where(eq(nylasGrants.userId, userId));
+    return grant;
+  }
+
+  async getNylasGrantByEmail(email: string): Promise<NylasGrant | undefined> {
+    const normalizedEmail = email.toLowerCase().trim();
+    const [grant] = await db.select().from(nylasGrants).where(eq(nylasGrants.email, normalizedEmail));
     return grant;
   }
 

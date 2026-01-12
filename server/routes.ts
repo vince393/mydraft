@@ -108,13 +108,16 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Email and password are required" });
       }
 
-      const existingUser = await storage.getUserByEmail(email);
+      // Normalize email to prevent duplicate accounts
+      const normalizedEmail = email.toLowerCase().trim();
+
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
       const hashedPassword = await hashPassword(password);
-      const user = await storage.createUser({ email, password: hashedPassword });
+      const user = await storage.createUser({ email: normalizedEmail, password: hashedPassword });
       
       req.session.regenerate((err) => {
         if (err) {
@@ -145,7 +148,10 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Email and password are required" });
       }
 
-      const user = await storage.getUserByEmail(email);
+      // Normalize email for consistent lookup
+      const normalizedEmail = email.toLowerCase().trim();
+
+      const user = await storage.getUserByEmail(normalizedEmail);
       if (!user) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
@@ -435,19 +441,52 @@ export async function registerRoutes(
       const redirectUri = getRedirectUri(req);
       const grant = await nylas.exchangeCodeForGrant(code, redirectUri);
 
+      // Normalize the email from OAuth provider
+      const normalizedEmail = grant.email.toLowerCase().trim();
+
+      // Check if this OAuth email is already connected to a different user
+      const existingGrantByEmail = await storage.getNylasGrantByEmail(normalizedEmail);
+      
+      if (existingGrantByEmail && existingGrantByEmail.userId !== userId) {
+        // This email is already connected to another account
+        // Log the current user into that existing account instead
+        const existingUser = await storage.getUser(existingGrantByEmail.userId);
+        
+        if (existingUser) {
+          // Update the grant with fresh OAuth tokens
+          await storage.updateNylasGrant(existingGrantByEmail.userId, {
+            grantId: grant.id,
+            provider: grant.provider || provider,
+            email: normalizedEmail,
+          });
+          
+          // Switch session to the existing account
+          req.session.userId = existingUser.id;
+          await new Promise<void>((resolve, reject) => {
+            req.session.save((err) => {
+              if (err) reject(err);
+              else resolve();
+            });
+          });
+          
+          return res.redirect('/?connected=true&account_merged=true');
+        }
+      }
+
+      // Normal flow: connect email to current user
       const existingGrant = await storage.getNylasGrant(userId);
       if (existingGrant) {
         await storage.updateNylasGrant(userId, {
           grantId: grant.id,
           provider: grant.provider || provider,
-          email: grant.email,
+          email: normalizedEmail,
         });
       } else {
         await storage.createNylasGrant({
           userId: userId,
           grantId: grant.id,
           provider: grant.provider || provider,
-          email: grant.email,
+          email: normalizedEmail,
         });
       }
 
