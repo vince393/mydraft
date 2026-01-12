@@ -112,13 +112,16 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     },
   });
 
-  const { data: emails = [], isLoading: isLoadingEmails } = useQuery<EmailWithNylasId[]>({
+  const { data: emails = [], isLoading: isLoadingEmails, isFetching } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", activeFolder],
     queryFn: async () => {
       const response = await fetch(`/api/emails?folder=${activeFolder}`);
       if (!response.ok) throw new Error("Failed to fetch emails");
       return response.json();
     },
+    enabled: !!userData?.user,
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {

@@ -33,6 +33,8 @@ function AuthenticatedApp() {
 
   const { data: emails = [] } = useQuery<Email[]>({
     queryKey: ["/api/emails"],
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
   });
 
   const unreadCount = emails.filter((e) => !e.isRead).length;
