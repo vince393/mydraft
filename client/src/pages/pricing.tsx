@@ -76,7 +76,6 @@ const basePlans = [
       "Voice assistant",
       "Custom AI training",
       "Team collaboration",
-      "API access",
       "Dedicated support",
       "14-day free trial",
     ],

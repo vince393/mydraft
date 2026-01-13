@@ -102,7 +102,7 @@ export default function PublicPricingPage() {
                 { text: "Voice assistant", included: true },
                 { text: "Custom AI training", included: true },
                 { text: "Team collaboration", included: true },
-                { text: "API access", included: true },
+                { text: "Dedicated support", included: true },
                 { text: "14-day free trial", included: true },
               ]}
               href={getStartedHref()}
@@ -223,7 +223,6 @@ function FeatureComparison() {
     { name: "Voice assistant", free: "x", pro: "x", business: "check" },
     { name: "Custom AI training", free: "x", pro: "x", business: "check" },
     { name: "Team collaboration", free: "x", pro: "x", business: "check" },
-    { name: "API access", free: "x", pro: "x", business: "check" },
     { name: "Support", free: "Standard", pro: "Priority", business: "Dedicated" },
   ];
 
