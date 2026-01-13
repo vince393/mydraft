@@ -25,8 +25,9 @@ export default function PublicPricingPage() {
 
   const getStartedHref = () => {
     if (!authData?.user) return "/login";
-    if (!authData.user.plan) return "/select-plan";
+    // New flow: Login → Onboarding → Pricing → Connect Email
     if (!authData.user.onboardingCompleted) return "/onboarding";
+    if (!authData.user.plan) return "/select-plan";
     if (!authData.user.emailConnected) return "/connect-email";
     return "/inbox";
   };
@@ -63,15 +64,14 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Free"
               price="$0"
-              description="For personal use"
+              description="Perfect for trying out MailFlow"
               features={[
-                { text: "1 email account", included: true },
-                { text: "10 AI replies/day", included: true },
-                { text: "Basic organization", included: true },
-                { text: "7-day email history", included: true },
-                { text: "Community support", included: true },
-                { text: "Smart scheduling", included: false },
-                { text: "Priority support", included: false },
+                { text: "Connect 1 email account", included: true },
+                { text: "Basic inbox management", included: true },
+                { text: "Standard support", included: true },
+                { text: "Unlimited AI replies", included: false },
+                { text: "Email scheduling", included: false },
+                { text: "Voice assistant", included: false },
               ]}
               href={getStartedHref()}
               buttonText="Start free"
@@ -79,15 +79,14 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Pro"
               price="$12"
-              description="For power users"
+              description="For professionals who need more"
               features={[
-                { text: "3 email accounts", included: true },
+                { text: "Connect 3 email accounts", included: true },
                 { text: "Unlimited AI replies", included: true },
-                { text: "Advanced organization", included: true },
-                { text: "30-day email history", included: true },
-                { text: "Smart scheduling", included: true },
-                { text: "Custom labels & rules", included: true },
+                { text: "Advanced tone customization", included: true },
+                { text: "Email scheduling", included: true },
                 { text: "Priority support", included: true },
+                { text: "Voice assistant", included: false },
               ]}
               href={getStartedHref()}
               buttonText="Get started"
@@ -96,15 +95,15 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Business"
               price="$29"
-              description="For teams"
+              description="For teams and power users"
               features={[
-                { text: "Unlimited accounts", included: true },
+                { text: "Connect unlimited accounts", included: true },
                 { text: "Unlimited AI replies", included: true },
-                { text: "Advanced organization", included: true },
-                { text: "Unlimited history", included: true },
+                { text: "Voice assistant", included: true },
+                { text: "Custom AI training", included: true },
                 { text: "Team collaboration", included: true },
-                { text: "Admin controls", included: true },
                 { text: "API access", included: true },
+                { text: "Dedicated support", included: true },
               ]}
               href={getStartedHref()}
               buttonText="Get started"
@@ -216,15 +215,15 @@ function PricingCard({
 function FeatureComparison() {
   const features = [
     { name: "Email accounts", free: "1", pro: "3", business: "Unlimited" },
-    { name: "AI replies per day", free: "10", pro: "Unlimited", business: "Unlimited" },
-    { name: "Email history", free: "7 days", pro: "30 days", business: "Unlimited" },
-    { name: "Thread summaries", free: "check", pro: "check", business: "check" },
-    { name: "Auto-labeling", free: "Basic", pro: "Advanced", business: "Advanced" },
-    { name: "Smart scheduling", free: "x", pro: "check", business: "check" },
-    { name: "Custom rules", free: "x", pro: "check", business: "check" },
-    { name: "Team features", free: "x", pro: "x", business: "check" },
+    { name: "AI replies", free: "Limited", pro: "Unlimited", business: "Unlimited" },
+    { name: "Inbox management", free: "Basic", pro: "Advanced", business: "Advanced" },
+    { name: "Tone customization", free: "x", pro: "check", business: "check" },
+    { name: "Email scheduling", free: "x", pro: "check", business: "check" },
+    { name: "Voice assistant", free: "x", pro: "x", business: "check" },
+    { name: "Custom AI training", free: "x", pro: "x", business: "check" },
+    { name: "Team collaboration", free: "x", pro: "x", business: "check" },
     { name: "API access", free: "x", pro: "x", business: "check" },
-    { name: "Support", free: "Community", pro: "Priority", business: "Dedicated" },
+    { name: "Support", free: "Standard", pro: "Priority", business: "Dedicated" },
   ];
 
   return (
