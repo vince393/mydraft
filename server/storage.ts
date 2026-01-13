@@ -1,7 +1,7 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc, and, lte } from "drizzle-orm";
+import { eq, desc, and, lte, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -107,6 +107,16 @@ export interface IStorage {
   getUnreadNotificationCount(userId: string): Promise<number>;
   markNotificationAsRead(userId: string, notificationId: number): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
+
+  // Owner panel methods
+  getAllUsers(): Promise<User[]>;
+  getUserStats(): Promise<{ total: number; free: number; pro: number; premium: number }>;
+  getAllUserFeedback(): Promise<UserFeedback[]>;
+  updateFeedbackStatus(id: number, status: string): Promise<UserFeedback | undefined>;
+  createActivityLog(userId: string | null, userEmail: string | null, actionType: string, details?: string, metadata?: Record<string, unknown>): Promise<ActivityLog>;
+  getActivityLogs(limit?: number): Promise<ActivityLog[]>;
+  sendNotificationToUsers(userIds: string[], type: string, title: string, message: string, data?: Record<string, unknown>): Promise<void>;
+  getUsersByPlan(plan: string): Promise<User[]>;
 }
 
 const avatarColors = [
@@ -1150,6 +1160,65 @@ Business Development`,
     await db.update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.userId, userId));
+  }
+
+  // Owner panel methods
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getUserStats(): Promise<{ total: number; free: number; pro: number; premium: number }> {
+    const allUsers = await db.select().from(users);
+    const stats = { total: allUsers.length, free: 0, pro: 0, premium: 0 };
+    for (const user of allUsers) {
+      if (user.plan === "free") stats.free++;
+      else if (user.plan === "pro") stats.pro++;
+      else if (user.plan === "premium") stats.premium++;
+    }
+    return stats;
+  }
+
+  async getAllUserFeedback(): Promise<UserFeedback[]> {
+    return db.select().from(userFeedback).orderBy(desc(userFeedback.createdAt));
+  }
+
+  async updateFeedbackStatus(id: number, status: string): Promise<UserFeedback | undefined> {
+    const [updated] = await db.update(userFeedback)
+      .set({ status })
+      .where(eq(userFeedback.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createActivityLog(userId: string | null, userEmail: string | null, actionType: string, details?: string, metadata?: Record<string, unknown>): Promise<ActivityLog> {
+    const [created] = await db.insert(activityLogs)
+      .values({ userId, userEmail, actionType, details, metadata })
+      .returning();
+    return created;
+  }
+
+  async getActivityLogs(limit: number = 100): Promise<ActivityLog[]> {
+    return db.select()
+      .from(activityLogs)
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(limit);
+  }
+
+  async sendNotificationToUsers(userIds: string[], type: string, title: string, message: string, data?: Record<string, unknown>): Promise<void> {
+    for (const userId of userIds) {
+      await db.insert(notifications).values({
+        userId,
+        type,
+        title,
+        message,
+        isRead: false,
+        data: data || null,
+      });
+    }
+  }
+
+  async getUsersByPlan(plan: string): Promise<User[]> {
+    return db.select().from(users).where(eq(users.plan, plan as "free" | "pro" | "premium"));
   }
 }
 
