@@ -13,7 +13,9 @@ import {
   X,
   Clock,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  Languages,
+  Loader2
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -67,6 +69,9 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
   const [customTime, setCustomTime] = useState("");
   const [showFormatted, setShowFormatted] = useState(true);
   const [formattedBody, setFormattedBody] = useState<string | null>(null);
+  const [detectedLanguage, setDetectedLanguage] = useState<{ code: string; name: string; isEnglish: boolean } | null>(null);
+  const [translatedContent, setTranslatedContent] = useState<{ subject: string; body: string } | null>(null);
+  const [showTranslated, setShowTranslated] = useState(false);
   const { toast } = useToast();
 
   const showDraft = !!generatedDraft;
@@ -79,6 +84,9 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
 
   useEffect(() => {
     setFormattedBody(null);
+    setDetectedLanguage(null);
+    setTranslatedContent(null);
+    setShowTranslated(false);
   }, [email?.id]);
 
   const formatMutation = useMutation({
@@ -109,6 +117,62 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
       formatMutation.mutate({ emailId, body: email.body });
     }
   }, [email?.id, showFormatted, formattedBody]);
+
+  const detectLanguageMutation = useMutation({
+    mutationFn: async ({ emailId, subject, body }: { emailId: string | number; subject: string; body: string }) => {
+      const response = await apiRequest("POST", `/api/emails/${emailId}/detect-language`, { subject, body });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setDetectedLanguage({
+        code: data.languageCode,
+        name: data.languageName,
+        isEnglish: data.isEnglish
+      });
+    },
+    onError: () => {
+      setDetectedLanguage({ code: "en", name: "English", isEnglish: true });
+    },
+  });
+
+  const translateMutation = useMutation({
+    mutationFn: async ({ emailId, subject, body, sourceLanguage }: { emailId: string | number; subject: string; body: string; sourceLanguage: string }) => {
+      const response = await apiRequest("POST", `/api/emails/${emailId}/translate`, { subject, body, sourceLanguage });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setTranslatedContent({
+        subject: data.translatedSubject,
+        body: data.translatedBody
+      });
+      setShowTranslated(true);
+    },
+    onError: () => {
+      toast({
+        title: "Translation failed",
+        description: "Could not translate this email. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (email && !detectedLanguage && !detectLanguageMutation.isPending) {
+      const emailId = (email as any).nylasId || email.id;
+      detectLanguageMutation.mutate({ emailId, subject: email.subject, body: email.body });
+    }
+  }, [email?.id, detectedLanguage]);
+
+  const handleTranslate = () => {
+    if (!email || !detectedLanguage) return;
+    const emailId = (email as any).nylasId || email.id;
+    translateMutation.mutate({ 
+      emailId, 
+      subject: email.subject, 
+      body: email.body, 
+      sourceLanguage: detectedLanguage.name 
+    });
+  };
 
   const scheduleMutation = useMutation({
     mutationFn: async ({ draftId, scheduledAt }: { draftId: number; scheduledAt: Date }) => {
@@ -223,7 +287,7 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-medium truncate pr-4 tracking-tight" data-testid="email-subject">
-            {email.subject}
+            {showTranslated && translatedContent?.subject ? translatedContent.subject : email.subject}
           </h1>
         </div>
         <div className="flex items-center gap-0.5">
@@ -291,7 +355,7 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             <button
               onClick={() => setShowFormatted(true)}
               className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
@@ -315,13 +379,72 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
             >
               Original
             </button>
+            
+            {detectedLanguage && !detectedLanguage.isEnglish && (
+              <>
+                {translatedContent ? (
+                  <button
+                    onClick={() => setShowTranslated(!showTranslated)}
+                    className={`text-xs px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 ${
+                      showTranslated 
+                        ? "bg-blue-500 text-white" 
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                    data-testid="button-toggle-translation"
+                  >
+                    <Languages className="w-3 h-3" />
+                    {showTranslated ? "Show Original" : "Show Translation"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleTranslate}
+                    disabled={translateMutation.isPending}
+                    className="text-xs px-3 py-1.5 rounded-full transition-colors bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 flex items-center gap-1"
+                    data-testid="button-translate"
+                  >
+                    {translateMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Translating...
+                      </>
+                    ) : (
+                      <>
+                        <Languages className="w-3 h-3" />
+                        Translate from {detectedLanguage.name}
+                      </>
+                    )}
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           <div 
             className="mb-8"
             data-testid="email-body"
           >
-            {showFormatted && formattedBody ? (
+            {showTranslated && translatedContent ? (
+              <>
+                <div className="text-xs text-blue-500 mb-2 flex items-center gap-1">
+                  <Languages className="w-3 h-3" />
+                  Translated from {detectedLanguage?.name || "original language"}
+                </div>
+                {translatedContent.body.includes('<') ? (
+                  <div 
+                    className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline"
+                    dangerouslySetInnerHTML={{ __html: translatedContent.body }} 
+                  />
+                ) : (
+                  translatedContent.body.split("\n").map((paragraph, i) => (
+                    paragraph.trim() ? (
+                      <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
+                        {paragraph}
+                      </p>
+                    ) : null
+                  ))
+                )}
+              </>
+            ) : showFormatted && formattedBody ? (
               <div 
                 className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline"
                 dangerouslySetInnerHTML={{ __html: formattedBody }} 

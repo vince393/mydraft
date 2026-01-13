@@ -93,6 +93,7 @@ interface ResponseTimeCache {
 const responseTimeCache: Map<string, ResponseTimeCache> = new Map();
 
 const formattedBodyCache: Map<string, { body: string; timestamp: number }> = new Map();
+const translationCache: Map<string, { detectedLanguage: string; translatedSubject: string; translatedBody: string; timestamp: number }> = new Map();
 const CACHE_MAX_SIZE = 100;
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -108,6 +109,21 @@ function cleanupFormattedBodyCache() {
       .sort((a, b) => a[1].timestamp - b[1].timestamp);
     const toRemove = entries.slice(0, formattedBodyCache.size - CACHE_MAX_SIZE);
     toRemove.forEach(([key]) => formattedBodyCache.delete(key));
+  }
+}
+
+function cleanupTranslationCache() {
+  const now = Date.now();
+  for (const [key, value] of Array.from(translationCache.entries())) {
+    if (now - value.timestamp > CACHE_TTL_MS) {
+      translationCache.delete(key);
+    }
+  }
+  if (translationCache.size > CACHE_MAX_SIZE) {
+    const entries = Array.from(translationCache.entries())
+      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toRemove = entries.slice(0, translationCache.size - CACHE_MAX_SIZE);
+    toRemove.forEach(([key]) => translationCache.delete(key));
   }
 }
 
@@ -824,6 +840,127 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
     } catch (error) {
       console.error("Error formatting email:", error);
       res.status(500).json({ error: "Failed to format email" });
+    }
+  });
+
+  app.post("/api/emails/:id/detect-language", requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const { subject, body } = req.body;
+
+      if (!body) {
+        return res.status(400).json({ error: "Email body is required" });
+      }
+
+      const sampleText = (subject ? subject + "\n\n" : "") + body.slice(0, 1000);
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a language detection system. Analyze the text and return ONLY a JSON object with these fields:
+- languageCode: ISO 639-1 two-letter code (e.g., "en", "es", "fr", "de", "zh", "ja", "ko", "ar", "ru", "pt")
+- languageName: Full name in English (e.g., "English", "Spanish", "French")
+- confidence: number between 0 and 1
+
+If the text is primarily in English, return languageCode: "en".
+Return ONLY valid JSON, no other text.`
+          },
+          {
+            role: "user",
+            content: sampleText
+          }
+        ],
+        max_tokens: 100,
+        temperature: 0,
+      });
+
+      const responseText = completion.choices[0]?.message?.content || '{"languageCode":"en","languageName":"English","confidence":0.5}';
+      
+      try {
+        const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, '').trim());
+        const languageCode = (parsed.languageCode || "en").toLowerCase().split('-')[0].split('_')[0];
+        const isEnglish = languageCode === "en";
+        res.json({
+          languageCode,
+          languageName: parsed.languageName || "English",
+          confidence: parsed.confidence || 0.5,
+          isEnglish
+        });
+      } catch {
+        res.json({ languageCode: "en", languageName: "English", confidence: 0.5, isEnglish: true });
+      }
+    } catch (error) {
+      console.error("Error detecting language:", error);
+      res.status(500).json({ error: "Failed to detect language" });
+    }
+  });
+
+  app.post("/api/emails/:id/translate", requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const { subject, body, sourceLanguage } = req.body;
+
+      if (!body) {
+        return res.status(400).json({ error: "Email body is required" });
+      }
+
+      const cacheKey = `${req.session.userId}-${id}-en`;
+      cleanupTranslationCache();
+      const cached = translationCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        return res.json({
+          translatedSubject: cached.translatedSubject,
+          translatedBody: cached.translatedBody,
+          detectedLanguage: cached.detectedLanguage,
+          cached: true
+        });
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional translator. Translate the email from ${sourceLanguage || "the source language"} to English.
+
+Rules:
+- Maintain the original formatting and structure
+- Preserve HTML tags if present
+- Keep proper nouns, names, and brand names in their original form
+- Translate naturally, not word-for-word
+- Return a JSON object with two fields: "subject" (translated subject) and "body" (translated body)
+- Return ONLY valid JSON, no other text`
+          },
+          {
+            role: "user",
+            content: JSON.stringify({ subject: subject || "", body })
+          }
+        ],
+        max_tokens: 4000,
+        temperature: 0.3,
+      });
+
+      const responseText = completion.choices[0]?.message?.content || '{}';
+      
+      try {
+        const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, '').trim());
+        const result = {
+          translatedSubject: parsed.subject || subject || "",
+          translatedBody: parsed.body || body,
+          detectedLanguage: sourceLanguage || "unknown"
+        };
+        
+        translationCache.set(cacheKey, { ...result, timestamp: Date.now() });
+        
+        res.json({ ...result, cached: false });
+      } catch {
+        res.status(500).json({ error: "Failed to parse translation" });
+      }
+    } catch (error) {
+      console.error("Error translating email:", error);
+      res.status(500).json({ error: "Failed to translate email" });
     }
   });
 
