@@ -20,6 +20,7 @@ import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { usePlan } from "@/hooks/use-plan";
+import { NotificationBell } from "@/components/notification-bell";
 import type { Email, Draft } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -288,7 +289,8 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
         />
       </div>
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="flex items-center justify-end h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
+        <header className="flex items-center justify-end gap-2 h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
