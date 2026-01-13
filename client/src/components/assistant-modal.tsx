@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   Mic, 
-  MicOff, 
   Volume2, 
   VolumeX, 
   Send,
@@ -50,6 +49,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AssistantMessage, AssistantSettings, ChatSession } from "@shared/schema";
+import { VoiceChatModal } from "./voice-chat-modal";
 
 interface ProposedAction {
   id: number;
@@ -101,15 +101,11 @@ interface AssistantModalProps {
 
 export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   const [message, setMessage] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [micAvailable, setMicAvailable] = useState(true);
+  const [voiceChatOpen, setVoiceChatOpen] = useState(false);
   const [feedbackMessageId, setFeedbackMessageId] = useState<number | null>(null);
   const [editingAction, setEditingAction] = useState<ProposedAction | null>(null);
   const [editedBody, setEditedBody] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings } = useQuery<AssistantSettings>({
@@ -288,29 +284,6 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     }
   }, [open]);
 
-  useEffect(() => {
-    const checkMicAvailability = async () => {
-      try {
-        if (typeof navigator !== "undefined" && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const hasMic = devices.some(device => device.kind === "audioinput");
-          setMicAvailable(hasMic);
-        } else {
-          setMicAvailable(false);
-        }
-      } catch {
-        setMicAvailable(false);
-      }
-    };
-    checkMicAvailability();
-    
-    return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-    };
-  }, []);
-
   const speakResponse = (text: string) => {
     if (!("speechSynthesis" in window)) return;
     
@@ -332,75 +305,6 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     utterance.rate = 1;
     utterance.pitch = 0.9;
     window.speechSynthesis.speak(utterance);
-  };
-
-  const handleStartRecording = async () => {
-    if (!micAvailable || isRecording || isTranscribing) return;
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunksRef.current = [];
-      
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      mediaRecorderRef.current = mediaRecorder;
-      
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-      
-      mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(track => track.stop());
-        
-        if (audioChunksRef.current.length === 0) {
-          setIsRecording(false);
-          return;
-        }
-        
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        setIsTranscribing(true);
-        
-        try {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const base64Audio = (reader.result as string).split(",")[1];
-            
-            const response = await fetch("/api/assistant/transcribe", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ audio: base64Audio, mimeType: "audio/webm" }),
-            });
-            
-            if (response.ok) {
-              const { transcript } = await response.json();
-              if (transcript && transcript.trim()) {
-                setMessage(prev => prev ? prev + " " + transcript : transcript);
-              }
-            }
-            setIsTranscribing(false);
-          };
-          reader.readAsDataURL(audioBlob);
-        } catch (error) {
-          console.error("Transcription error:", error);
-          setIsTranscribing(false);
-        }
-      };
-      
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error("Microphone access error:", error);
-      setMicAvailable(false);
-    }
-  };
-
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
   };
 
   const handleSendMessage = () => {
@@ -842,29 +746,12 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
           <div className="flex items-center gap-2">
             <Button
               size="icon"
-              variant={isRecording ? "default" : "outline"}
-              className={cn(
-                "h-10 w-10 shrink-0 rounded-xl",
-                isRecording && "bg-red-500 hover:bg-red-600",
-                isTranscribing && "bg-blue-500 hover:bg-blue-600"
-              )}
-              onMouseDown={handleStartRecording}
-              onMouseUp={handleStopRecording}
-              onMouseLeave={handleStopRecording}
-              onTouchStart={handleStartRecording}
-              onTouchEnd={handleStopRecording}
-              disabled={!micAvailable || isTranscribing}
+              variant="outline"
+              className="h-10 w-10 shrink-0 rounded-xl"
+              onClick={() => setVoiceChatOpen(true)}
               data-testid="button-voice-input"
             >
-              {isTranscribing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : isRecording ? (
-                <Mic className="w-4 h-4 animate-pulse" />
-              ) : micAvailable ? (
-                <Mic className="w-4 h-4" />
-              ) : (
-                <MicOff className="w-4 h-4" />
-              )}
+              <Mic className="w-4 h-4" />
             </Button>
             <Input
               ref={inputRef}
@@ -892,6 +779,11 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
           </div>
         </div>
       </DialogContent>
+
+      <VoiceChatModal 
+        open={voiceChatOpen} 
+        onOpenChange={setVoiceChatOpen} 
+      />
     </Dialog>
   );
 }
