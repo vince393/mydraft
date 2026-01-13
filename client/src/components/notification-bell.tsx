@@ -40,7 +40,7 @@ export function NotificationBell() {
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
-      return apiRequest(`/api/notifications/${notificationId}/read`, "POST");
+      return apiRequest("POST", `/api/notifications/${notificationId}/read`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
@@ -50,7 +50,7 @@ export function NotificationBell() {
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/notifications/mark-all-read", "POST");
+      return apiRequest("POST", "/api/notifications/mark-all-read");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
@@ -60,7 +60,7 @@ export function NotificationBell() {
 
   const acceptInviteMutation = useMutation({
     mutationFn: async (inviteId: number) => {
-      return apiRequest(`/api/team/invite/${inviteId}/accept`, "POST");
+      return apiRequest("POST", `/api/team/invite/${inviteId}/accept`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
@@ -71,7 +71,7 @@ export function NotificationBell() {
 
   const declineInviteMutation = useMutation({
     mutationFn: async (inviteId: number) => {
-      return apiRequest(`/api/team/invite/${inviteId}/decline`, "POST");
+      return apiRequest("POST", `/api/team/invite/${inviteId}/decline`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
