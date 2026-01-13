@@ -401,3 +401,16 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// Activity logs for owner panel
+export const activityLogs = pgTable("activity_logs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id"),
+  userEmail: text("user_email"),
+  actionType: text("action_type").notNull(), // signup, plan_upgrade, plan_downgrade, team_invite_sent, team_invite_accepted, login, email_connected
+  details: text("details"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
