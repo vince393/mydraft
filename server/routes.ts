@@ -1664,36 +1664,48 @@ RESPONSE STYLE:
     }
   });
 
-  // Voice transcription endpoint using Gemini
+  // Voice transcription endpoint using OpenAI Whisper
   app.post("/api/assistant/transcribe", requireAuth, async (req, res) => {
     try {
       const { audio, mimeType } = req.body;
       
-      if (!audio) {
+      if (!audio || typeof audio !== "string") {
         return res.status(400).json({ error: "Audio data required" });
       }
 
-      const response = await gemini.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inlineData: {
-                  mimeType: mimeType || "audio/webm",
-                  data: audio,
-                },
-              },
-              {
-                text: "Transcribe this audio recording accurately. This is a voice command or question from a user speaking to an AI email assistant named Vince. Listen carefully and return the exact words spoken. Return only the transcribed text with no additional formatting, quotes, or explanation. If the audio is unclear, silent, or contains only background noise, return an empty string.",
-              },
-            ],
-          },
-        ],
+      // Validate base64 format and size (max 25MB for Whisper)
+      const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+      if (!base64Regex.test(audio)) {
+        return res.status(400).json({ error: "Invalid audio format" });
+      }
+      
+      const maxSizeBytes = 25 * 1024 * 1024; // 25MB limit
+      const estimatedSize = (audio.length * 3) / 4;
+      if (estimatedSize > maxSizeBytes) {
+        return res.status(400).json({ error: "Audio file too large" });
+      }
+
+      // Validate mime type
+      const allowedMimeTypes = ["audio/webm", "audio/mp3", "audio/wav", "audio/m4a", "audio/ogg"];
+      const safeMimeType = allowedMimeTypes.includes(mimeType) ? mimeType : "audio/webm";
+
+      // Convert base64 to buffer and create a File object for Whisper
+      const audioBuffer = Buffer.from(audio, "base64");
+      const audioFile = new File([audioBuffer], "audio.webm", { 
+        type: safeMimeType 
       });
 
-      const transcript = response.text?.trim() || "";
+      const transcription = await openai.audio.transcriptions.create({
+        file: audioFile,
+        model: "whisper-1",
+        language: "en",
+        response_format: "text",
+      });
+
+      const transcript = typeof transcription === "string" 
+        ? transcription.trim() 
+        : (transcription as any).text?.trim() || "";
+      
       res.json({ transcript });
     } catch (error) {
       console.error("Error transcribing audio:", error);
