@@ -84,20 +84,6 @@ const ACTION_ICONS: Record<string, typeof Mail> = {
   archive: Archive,
 };
 
-interface SpeechRecognitionEvent {
-  results: { [key: number]: { [key: number]: { transcript: string } } };
-}
-
-interface SpeechRecognitionInstance {
-  continuous: boolean;
-  interimResults: boolean;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-}
 
 const ASSISTANT_VOICES = [
   { id: "vince", name: "Vince", description: "Professional and calm" },
@@ -116,11 +102,14 @@ interface AssistantModalProps {
 export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [micAvailable, setMicAvailable] = useState(true);
   const [feedbackMessageId, setFeedbackMessageId] = useState<number | null>(null);
   const [editingAction, setEditingAction] = useState<ProposedAction | null>(null);
   const [editedBody, setEditedBody] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings } = useQuery<AssistantSettings>({
@@ -300,33 +289,24 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   }, [open]);
 
   useEffect(() => {
-    const win = window as { SpeechRecognition?: new () => SpeechRecognitionInstance; webkitSpeechRecognition?: new () => SpeechRecognitionInstance };
-    if (typeof window !== "undefined" && (win.SpeechRecognition || win.webkitSpeechRecognition)) {
-      const SpeechRecognitionClass = win.SpeechRecognition || win.webkitSpeechRecognition;
-      if (SpeechRecognitionClass) {
-        recognitionRef.current = new SpeechRecognitionClass();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
-        
-        recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-          const transcript = event.results[0][0].transcript;
-          setMessage(transcript);
-          setIsRecording(false);
-        };
-        
-        recognitionRef.current.onerror = () => {
-          setIsRecording(false);
-        };
-        
-        recognitionRef.current.onend = () => {
-          setIsRecording(false);
-        };
+    const checkMicAvailability = async () => {
+      try {
+        if (typeof navigator !== "undefined" && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const hasMic = devices.some(device => device.kind === "audioinput");
+          setMicAvailable(hasMic);
+        } else {
+          setMicAvailable(false);
+        }
+      } catch {
+        setMicAvailable(false);
       }
-    }
+    };
+    checkMicAvailability();
     
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
       }
     };
   }, []);
@@ -354,16 +334,71 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleStartRecording = () => {
-    if (recognitionRef.current) {
+  const handleStartRecording = async () => {
+    if (!micAvailable || isRecording || isTranscribing) return;
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (audioChunksRef.current.length === 0) {
+          setIsRecording(false);
+          return;
+        }
+        
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        setIsTranscribing(true);
+        
+        try {
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const base64Audio = (reader.result as string).split(",")[1];
+            
+            const response = await fetch("/api/assistant/transcribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ audio: base64Audio, mimeType: "audio/webm" }),
+            });
+            
+            if (response.ok) {
+              const { transcript } = await response.json();
+              if (transcript && transcript.trim()) {
+                setMessage(prev => prev ? prev + " " + transcript : transcript);
+              }
+            }
+            setIsTranscribing(false);
+          };
+          reader.readAsDataURL(audioBlob);
+        } catch (error) {
+          console.error("Transcription error:", error);
+          setIsTranscribing(false);
+        }
+      };
+      
+      mediaRecorder.start();
       setIsRecording(true);
-      recognitionRef.current.start();
+    } catch (error) {
+      console.error("Microphone access error:", error);
+      setMicAvailable(false);
     }
   };
 
   const handleStopRecording = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
   };
@@ -808,18 +843,24 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
             <Button
               size="icon"
               variant={isRecording ? "default" : "outline"}
-              className={cn("h-10 w-10 shrink-0 rounded-xl", isRecording && "bg-red-500 hover:bg-red-600")}
+              className={cn(
+                "h-10 w-10 shrink-0 rounded-xl",
+                isRecording && "bg-red-500 hover:bg-red-600",
+                isTranscribing && "bg-blue-500 hover:bg-blue-600"
+              )}
               onMouseDown={handleStartRecording}
               onMouseUp={handleStopRecording}
               onMouseLeave={handleStopRecording}
               onTouchStart={handleStartRecording}
               onTouchEnd={handleStopRecording}
-              disabled={!recognitionRef.current}
+              disabled={!micAvailable || isTranscribing}
               data-testid="button-voice-input"
             >
-              {isRecording ? (
+              {isTranscribing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isRecording ? (
                 <Mic className="w-4 h-4 animate-pulse" />
-              ) : recognitionRef.current ? (
+              ) : micAvailable ? (
                 <Mic className="w-4 h-4" />
               ) : (
                 <MicOff className="w-4 h-4" />

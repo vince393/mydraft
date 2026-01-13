@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import * as nylas from "./nylas";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -23,6 +24,14 @@ const scryptAsync = promisify(scrypt);
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
+
+const gemini = new GoogleGenAI({
+  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+  httpOptions: {
+    apiVersion: "",
+    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+  },
 });
 
 async function hashPassword(password: string): Promise<string> {
@@ -1522,6 +1531,43 @@ RESPONSE STYLE:
     } catch (error) {
       console.error("Error clearing assistant messages:", error);
       res.status(500).json({ error: "Failed to clear messages" });
+    }
+  });
+
+  // Voice transcription endpoint using Gemini
+  app.post("/api/assistant/transcribe", requireAuth, async (req, res) => {
+    try {
+      const { audio, mimeType } = req.body;
+      
+      if (!audio) {
+        return res.status(400).json({ error: "Audio data required" });
+      }
+
+      const response = await gemini.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  mimeType: mimeType || "audio/webm",
+                  data: audio,
+                },
+              },
+              {
+                text: "Transcribe this audio accurately. Return only the transcribed text, nothing else. If the audio is unclear or empty, return an empty string.",
+              },
+            ],
+          },
+        ],
+      });
+
+      const transcript = response.text?.trim() || "";
+      res.json({ transcript });
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+      res.status(500).json({ error: "Failed to transcribe audio" });
     }
   });
 
