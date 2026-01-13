@@ -2501,5 +2501,360 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  // =====================
+  // NOTIFICATIONS ROUTES
+  // =====================
+  
+  // Get all notifications for current user
+  app.get("/api/notifications", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const notifications = await storage.getNotifications(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  // Get unread notification count
+  app.get("/api/notifications/unread-count", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const count = await storage.getUnreadNotificationCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.status(500).json({ error: "Failed to fetch unread count" });
+    }
+  });
+
+  // Mark single notification as read
+  app.post("/api/notifications/:id/read", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const notificationId = parseInt(req.params.id);
+      if (isNaN(notificationId)) {
+        return res.status(400).json({ error: "Invalid notification ID" });
+      }
+      const notification = await storage.markNotificationAsRead(userId, notificationId);
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ error: "Failed to mark notification as read" });
+    }
+  });
+
+  // Mark all notifications as read
+  app.post("/api/notifications/mark-all-read", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ error: "Failed to mark notifications as read" });
+    }
+  });
+
+  // =====================
+  // TEAM INVITES ROUTES (Business plan only)
+  // =====================
+
+  // Send a team invite (Business plan only)
+  app.post("/api/team/invite", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { inviteeEmail } = req.body;
+
+      if (!inviteeEmail || typeof inviteeEmail !== "string") {
+        return res.status(400).json({ error: "Invitee email is required" });
+      }
+
+      // Check if user has Business plan
+      const user = await storage.getUser(userId);
+      if (!user || user.plan !== "premium") {
+        return res.status(403).json({ error: "Team invites are only available on the Business plan" });
+      }
+
+      // Check team member limit (max 1 member = 2 total including owner)
+      const memberCount = await storage.getTeamMemberCount(userId);
+      if (memberCount >= 1) {
+        return res.status(400).json({ error: "Team limit reached. Business plan allows 1 additional team member." });
+      }
+
+      // Check if pending invites already exist
+      const sentInvites = await storage.getSentInvites(userId);
+      const pendingCount = sentInvites.filter(i => i.status === "pending").length;
+      if (pendingCount + memberCount >= 1) {
+        return res.status(400).json({ error: "You already have a pending invite or team member." });
+      }
+
+      // Find the invitee user
+      const invitee = await storage.getUserByEmail(inviteeEmail.toLowerCase().trim());
+      if (!invitee) {
+        return res.status(404).json({ error: "User not found. They must have an account to receive an invite." });
+      }
+
+      // Can't invite yourself
+      if (invitee.id === userId) {
+        return res.status(400).json({ error: "You cannot invite yourself" });
+      }
+
+      // Check if invitee is already a team member somewhere
+      const existingMembership = await storage.getTeamMembership(invitee.id);
+      if (existingMembership) {
+        return res.status(400).json({ error: "This user is already on another team" });
+      }
+
+      // Check if there's already a pending invite
+      const existingInvites = sentInvites.filter(i => i.inviteeId === invitee.id && i.status === "pending");
+      if (existingInvites.length > 0) {
+        return res.status(400).json({ error: "You already have a pending invite to this user" });
+      }
+
+      // Create the invite
+      const invite = await storage.createTeamInvite({
+        inviterId: userId,
+        inviteeId: invitee.id,
+        status: "pending"
+      });
+
+      // Create notification for invitee
+      await storage.createNotification({
+        userId: invitee.id,
+        type: "team_invite_received",
+        title: "Team Invite Received",
+        message: `${user.email} invited you to join their team`,
+        isRead: false,
+        data: { inviteId: invite.id, inviterId: userId, inviterEmail: user.email }
+      });
+
+      res.json({ success: true, invite });
+    } catch (error) {
+      console.error("Error sending team invite:", error);
+      res.status(500).json({ error: "Failed to send team invite" });
+    }
+  });
+
+  // Get sent invites
+  app.get("/api/team/invites/sent", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const invites = await storage.getSentInvites(userId);
+      
+      // Enrich with invitee email
+      const enrichedInvites = await Promise.all(invites.map(async (invite) => {
+        const invitee = await storage.getUser(invite.inviteeId);
+        return {
+          ...invite,
+          inviteeEmail: invitee?.email || "Unknown"
+        };
+      }));
+      
+      res.json(enrichedInvites);
+    } catch (error) {
+      console.error("Error fetching sent invites:", error);
+      res.status(500).json({ error: "Failed to fetch sent invites" });
+    }
+  });
+
+  // Get pending invites received
+  app.get("/api/team/invites/pending", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const invites = await storage.getPendingInvitesForUser(userId);
+      
+      // Enrich with inviter email
+      const enrichedInvites = await Promise.all(invites.map(async (invite) => {
+        const inviter = await storage.getUser(invite.inviterId);
+        return {
+          ...invite,
+          inviterEmail: inviter?.email || "Unknown"
+        };
+      }));
+      
+      res.json(enrichedInvites);
+    } catch (error) {
+      console.error("Error fetching pending invites:", error);
+      res.status(500).json({ error: "Failed to fetch pending invites" });
+    }
+  });
+
+  // Accept team invite
+  app.post("/api/team/invite/:id/accept", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const inviteId = parseInt(req.params.id);
+      
+      if (isNaN(inviteId)) {
+        return res.status(400).json({ error: "Invalid invite ID" });
+      }
+
+      const invite = await storage.getTeamInvite(inviteId);
+      if (!invite) {
+        return res.status(404).json({ error: "Invite not found" });
+      }
+
+      if (invite.inviteeId !== userId) {
+        return res.status(403).json({ error: "This invite is not for you" });
+      }
+
+      if (invite.status !== "pending") {
+        return res.status(400).json({ error: "This invite has already been responded to" });
+      }
+
+      // Check if user is already on a team
+      const existingMembership = await storage.getTeamMembership(userId);
+      if (existingMembership) {
+        return res.status(400).json({ error: "You are already on a team" });
+      }
+
+      // Update invite status
+      await storage.updateTeamInviteStatus(inviteId, "accepted");
+
+      // Create team membership
+      await storage.createTeamMember(invite.inviterId, userId, "member");
+
+      // Notify inviter
+      const user = await storage.getUser(userId);
+      await storage.createNotification({
+        userId: invite.inviterId,
+        type: "team_invite_accepted",
+        title: "Team Invite Accepted",
+        message: `${user?.email || "Someone"} accepted your team invite`,
+        isRead: false,
+        data: { inviteId }
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error accepting team invite:", error);
+      res.status(500).json({ error: "Failed to accept team invite" });
+    }
+  });
+
+  // Decline team invite
+  app.post("/api/team/invite/:id/decline", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const inviteId = parseInt(req.params.id);
+      
+      if (isNaN(inviteId)) {
+        return res.status(400).json({ error: "Invalid invite ID" });
+      }
+
+      const invite = await storage.getTeamInvite(inviteId);
+      if (!invite) {
+        return res.status(404).json({ error: "Invite not found" });
+      }
+
+      if (invite.inviteeId !== userId) {
+        return res.status(403).json({ error: "This invite is not for you" });
+      }
+
+      if (invite.status !== "pending") {
+        return res.status(400).json({ error: "This invite has already been responded to" });
+      }
+
+      // Update invite status
+      await storage.updateTeamInviteStatus(inviteId, "declined");
+
+      // Notify inviter
+      const user = await storage.getUser(userId);
+      await storage.createNotification({
+        userId: invite.inviterId,
+        type: "team_invite_declined",
+        title: "Team Invite Declined",
+        message: `${user?.email || "Someone"} declined your team invite`,
+        isRead: false,
+        data: { inviteId }
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error declining team invite:", error);
+      res.status(500).json({ error: "Failed to decline team invite" });
+    }
+  });
+
+  // Get current team members
+  app.get("/api/team/members", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const members = await storage.getTeamMembers(userId);
+      
+      // Enrich with member email
+      const enrichedMembers = await Promise.all(members.map(async (member) => {
+        const memberUser = await storage.getUser(member.memberId);
+        return {
+          ...member,
+          memberEmail: memberUser?.email || "Unknown"
+        };
+      }));
+      
+      res.json(enrichedMembers);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ error: "Failed to fetch team members" });
+    }
+  });
+
+  // Remove team member
+  app.delete("/api/team/member/:memberId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const memberId = req.params.memberId;
+      
+      const success = await storage.removeTeamMember(userId, memberId);
+      if (!success) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+
+      // Notify the removed member
+      const user = await storage.getUser(userId);
+      await storage.createNotification({
+        userId: memberId,
+        type: "team_removed",
+        title: "Removed from Team",
+        message: `You have been removed from ${user?.email || "someone"}'s team`,
+        isRead: false,
+        data: {}
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing team member:", error);
+      res.status(500).json({ error: "Failed to remove team member" });
+    }
+  });
+
+  // Get current user's team membership status
+  app.get("/api/team/membership", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const membership = await storage.getTeamMembership(userId);
+      
+      if (membership) {
+        const owner = await storage.getUser(membership.ownerId);
+        return res.json({
+          isMember: true,
+          ownerId: membership.ownerId,
+          ownerEmail: owner?.email || "Unknown",
+          role: membership.role,
+          joinedAt: membership.joinedAt
+        });
+      }
+      
+      res.json({ isMember: false });
+    } catch (error) {
+      console.error("Error fetching membership:", error);
+      res.status(500).json({ error: "Failed to fetch membership" });
+    }
+  });
+
   return httpServer;
 }
