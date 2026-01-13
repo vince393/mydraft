@@ -5,10 +5,13 @@ import { sql } from "drizzle-orm";
 
 export const aiPreferencesSchema = z.object({
   primaryUse: z.enum(["work", "personal", "both"]).optional(),
+  emailVolume: z.enum(["low", "medium", "high", "very-high"]).optional(),
   aiFeatures: z.array(z.enum(["auto-draft", "suggest-replies", "summarize", "auto-label"])).optional(),
   automationLevel: z.enum(["low", "medium", "high"]).optional(),
   replyTone: z.enum(["professional", "friendly", "concise", "custom"]).optional(),
   customTone: z.string().optional(),
+  referralSource: z.enum(["search", "social", "friend", "blog", "podcast", "ad", "other"]).optional(),
+  referralOther: z.string().optional(),
 });
 
 export type AiPreferences = z.infer<typeof aiPreferencesSchema>;

@@ -110,15 +110,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   const user = authData.user;
 
-  if (!user.plan && location !== "/select-plan") {
-    return <Redirect to="/select-plan" />;
-  }
-
-  if (user.plan && !user.onboardingCompleted && location !== "/onboarding") {
+  // New flow: Login → Onboarding → Pricing → Connect Email
+  // Step 1: Complete onboarding first
+  if (!user.onboardingCompleted && location !== "/onboarding") {
     return <Redirect to="/onboarding" />;
   }
 
-  if (user.plan && user.onboardingCompleted && !user.emailConnected && location !== "/connect-email") {
+  // Step 2: Select plan after onboarding
+  if (user.onboardingCompleted && !user.plan && location !== "/select-plan") {
+    return <Redirect to="/select-plan" />;
+  }
+
+  // Step 3: Connect email after plan selection
+  if (user.onboardingCompleted && user.plan && !user.emailConnected && location !== "/connect-email") {
     return <Redirect to="/connect-email" />;
   }
 
@@ -140,11 +144,12 @@ function PublicRoute({ children, redirectIfAuthenticated = true }: { children: R
   }
 
   if (redirectIfAuthenticated && authData?.user) {
-    if (!authData.user.plan) {
-      return <Redirect to="/select-plan" />;
-    }
+    // New flow: Onboarding → Pricing → Connect Email
     if (!authData.user.onboardingCompleted) {
       return <Redirect to="/onboarding" />;
+    }
+    if (!authData.user.plan) {
+      return <Redirect to="/select-plan" />;
     }
     if (!authData.user.emailConnected) {
       return <Redirect to="/connect-email" />;

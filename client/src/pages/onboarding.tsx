@@ -8,30 +8,35 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare, Inbox, Users } from "lucide-react";
 
-type Step = "primary-use" | "ai-features" | "automation" | "tone";
+type Step = "primary-use" | "email-volume" | "ai-features" | "automation" | "tone" | "referral";
 
 interface AIPreferences {
   primaryUse: string;
+  emailVolume: string;
   aiFeatures: string[];
   automationLevel: string;
   replyTone: string;
   customTone?: string;
+  referralSource: string;
+  referralOther?: string;
 }
 
 export default function OnboardingPage() {
   const [step, setStep] = useState<Step>("primary-use");
   const [preferences, setPreferences] = useState<AIPreferences>({
     primaryUse: "",
+    emailVolume: "",
     aiFeatures: [],
     automationLevel: "",
     replyTone: "",
+    referralSource: "",
   });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const steps: Step[] = ["primary-use", "ai-features", "automation", "tone"];
+  const steps: Step[] = ["primary-use", "email-volume", "ai-features", "automation", "tone", "referral"];
   const currentStepIndex = steps.indexOf(step);
 
   const completeOnboardingMutation = useMutation({
@@ -41,7 +46,8 @@ export default function OnboardingPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      setLocation("/connect-email");
+      // Go to pricing after onboarding (new flow)
+      setLocation("/select-plan");
     },
     onError: (error: Error) => {
       toast({
@@ -66,7 +72,7 @@ export default function OnboardingPage() {
     if (prevIndex >= 0) {
       setStep(steps[prevIndex]);
     } else {
-      setLocation("/select-plan");
+      setLocation("/login");
     }
   };
 
@@ -100,15 +106,19 @@ export default function OnboardingPage() {
             </div>
             <CardTitle className="text-xl">
               {step === "primary-use" && "How will you use MailFlow?"}
+              {step === "email-volume" && "How many emails do you receive daily?"}
               {step === "ai-features" && "Which AI features interest you?"}
               {step === "automation" && "How much automation do you want?"}
               {step === "tone" && "What's your preferred reply tone?"}
+              {step === "referral" && "How did you hear about us?"}
             </CardTitle>
             <CardDescription>
               {step === "primary-use" && "Help us personalize your experience"}
+              {step === "email-volume" && "This helps us recommend the right plan for you"}
               {step === "ai-features" && "Select all that apply"}
               {step === "automation" && "We'll set up your inbox accordingly"}
               {step === "tone" && "This will be your default for AI replies"}
+              {step === "referral" && "We'd love to know how you found us"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -132,6 +142,38 @@ export default function OnboardingPage() {
                     <Label htmlFor={option.value} className="flex items-center gap-3 cursor-pointer flex-1">
                       <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
                         <option.icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{option.label}</div>
+                        <div className="text-xs text-muted-foreground">{option.desc}</div>
+                      </div>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
+
+            {step === "email-volume" && (
+              <RadioGroup
+                value={preferences.emailVolume}
+                onValueChange={(value) => setPreferences({ ...preferences, emailVolume: value })}
+                className="space-y-3"
+              >
+                {[
+                  { value: "low", label: "Less than 20", desc: "I keep it light" },
+                  { value: "medium", label: "20-50 emails", desc: "A moderate flow" },
+                  { value: "high", label: "50-100 emails", desc: "Busy inbox" },
+                  { value: "very-high", label: "100+ emails", desc: "I need serious help" },
+                ].map((option) => (
+                  <div key={option.value} className="flex items-center space-x-3">
+                    <RadioGroupItem 
+                      value={option.value} 
+                      id={`volume-${option.value}`}
+                      data-testid={`radio-email-volume-${option.value}`}
+                    />
+                    <Label htmlFor={`volume-${option.value}`} className="flex items-center gap-3 cursor-pointer flex-1">
+                      <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
+                        <Inbox className="w-4 h-4" />
                       </div>
                       <div>
                         <div className="font-medium">{option.label}</div>
@@ -231,6 +273,45 @@ export default function OnboardingPage() {
                 )}
               </div>
             )}
+
+            {step === "referral" && (
+              <div className="space-y-4">
+                <RadioGroup
+                  value={preferences.referralSource}
+                  onValueChange={(value) => setPreferences({ ...preferences, referralSource: value })}
+                  className="space-y-3"
+                >
+                  {[
+                    { value: "search", label: "Search engine (Google, etc.)" },
+                    { value: "social", label: "Social media" },
+                    { value: "friend", label: "Friend or colleague" },
+                    { value: "blog", label: "Blog or article" },
+                    { value: "podcast", label: "Podcast" },
+                    { value: "ad", label: "Online advertisement" },
+                    { value: "other", label: "Other" },
+                  ].map((option) => (
+                    <div key={option.value} className="flex items-center space-x-3">
+                      <RadioGroupItem 
+                        value={option.value} 
+                        id={`referral-${option.value}`}
+                        data-testid={`radio-referral-${option.value}`}
+                      />
+                      <Label htmlFor={`referral-${option.value}`} className="cursor-pointer flex-1">
+                        <div className="font-medium">{option.label}</div>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                {preferences.referralSource === "other" && (
+                  <Input
+                    placeholder="Please specify..."
+                    value={preferences.referralOther || ""}
+                    onChange={(e) => setPreferences({ ...preferences, referralOther: e.target.value })}
+                    data-testid="input-referral-other"
+                  />
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -247,9 +328,11 @@ export default function OnboardingPage() {
             onClick={goNext}
             disabled={
               (step === "primary-use" && !preferences.primaryUse) ||
+              (step === "email-volume" && !preferences.emailVolume) ||
               (step === "ai-features" && preferences.aiFeatures.length === 0) ||
               (step === "automation" && !preferences.automationLevel) ||
               (step === "tone" && !preferences.replyTone) ||
+              (step === "referral" && !preferences.referralSource) ||
               completeOnboardingMutation.isPending
             }
             data-testid="button-onboarding-next"
