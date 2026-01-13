@@ -1,7 +1,16 @@
-import { pgTable, text, varchar, timestamp, boolean, serial, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, serial, integer, jsonb, bigint } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
+
+// Session table for connect-pg-simple (express-session)
+// This table is managed by connect-pg-simple, not Drizzle
+// We define it here to prevent drizzle-kit from trying to delete it
+export const userSessions = pgTable("user_sessions", {
+  sid: varchar("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
+});
 
 export const aiPreferencesSchema = z.object({
   primaryUse: z.enum(["work", "personal", "both"]).optional(),
