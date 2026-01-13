@@ -81,7 +81,7 @@ export default function PublicPricingPage() {
               price="$12"
               description="For professionals who need more"
               features={[
-                { text: "Connect 3 email accounts", included: true },
+                { text: "Connect 1 email account", included: true },
                 { text: "Unlimited AI replies", included: true },
                 { text: "Advanced tone customization", included: true },
                 { text: "Email scheduling", included: true },
@@ -97,7 +97,7 @@ export default function PublicPricingPage() {
               price="$29"
               description="For teams and power users"
               features={[
-                { text: "Connect unlimited accounts", included: true },
+                { text: "Connect 1 email account", included: true },
                 { text: "Unlimited AI replies", included: true },
                 { text: "Voice assistant", included: true },
                 { text: "Custom AI training", included: true },
@@ -214,7 +214,7 @@ function PricingCard({
 
 function FeatureComparison() {
   const features = [
-    { name: "Email accounts", free: "1", pro: "3", business: "Unlimited" },
+    { name: "Email accounts", free: "1", pro: "1", business: "1" },
     { name: "AI replies", free: "Limited", pro: "Unlimited", business: "Unlimited" },
     { name: "Inbox management", free: "Basic", pro: "Advanced", business: "Advanced" },
     { name: "Tone customization", free: "x", pro: "check", business: "check" },

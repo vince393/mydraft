@@ -56,7 +56,7 @@ const basePlans = [
     period: "month",
     description: "For professionals who need more",
     features: [
-      "Connect 3 email accounts",
+      "Connect 1 email account",
       "Unlimited AI replies",
       "Advanced tone customization",
       "Email scheduling",
@@ -70,7 +70,7 @@ const basePlans = [
     period: "month",
     description: "For teams and power users",
     features: [
-      "Connect unlimited accounts",
+      "Connect 1 email account",
       "Unlimited AI replies",
       "Voice assistant",
       "Custom AI training",
