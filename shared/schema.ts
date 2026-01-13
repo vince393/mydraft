@@ -13,11 +13,14 @@ export const aiPreferencesSchema = z.object({
 
 export type AiPreferences = z.infer<typeof aiPreferencesSchema>;
 
+export const planSchema = z.enum(["free", "pro", "premium"]);
+export type Plan = z.infer<typeof planSchema>;
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  plan: text("plan"),
+  plan: text("plan").$type<Plan>().default("free").notNull(),
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   aiPreferences: jsonb("ai_preferences").$type<AiPreferences>(),
   emailSignature: text("email_signature"),

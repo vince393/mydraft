@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { usePlan } from "@/hooks/use-plan";
+import { UpgradeModal } from "./upgrade-modal";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -105,8 +107,18 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   const [feedbackMessageId, setFeedbackMessageId] = useState<number | null>(null);
   const [editingAction, setEditingAction] = useState<ProposedAction | null>(null);
   const [editedBody, setEditedBody] = useState("");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { hasPremium } = usePlan();
+  
+  const handleOpenVoiceChat = () => {
+    if (!hasPremium) {
+      setShowUpgradeModal(true);
+    } else {
+      setVoiceChatOpen(true);
+    }
+  };
 
   const { data: settings } = useQuery<AssistantSettings>({
     queryKey: ["/api/assistant/settings"],
@@ -747,9 +759,13 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
             <Button
               size="icon"
               variant="outline"
-              className="h-10 w-10 shrink-0 rounded-xl"
-              onClick={() => setVoiceChatOpen(true)}
+              className={cn(
+                "h-10 w-10 shrink-0 rounded-xl",
+                !hasPremium && "opacity-60"
+              )}
+              onClick={handleOpenVoiceChat}
               data-testid="button-voice-input"
+              title={hasPremium ? "Voice chat" : "Voice chat (Premium)"}
             >
               <Mic className="w-4 h-4" />
             </Button>
@@ -783,6 +799,13 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
       <VoiceChatModal 
         open={voiceChatOpen} 
         onOpenChange={setVoiceChatOpen} 
+      />
+      
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        requiredPlan="premium"
+        feature="Voice Chat with Vince"
       />
     </Dialog>
   );

@@ -60,6 +60,46 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Plan-based gating middleware
+async function requirePlan(minPlan: "pro" | "premium") {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+    
+    const planHierarchy: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+    const userPlanLevel = planHierarchy[user.plan || "free"] || 0;
+    const requiredLevel = planHierarchy[minPlan];
+    
+    if (userPlanLevel < requiredLevel) {
+      return res.status(403).json({ 
+        error: "Plan upgrade required", 
+        requiredPlan: minPlan,
+        currentPlan: user.plan || "free"
+      });
+    }
+    
+    next();
+  };
+}
+
+// Helper to get user plan
+async function getUserPlan(userId: string): Promise<string> {
+  const user = await storage.getUser(userId);
+  return user?.plan || "free";
+}
+
+// Check if user has at least the specified plan
+function hasPlan(userPlan: string, minPlan: "pro" | "premium"): boolean {
+  const planHierarchy: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+  return (planHierarchy[userPlan] || 0) >= planHierarchy[minPlan];
+}
+
 function getRedirectUri(req: any): string {
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const host = req.headers.host;
@@ -339,7 +379,7 @@ export async function registerRoutes(
   app.post("/api/user/plan", requireAuth, async (req, res) => {
     try {
       const { plan } = req.body;
-      if (!plan || !["free", "pro", "business"].includes(plan)) {
+      if (!plan || !["free", "pro", "premium"].includes(plan)) {
         return res.status(400).json({ error: "Invalid plan" });
       }
 
@@ -639,6 +679,53 @@ export async function registerRoutes(
     }
   });
 
+  // Get unread counts per folder
+  app.get("/api/emails/unread-counts", requireAuth, async (req, res) => {
+    try {
+      const grant = await storage.getNylasGrant(req.session.userId!);
+      
+      const counts: Record<string, number> = {
+        inbox: 0,
+        sent: 0,
+        archived: 0,
+        trash: 0,
+        drafts: 0,
+        junk: 0
+      };
+      
+      if (grant) {
+        // Fetch from Nylas for all folders that can have unread messages
+        const folders = ["inbox", "junk", "trash"] as const;
+        
+        await Promise.all(folders.map(async (folder) => {
+          try {
+            const messages = await nylas.getMessages(grant.grantId, folder, grant.provider);
+            counts[folder] = messages.filter((m: any) => !m.isRead && m.unread !== false).length;
+          } catch (err) {
+            // Silently ignore folder fetch errors (folder may not exist)
+            console.log(`Could not fetch ${folder} for unread count`);
+          }
+        }));
+        
+        // Note: sent/drafts/archived don't have "unread" concept for user's own messages
+      } else {
+        // Fallback to local storage
+        const allEmails = await storage.getEmails();
+        for (const email of allEmails) {
+          const folder = email.folder || "inbox";
+          if (!email.isRead && counts[folder] !== undefined) {
+            counts[folder]++;
+          }
+        }
+      }
+      
+      res.json(counts);
+    } catch (error) {
+      console.error("Error fetching unread counts:", error);
+      res.status(500).json({ error: "Failed to fetch unread counts" });
+    }
+  });
+
   app.get("/api/emails/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
@@ -845,6 +932,16 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
 
   app.post("/api/emails/:id/detect-language", requireAuth, async (req, res) => {
     try {
+      const user = await storage.getUser(req.session.userId!);
+      const userPlan = user?.plan || "free";
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({
+          error: "Pro plan required for language detection",
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const id = req.params.id;
       const { subject, body } = req.body;
 
@@ -899,6 +996,16 @@ Return ONLY valid JSON, no other text.`
 
   app.post("/api/emails/:id/translate", requireAuth, async (req, res) => {
     try {
+      const user = await storage.getUser(req.session.userId!);
+      const userPlan = user?.plan || "free";
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({
+          error: "Pro plan required for email translation",
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const id = req.params.id;
       const { subject, body, sourceLanguage } = req.body;
 
@@ -1051,6 +1158,16 @@ Rules:
 
   app.post("/api/drafts/generate", requireAuth, async (req, res) => {
     try {
+      const user = await storage.getUser(req.session.userId!);
+      const userPlan = user?.plan || "free";
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({
+          error: "Pro plan required for AI draft generation",
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const { emailId, tone = "professional" } = req.body;
       
       if (!emailId) {
@@ -1473,11 +1590,21 @@ Return ONLY a JSON object with this exact format:
     }
   });
 
-  // Chat with assistant - Full email capabilities
+  // Chat with assistant - Full email capabilities (requires Pro+)
   app.post("/api/assistant/chat", requireAuth, async (req, res) => {
     try {
       const { message, voiceId = "vince" } = req.body;
       const userId = req.session.userId!;
+
+      // Plan gating: requires Pro or Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
 
       if (!message || typeof message !== "string") {
         return res.status(400).json({ error: "Message is required" });
@@ -1664,9 +1791,21 @@ RESPONSE STYLE:
     }
   });
 
-  // Voice transcription endpoint using OpenAI Whisper
+  // Voice transcription endpoint using OpenAI Whisper (requires Premium)
   app.post("/api/assistant/transcribe", requireAuth, async (req, res) => {
     try {
+      const userId = req.session.userId!;
+      
+      // Plan gating: voice features require Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "premium")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "premium",
+          currentPlan: userPlan
+        });
+      }
+      
       const { audio, mimeType } = req.body;
       
       if (!audio || typeof audio !== "string") {
@@ -1715,10 +1854,21 @@ RESPONSE STYLE:
 
   // ============ AI MAILBOX ACTION ENDPOINTS ============
 
-  // Get AI context (user profile + preferences + allowed actions)
+  // Get AI context (user profile + preferences + allowed actions) (requires Pro+)
   app.get("/api/ai/context", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
+      
+      // Plan gating: requires Pro or Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const user = await storage.getUser(userId);
       const grant = await storage.getNylasGrant(userId);
       const styleProfile = await storage.getUserStyleProfile(userId);
@@ -1764,10 +1914,21 @@ RESPONSE STYLE:
     }
   });
 
-  // Update user style profile
+  // Update user style profile (requires Pro+)
   app.post("/api/ai/style-profile", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
+      
+      // Plan gating: requires Pro or Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const { tone, length, greetingStyle, signOff, formattingPreference, allowedActions, customInstructions } = req.body;
       
       const profile = await storage.upsertUserStyleProfile(userId, {
@@ -1894,10 +2055,21 @@ RESPONSE STYLE:
     }
   });
 
-  // Generate AI draft (compose/reply/reply-all/forward)
+  // Generate AI draft (compose/reply/reply-all/forward) (requires Pro+)
   app.post("/api/ai/draft", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
+      
+      // Plan gating: requires Pro or Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const { actionType, messageId, instructions, to, cc, bcc, subject } = req.body;
       
       if (!actionType || !["compose", "reply", "reply-all", "forward"].includes(actionType)) {
@@ -2050,10 +2222,21 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
-  // Review/improve an existing draft
+  // Review/improve an existing draft (requires Pro+)
   app.post("/api/ai/review", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
+      
+      // Plan gating: requires Pro or Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const { draft, improvementType, customInstructions } = req.body;
       
       if (!draft || typeof draft !== "string") {
@@ -2105,10 +2288,21 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
-  // Confirm and execute an action (send/trash/archive)
+  // Confirm and execute an action (send/trash/archive) (requires Pro+)
   app.post("/api/ai/confirm-action", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
+      
+      // Plan gating: requires Pro or Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const { actionId, modifications } = req.body;
       
       if (!actionId) {
@@ -2211,10 +2405,21 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
-  // Cancel a pending action
+  // Cancel a pending action (requires Pro+)
   app.post("/api/ai/cancel-action", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
+      
+      // Plan gating: requires Pro or Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const { actionId } = req.body;
       
       if (!actionId) {
@@ -2238,10 +2443,21 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
-  // Store feedback and update user profile
+  // Store feedback and update user profile (requires Pro+)
   app.post("/api/ai/feedback", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
+      
+      // Plan gating: requires Pro or Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
       const { assistantMessageId, rating, tags, comment } = req.body;
       
       if (!assistantMessageId) {

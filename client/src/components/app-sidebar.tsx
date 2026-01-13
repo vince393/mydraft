@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
-import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User } from "lucide-react";
+import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock } from "lucide-react";
+import { usePlan } from "@/hooks/use-plan";
+import { UpgradeModal } from "./upgrade-modal";
 import {
   Sidebar,
   SidebarContent,
@@ -44,22 +46,43 @@ const defaultItems: FolderItem[] = [
   { title: "Trash", icon: Trash2 },
 ];
 
+interface UnreadCounts {
+  inbox: number;
+  sent: number;
+  archived: number;
+  trash: number;
+  drafts: number;
+  junk: number;
+}
+
 interface AppSidebarProps {
   activeFolder: string;
   onFolderChange: (folder: string) => void;
   unreadCount: number;
+  unreadCounts?: UnreadCounts;
   onCompose?: () => void;
 }
 
-export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompose }: AppSidebarProps) {
+export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCounts, onCompose }: AppSidebarProps) {
   const [folders, setFolders] = useState<FolderItem[]>(defaultItems);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHoverExpanded, setIsHoverExpanded] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const justCollapsedRef = useRef(false);
+  const { hasPro } = usePlan();
+  
+  const handleOpenAssistant = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+    } else {
+      setIsAssistantOpen(true);
+    }
+  };
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -188,7 +211,9 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompos
                 </SidebarMenuItem>
                 {folders.map((item) => {
                   const isActive = activeFolder.toLowerCase() === item.title.toLowerCase();
-                  const showCount = item.title === "Inbox" && unreadCount > 0;
+                  const folderKey = item.title.toLowerCase() as keyof UnreadCounts;
+                  const folderCount = unreadCounts?.[folderKey] || (item.title === "Inbox" ? unreadCount : 0);
+                  const showCount = folderCount > 0;
                   
                   if (!showText) {
                     return (
@@ -218,7 +243,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompos
                             </SidebarMenuButton>
                           </TooltipTrigger>
                           <TooltipContent side="right">
-                            {item.title}{showCount ? ` (${unreadCount})` : ""}
+                            {item.title}{showCount ? ` (${folderCount})` : ""}
                           </TooltipContent>
                         </Tooltip>
                       </SidebarMenuItem>
@@ -247,7 +272,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompos
                         </div>
                         {showCount && (
                           <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
-                            {unreadCount}
+                            {folderCount}
                           </Badge>
                         )}
                       </SidebarMenuButton>
@@ -261,38 +286,60 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompos
         </SidebarContent>
 
         <SidebarFooter className={`${isExpanded ? "p-3" : "p-2"} transition-all duration-300 space-y-2`}>
-          {/* Assistant Button */}
+          {/* Assistant Button - Plan gated */}
           {showText ? (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsAssistantOpen(true);
-              }}
-              className="w-full flex items-center gap-3 px-3 h-10 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors"
+              onClick={handleOpenAssistant}
+              className={`w-full flex items-center gap-3 px-3 h-10 rounded-xl transition-colors ${
+                hasPro 
+                  ? "bg-muted/40 hover:bg-muted/60" 
+                  : "bg-muted/20 opacity-60"
+              }`}
               data-testid="button-open-assistant"
             >
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
-                <User className="w-3 h-3 text-white" />
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                hasPro 
+                  ? "bg-gradient-to-br from-blue-500 to-purple-600" 
+                  : "bg-muted"
+              }`}>
+                {hasPro ? (
+                  <User className="w-3 h-3 text-white" />
+                ) : (
+                  <Lock className="w-3 h-3 text-muted-foreground" />
+                )}
               </div>
-              <span className="text-sm text-muted-foreground">Vince</span>
+              <span className="text-sm text-muted-foreground">
+                {hasPro ? "Vince" : "Vince (Pro)"}
+              </span>
             </button>
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsAssistantOpen(true);
-                  }}
-                  className="w-10 h-10 mx-auto flex items-center justify-center rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors"
+                  onClick={handleOpenAssistant}
+                  className={`w-10 h-10 mx-auto flex items-center justify-center rounded-xl transition-colors ${
+                    hasPro 
+                      ? "bg-muted/40 hover:bg-muted/60" 
+                      : "bg-muted/20 opacity-60"
+                  }`}
                   data-testid="button-open-assistant"
                 >
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <User className="w-3 h-3 text-white" />
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    hasPro 
+                      ? "bg-gradient-to-br from-blue-500 to-purple-600" 
+                      : "bg-muted"
+                  }`}>
+                    {hasPro ? (
+                      <User className="w-3 h-3 text-white" />
+                    ) : (
+                      <Lock className="w-3 h-3 text-muted-foreground" />
+                    )}
                   </div>
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right">Vince - Assistant</TooltipContent>
+              <TooltipContent side="right">
+                {hasPro ? "Vince - Assistant" : "Vince (Upgrade to Pro)"}
+              </TooltipContent>
             </Tooltip>
           )}
           {showText ? (
@@ -362,6 +409,13 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, onCompos
       </Dialog>
 
       <AssistantModal open={isAssistantOpen} onOpenChange={setIsAssistantOpen} />
+      
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        requiredPlan="pro"
+        feature="AI Assistant (Vince)"
+      />
     </>
   );
 }

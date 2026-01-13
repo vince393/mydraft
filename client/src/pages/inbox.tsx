@@ -6,6 +6,7 @@ import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
 import { AIDraftDialog } from "@/components/ai-draft-dialog";
 import { ComposeDialog } from "@/components/compose-dialog";
+import { UpgradeModal } from "@/components/upgrade-modal";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -18,6 +19,7 @@ import { Settings, LogOut, User, Mail, Crown } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { usePlan } from "@/hooks/use-plan";
 import type { Email, Draft } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -42,8 +44,10 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { hasPro } = usePlan();
 
   // Fetch current user info including connected email
   const { data: userData } = useQuery<{ user: { 
@@ -175,7 +179,11 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
 
   const handleAiReply = () => {
     if (selectedEmail) {
-      setShowAiDialog(true);
+      if (!hasPro) {
+        setShowUpgradeModal(true);
+      } else {
+        setShowAiDialog(true);
+      }
     }
   };
 
@@ -372,6 +380,13 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
         mode={composeMode}
         originalEmail={composeEmail}
         currentUserEmail={currentUserEmail}
+      />
+
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        requiredPlan="pro"
+        feature="AI Draft Generator"
       />
     </div>
   );

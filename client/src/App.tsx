@@ -26,6 +26,15 @@ interface AuthResponse {
   user: (User & { emailConnected?: boolean }) | null;
 }
 
+interface UnreadCounts {
+  inbox: number;
+  sent: number;
+  archived: number;
+  trash: number;
+  drafts: number;
+  junk: number;
+}
+
 function AuthenticatedApp() {
   const [activeFolder, setActiveFolder] = useState("inbox");
   const [showComposeDialog, setShowComposeDialog] = useState(false);
@@ -37,7 +46,13 @@ function AuthenticatedApp() {
     refetchOnWindowFocus: true,
   });
 
-  const unreadCount = emails.filter((e) => !e.isRead).length;
+  const { data: unreadCounts } = useQuery<UnreadCounts>({
+    queryKey: ["/api/emails/unread-counts"],
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  });
+
+  const unreadCount = unreadCounts?.inbox || emails.filter((e) => !e.isRead).length;
 
   const handleCompose = () => {
     setComposeMode("new");
@@ -56,6 +71,7 @@ function AuthenticatedApp() {
           activeFolder={activeFolder}
           onFolderChange={setActiveFolder}
           unreadCount={unreadCount}
+          unreadCounts={unreadCounts}
           onCompose={handleCompose}
         />
         <SidebarInset className="flex flex-1 min-w-0">
