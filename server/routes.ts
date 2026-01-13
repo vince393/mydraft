@@ -60,6 +60,25 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Owner/Admin authentication middleware
+async function requireOwner(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  
+  const user = await storage.getUser(req.session.userId);
+  if (!user) {
+    return res.status(401).json({ error: "User not found" });
+  }
+  
+  const ownerEmail = process.env.OWNER_EMAIL?.toLowerCase().trim();
+  if (!ownerEmail || user.email.toLowerCase().trim() !== ownerEmail) {
+    return res.status(403).json({ error: "Access denied. Owner privileges required." });
+  }
+  
+  next();
+}
+
 // Plan-based gating middleware
 async function requirePlan(minPlan: "pro" | "premium") {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -2853,6 +2872,193 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error fetching membership:", error);
       res.status(500).json({ error: "Failed to fetch membership" });
+    }
+  });
+
+  // ==================== OWNER PANEL ROUTES ====================
+
+  // Check if current user is owner
+  app.get("/api/owner/check", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.json({ isOwner: false });
+      }
+      
+      const ownerEmail = process.env.OWNER_EMAIL?.toLowerCase().trim();
+      const isOwner = ownerEmail && user.email.toLowerCase().trim() === ownerEmail;
+      
+      res.json({ isOwner });
+    } catch (error) {
+      console.error("Error checking owner status:", error);
+      res.status(500).json({ error: "Failed to check owner status" });
+    }
+  });
+
+  // Owner Dashboard Stats
+  app.get("/api/owner/stats", requireOwner, async (req, res) => {
+    try {
+      const userStats = await storage.getUserStats();
+      const allUsers = await storage.getAllUsers();
+      
+      // Calculate active users (logged in within last 30 days - simplified to all for now)
+      const activeUsers = allUsers.length;
+      
+      // Get connected email accounts count
+      const usersWithGrants = await Promise.all(
+        allUsers.map(async (user) => {
+          const grant = await storage.getNylasGrant(user.id);
+          return grant ? 1 : 0;
+        })
+      );
+      const connectedAccounts = usersWithGrants.reduce((sum, val) => sum + val, 0);
+      
+      res.json({
+        totalUsers: userStats.total,
+        activeUsers,
+        freeUsers: userStats.free,
+        proUsers: userStats.pro,
+        premiumUsers: userStats.premium,
+        connectedAccounts,
+        // Revenue calculation (simplified - Pro $24/mo, Premium $49/mo)
+        estimatedMRR: (userStats.pro * 24) + (userStats.premium * 49)
+      });
+    } catch (error) {
+      console.error("Error fetching owner stats:", error);
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // Get all users for owner
+  app.get("/api/owner/users", requireOwner, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      
+      // Enrich with connected email provider
+      const enrichedUsers = await Promise.all(
+        allUsers.map(async (user) => {
+          const grant = await storage.getNylasGrant(user.id);
+          return {
+            id: user.id,
+            email: user.email,
+            plan: user.plan,
+            onboardingCompleted: user.onboardingCompleted,
+            createdAt: user.createdAt,
+            connectedProvider: grant?.provider || null,
+            connectedEmail: grant?.email || null
+          };
+        })
+      );
+      
+      res.json(enrichedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Get all feedback for owner
+  app.get("/api/owner/feedback", requireOwner, async (req, res) => {
+    try {
+      const feedback = await storage.getAllUserFeedback();
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+      res.status(500).json({ error: "Failed to fetch feedback" });
+    }
+  });
+
+  // Update feedback status
+  app.patch("/api/owner/feedback/:id/status", requireOwner, async (req, res) => {
+    try {
+      const feedbackId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!["pending", "reviewed", "resolved"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      
+      const updated = await storage.updateFeedbackStatus(feedbackId, status);
+      if (!updated) {
+        return res.status(404).json({ error: "Feedback not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating feedback:", error);
+      res.status(500).json({ error: "Failed to update feedback" });
+    }
+  });
+
+  // Get activity logs for owner
+  app.get("/api/owner/activity-logs", requireOwner, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const logs = await storage.getActivityLogs(limit);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching activity logs:", error);
+      res.status(500).json({ error: "Failed to fetch activity logs" });
+    }
+  });
+
+  // Send notification to users
+  app.post("/api/owner/notifications/send", requireOwner, async (req, res) => {
+    try {
+      const { target, targetPlan, userIds, title, message, type } = req.body;
+      
+      if (!title || !message) {
+        return res.status(400).json({ error: "Title and message are required" });
+      }
+      
+      let targetUserIds: string[] = [];
+      
+      if (target === "all") {
+        const allUsers = await storage.getAllUsers();
+        targetUserIds = allUsers.map(u => u.id);
+      } else if (target === "plan" && targetPlan) {
+        const planUsers = await storage.getUsersByPlan(targetPlan);
+        targetUserIds = planUsers.map(u => u.id);
+      } else if (target === "specific" && userIds && Array.isArray(userIds)) {
+        targetUserIds = userIds;
+      } else {
+        return res.status(400).json({ error: "Invalid target specification" });
+      }
+      
+      await storage.sendNotificationToUsers(
+        targetUserIds,
+        type || "admin_notification",
+        title,
+        message
+      );
+      
+      res.json({ success: true, sentTo: targetUserIds.length });
+    } catch (error) {
+      console.error("Error sending notifications:", error);
+      res.status(500).json({ error: "Failed to send notifications" });
+    }
+  });
+
+  // Get users by plan for owner
+  app.get("/api/owner/users/by-plan/:plan", requireOwner, async (req, res) => {
+    try {
+      const plan = req.params.plan;
+      if (!["free", "pro", "premium"].includes(plan)) {
+        return res.status(400).json({ error: "Invalid plan" });
+      }
+      
+      const users = await storage.getUsersByPlan(plan);
+      res.json(users.map(u => ({
+        id: u.id,
+        email: u.email,
+        plan: u.plan,
+        createdAt: u.createdAt
+      })));
+    } catch (error) {
+      console.error("Error fetching users by plan:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
     }
   });
 
