@@ -1,11 +1,15 @@
-import { useState, useRef, useCallback } from "react";
-import { format, isToday, isYesterday } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check } from "lucide-react";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Email } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -90,8 +94,21 @@ function EmailListEmpty() {
   );
 }
 
+interface Filters {
+  unreadOnly: boolean;
+  dateRange: "all" | "today" | "week" | "month";
+  sender: string;
+}
+
 export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, isAiLoading, isMoving, isLoading, activeFolder = "inbox" }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<Filters>({
+    unreadOnly: false,
+    dateRange: "all",
+    sender: "",
+  });
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   const { data: responseTime, isLoading: isLoadingTime } = useQuery<ResponseTimeEstimate>({
     queryKey: ['/api/response-time', activeFolder],
@@ -107,6 +124,75 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef(false);
   const dragStarted = useRef(false);
+
+  const hasActiveFilters = filters.unreadOnly || filters.dateRange !== "all" || filters.sender.trim() !== "";
+
+  const filteredEmails = useMemo(() => {
+    let result = emails;
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(email =>
+        (email.sender?.toLowerCase() ?? "").includes(query) ||
+        (email.senderEmail?.toLowerCase() ?? "").includes(query) ||
+        (email.subject?.toLowerCase() ?? "").includes(query) ||
+        (email.preview?.toLowerCase() ?? "").includes(query) ||
+        (email.body?.toLowerCase() ?? "").includes(query)
+      );
+    }
+
+    // Apply unread filter
+    if (filters.unreadOnly) {
+      result = result.filter(email => !email.isRead);
+    }
+
+    // Apply date range filter
+    if (filters.dateRange !== "all") {
+      const now = new Date();
+      let cutoffDate: Date;
+      switch (filters.dateRange) {
+        case "today":
+          cutoffDate = subDays(now, 1);
+          break;
+        case "week":
+          cutoffDate = subDays(now, 7);
+          break;
+        case "month":
+          cutoffDate = subDays(now, 30);
+          break;
+        default:
+          cutoffDate = new Date(0);
+      }
+      result = result.filter(email => isAfter(new Date(email.receivedAt), cutoffDate));
+    }
+
+    // Apply sender filter
+    if (filters.sender.trim()) {
+      const senderQuery = filters.sender.toLowerCase();
+      result = result.filter(email =>
+        (email.sender?.toLowerCase() ?? "").includes(senderQuery) ||
+        (email.senderEmail?.toLowerCase() ?? "").includes(senderQuery)
+      );
+    }
+
+    return result;
+  }, [emails, searchQuery, filters]);
+
+  const clearFilters = () => {
+    setFilters({ unreadOnly: false, dateRange: "all", sender: "" });
+    setSearchQuery("");
+  };
+
+  const uniqueSenders = useMemo(() => {
+    const senders = new Map<string, string>();
+    emails.forEach(email => {
+      if (!senders.has(email.senderEmail)) {
+        senders.set(email.senderEmail, email.sender);
+      }
+    });
+    return Array.from(senders.entries()).slice(0, 10);
+  }, [emails]);
 
   const handleLongPressStart = useCallback((emailId: string | number) => {
     longPressTriggered.current = false;
@@ -170,13 +256,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    if (selectedIds.size === emails.length) {
+    if (selectedIds.size === filteredEmails.length) {
       setSelectedIds(new Set());
       setIsSelectionMode(false);
     } else {
-      setSelectedIds(new Set(emails.map(e => getEmailId(e))));
+      setSelectedIds(new Set(filteredEmails.map(e => getEmailId(e))));
     }
-  }, [selectedIds.size, emails]);
+  }, [selectedIds.size, filteredEmails]);
 
   const handleTrashSelected = useCallback(() => {
     if (selectedIds.size > 0) {
@@ -194,13 +280,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     }
   }, [selectedIds, onArchiveMultipleEmails]);
 
-  const allSelected = emails.length > 0 && selectedIds.size === emails.length;
+  const allSelected = filteredEmails.length > 0 && selectedIds.size === filteredEmails.length;
 
   if (isLoading) {
     return <EmailListSkeleton />;
   }
 
-  if (emails.length === 0) {
+  if (emails.length === 0 && !searchQuery && !hasActiveFilters) {
     return <EmailListEmpty />;
   }
 
@@ -213,19 +299,131 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             <Input 
               type="search"
               placeholder="Search emails..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-muted/30 border-0 h-10 rounded-xl focus:bg-muted/50 transition-colors"
               data-testid="input-search"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                data-testid="button-clear-search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
-            data-testid="button-filter"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-          </Button>
+          <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className={`h-10 w-10 rounded-xl transition-colors ${hasActiveFilters ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
+                data-testid="button-filter"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-4" align="end">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">Filters</h4>
+                  {hasActiveFilters && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={clearFilters}
+                      className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                      data-testid="button-clear-filters"
+                    >
+                      Clear all
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="unread-only" 
+                    checked={filters.unreadOnly}
+                    onCheckedChange={(checked) => setFilters(f => ({ ...f, unreadOnly: !!checked }))}
+                    data-testid="checkbox-unread-only"
+                  />
+                  <Label htmlFor="unread-only" className="text-sm flex items-center gap-2 cursor-pointer">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    Unread only
+                  </Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    Date range
+                  </Label>
+                  <Select 
+                    value={filters.dateRange} 
+                    onValueChange={(value: "all" | "today" | "week" | "month") => setFilters(f => ({ ...f, dateRange: value }))}
+                  >
+                    <SelectTrigger className="w-full h-9" data-testid="select-date-range">
+                      <SelectValue placeholder="Select date range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All time</SelectItem>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="week">Last 7 days</SelectItem>
+                      <SelectItem value="month">Last 30 days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm flex items-center gap-2">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    Sender
+                  </Label>
+                  <Input
+                    placeholder="Filter by sender..."
+                    value={filters.sender}
+                    onChange={(e) => setFilters(f => ({ ...f, sender: e.target.value }))}
+                    className="h-9"
+                    data-testid="input-filter-sender"
+                  />
+                  {uniqueSenders.length > 0 && !filters.sender && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {uniqueSenders.slice(0, 5).map(([email, name]) => (
+                        <button
+                          key={email}
+                          onClick={() => setFilters(f => ({ ...f, sender: name }))}
+                          className="text-xs px-2 py-1 rounded-md bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors truncate max-w-[120px]"
+                          data-testid={`button-sender-${email}`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
+        {(hasActiveFilters || searchQuery) && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs text-muted-foreground">
+              {filteredEmails.length} result{filteredEmails.length !== 1 ? "s" : ""}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-6 text-xs px-2 text-muted-foreground hover:text-foreground"
+              data-testid="button-clear-all-filters"
+            >
+              <X className="w-3 h-3 mr-1" />
+              Clear
+            </Button>
+          </div>
+        )}
         <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-900/40 backdrop-blur-sm rounded-md border border-blue-800/30">
           <Clock className="w-3.5 h-3.5 text-blue-400/80" />
           <span className="text-sm text-blue-100/80">
@@ -242,8 +440,26 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         </div>
       </div>
       <ScrollArea className="flex-1 scrollbar-thin">
+        {filteredEmails.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 text-center p-8">
+            <Search className="w-10 h-10 text-muted-foreground/40 mb-4" />
+            <h3 className="font-medium text-sm mb-1">No emails found</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              {searchQuery ? `No results for "${searchQuery}"` : "Try adjusting your filters"}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearFilters}
+              className="text-xs"
+              data-testid="button-clear-filters-empty"
+            >
+              Clear filters
+            </Button>
+          </div>
+        ) : (
         <div className="space-y-0.5 p-3">
-        {emails.map((email) => {
+        {filteredEmails.map((email) => {
           const emailId = getEmailId(email);
           const isSelected = email.id === selectedEmailId;
           const isChecked = selectedIds.has(emailId);
@@ -338,6 +554,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           );
         })}
         </div>
+        )}
       </ScrollArea>
 
       <div className="p-3 border-t border-border/30 bg-background/95 backdrop-blur-xl">
