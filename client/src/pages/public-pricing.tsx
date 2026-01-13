@@ -53,7 +53,7 @@ export default function PublicPricingPage() {
             </span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            14 day free trial. No credit card required.
+            14-day free trial on Pro & Business. No credit card required.
           </p>
         </div>
       </section>
@@ -78,7 +78,7 @@ export default function PublicPricingPage() {
             />
             <PricingCard
               name="Pro"
-              price="$12"
+              price="$24"
               description="For professionals who need more"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -86,15 +86,15 @@ export default function PublicPricingPage() {
                 { text: "Advanced tone customization", included: true },
                 { text: "Email scheduling", included: true },
                 { text: "Priority support", included: true },
-                { text: "Voice assistant", included: false },
+                { text: "14-day free trial", included: true },
               ]}
               href={getStartedHref()}
-              buttonText="Get started"
+              buttonText="Start free trial"
               highlighted
             />
             <PricingCard
               name="Business"
-              price="$29"
+              price="$49"
               description="For teams and power users"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -103,10 +103,10 @@ export default function PublicPricingPage() {
                 { text: "Custom AI training", included: true },
                 { text: "Team collaboration", included: true },
                 { text: "API access", included: true },
-                { text: "Dedicated support", included: true },
+                { text: "14-day free trial", included: true },
               ]}
               href={getStartedHref()}
-              buttonText="Get started"
+              buttonText="Start free trial"
             />
           </div>
 
@@ -123,7 +123,7 @@ export default function PublicPricingPage() {
             Ready to get started?
           </h2>
           <p className="text-muted-foreground text-lg mb-8">
-            14 day free trial. No credit card required.
+            14-day free trial on Pro & Business. No credit card required.
           </p>
           <Link href={getStartedHref()}>
             <Button size="lg" className="gap-2 h-12 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all">
@@ -215,6 +215,7 @@ function PricingCard({
 function FeatureComparison() {
   const features = [
     { name: "Email accounts", free: "1", pro: "1", business: "1" },
+    { name: "Free trial", free: "x", pro: "14 days", business: "14 days" },
     { name: "AI replies", free: "Limited", pro: "Unlimited", business: "Unlimited" },
     { name: "Inbox management", free: "Basic", pro: "Advanced", business: "Advanced" },
     { name: "Tone customization", free: "x", pro: "check", business: "check" },
@@ -282,7 +283,7 @@ function PricingFAQ() {
     },
     {
       q: "Is there a free trial for Pro?",
-      a: "Yes! Start with our free plan and experience core features. Upgrade to Pro when you're ready for unlimited AI replies and more accounts."
+      a: "Yes! Both Pro and Business plans include a 14-day free trial. No credit card required until your trial ends."
     },
     {
       q: "What payment methods do you accept?",

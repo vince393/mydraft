@@ -52,7 +52,7 @@ const basePlans = [
   {
     id: "pro",
     name: "Pro",
-    price: "$12",
+    price: "$24",
     period: "month",
     description: "For professionals who need more",
     features: [
@@ -61,12 +61,13 @@ const basePlans = [
       "Advanced tone customization",
       "Email scheduling",
       "Priority support",
+      "14-day free trial",
     ],
   },
   {
     id: "business",
     name: "Business",
-    price: "$29",
+    price: "$49",
     period: "month",
     description: "For teams and power users",
     features: [
@@ -77,6 +78,7 @@ const basePlans = [
       "Team collaboration",
       "API access",
       "Dedicated support",
+      "14-day free trial",
     ],
   },
 ];
@@ -173,7 +175,7 @@ export default function PricingPage() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-8">
-          All plans include a 14-day money-back guarantee. No credit card required for free plan.
+          Pro and Business plans include a 14-day free trial. No credit card required until your trial ends.
         </p>
       </div>
     </div>
