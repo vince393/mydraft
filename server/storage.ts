@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte } from "drizzle-orm";
@@ -86,6 +86,27 @@ export interface IStorage {
   claimPendingSendForProcessing(id: number): Promise<PendingSend | undefined>;
   markPendingSendSent(id: number): Promise<PendingSend | undefined>;
   markPendingSendFailed(id: number, errorMessage: string): Promise<PendingSend | undefined>;
+
+  // Team invite methods (Business plan)
+  createTeamInvite(invite: InsertTeamInvite): Promise<TeamInvite>;
+  getTeamInvite(id: number): Promise<TeamInvite | undefined>;
+  getPendingInvitesForUser(inviteeId: string): Promise<TeamInvite[]>;
+  getSentInvites(inviterId: string): Promise<TeamInvite[]>;
+  updateTeamInviteStatus(id: number, status: string): Promise<TeamInvite | undefined>;
+  
+  // Team members methods
+  createTeamMember(ownerId: string, memberId: string, role: string): Promise<TeamMember>;
+  getTeamMembers(ownerId: string): Promise<TeamMember[]>;
+  getTeamMembership(memberId: string): Promise<TeamMember | undefined>;
+  removeTeamMember(ownerId: string, memberId: string): Promise<boolean>;
+  getTeamMemberCount(ownerId: string): Promise<number>;
+
+  // Notifications methods
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotifications(userId: string): Promise<Notification[]>;
+  getUnreadNotificationCount(userId: string): Promise<number>;
+  markNotificationAsRead(userId: string, notificationId: number): Promise<Notification | undefined>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
 }
 
 const avatarColors = [
@@ -1035,6 +1056,100 @@ Business Development`,
       .where(eq(pendingSends.id, id))
       .returning();
     return updated;
+  }
+
+  // Team invite methods (Business plan)
+  async createTeamInvite(invite: InsertTeamInvite): Promise<TeamInvite> {
+    const [created] = await db.insert(teamInvites).values(invite).returning();
+    return created;
+  }
+
+  async getTeamInvite(id: number): Promise<TeamInvite | undefined> {
+    const [invite] = await db.select().from(teamInvites).where(eq(teamInvites.id, id));
+    return invite;
+  }
+
+  async getPendingInvitesForUser(inviteeId: string): Promise<TeamInvite[]> {
+    return db.select()
+      .from(teamInvites)
+      .where(and(eq(teamInvites.inviteeId, inviteeId), eq(teamInvites.status, "pending")))
+      .orderBy(desc(teamInvites.createdAt));
+  }
+
+  async getSentInvites(inviterId: string): Promise<TeamInvite[]> {
+    return db.select()
+      .from(teamInvites)
+      .where(eq(teamInvites.inviterId, inviterId))
+      .orderBy(desc(teamInvites.createdAt));
+  }
+
+  async updateTeamInviteStatus(id: number, status: string): Promise<TeamInvite | undefined> {
+    const [updated] = await db.update(teamInvites)
+      .set({ status, respondedAt: new Date() })
+      .where(eq(teamInvites.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Team members methods
+  async createTeamMember(ownerId: string, memberId: string, role: string): Promise<TeamMember> {
+    const [created] = await db.insert(teamMembers).values({ ownerId, memberId, role }).returning();
+    return created;
+  }
+
+  async getTeamMembers(ownerId: string): Promise<TeamMember[]> {
+    return db.select().from(teamMembers).where(eq(teamMembers.ownerId, ownerId));
+  }
+
+  async getTeamMembership(memberId: string): Promise<TeamMember | undefined> {
+    const [member] = await db.select().from(teamMembers).where(eq(teamMembers.memberId, memberId));
+    return member;
+  }
+
+  async removeTeamMember(ownerId: string, memberId: string): Promise<boolean> {
+    const result = await db.delete(teamMembers)
+      .where(and(eq(teamMembers.ownerId, ownerId), eq(teamMembers.memberId, memberId)))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getTeamMemberCount(ownerId: string): Promise<number> {
+    const members = await db.select().from(teamMembers).where(eq(teamMembers.ownerId, ownerId));
+    return members.length;
+  }
+
+  // Notifications methods
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values(notification).returning();
+    return created;
+  }
+
+  async getNotifications(userId: string): Promise<Notification[]> {
+    return db.select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async getUnreadNotificationCount(userId: string): Promise<number> {
+    const unread = await db.select()
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return unread.length;
+  }
+
+  async markNotificationAsRead(userId: string, notificationId: number): Promise<Notification | undefined> {
+    const [updated] = await db.update(notifications)
+      .set({ isRead: true })
+      .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db.update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
   }
 }
 
