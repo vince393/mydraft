@@ -19,6 +19,7 @@ import OnboardingPage from "@/pages/onboarding";
 import ConnectEmailPage from "@/pages/connect-email";
 import SettingsPage from "@/pages/settings";
 import ProfilePage from "@/pages/profile";
+import OwnerPanel from "@/pages/owner-panel";
 import type { Email, User } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 
@@ -208,6 +209,11 @@ function AppRoutes() {
       <Route path="/inbox">
         <ProtectedRoute>
           <AuthenticatedApp />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/owner">
+        <ProtectedRoute>
+          <OwnerPanel />
         </ProtectedRoute>
       </Route>
       <Route path="/">

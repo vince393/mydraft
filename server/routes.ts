@@ -214,6 +214,9 @@ export async function registerRoutes(
       const hashedPassword = await hashPassword(password);
       const user = await storage.createUser({ email: normalizedEmail, password: hashedPassword });
       
+      // Log signup activity
+      await storage.createActivityLog(user.id, normalizedEmail, "signup", "New user registered");
+      
       req.session.regenerate((err) => {
         if (err) {
           console.error("Session regeneration error:", err);
@@ -402,7 +405,23 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid plan" });
       }
 
+      const currentUser = await storage.getUser(req.session.userId!);
+      const oldPlan = currentUser?.plan || "free";
+      
       const user = await storage.updateUser(req.session.userId!, { plan });
+      
+      // Log plan change activity
+      if (oldPlan !== plan) {
+        const planHierarchy: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+        const actionType = planHierarchy[plan] > planHierarchy[oldPlan] ? "plan_upgrade" : "plan_downgrade";
+        await storage.createActivityLog(
+          user!.id, 
+          user!.email, 
+          actionType, 
+          `Plan changed from ${oldPlan} to ${plan}`
+        );
+      }
+      
       res.json({ user: { id: user!.id, email: user!.email, plan: user!.plan } });
     } catch (error) {
       console.error("Plan update error:", error);
@@ -619,6 +638,8 @@ export async function registerRoutes(
 
       // Normal flow: connect email to current user
       const existingGrant = await storage.getNylasGrant(userId);
+      const currentUser = await storage.getUser(userId);
+      
       if (existingGrant) {
         await storage.updateNylasGrant(userId, {
           grantId: grant.id,
@@ -632,6 +653,14 @@ export async function registerRoutes(
           provider: grant.provider || provider,
           email: normalizedEmail,
         });
+        
+        // Log email connection activity
+        await storage.createActivityLog(
+          userId, 
+          currentUser?.email || normalizedEmail, 
+          "email_connected", 
+          `Connected ${grant.provider || provider} email: ${normalizedEmail}`
+        );
       }
 
       res.redirect('/?connected=true');
@@ -2652,6 +2681,9 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         data: { inviteId: invite.id, inviterId: userId, inviterEmail: user.email }
       });
 
+      // Log activity
+      await storage.createActivityLog(userId, user.email, "team_invite_sent", `Invited ${inviteeEmail} to team`);
+
       res.json({ success: true, invite });
     } catch (error) {
       console.error("Error sending team invite:", error);
@@ -2913,7 +2945,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           return grant ? 1 : 0;
         })
       );
-      const connectedAccounts = usersWithGrants.reduce((sum, val) => sum + val, 0);
+      const connectedAccounts = usersWithGrants.reduce((sum: number, val: number) => sum + val, 0 as number);
       
       res.json({
         totalUsers: userStats.total,
