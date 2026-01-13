@@ -35,10 +35,14 @@ import {
   EyeOff,
   LogOut,
   Trash2,
-  Check
+  Check,
+  Users,
+  UserPlus,
+  X
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface Settings {
   email: string;
@@ -96,7 +100,7 @@ export default function SettingsPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 h-auto p-1">
+          <TabsList className={`grid w-full h-auto p-1 ${settings.plan === "premium" ? "grid-cols-6" : "grid-cols-5"}`}>
             <TabsTrigger value="account" className="flex items-center gap-2 py-2" data-testid="tab-account">
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">Account</span>
@@ -117,6 +121,12 @@ export default function SettingsPage() {
               <Link2 className="w-4 h-4" />
               <span className="hidden sm:inline">Connections</span>
             </TabsTrigger>
+            {settings.plan === "premium" && (
+              <TabsTrigger value="team" className="flex items-center gap-2 py-2" data-testid="tab-team">
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Team</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="account">
@@ -134,6 +144,11 @@ export default function SettingsPage() {
           <TabsContent value="connections">
             <ConnectionsTab settings={settings!} />
           </TabsContent>
+          {settings.plan === "premium" && (
+            <TabsContent value="team">
+              <TeamTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
@@ -804,6 +819,307 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
           <p className="text-sm text-muted-foreground">
             Additional integrations coming soon. Connect your calendar, task manager, and more.
           </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface TeamInvite {
+  id: number;
+  inviterId: string;
+  inviteeId: string;
+  inviteeEmail?: string;
+  inviterEmail?: string;
+  status: string;
+  createdAt: string;
+}
+
+interface TeamMember {
+  id: number;
+  ownerId: string;
+  memberId: string;
+  memberEmail?: string;
+  role: string;
+  joinedAt: string;
+}
+
+function TeamTab() {
+  const { toast } = useToast();
+  const [inviteEmail, setInviteEmail] = useState("");
+
+  const { data: sentInvites = [], isLoading: loadingInvites } = useQuery<TeamInvite[]>({
+    queryKey: ["/api/team/invites/sent"],
+  });
+
+  const { data: teamMembers = [], isLoading: loadingMembers } = useQuery<TeamMember[]>({
+    queryKey: ["/api/team/members"],
+  });
+
+  const sendInviteMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const response = await apiRequest("POST", "/api/team/invite", { inviteeEmail: email });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to send invite");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Invite sent successfully" });
+      setInviteEmail("");
+      queryClient.invalidateQueries({ queryKey: ["/api/team/invites/sent"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to send invite", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      const response = await apiRequest("DELETE", `/api/team/member/${memberId}`);
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to remove member");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Team member removed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/team/members"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to remove member", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleSendInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inviteEmail.trim()) {
+      sendInviteMutation.mutate(inviteEmail.trim());
+    }
+  };
+
+  const pendingInvites = sentInvites.filter(i => i.status === "pending");
+  const hasTeamMember = teamMembers.length > 0;
+  const canInvite = !hasTeamMember && pendingInvites.length === 0;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Team Management
+          </CardTitle>
+          <CardDescription>
+            Invite team members to collaborate on your inbox. Business plan allows 1 additional team member.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {canInvite ? (
+            <form onSubmit={handleSendInvite} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="inviteEmail">Invite by Email</Label>
+                <p className="text-sm text-muted-foreground">
+                  Enter the email of an existing MailFlow user to invite them to your team.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  id="inviteEmail"
+                  type="email"
+                  placeholder="colleague@company.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="flex-1"
+                  data-testid="input-invite-email"
+                />
+                <Button 
+                  type="submit" 
+                  disabled={!inviteEmail.trim() || sendInviteMutation.isPending}
+                  data-testid="button-send-invite"
+                >
+                  {sendInviteMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Send Invite
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                {hasTeamMember 
+                  ? "You have reached the maximum team size (1 member). Remove the current member to invite someone else."
+                  : "You have a pending invite. Wait for a response or the invite will expire."}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Team Members</CardTitle>
+          <CardDescription>
+            People currently on your team
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingMembers ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : teamMembers.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">
+              No team members yet. Invite someone to get started.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {teamMembers.map((member) => (
+                <div 
+                  key={member.id} 
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                  data-testid={`team-member-${member.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-medium">
+                      {member.memberEmail?.charAt(0).toUpperCase() || "U"}
+                    </div>
+                    <div>
+                      <p className="font-medium">{member.memberEmail || "Unknown"}</p>
+                      <p className="text-sm text-muted-foreground capitalize">{member.role}</p>
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-muted-foreground hover:text-destructive"
+                        data-testid={`button-remove-member-${member.id}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove {member.memberEmail} from your team? They will no longer have access to team features.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => removeMemberMutation.mutate(member.memberId)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Remove
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pending Invites</CardTitle>
+          <CardDescription>
+            Invites waiting for a response
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingInvites ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : pendingInvites.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">
+              No pending invites.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {pendingInvites.map((invite) => (
+                <div 
+                  key={invite.id} 
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                  data-testid={`pending-invite-${invite.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{invite.inviteeEmail || "Unknown"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Sent {new Date(invite.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary">Pending</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Invite History</CardTitle>
+          <CardDescription>
+            Past invites and their status
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {sentInvites.filter(i => i.status !== "pending").length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">
+              No invite history yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {sentInvites.filter(i => i.status !== "pending").map((invite) => (
+                <div 
+                  key={invite.id} 
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                  data-testid={`invite-history-${invite.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{invite.inviteeEmail || "Unknown"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(invite.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge 
+                    variant={invite.status === "accepted" ? "default" : "secondary"}
+                    className={invite.status === "declined" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" : ""}
+                  >
+                    {invite.status === "accepted" ? (
+                      <><Check className="w-3 h-3 mr-1" /> Accepted</>
+                    ) : (
+                      <><X className="w-3 h-3 mr-1" /> Declined</>
+                    )}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
