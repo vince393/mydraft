@@ -351,3 +351,53 @@ export const assistantAuditLog = pgTable("assistant_audit_log", {
 });
 
 export type AssistantAuditLogRecord = typeof assistantAuditLog.$inferSelect;
+
+// Team invites for Business plan
+export const teamInvites = pgTable("team_invites", {
+  id: serial("id").primaryKey(),
+  inviterId: varchar("inviter_id").notNull(), // User who sent the invite
+  inviteeId: varchar("invitee_id").notNull(), // User who received the invite
+  status: text("status").default("pending").notNull(), // pending, accepted, declined
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  respondedAt: timestamp("responded_at"),
+});
+
+export const insertTeamInviteSchema = createInsertSchema(teamInvites).omit({
+  id: true,
+  createdAt: true,
+  respondedAt: true,
+});
+
+export type TeamInvite = typeof teamInvites.$inferSelect;
+export type InsertTeamInvite = z.infer<typeof insertTeamInviteSchema>;
+
+// Team memberships (owner + 1 member max for Business)
+export const teamMembers = pgTable("team_members", {
+  id: serial("id").primaryKey(),
+  ownerId: varchar("owner_id").notNull(), // The Business plan account owner
+  memberId: varchar("member_id").notNull(), // The invited team member
+  role: text("role").default("member").notNull(), // owner, member
+  joinedAt: timestamp("joined_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type TeamMember = typeof teamMembers.$inferSelect;
+
+// Notifications for all users
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  type: text("type").notNull(), // team_invite_received, team_invite_accepted, team_invite_declined
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  data: jsonb("data").$type<{ inviteId?: number; inviterId?: string; inviterEmail?: string }>(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
