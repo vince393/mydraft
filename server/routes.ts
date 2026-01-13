@@ -1521,14 +1521,7 @@ Return ONLY a JSON object with this exact format:
         }
       }
       
-      const voiceNames: Record<string, string> = {
-        vince: "Vince",
-        alex: "Alex",
-        leo: "Leo",
-        max: "Max"
-      };
-
-      const assistantName = voiceNames[voiceId] || "Vince";
+      const assistantName = "Vince";
 
       // Build stats from Nylas data
       const unreadCount = nylasMessages.filter((m: any) => m.unread).length;
@@ -1693,7 +1686,7 @@ RESPONSE STYLE:
                 },
               },
               {
-                text: "Transcribe this audio accurately. Return only the transcribed text, nothing else. If the audio is unclear or empty, return an empty string.",
+                text: "Transcribe this audio recording accurately. This is a voice command or question from a user speaking to an AI email assistant named Vince. Listen carefully and return the exact words spoken. Return only the transcribed text with no additional formatting, quotes, or explanation. If the audio is unclear, silent, or contains only background noise, return an empty string.",
               },
             ],
           },

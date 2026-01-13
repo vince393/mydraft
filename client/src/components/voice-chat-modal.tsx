@@ -17,12 +17,7 @@ interface AssistantSettings {
   voiceOutputEnabled: boolean;
 }
 
-const ASSISTANT_VOICES = [
-  { id: "vince", name: "Vince", color: "from-blue-500 to-purple-600" },
-  { id: "alex", name: "Alex", color: "from-green-500 to-teal-600" },
-  { id: "leo", name: "Leo", color: "from-orange-500 to-red-600" },
-  { id: "max", name: "Max", color: "from-pink-500 to-rose-600" },
-] as const;
+const VINCE = { id: "vince", name: "Vince", color: "from-blue-500 to-purple-600" };
 
 type ConversationState = "idle" | "listening" | "processing" | "speaking";
 
@@ -62,8 +57,8 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     enabled: open,
   });
 
-  const selectedVoice = settings?.selectedVoice || "vince";
-  const currentVoice = ASSISTANT_VOICES.find(v => v.id === selectedVoice) || ASSISTANT_VOICES[0];
+  const selectedVoice = "vince";
+  const currentVoice = VINCE;
 
   const resumeListening = useCallback(() => {
     if (openRef.current) {
@@ -88,17 +83,19 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     
     const voices = window.speechSynthesis.getVoices();
     const preferredVoice = voices.find(v => 
-      v.name.toLowerCase().includes("male") || 
-      v.name.toLowerCase().includes("david") ||
-      v.name.toLowerCase().includes("google uk english male")
-    );
+      v.name.toLowerCase().includes("google uk english male") ||
+      v.name.toLowerCase().includes("daniel") ||
+      v.name.toLowerCase().includes("james") ||
+      v.name.toLowerCase().includes("google us english") ||
+      (v.lang.startsWith("en") && v.name.toLowerCase().includes("male"))
+    ) || voices.find(v => v.lang.startsWith("en-"));
     
     if (preferredVoice) {
       utterance.voice = preferredVoice;
     }
     
-    utterance.rate = 1;
-    utterance.pitch = 0.9;
+    utterance.rate = 0.95;
+    utterance.pitch = 0.85;
     
     utterance.onend = () => {
       setConversationState("idle");
@@ -312,11 +309,11 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
       case "listening":
         return "Listening...";
       case "processing":
-        return "Processing...";
+        return "Thinking...";
       case "speaking":
-        return `${currentVoice.name} is speaking...`;
+        return "Vince is speaking...";
       default:
-        return "Tap to start";
+        return "Tap to speak";
     }
   };
 
@@ -378,17 +375,9 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
               </p>
             </div>
 
-            {transcript && (
-              <div className="bg-muted/50 rounded-xl p-4 max-w-sm text-center">
-                <p className="text-sm text-muted-foreground mb-1">You said:</p>
-                <p className="text-sm">{transcript}</p>
-              </div>
-            )}
-
             {lastResponse && conversationState === "speaking" && (
               <div className="bg-primary/10 rounded-xl p-4 max-w-sm text-center">
-                <p className="text-sm text-primary/70 mb-1">{currentVoice.name}:</p>
-                <p className="text-sm line-clamp-3">{lastResponse}</p>
+                <p className="text-sm line-clamp-4">{lastResponse}</p>
               </div>
             )}
 
