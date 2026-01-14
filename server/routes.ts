@@ -1288,6 +1288,104 @@ Reply:`;
     }
   });
 
+  // Quick AI draft generation for compose dialog (returns subject + body)
+  app.post("/api/drafts/quick-generate", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      const userPlan = user?.plan || "free";
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({
+          error: "Pro plan required for AI draft generation",
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
+      const { mode, originalEmail } = req.body;
+      
+      // Get user's AI preferences for tone
+      const aiPrefs = user?.aiPreferences as { replyTone?: string } | undefined;
+      const tone = aiPrefs?.replyTone || "professional";
+      
+      const toneDescriptions: Record<string, string> = {
+        professional: "professional, courteous, and business-appropriate",
+        friendly: "warm, friendly, and approachable while remaining respectful",
+        concise: "brief, direct, and to-the-point with minimal pleasantries",
+        custom: "professional and thoughtful",
+      };
+      const toneDesc = toneDescriptions[tone] || toneDescriptions.professional;
+
+      let prompt: string;
+      let systemMessage: string;
+
+      if (mode === "reply" || mode === "replyAll") {
+        systemMessage = `You are an email assistant that writes clear, concise email replies. Always respond in JSON format with "subject" and "body" fields.`;
+        prompt = `Generate a reply to this email with a ${toneDesc} tone.
+
+Original email:
+From: ${originalEmail?.from || "Unknown"} <${originalEmail?.fromEmail || ""}>
+Subject: ${originalEmail?.subject || "No subject"}
+
+${originalEmail?.body?.replace(/<[^>]*>/g, '') || ""}
+
+Write a reply that:
+1. Acknowledges the sender's message
+2. Addresses any questions or action items
+3. Uses a ${tone} tone throughout
+4. Is concise (2-3 paragraphs max)
+
+Respond with JSON only: {"subject": "Re: ...", "body": "Your reply text here..."}`;
+      } else if (mode === "forward") {
+        systemMessage = `You are an email assistant. Always respond in JSON format with "subject" and "body" fields.`;
+        prompt = `Generate a brief forwarding message for this email with a ${toneDesc} tone.
+
+Original email being forwarded:
+From: ${originalEmail?.from || "Unknown"}
+Subject: ${originalEmail?.subject || "No subject"}
+
+Write a brief message to introduce why you're forwarding this email. Keep it to 1-2 sentences.
+
+Respond with JSON only: {"subject": "Fwd: ${originalEmail?.subject || ''}", "body": "Your forwarding message here..."}`;
+      } else {
+        // New email
+        systemMessage = `You are an email assistant that helps compose professional emails. Always respond in JSON format with "subject" and "body" fields.`;
+        prompt = `Generate a new email with a ${toneDesc} tone. Since no context is provided, create a professional template email that the user can customize.
+
+Write a brief, customizable email template that:
+1. Has a clear, professional subject line
+2. Uses a ${tone} tone
+3. Is concise and easy to customize
+
+Respond with JSON only: {"subject": "Your subject here", "body": "Your email body here..."}`;
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemMessage },
+          { role: "user", content: prompt }
+        ],
+        max_completion_tokens: 512,
+        response_format: { type: "json_object" },
+      });
+
+      const content = response.choices[0]?.message?.content || '{"subject": "", "body": ""}';
+      
+      try {
+        const parsed = JSON.parse(content);
+        res.json({
+          subject: parsed.subject || "",
+          body: parsed.body || "",
+        });
+      } catch {
+        res.json({ subject: "", body: content });
+      }
+    } catch (error) {
+      console.error("Error generating quick draft:", error);
+      res.status(500).json({ error: "Failed to generate draft" });
+    }
+  });
+
   app.patch("/api/drafts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);

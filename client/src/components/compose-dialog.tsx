@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp, Undo2 } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles } from "lucide-react";
 
 interface ComposeDialogProps {
   open: boolean;
@@ -271,6 +271,64 @@ export function ComposeDialog({
     lastEmailIdRef.current = undefined;
   };
 
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [previousBody, setPreviousBody] = useState("");
+
+  const aiDraftMutation = useMutation({
+    mutationFn: async () => {
+      setPreviousBody(body);
+      setIsGenerating(true);
+      setBody("Generating...");
+      
+      const response = await apiRequest("POST", "/api/drafts/quick-generate", {
+        mode,
+        originalEmail: originalEmail ? {
+          from: originalEmail.from,
+          fromEmail: originalEmail.fromEmail,
+          subject: originalEmail.subject,
+          body: originalEmail.body,
+        } : undefined,
+      });
+      return response.json();
+    },
+    onSuccess: (data: { subject?: string; body?: string }) => {
+      setIsGenerating(false);
+      if (data.subject && mode !== "reply" && mode !== "replyAll") {
+        setSubject(data.subject);
+      } else if (data.subject && (mode === "reply" || mode === "replyAll")) {
+        // For replies, keep the Re: prefix but update if AI provides better subject
+        if (!subject.startsWith("Re:")) {
+          setSubject(data.subject);
+        }
+      }
+      
+      if (data.body) {
+        // For replies, prepend AI body to the original email quote
+        if ((mode === "reply" || mode === "replyAll" || mode === "forward") && originalEmail) {
+          const originalQuote = previousBody.includes("---------- Original message ----------") 
+            ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
+            : previousBody.includes("---------- Forwarded message ----------")
+            ? previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2)
+            : "";
+          setBody(data.body + originalQuote);
+        } else {
+          setBody(data.body);
+        }
+      } else {
+        setBody(previousBody);
+      }
+    },
+    onError: (error: Error) => {
+      setIsGenerating(false);
+      setBody(previousBody);
+      toast({
+        title: "Failed to generate draft",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleClose = () => {
     onOpenChange(false);
     resetForm();
@@ -375,17 +433,33 @@ export function ComposeDialog({
           </div>
           
           <div className="flex items-center justify-between pt-2 border-t flex-shrink-0">
-            <Button
-              variant="ghost"
-              onClick={handleClose}
-              data-testid="button-compose-cancel"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Discard
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={handleClose}
+                data-testid="button-compose-cancel"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Discard
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => aiDraftMutation.mutate()}
+                disabled={isGenerating || sendMutation.isPending}
+                className="gap-2 bg-gradient-to-r from-blue-600/10 to-purple-600/10 border-blue-500/30 hover:border-blue-500/50 text-blue-400"
+                data-testid="button-ai-draft"
+              >
+                {isGenerating ? (
+                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                {isGenerating ? "Generating..." : "AI Draft"}
+              </Button>
+            </div>
             <Button
               onClick={() => sendMutation.mutate()}
-              disabled={sendMutation.isPending || !to.trim()}
+              disabled={sendMutation.isPending || !to.trim() || isGenerating}
               data-testid="button-compose-send"
             >
               {sendMutation.isPending ? (
