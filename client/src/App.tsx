@@ -63,7 +63,7 @@ function AuthenticatedApp() {
   return (
     <SidebarProvider
       style={{
-        "--sidebar-width": "11rem",
+        "--sidebar-width": "10rem",
         "--sidebar-width-icon": "0rem",
       } as React.CSSProperties}
     >
