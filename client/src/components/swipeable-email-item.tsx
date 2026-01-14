@@ -260,7 +260,7 @@ export function SwipeableEmailItem({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={`
-          group relative py-4 pl-4 pr-2 cursor-pointer bg-background
+          group relative py-4 pl-4 pr-4 cursor-pointer bg-background
           transition-transform select-none
           ${!isSwiping ? "duration-200 ease-out" : "duration-0"}
           ${isSelectionMode && isChecked
