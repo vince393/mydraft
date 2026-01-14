@@ -221,15 +221,15 @@ export function SwipeableEmailItem({
       data-testid={`email-item-${emailId}`}
     >
       <div 
-        className="absolute inset-y-0 right-0 flex items-stretch"
-        style={{ width: Math.max(Math.abs(swipeX), REVEAL_THRESHOLD) }}
+        className="absolute inset-y-0 right-0 flex items-stretch overflow-hidden"
+        style={{ width: Math.abs(swipeX) }}
       >
         <button
           onClick={handleArchiveClick}
-          className="flex-1 flex items-center justify-center bg-blue-500 hover:bg-blue-600 transition-colors"
+          className="flex items-center justify-center bg-blue-500 hover:bg-blue-600 transition-colors"
           style={{ 
-            opacity: Math.abs(swipeX) > 20 ? 1 : 0,
-            minWidth: REVEAL_THRESHOLD / 2
+            width: Math.abs(swipeX) / 2,
+            minWidth: Math.abs(swipeX) > 10 ? 40 : 0
           }}
           data-testid={`swipe-archive-${emailId}`}
         >
@@ -237,11 +237,10 @@ export function SwipeableEmailItem({
         </button>
         <button
           onClick={handleDeleteClick}
-          className="flex-1 flex items-center justify-center bg-red-500 hover:bg-red-600 transition-colors"
+          className="flex items-center justify-center bg-red-500 hover:bg-red-600 transition-colors"
           style={{ 
-            opacity: Math.abs(swipeX) > 20 ? 1 : 0,
-            minWidth: REVEAL_THRESHOLD / 2,
-            flex: swipeX <= -DELETE_THRESHOLD ? 2 : 1
+            width: swipeX <= -DELETE_THRESHOLD ? Math.abs(swipeX) * 0.6 : Math.abs(swipeX) / 2,
+            minWidth: Math.abs(swipeX) > 10 ? 40 : 0
           }}
           data-testid={`swipe-delete-${emailId}`}
         >
