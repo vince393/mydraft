@@ -122,8 +122,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Redirect to="/select-plan" />;
   }
 
-  // Step 3: Connect email after plan selection
-  if (user.onboardingCompleted && user.plan && !user.emailConnected && location !== "/connect-email") {
+  // Step 3: Connect email after plan selection (but allow access to certain pages)
+  const allowedWithoutEmail = ["/connect-email", "/settings", "/owner"];
+  if (user.onboardingCompleted && user.plan && !user.emailConnected && !allowedWithoutEmail.includes(location)) {
     return <Redirect to="/connect-email" />;
   }
 
@@ -145,16 +146,14 @@ function PublicRoute({ children, redirectIfAuthenticated = true }: { children: R
   }
 
   if (redirectIfAuthenticated && authData?.user) {
-    // New flow: Onboarding → Pricing → Connect Email
+    // New flow: Onboarding → Pricing → Connect Email → Inbox
     if (!authData.user.onboardingCompleted) {
       return <Redirect to="/onboarding" />;
     }
     if (!authData.user.plan) {
       return <Redirect to="/select-plan" />;
     }
-    if (!authData.user.emailConnected) {
-      return <Redirect to="/connect-email" />;
-    }
+    // Redirect to inbox (or connect-email will be enforced by ProtectedRoute if needed)
     return <Redirect to="/inbox" />;
   }
 
