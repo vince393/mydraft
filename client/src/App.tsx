@@ -122,11 +122,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Redirect to="/select-plan" />;
   }
 
-  // Step 3: Connect email after plan selection (but allow access to certain pages)
-  const allowedWithoutEmail = ["/connect-email", "/settings", "/owner"];
-  if (user.onboardingCompleted && user.plan && !user.emailConnected && !allowedWithoutEmail.includes(location)) {
-    return <Redirect to="/connect-email" />;
-  }
+  // Step 3: Email connection is now optional - users can skip and connect later
+  // The "Connect Account" button in the inbox header will remind them
 
   return <>{children}</>;
 }
