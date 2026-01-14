@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Archive, Trash2, Star, Check } from "lucide-react";
+import { Archive, Trash2, Star, Check, RotateCcw } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SwipeableEmailItemProps {
@@ -15,9 +15,11 @@ interface SwipeableEmailItemProps {
   isChecked: boolean;
   isSelectionMode: boolean;
   avatarColor?: string;
+  folder?: string;
   onSelect: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onRestore?: () => void;
   onToggleStar: () => void;
   onLongPressStart: () => void;
   onLongPressEnd: () => void;
@@ -44,9 +46,11 @@ export function SwipeableEmailItem({
   isChecked,
   isSelectionMode,
   avatarColor,
+  folder = "inbox",
   onSelect,
   onArchive,
   onDelete,
+  onRestore,
   onToggleStar,
   onLongPressStart,
   onLongPressEnd,
@@ -54,6 +58,7 @@ export function SwipeableEmailItem({
   formatTime,
   getAvatarUrl,
 }: SwipeableEmailItemProps) {
+  const isArchiveFolder = folder === "archive";
   const [swipeX, setSwipeX] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
@@ -220,6 +225,13 @@ export function SwipeableEmailItem({
     setIsRevealed(false);
   }, [onArchive]);
 
+  const handleRestoreClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onRestore) onRestore();
+    setSwipeX(0);
+    setIsRevealed(false);
+  }, [onRestore]);
+
   const handleDeleteClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete();
@@ -245,17 +257,31 @@ export function SwipeableEmailItem({
         style={{ width: Math.abs(swipeX) }}
       >
         {swipeX > -deleteThreshold && (
-          <button
-            onClick={handleArchiveClick}
-            className="flex items-center justify-center bg-blue-500 hover:bg-blue-600 transition-all"
-            style={{ 
-              width: Math.abs(swipeX) / 2,
-              minWidth: Math.abs(swipeX) > 10 ? 40 : 0
-            }}
-            data-testid={`swipe-archive-${emailId}`}
-          >
-            <Archive className="w-5 h-5 text-white" />
-          </button>
+          isArchiveFolder ? (
+            <button
+              onClick={handleRestoreClick}
+              className="flex items-center justify-center bg-green-500 hover:bg-green-600 transition-all"
+              style={{ 
+                width: Math.abs(swipeX) / 2,
+                minWidth: Math.abs(swipeX) > 10 ? 40 : 0
+              }}
+              data-testid={`swipe-restore-${emailId}`}
+            >
+              <RotateCcw className="w-5 h-5 text-white" />
+            </button>
+          ) : (
+            <button
+              onClick={handleArchiveClick}
+              className="flex items-center justify-center bg-blue-500 hover:bg-blue-600 transition-all"
+              style={{ 
+                width: Math.abs(swipeX) / 2,
+                minWidth: Math.abs(swipeX) > 10 ? 40 : 0
+              }}
+              data-testid={`swipe-archive-${emailId}`}
+            >
+              <Archive className="w-5 h-5 text-white" />
+            </button>
+          )
         )}
         <button
           onClick={handleDeleteClick}

@@ -47,6 +47,7 @@ interface EmailListProps {
   onToggleStar: (emailId: string | number) => void;
   onTrashSingleEmail: (emailId: string | number) => void;
   onArchiveSingleEmail: (emailId: string | number) => void;
+  onRestoreSingleEmail?: (emailId: string | number) => void;
   isAiLoading?: boolean;
   isMoving?: boolean;
   isLoading?: boolean;
@@ -102,7 +103,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox" }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox" }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Filters>({
@@ -481,9 +482,11 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               isChecked={isChecked}
               isSelectionMode={isSelectionMode}
               avatarColor={email.avatarColor || undefined}
+              folder={activeFolder}
               onSelect={() => handleEmailClick(email)}
               onArchive={() => onArchiveSingleEmail(emailId)}
               onDelete={() => onTrashSingleEmail(emailId)}
+              onRestore={onRestoreSingleEmail ? () => onRestoreSingleEmail(emailId) : undefined}
               onToggleStar={() => onToggleStar(emailId)}
               onLongPressStart={() => handleLongPressStart(emailId)}
               onLongPressEnd={handleLongPressEnd}
