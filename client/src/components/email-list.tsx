@@ -516,16 +516,16 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 </div>
 
                 <div className="flex-1 min-w-0 overflow-hidden">
-                  <div className="grid grid-cols-[60%_auto_auto] items-center gap-1 mb-1 min-w-0">
-                    <div className={`block text-sm truncate min-w-0 ${!email.isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`flex-1 min-w-0 text-sm truncate ${!email.isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
                       {email.sender}
                     </div>
-                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                    <div className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
                       {formatEmailTime(new Date(email.receivedAt))}
                     </div>
                     <button 
                       className={`
-                        p-1 rounded-lg transition-all duration-200
+                        flex-shrink-0 p-1 rounded-lg transition-all duration-200
                         ${email.isStarred 
                           ? "opacity-100 text-yellow-400" 
                           : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
