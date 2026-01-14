@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Archive, Trash2, Star, Check } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -26,9 +26,10 @@ interface SwipeableEmailItemProps {
   getAvatarUrl: (email: string, name: string) => string;
 }
 
-const REVEAL_THRESHOLD = 80;
-const DELETE_THRESHOLD = 120;
-const MAX_SWIPE = 220;
+// Percentage-based thresholds
+const REVEAL_PERCENT = 25;   // 25% of container width to reveal buttons
+const DELETE_PERCENT = 40;   // 40% of container width to trigger delete mode
+const MAX_SWIPE_PERCENT = 70; // 70% max swipe distance
 
 export function SwipeableEmailItem({
   emailId,
@@ -56,11 +57,29 @@ export function SwipeableEmailItem({
   const [swipeX, setSwipeX] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(300);
   const startX = useRef(0);
   const startY = useRef(0);
   const currentX = useRef(0);
   const isHorizontalSwipe = useRef<boolean | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate thresholds based on container width
+  const revealThreshold = (containerWidth * REVEAL_PERCENT) / 100;
+  const deleteThreshold = (containerWidth * DELETE_PERCENT) / 100;
+  const maxSwipe = (containerWidth * MAX_SWIPE_PERCENT) / 100;
+
+  // Measure container width on mount and resize
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
 
   const initials = sender
     .split(" ")
@@ -73,7 +92,7 @@ export function SwipeableEmailItem({
     if (isSelectionMode) return;
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
-    currentX.current = isRevealed ? -REVEAL_THRESHOLD : 0;
+    currentX.current = isRevealed ? -revealThreshold : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
   }, [isRevealed, isSelectionMode]);
@@ -102,8 +121,8 @@ export function SwipeableEmailItem({
       newX = 0;
     }
     
-    if (newX < -MAX_SWIPE) {
-      newX = -MAX_SWIPE;
+    if (newX < -maxSwipe) {
+      newX = -maxSwipe;
     }
 
     setSwipeX(newX);
@@ -113,8 +132,8 @@ export function SwipeableEmailItem({
     if (isSelectionMode) return;
     setIsSwiping(false);
     
-    if (swipeX <= -DELETE_THRESHOLD) {
-      setSwipeX(-MAX_SWIPE);
+    if (swipeX <= -deleteThreshold) {
+      setSwipeX(-maxSwipe);
       setTimeout(() => {
         onDelete();
         setSwipeX(0);
@@ -123,8 +142,8 @@ export function SwipeableEmailItem({
       return;
     }
 
-    if (swipeX <= -REVEAL_THRESHOLD / 2) {
-      setSwipeX(-REVEAL_THRESHOLD);
+    if (swipeX <= -revealThreshold / 2) {
+      setSwipeX(-revealThreshold);
       setIsRevealed(true);
     } else {
       setSwipeX(0);
@@ -139,7 +158,7 @@ export function SwipeableEmailItem({
     }
     startX.current = e.clientX;
     startY.current = e.clientY;
-    currentX.current = isRevealed ? -REVEAL_THRESHOLD : 0;
+    currentX.current = isRevealed ? -revealThreshold : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
   }, [isRevealed, isSelectionMode, onLongPressStart]);
@@ -161,7 +180,7 @@ export function SwipeableEmailItem({
     let newX = currentX.current + deltaX;
     
     if (newX > 0) newX = 0;
-    if (newX < -MAX_SWIPE) newX = -MAX_SWIPE;
+    if (newX < -maxSwipe) newX = -maxSwipe;
 
     setSwipeX(newX);
   }, [isSwiping, isSelectionMode]);
@@ -213,7 +232,7 @@ export function SwipeableEmailItem({
     onToggleStar();
   }, [onToggleStar]);
 
-  const progress = Math.min(Math.abs(swipeX) / DELETE_THRESHOLD, 1);
+  const progress = Math.min(Math.abs(swipeX) / deleteThreshold, 1);
 
   return (
     <div 
@@ -225,7 +244,7 @@ export function SwipeableEmailItem({
         className="absolute inset-y-0 right-0 flex items-stretch overflow-hidden"
         style={{ width: Math.abs(swipeX) }}
       >
-        {swipeX > -DELETE_THRESHOLD && (
+        {swipeX > -deleteThreshold && (
           <button
             onClick={handleArchiveClick}
             className="flex items-center justify-center bg-blue-500 hover:bg-blue-600 transition-all"
@@ -246,7 +265,7 @@ export function SwipeableEmailItem({
           }}
           data-testid={`swipe-delete-${emailId}`}
         >
-          <Trash2 className={`text-white transition-transform ${swipeX <= -DELETE_THRESHOLD ? "w-6 h-6 scale-110" : "w-5 h-5"}`} />
+          <Trash2 className={`text-white transition-transform ${swipeX <= -deleteThreshold ? "w-6 h-6 scale-110" : "w-5 h-5"}`} />
         </button>
       </div>
 
