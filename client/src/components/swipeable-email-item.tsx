@@ -29,7 +29,7 @@ interface SwipeableEmailItemProps {
 // Percentage-based thresholds
 const REVEAL_PERCENT = 25;   // 25% of container width to reveal buttons
 const DELETE_PERCENT = 40;   // 40% of container width to trigger delete mode
-const MAX_SWIPE_PERCENT = 70; // 70% max swipe distance
+const MAX_SWIPE_PERCENT = 99; // 99% max swipe distance
 
 export function SwipeableEmailItem({
   emailId,
