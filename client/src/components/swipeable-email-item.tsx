@@ -27,7 +27,8 @@ interface SwipeableEmailItemProps {
 }
 
 const REVEAL_THRESHOLD = 80;
-const DELETE_THRESHOLD = 160;
+const DELETE_THRESHOLD = 120;
+const MAX_SWIPE = 220;
 
 export function SwipeableEmailItem({
   emailId,
@@ -101,8 +102,8 @@ export function SwipeableEmailItem({
       newX = 0;
     }
     
-    if (newX < -DELETE_THRESHOLD - 40) {
-      newX = -DELETE_THRESHOLD - 40;
+    if (newX < -MAX_SWIPE) {
+      newX = -MAX_SWIPE;
     }
 
     setSwipeX(newX);
@@ -113,7 +114,7 @@ export function SwipeableEmailItem({
     setIsSwiping(false);
     
     if (swipeX <= -DELETE_THRESHOLD) {
-      setSwipeX(-DELETE_THRESHOLD - 40);
+      setSwipeX(-MAX_SWIPE);
       setTimeout(() => {
         onDelete();
         setSwipeX(0);
@@ -160,7 +161,7 @@ export function SwipeableEmailItem({
     let newX = currentX.current + deltaX;
     
     if (newX > 0) newX = 0;
-    if (newX < -DELETE_THRESHOLD - 40) newX = -DELETE_THRESHOLD - 40;
+    if (newX < -MAX_SWIPE) newX = -MAX_SWIPE;
 
     setSwipeX(newX);
   }, [isSwiping, isSelectionMode]);
