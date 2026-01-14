@@ -113,6 +113,17 @@ export default function ConnectEmailPage() {
                   )}
                   Connect with Microsoft
                 </Button>
+                <div className="pt-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setLocation("/inbox")}
+                    disabled={connectingProvider !== null}
+                    data-testid="button-skip-connect"
+                  >
+                    Skip for now
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

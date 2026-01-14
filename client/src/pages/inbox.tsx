@@ -15,9 +15,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { usePlan } from "@/hooks/use-plan";
 import { NotificationBell } from "@/components/notification-bell";
@@ -300,6 +301,18 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       </div>
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="flex items-center justify-end gap-2 h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
+          {!userData?.user?.connectedEmail && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setLocation("/connect-email")}
+              data-testid="button-connect-account"
+            >
+              <Link className="w-4 h-4" />
+              Connect Account
+            </Button>
+          )}
           <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
