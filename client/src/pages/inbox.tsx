@@ -217,6 +217,14 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     }
   };
 
+  const handleTrashSingleEmail = (emailId: string | number) => {
+    moveEmailMutation.mutate({ emailId, folder: "trash" });
+  };
+
+  const handleArchiveSingleEmail = (emailId: string | number) => {
+    moveEmailMutation.mutate({ emailId, folder: "archived" });
+  };
+
   const handleStarEmail = () => {
     if (selectedEmail) {
       toggleStarMutation.mutate(getEmailId(selectedEmail));
@@ -282,6 +290,8 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           onTrashMultipleEmails={handleTrashMultipleEmails}
           onArchiveMultipleEmails={handleArchiveMultipleEmails}
           onToggleStar={(emailId) => toggleStarMutation.mutate(emailId)}
+          onTrashSingleEmail={handleTrashSingleEmail}
+          onArchiveSingleEmail={handleArchiveSingleEmail}
           isAiLoading={false}
           isMoving={moveEmailMutation.isPending}
           isLoading={isLoadingEmails}

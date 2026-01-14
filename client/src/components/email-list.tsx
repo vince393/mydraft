@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
 import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SwipeableEmailItem } from "@/components/swipeable-email-item";
 import type { Email } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -45,6 +45,8 @@ interface EmailListProps {
   onTrashMultipleEmails: (emailIds: (string | number)[]) => void;
   onArchiveMultipleEmails: (emailIds: (string | number)[]) => void;
   onToggleStar: (emailId: string | number) => void;
+  onTrashSingleEmail: (emailId: string | number) => void;
+  onArchiveSingleEmail: (emailId: string | number) => void;
   isAiLoading?: boolean;
   isMoving?: boolean;
   isLoading?: boolean;
@@ -100,7 +102,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, isAiLoading, isMoving, isLoading, activeFolder = "inbox" }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox" }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Filters>({
@@ -463,94 +465,32 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           const emailId = getEmailId(email);
           const isSelected = email.id === selectedEmailId;
           const isChecked = selectedIds.has(emailId);
-          const initials = email.sender
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
 
           return (
-            <div
+            <SwipeableEmailItem
               key={emailId}
-              onClick={() => handleEmailClick(email)}
-              onMouseDown={() => handleLongPressStart(emailId)}
-              onMouseUp={handleLongPressEnd}
-              onMouseEnter={() => handleMouseEnterWhileDragging(emailId)}
-              onTouchStart={() => handleLongPressStart(emailId)}
-              onTouchEnd={handleLongPressEnd}
-              className={`
-                group relative py-4 pl-4 pr-2 rounded-xl cursor-pointer
-                transition-all duration-200 ease-out select-none
-                ${isSelectionMode && isChecked
-                  ? "bg-primary/20 ring-1 ring-primary/50"
-                  : isSelected 
-                    ? "bg-primary/10 ring-1 ring-primary/30" 
-                    : "hover:bg-muted/50"
-                }
-              `}
-              data-testid={`email-item-${emailId}`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="relative flex-shrink-0">
-                  <Avatar className="w-11 h-11 ring-2 ring-border/30">
-                    <AvatarImage 
-                      src={getAvatarUrl(email.senderEmail, email.sender)} 
-                      alt={email.sender}
-                    />
-                    <AvatarFallback 
-                      style={{ backgroundColor: email.avatarColor }}
-                      className="text-white text-sm font-medium"
-                    >
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!email.isRead && !isSelectionMode && (
-                    <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary ring-2 ring-background" />
-                  )}
-                  {isSelectionMode && isChecked && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-primary ring-2 ring-background flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`flex-1 min-w-0 text-sm truncate ${!email.isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
-                      {email.sender}
-                    </div>
-                    <div className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
-                      {formatEmailTime(new Date(email.receivedAt))}
-                    </div>
-                    <button 
-                      className={`
-                        flex-shrink-0 p-1 rounded-lg transition-all duration-200
-                        ${email.isStarred 
-                          ? "opacity-100 text-yellow-400" 
-                          : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
-                        }
-                      `}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleStar(emailId);
-                      }}
-                      data-testid={`star-email-${emailId}`}
-                    >
-                      <Star className={`w-4 h-4 ${email.isStarred ? "fill-current" : ""}`} />
-                    </button>
-                  </div>
-                  
-                  <h4 className={`text-sm truncate mb-1.5 ${!email.isRead ? "font-medium" : "text-foreground/80"}`}>
-                    {email.subject}
-                  </h4>
-                  
-                  <p className="text-xs text-muted-foreground/80 line-clamp-1">
-                    {email.preview}
-                  </p>
-                </div>
-              </div>
-            </div>
+              emailId={emailId}
+              sender={email.sender}
+              senderEmail={email.senderEmail}
+              subject={email.subject}
+              preview={email.preview || ""}
+              receivedAt={email.receivedAt.toString()}
+              isRead={email.isRead}
+              isStarred={email.isStarred}
+              isSelected={isSelected}
+              isChecked={isChecked}
+              isSelectionMode={isSelectionMode}
+              avatarColor={email.avatarColor || undefined}
+              onSelect={() => handleEmailClick(email)}
+              onArchive={() => onArchiveSingleEmail(emailId)}
+              onDelete={() => onTrashSingleEmail(emailId)}
+              onToggleStar={() => onToggleStar(emailId)}
+              onLongPressStart={() => handleLongPressStart(emailId)}
+              onLongPressEnd={handleLongPressEnd}
+              onMouseEnterWhileDragging={() => handleMouseEnterWhileDragging(emailId)}
+              formatTime={formatEmailTime}
+              getAvatarUrl={getAvatarUrl}
+            />
           );
         })}
         </div>
