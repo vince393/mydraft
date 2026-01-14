@@ -237,7 +237,7 @@ export function SwipeableEmailItem({
   return (
     <div 
       ref={containerRef}
-      className="relative overflow-hidden rounded-xl w-[33vw]"
+      className="relative overflow-hidden rounded-xl w-[30vw]"
       data-testid={`email-item-${emailId}`}
     >
       <div 
