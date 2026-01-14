@@ -298,12 +298,12 @@ export function SwipeableEmailItem({
 
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-2 mb-1">
-              <div className={`flex-1 min-w-0 text-sm truncate ${!isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
+              <span className={`flex-1 min-w-0 text-sm truncate block ${!isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
                 {sender}
-              </div>
-              <div className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+              </span>
+              <span className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
                 {formatTime(new Date(receivedAt))}
-              </div>
+              </span>
               <button 
                 className={`
                   flex-shrink-0 p-1 rounded-lg transition-all duration-200
@@ -319,11 +319,11 @@ export function SwipeableEmailItem({
               </button>
             </div>
             
-            <h4 className={`text-sm truncate mb-1.5 ${!isRead ? "font-medium" : "text-foreground/80"}`}>
+            <h4 className={`text-sm mb-1.5 truncate ${!isRead ? "font-medium" : "text-foreground/80"}`}>
               {subject}
             </h4>
             
-            <p className="text-xs text-muted-foreground/80 line-clamp-1">
+            <p className="text-xs text-muted-foreground/80 truncate">
               {preview}
             </p>
           </div>

@@ -279,7 +279,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
 
   return (
     <div className="flex h-screen">
-      <div className="w-[320px] min-w-[320px] max-w-[320px] border-r border-border/50 flex-shrink-0 flex flex-col overflow-hidden">
+      <div className="w-[360px] min-w-[360px] max-w-[360px] border-r border-border/50 flex-shrink-0 flex flex-col overflow-hidden">
         <EmailList
           emails={emails}
           selectedEmailId={selectedEmail?.id ?? null}
