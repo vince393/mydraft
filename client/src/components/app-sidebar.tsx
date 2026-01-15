@@ -372,19 +372,27 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                                   onFolderChange(item.title.toLowerCase());
                                 }
                               }}
-                              onTouchStart={() => handleFolderTouchStart(item)}
+                              onTouchStart={(e) => {
+                                e.preventDefault();
+                                handleFolderTouchStart(item);
+                              }}
                               onTouchEnd={handleFolderTouchEnd}
                               onTouchCancel={handleFolderTouchEnd}
                               onMouseDown={() => handleFolderTouchStart(item)}
                               onMouseUp={handleFolderTouchEnd}
                               onMouseLeave={handleFolderTouchEnd}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setFolderActionMenuOpen(item.title);
+                              }}
                               className={`
-                                w-full justify-between h-11 rounded-xl transition-all duration-200
+                                w-full justify-between h-11 rounded-xl transition-all duration-200 select-none
                                 ${isActive 
                                   ? "bg-muted/60 text-foreground" 
                                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                                 }
                               `}
+                              style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
                               data-testid={`nav-${item.title.toLowerCase()}`}
                             >
                               <div className="flex items-center gap-3">
