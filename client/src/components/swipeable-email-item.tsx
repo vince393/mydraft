@@ -335,9 +335,9 @@ export function SwipeableEmailItem({
           transition-transform select-none
           ${!isSwiping ? "duration-200 ease-out" : "duration-0"}
           ${isSelectionMode && isChecked
-            ? "bg-primary/20 ring-1 ring-primary/50"
+            ? "bg-primary/15"
             : isSelected 
-              ? "bg-primary/10 ring-1 ring-primary/30" 
+              ? "bg-muted/60" 
               : "hover:bg-muted/50"
           }
         `}
