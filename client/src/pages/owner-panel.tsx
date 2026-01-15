@@ -116,6 +116,20 @@ export default function OwnerPanel() {
     },
   });
 
+  const updateUserPlanMutation = useMutation({
+    mutationFn: async ({ userId, plan }: { userId: string; plan: string }) => {
+      return apiRequest("PATCH", `/api/owner/users/${userId}/plan`, { plan });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/stats"] });
+      toast({ title: "User plan updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update user plan", variant: "destructive" });
+    },
+  });
+
   const sendNotificationMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("POST", "/api/owner/notifications/send", {
@@ -331,6 +345,7 @@ export default function OwnerPanel() {
                         <TableRow>
                           <TableHead>Email</TableHead>
                           <TableHead>Plan</TableHead>
+                          <TableHead>Change Plan</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Connected Email</TableHead>
                           <TableHead>Joined</TableHead>
@@ -349,6 +364,23 @@ export default function OwnerPanel() {
                               <Badge variant={getPlanBadgeVariant(user.plan)}>
                                 {user.plan === "premium" ? "Business" : user.plan.charAt(0).toUpperCase() + user.plan.slice(1)}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={user.plan}
+                                onValueChange={(value) =>
+                                  updateUserPlanMutation.mutate({ userId: user.id, plan: value })
+                                }
+                              >
+                                <SelectTrigger className="w-[110px]" data-testid={`select-plan-${user.id}`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="free">Free</SelectItem>
+                                  <SelectItem value="pro">Pro</SelectItem>
+                                  <SelectItem value="premium">Business</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </TableCell>
                             <TableCell>
                               {user.onboardingCompleted ? (

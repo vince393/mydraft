@@ -3199,6 +3199,48 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  // Update user plan (owner only)
+  app.patch("/api/owner/users/:userId/plan", requireOwner, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { plan } = req.body;
+      
+      if (!plan || !["free", "pro", "premium", "business"].includes(plan)) {
+        return res.status(400).json({ error: "Invalid plan. Must be free, pro, premium, or business" });
+      }
+      
+      // Map business to premium for internal storage
+      const storedPlan = plan === "business" ? "premium" : plan;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const oldPlan = user.plan;
+      const updatedUser = await storage.updateUser(userId, { plan: storedPlan });
+      
+      // Log the plan change
+      await storage.createActivityLog({
+        userId,
+        actionType: storedPlan === "free" ? "plan_downgrade" : "plan_upgrade",
+        details: `Plan changed from ${oldPlan} to ${storedPlan} by owner`,
+      });
+      
+      res.json({ 
+        success: true, 
+        user: {
+          id: updatedUser?.id,
+          email: updatedUser?.email,
+          plan: updatedUser?.plan
+        }
+      });
+    } catch (error) {
+      console.error("Error updating user plan:", error);
+      res.status(500).json({ error: "Failed to update user plan" });
+    }
+  });
+
   // Get users by plan for owner
   app.get("/api/owner/users/by-plan/:plan", requireOwner, async (req, res) => {
     try {
