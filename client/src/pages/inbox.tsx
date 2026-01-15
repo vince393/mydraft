@@ -269,14 +269,18 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const handleSelectEmail = (email: EmailWithNylasId) => {
     const emailId = getEmailId(email);
     setSelectedEmailId(emailId);
-    setSelectedThreadEmails(email.threadEmails || [email]);
+    const threadEmails = email.threadEmails || [email];
+    setSelectedThreadEmails(threadEmails);
     setGeneratedDraft(null);
     if (screen.isMobile) {
       setShowMobileDetail(true);
     }
-    if (!email.isRead) {
-      markAsReadMutation.mutate(emailId);
-    }
+    // Mark all unread emails in the thread as read
+    threadEmails.forEach(threadEmail => {
+      if (!threadEmail.isRead) {
+        markAsReadMutation.mutate(getEmailId(threadEmail));
+      }
+    });
   };
 
   const handleBackToList = () => {
