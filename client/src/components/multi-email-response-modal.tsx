@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { 
   Sparkles, RefreshCw, Loader2, ChevronLeft, ChevronRight, 
-  ChevronDown, ChevronUp, Send, AlertCircle 
+  ChevronDown, ChevronUp, Send, AlertCircle, Wand2
 } from "lucide-react";
 import {
   Dialog,
@@ -64,6 +64,8 @@ export function MultiEmailResponseModal({
   const [responses, setResponses] = useState<Map<string | number, EmailResponse>>(new Map());
   const [selectedTone, setSelectedTone] = useState<ToneType>("professional");
   const [isOriginalExpanded, setIsOriginalExpanded] = useState(false);
+  const [refineInstruction, setRefineInstruction] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
   const { toast } = useToast();
 
   const currentEmail = emails[currentIndex];
@@ -71,9 +73,15 @@ export function MultiEmailResponseModal({
   const currentResponse = currentEmailId ? responses.get(currentEmailId) : null;
 
   const generateMutation = useMutation({
-    mutationFn: async ({ emailId, tone }: { emailId: string | number; tone: string }) => {
+    mutationFn: async ({ email, tone }: { email: EmailWithNylasId; tone: string }) => {
       const response = await apiRequest("POST", "/api/drafts/generate", { 
-        emailId: String(emailId), 
+        emailContent: {
+          sender: email.sender,
+          senderEmail: email.senderEmail,
+          subject: email.subject,
+          body: email.body || email.preview || "",
+          preview: email.preview,
+        },
         tone 
       });
       if (!response.ok) {
@@ -98,6 +106,57 @@ export function MultiEmailResponseModal({
     },
   });
 
+  const refineMutation = useMutation({
+    mutationFn: async ({ text, instruction, email }: { text: string; instruction: string; email: EmailWithNylasId }) => {
+      const response = await apiRequest("POST", "/api/ai/refine", {
+        text,
+        instruction,
+        originalEmail: {
+          sender: email.sender,
+          senderEmail: email.senderEmail,
+          subject: email.subject,
+          body: email.body || email.preview || "",
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw errorData;
+      }
+      return response.json();
+    },
+  });
+
+  const handleRefine = async () => {
+    if (!currentEmail || !currentResponse || !refineInstruction.trim()) return;
+    
+    setIsRefining(true);
+    try {
+      const result = await refineMutation.mutateAsync({
+        text: currentResponse.content,
+        instruction: refineInstruction,
+        email: currentEmail,
+      });
+      
+      updateCurrentResponse('content', result.refined);
+      setRefineInstruction("");
+      toast({
+        title: "Response refined",
+        description: "The AI has updated your response based on your instructions.",
+      });
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'error' in error 
+        ? String((error as { error: string }).error) 
+        : "Failed to refine response";
+      toast({
+        title: "Refinement failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
   const generateForEmail = useCallback(async (email: EmailWithNylasId, tone: ToneType) => {
     const emailId = getEmailId(email);
     
@@ -116,7 +175,7 @@ export function MultiEmailResponseModal({
     });
 
     try {
-      const draft = await generateMutation.mutateAsync({ emailId, tone });
+      const draft = await generateMutation.mutateAsync({ email, tone });
       setResponses(prev => {
         const newMap = new Map(prev);
         const existing = newMap.get(emailId);
@@ -443,6 +502,41 @@ export function MultiEmailResponseModal({
                       className="min-h-[200px] bg-muted/20 resize-none"
                       data-testid="textarea-response-content"
                     />
+                  )}
+                  
+                  {currentResponse?.content && !currentResponse?.isLoading && !currentResponse?.sent && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <div className="flex-1 relative">
+                        <Input
+                          value={refineInstruction}
+                          onChange={(e) => setRefineInstruction(e.target.value)}
+                          placeholder="Ask AI to change something... e.g. 'Make it shorter' or 'Add a thank you'"
+                          className="pr-20 bg-muted/20"
+                          disabled={isRefining}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && refineInstruction.trim()) {
+                              e.preventDefault();
+                              handleRefine();
+                            }
+                          }}
+                          data-testid="input-refine-instruction"
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={handleRefine}
+                        disabled={!refineInstruction.trim() || isRefining}
+                        className="gap-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white"
+                        data-testid="button-refine"
+                      >
+                        {isRefining ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Wand2 className="w-3.5 h-3.5" />
+                        )}
+                        Refine
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

@@ -1293,21 +1293,40 @@ Rules:
         }
       }
       
-      const { emailId, tone = "professional" } = req.body;
+      const { emailId, tone = "professional", emailContent } = req.body;
       
-      if (!emailId) {
-        return res.status(400).json({ error: "Email ID is required" });
+      // Can provide either emailId to look up, or emailContent directly
+      let emailData: { sender: string; senderEmail: string; subject: string; body: string; preview?: string } | null = null;
+      
+      if (emailContent) {
+        // Direct email content provided (for multi-email responses)
+        emailData = emailContent;
+      } else if (emailId) {
+        // Try to find email by numeric ID first
+        const numericId = parseInt(emailId);
+        if (!isNaN(numericId)) {
+          const email = await storage.getEmail(numericId);
+          if (email) {
+            emailData = email;
+          }
+        }
+        
+        // If not found, try to find by nylasId
+        if (!emailData) {
+          const allEmails = await storage.getEmailsByUserId(req.session.userId!);
+          const emailByNylasId = allEmails.find(e => (e as Email & { nylasId?: string }).nylasId === emailId);
+          if (emailByNylasId) {
+            emailData = emailByNylasId;
+          }
+        }
+      }
+      
+      if (!emailData) {
+        return res.status(400).json({ error: "Email ID or content is required" });
       }
 
-      const email = await storage.getEmail(emailId);
-      if (!email) {
-        return res.status(404).json({ error: "Email not found" });
-      }
-
-      const existingDraft = await storage.getDraftByEmailId(emailId);
-      if (existingDraft) {
-        await storage.deleteDraft(existingDraft.id);
-      }
+      // Use preview or body - some emails only have preview
+      const emailBody = emailData.body || emailData.preview || "";
 
       const toneDescriptions: Record<string, string> = {
         professional: "professional, courteous, and business-appropriate",
@@ -1321,16 +1340,17 @@ Rules:
 
       const prompt = `You are an email assistant. Generate a reply to the following email. The reply should be ${toneDesc}.
 
-From: ${email.sender} <${email.senderEmail}>
-Subject: ${email.subject}
+From: ${emailData.sender} <${emailData.senderEmail}>
+Subject: ${emailData.subject}
 
-${email.body}
+${emailBody}
 
 Please write a reply that:
-1. Acknowledges the sender's message
-2. Addresses any questions or action items
+1. Acknowledges the sender's message appropriately
+2. Addresses any questions or action items mentioned
 3. Uses a ${tone} tone throughout
 4. Is concise (2-4 paragraphs)
+5. Do NOT include greeting like "Dear" or sign-off - just the body content
 
 Reply:`;
 
@@ -1339,7 +1359,7 @@ Reply:`;
         messages: [
           {
             role: "system",
-            content: `You are an email assistant that writes clear, concise email replies with a ${tone} tone.`
+            content: `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings or sign-offs.`
           },
           {
             role: "user",
@@ -1359,12 +1379,33 @@ Reply:`;
         });
       }
 
-      const draft = await storage.createDraft({
-        emailId,
-        content: generatedContent,
-        isAiGenerated: true,
-        status: "draft",
-      });
+      // If emailId was numeric, save the draft
+      const numericEmailId = parseInt(emailId);
+      let draft = null;
+      if (!isNaN(numericEmailId)) {
+        const existingDraft = await storage.getDraftByEmailId(numericEmailId);
+        if (existingDraft) {
+          await storage.deleteDraft(existingDraft.id);
+        }
+        
+        draft = await storage.createDraft({
+          emailId: numericEmailId,
+          content: generatedContent,
+          isAiGenerated: true,
+          status: "draft",
+        });
+      } else {
+        // For Nylas IDs, just return the content without saving
+        draft = {
+          id: 0,
+          emailId: 0,
+          content: generatedContent,
+          isAiGenerated: true,
+          status: "draft",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      }
 
       // Increment usage for free plan users
       if (userPlan === "free") {
@@ -1390,6 +1431,125 @@ Reply:`;
       }
       
       res.status(500).json({ error: errorMessage, reason, canRetry: true });
+    }
+  });
+
+  // AI Polish - improves existing text
+  app.post("/api/ai/polish", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      const userPlan = user?.plan || "free";
+      
+      const { text, mode = "basic" } = req.body;
+      
+      if (!text || text.trim().length === 0) {
+        return res.status(400).json({ error: "Text is required" });
+      }
+
+      // Advanced polish modes are only for Pro+ users (basic and casual free for all)
+      const advancedModes = ["formal", "concise", "persuasive", "empathetic", "executive"];
+      if (advancedModes.includes(mode) && userPlan === "free") {
+        return res.status(403).json({ 
+          error: "Advanced polish modes require Pro or Business plan",
+          currentPlan: userPlan,
+          requiredPlan: "pro"
+        });
+      }
+
+      const modeInstructions: Record<string, string> = {
+        basic: "Fix grammar, spelling, and punctuation. Improve clarity while keeping the original tone and meaning.",
+        formal: "Make the text more formal and professional. Use proper business language.",
+        casual: "Make the text more casual and friendly while remaining professional.",
+        concise: "Shorten the text while preserving key information. Remove redundancy.",
+        persuasive: "Make the text more compelling and persuasive.",
+        empathetic: "Add more empathetic and understanding language.",
+        executive: "Rewrite for an executive audience - brief, impactful, and action-oriented.",
+      };
+
+      const instruction = modeInstructions[mode] || modeInstructions.basic;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an email writing assistant. Your task: ${instruction}. Return ONLY the improved text without any explanations or quotes around it.`
+          },
+          {
+            role: "user",
+            content: text
+          }
+        ],
+        max_completion_tokens: 1024,
+      });
+
+      const polishedText = response.choices[0]?.message?.content;
+      
+      if (!polishedText || polishedText.trim().length === 0) {
+        return res.status(422).json({ error: "Unable to polish text" });
+      }
+
+      res.json({ polished: polishedText.trim() });
+    } catch (error) {
+      console.error("Error polishing text:", error);
+      res.status(500).json({ error: "Failed to polish text" });
+    }
+  });
+
+  // AI Refine - modify existing response based on instructions
+  app.post("/api/ai/refine", requireAuth, async (req, res) => {
+    try {
+      const { text, instruction, originalEmail } = req.body;
+      
+      if (!text || text.trim().length === 0) {
+        return res.status(400).json({ error: "Text is required" });
+      }
+      
+      if (!instruction || instruction.trim().length === 0) {
+        return res.status(400).json({ error: "Instruction is required" });
+      }
+
+      let contextPrompt = "";
+      if (originalEmail) {
+        contextPrompt = `
+
+Original email being responded to:
+From: ${originalEmail.sender} <${originalEmail.senderEmail}>
+Subject: ${originalEmail.subject}
+${originalEmail.body || originalEmail.preview || ""}
+`;
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an email writing assistant. Modify the given email response based on the user's instruction. Return ONLY the modified text without explanations.${contextPrompt}`
+          },
+          {
+            role: "user",
+            content: `Current response:
+${text}
+
+Instruction: ${instruction}
+
+Please modify the response according to the instruction.`
+          }
+        ],
+        max_completion_tokens: 1024,
+      });
+
+      const refinedText = response.choices[0]?.message?.content;
+      
+      if (!refinedText || refinedText.trim().length === 0) {
+        return res.status(422).json({ error: "Unable to refine text" });
+      }
+
+      res.json({ refined: refinedText.trim() });
+    } catch (error) {
+      console.error("Error refining text:", error);
+      res.status(500).json({ error: "Failed to refine text" });
     }
   });
 
