@@ -511,7 +511,7 @@ export function ComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[680px] max-h-[85vh] p-0 overflow-hidden flex flex-col gap-0 bg-background/95 backdrop-blur-xl border-border/50">
+      <DialogContent className="w-[95vw] sm:w-auto sm:max-w-[680px] max-h-[90vh] sm:max-h-[85vh] p-0 overflow-hidden flex flex-col gap-0 bg-background/95 backdrop-blur-xl border-border/50">
         {/* Header */}
         <DialogHeader className="flex-shrink-0 px-6 py-4 border-b border-border/50 bg-muted/30">
           <DialogTitle className="flex items-center gap-3 text-lg font-semibold">

@@ -328,16 +328,13 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <Button size="icon" variant="ghost" className="lg:hidden" data-testid="button-back">
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-lg font-medium truncate pr-4 tracking-tight" data-testid="email-subject">
+      <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-border/50">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <h1 className="text-base sm:text-lg font-medium truncate pr-2 sm:pr-4 tracking-tight" data-testid="email-subject">
             {showTranslated && translatedContent?.subject ? translatedContent.subject : email.subject}
           </h1>
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           <Button 
             size="icon" 
             variant="ghost" 
@@ -372,7 +369,7 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
       </div>
 
       <ScrollArea className="flex-1 scrollbar-thin">
-        <div className="pl-6 pr-8 pt-4 pb-8">
+        <div className="px-3 sm:pl-6 sm:pr-8 pt-3 sm:pt-4 pb-6 sm:pb-8">
           {/* Thread indicator - Gmail-style with first message preview and expandable rest */}
           {hasThread && olderEmails.length > 0 && (() => {
             const firstOlderEmail = olderEmails[0];

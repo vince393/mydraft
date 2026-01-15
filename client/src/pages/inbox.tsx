@@ -15,12 +15,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown, Link } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { usePlan } from "@/hooks/use-plan";
+import { useScreenSize } from "@/hooks/use-screen-size";
 import { NotificationBell } from "@/components/notification-bell";
 import type { Email, Draft } from "@shared/schema";
 
@@ -50,9 +51,11 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showMobileDetail, setShowMobileDetail] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { hasPro } = usePlan();
+  const screen = useScreenSize();
 
   // Fetch current user info including connected email
   const { data: userData } = useQuery<{ user: { 
@@ -268,9 +271,16 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     setSelectedEmailId(emailId);
     setSelectedThreadEmails(email.threadEmails || [email]);
     setGeneratedDraft(null);
+    if (screen.isMobile) {
+      setShowMobileDetail(true);
+    }
     if (!email.isRead) {
       markAsReadMutation.mutate(emailId);
     }
+  };
+
+  const handleBackToList = () => {
+    setShowMobileDetail(false);
   };
 
   const handleAiReply = () => {
@@ -377,8 +387,9 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   }, [selectedEmail, composeMode]);
 
   return (
-    <div className="flex h-screen">
-      <div className="w-[35%] border-r border-border/50 flex-shrink-0 flex flex-col overflow-hidden">
+    <div className="email-layout">
+      {/* Email List Panel - hidden on mobile when viewing detail */}
+      <div className={`email-list-panel ${screen.isMobile && showMobileDetail ? 'hidden' : ''}`}>
         <EmailList
           emails={emails}
           selectedEmailId={selectedEmail?.id ?? null}
@@ -398,22 +409,37 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           activeFolder={activeFolder}
         />
       </div>
-      <div className="flex-1 min-w-0 flex flex-col">
-        <header className="flex items-center justify-end gap-2 h-14 px-6 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
-          {!userData?.user?.connectedEmail && (
+      
+      {/* Email Detail Panel - full screen on mobile */}
+      <div className={`email-detail-panel ${screen.isMobile && showMobileDetail ? 'show-mobile' : ''}`}>
+        <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
+          {/* Mobile back button */}
+          {screen.isMobile && showMobileDetail && (
             <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => setLocation("/connect-email")}
-              data-testid="button-connect-account"
+              size="icon"
+              variant="ghost"
+              onClick={handleBackToList}
+              className="mr-auto"
+              data-testid="button-back-to-list"
             >
-              <Link className="w-4 h-4" />
-              Connect Account
+              <ArrowLeft className="w-5 h-5" />
             </Button>
           )}
-          <NotificationBell />
-          <DropdownMenu>
+          <div className={`flex items-center gap-2 ${screen.isMobile && showMobileDetail ? '' : 'ml-auto'}`}>
+            {!userData?.user?.connectedEmail && !screen.isMobile && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setLocation("/connect-email")}
+                data-testid="button-connect-account"
+              >
+                <Link className="w-4 h-4" />
+                Connect Account
+              </Button>
+            )}
+            <NotificationBell />
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
                 <Avatar className="w-9 h-9 ring-2 ring-border/30">
@@ -472,7 +498,8 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                 <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         </header>
         <div className="flex-1 overflow-auto">
           <EmailDetail 
