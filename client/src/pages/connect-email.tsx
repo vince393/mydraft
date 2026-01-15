@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Loader2, ArrowRight, CheckCircle, Building2 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function ConnectEmailPage() {
   const [, setLocation] = useLocation();
@@ -16,6 +16,13 @@ export default function ConnectEmailPage() {
   });
 
   const isConnected = nylasStatus?.connected ?? false;
+
+  // Automatically redirect to inbox if already connected
+  useEffect(() => {
+    if (isConnected && !statusLoading) {
+      setLocation("/inbox");
+    }
+  }, [isConnected, statusLoading, setLocation]);
 
   const handleConnect = async (provider: 'google' | 'microsoft') => {
     setConnectingProvider(provider);

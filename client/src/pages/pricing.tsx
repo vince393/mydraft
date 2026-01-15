@@ -102,6 +102,10 @@ export default function PricingPage() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
 
+  const { data: userData } = useQuery<UserData>({
+    queryKey: ["/api/auth/me"],
+  });
+
   // Check for success/cancel URL params from Stripe
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -111,21 +115,29 @@ export default function PricingPage() {
         description: "Thank you for subscribing. Your plan is now active.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      // Use wouter navigation to clear params
-      setLocation("/pricing", { replace: true });
+      // Redirect to email connection after successful subscription
+      setLocation("/connect-email");
     } else if (params.get("canceled") === "true") {
       toast({
         title: "Checkout canceled",
         description: "Your subscription was not completed.",
         variant: "destructive",
       });
-      setLocation("/pricing", { replace: true });
+      setLocation("/select-plan", { replace: true });
     }
   }, [toast, setLocation]);
 
-  const { data: userData } = useQuery<UserData>({
-    queryKey: ["/api/auth/me"],
-  });
+  // Redirect users who already have a plan to the next step
+  useEffect(() => {
+    // Only redirect if not coming back from Stripe
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") || params.get("canceled")) return;
+    
+    if (userData?.user?.plan) {
+      // User already has a plan, send them to the next step
+      setLocation("/connect-email");
+    }
+  }, [userData, setLocation]);
 
   // Fetch Stripe products
   const { data: stripeData } = useQuery<{ products: StripeProduct[] }>({

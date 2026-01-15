@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,11 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare, Inbox, Users } from "lucide-react";
+import type { User } from "@shared/schema";
+
+interface AuthResponse {
+  user: (User & { emailConnected?: boolean }) | null;
+}
 
 type Step = "primary-use" | "email-volume" | "ai-features" | "automation" | "tone" | "referral";
 
@@ -36,6 +41,25 @@ export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  const { data: authData } = useQuery<AuthResponse>({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+  });
+
+  // If user has already completed onboarding, redirect them to the next step
+  useEffect(() => {
+    if (authData?.user?.onboardingCompleted) {
+      // Redirect based on their current state
+      if (!authData.user.plan) {
+        setLocation("/select-plan");
+      } else if (!authData.user.emailConnected) {
+        setLocation("/connect-email");
+      } else {
+        setLocation("/inbox");
+      }
+    }
+  }, [authData, setLocation]);
+
   const steps: Step[] = ["primary-use", "email-volume", "ai-features", "automation", "tone", "referral"];
   const currentStepIndex = steps.indexOf(step);
 
@@ -44,8 +68,10 @@ export default function OnboardingPage() {
       const response = await apiRequest("POST", "/api/user/onboarding", { aiPreferences: preferences });
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    onSuccess: async () => {
+      // Wait for the query to refetch with updated data before redirecting
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
       // Go to pricing after onboarding (new flow)
       setLocation("/select-plan");
     },
