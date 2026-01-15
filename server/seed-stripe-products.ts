@@ -1,0 +1,76 @@
+// Stripe Products Seed Script for MailFlow Payment Plans
+// Run with: npx tsx server/seed-stripe-products.ts
+
+import { getUncachableStripeClient } from './stripeClient';
+
+async function seedProducts() {
+  console.log('Creating Stripe products for MailFlow...\n');
+  
+  const stripe = await getUncachableStripeClient();
+  
+  // Check if products already exist
+  const existingProducts = await stripe.products.search({ query: "active:'true'" });
+  const existingNames = existingProducts.data.map(p => p.name);
+  
+  // Pro Plan - $24/month
+  if (!existingNames.includes('MailFlow Pro')) {
+    console.log('Creating Pro Plan...');
+    const proProduct = await stripe.products.create({
+      name: 'MailFlow Pro',
+      description: 'Professional email management with AI-powered features',
+      metadata: {
+        plan: 'pro',
+        features: 'AI draft generation, Priority support, Advanced filters, Unlimited emails'
+      }
+    });
+    
+    const proPrice = await stripe.prices.create({
+      product: proProduct.id,
+      unit_amount: 2400, // $24.00
+      currency: 'usd',
+      recurring: { interval: 'month' },
+      metadata: { plan: 'pro' }
+    });
+    
+    console.log(`  Created: ${proProduct.name} (${proProduct.id})`);
+    console.log(`  Price: $24/month (${proPrice.id})\n`);
+  } else {
+    console.log('Pro Plan already exists, skipping...\n');
+  }
+  
+  // Business Plan - $49/month
+  if (!existingNames.includes('MailFlow Business')) {
+    console.log('Creating Business Plan...');
+    const businessProduct = await stripe.products.create({
+      name: 'MailFlow Business',
+      description: 'Enterprise-grade email management for teams',
+      metadata: {
+        plan: 'premium',
+        features: 'All Pro features, Team management, Priority queue, Custom integrations, Dedicated support'
+      }
+    });
+    
+    const businessPrice = await stripe.prices.create({
+      product: businessProduct.id,
+      unit_amount: 4900, // $49.00
+      currency: 'usd',
+      recurring: { interval: 'month' },
+      metadata: { plan: 'premium' }
+    });
+    
+    console.log(`  Created: ${businessProduct.name} (${businessProduct.id})`);
+    console.log(`  Price: $49/month (${businessPrice.id})\n`);
+  } else {
+    console.log('Business Plan already exists, skipping...\n');
+  }
+  
+  console.log('Done! Products will be synced to the database via webhooks.');
+  console.log('You can verify them at: https://dashboard.stripe.com/products');
+}
+
+seedProducts()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error('Error seeding products:', error);
+    process.exit(1);
+  });
