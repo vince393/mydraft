@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
 import {
@@ -29,12 +29,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { Textarea } from "@/components/ui/textarea";
 import { AssistantModal } from "./assistant-modal";
 
 interface FolderItem {
   title: string;
   icon: typeof Inbox;
   isCustom?: boolean;
+  aiDescription?: string; // AI sorting description for Pro+ users
 }
 
 const defaultItems: FolderItem[] = [
@@ -67,10 +75,18 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [folders, setFolders] = useState<FolderItem[]>(defaultItems);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderAiDescription, setNewFolderAiDescription] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHoverExpanded, setIsHoverExpanded] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  
+  // Rename/Delete folder state
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
+  const [renameFolderName, setRenameFolderName] = useState("");
+  
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const justCollapsedRef = useRef(false);
   const { hasPro } = usePlan();
@@ -90,12 +106,49 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         title: newFolderName.trim(),
         icon: FileText,
         isCustom: true,
+        aiDescription: hasPro && newFolderAiDescription.trim() ? newFolderAiDescription.trim() : undefined,
       };
       setFolders([...folders, newFolder]);
       setNewFolderName("");
+      setNewFolderAiDescription("");
       setIsCreateOpen(false);
     }
   };
+
+  const handleOpenRename = useCallback((folder: FolderItem) => {
+    setSelectedFolder(folder);
+    setRenameFolderName(folder.title);
+    setIsRenameOpen(true);
+  }, []);
+
+  const handleRenameFolder = useCallback(() => {
+    if (selectedFolder && renameFolderName.trim()) {
+      setFolders(folders.map(f => 
+        f.title === selectedFolder.title 
+          ? { ...f, title: renameFolderName.trim() }
+          : f
+      ));
+      setIsRenameOpen(false);
+      setSelectedFolder(null);
+      setRenameFolderName("");
+    }
+  }, [selectedFolder, renameFolderName, folders]);
+
+  const handleOpenDelete = useCallback((folder: FolderItem) => {
+    setSelectedFolder(folder);
+    setIsDeleteOpen(true);
+  }, []);
+
+  const handleDeleteFolder = useCallback(() => {
+    if (selectedFolder) {
+      setFolders(folders.filter(f => f.title !== selectedFolder.title));
+      if (activeFolder.toLowerCase() === selectedFolder.title.toLowerCase()) {
+        onFolderChange("inbox");
+      }
+      setIsDeleteOpen(false);
+      setSelectedFolder(null);
+    }
+  }, [selectedFolder, folders, activeFolder, onFolderChange]);
 
   const handleMouseEnter = () => {
     if (isCollapsed && !justCollapsedRef.current) {
@@ -250,32 +303,68 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     );
                   }
                   
+                  const folderButton = (
+                    <SidebarMenuButton 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onFolderChange(item.title.toLowerCase());
+                      }}
+                      className={`
+                        w-full justify-between h-11 rounded-xl transition-all duration-200
+                        ${isActive 
+                          ? "bg-muted/60 text-foreground" 
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                        }
+                      `}
+                      data-testid={`nav-${item.title.toLowerCase()}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className="w-[18px] h-[18px]" />
+                        <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
+                        {item.aiDescription && (
+                          <Sparkles className="w-3 h-3 text-primary/60" />
+                        )}
+                      </div>
+                      {showCount && (
+                        <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
+                          {folderCount}
+                        </Badge>
+                      )}
+                    </SidebarMenuButton>
+                  );
+
+                  // Custom folders get context menu for rename/delete
+                  if (item.isCustom) {
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <ContextMenu>
+                          <ContextMenuTrigger asChild>
+                            {folderButton}
+                          </ContextMenuTrigger>
+                          <ContextMenuContent className="w-40">
+                            <ContextMenuItem 
+                              onClick={() => handleOpenRename(item)}
+                              className="gap-2"
+                            >
+                              <Pencil className="w-4 h-4" />
+                              Rename
+                            </ContextMenuItem>
+                            <ContextMenuItem 
+                              onClick={() => handleOpenDelete(item)}
+                              className="gap-2 text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </ContextMenuItem>
+                          </ContextMenuContent>
+                        </ContextMenu>
+                      </SidebarMenuItem>
+                    );
+                  }
+                  
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onFolderChange(item.title.toLowerCase());
-                        }}
-                        className={`
-                          w-full justify-between h-11 rounded-xl transition-all duration-200
-                          ${isActive 
-                            ? "bg-muted/60 text-foreground" 
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                          }
-                        `}
-                        data-testid={`nav-${item.title.toLowerCase()}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <item.icon className="w-[18px] h-[18px]" />
-                          <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
-                        </div>
-                        {showCount && (
-                          <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
-                            {folderCount}
-                          </Badge>
-                        )}
-                      </SidebarMenuButton>
+                      {folderButton}
                     </SidebarMenuItem>
                   );
                 })}
@@ -371,6 +460,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         </Sidebar>
       </div>
 
+      {/* Create Folder Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
@@ -379,30 +469,111 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
               Enter a name for your new folder.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="folder-name" className="text-sm font-medium">
-              Folder Name
-            </Label>
-            <Input
-              id="folder-name"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="Enter folder name..."
-              className="mt-2"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCreateFolder();
-                }
-              }}
-              data-testid="input-folder-name"
-            />
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="folder-name" className="text-sm font-medium">
+                Folder Name
+              </Label>
+              <Input
+                id="folder-name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Enter folder name..."
+                className="mt-2"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !hasPro) {
+                    handleCreateFolder();
+                  }
+                }}
+                data-testid="input-folder-name"
+              />
+            </div>
+            
+            {/* AI Auto-Sort Description - Pro+ only */}
+            {hasPro && (
+              <div>
+                <Label htmlFor="folder-ai-description" className="text-sm font-medium flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  AI Auto-Sort (Optional)
+                </Label>
+                <Textarea
+                  id="folder-ai-description"
+                  value={newFolderAiDescription}
+                  onChange={(e) => setNewFolderAiDescription(e.target.value)}
+                  placeholder="Describe what emails should go here, e.g. 'Newsletters and marketing emails'"
+                  className="mt-2 min-h-[80px] resize-none"
+                  data-testid="input-folder-ai-description"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  AI will automatically sort matching emails into this folder.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+            <Button variant="outline" onClick={() => { setIsCreateOpen(false); setNewFolderAiDescription(""); }}>
               Cancel
             </Button>
             <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
               Create Folder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Folder Dialog */}
+      <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Rename Folder</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this folder.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="rename-folder-name" className="text-sm font-medium">
+              Folder Name
+            </Label>
+            <Input
+              id="rename-folder-name"
+              value={renameFolderName}
+              onChange={(e) => setRenameFolderName(e.target.value)}
+              placeholder="Enter folder name..."
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleRenameFolder();
+                }
+              }}
+              data-testid="input-rename-folder-name"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRenameOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameFolder} disabled={!renameFolderName.trim()}>
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Folder Confirmation Dialog */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Delete Folder</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{selectedFolder?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteFolder}>
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
