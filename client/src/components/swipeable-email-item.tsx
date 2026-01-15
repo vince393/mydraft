@@ -94,13 +94,16 @@ export function SwipeableEmailItem({
     .slice(0, 2);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Always trigger long press start for potential selection mode entry
+    onLongPressStart();
+    
     if (isSelectionMode) return;
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
     currentX.current = isRevealed ? -revealThreshold : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
-  }, [isRevealed, isSelectionMode]);
+  }, [isRevealed, isSelectionMode, onLongPressStart]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (isSelectionMode || !isSwiping) return;
@@ -109,6 +112,11 @@ export function SwipeableEmailItem({
     const touchY = e.touches[0].clientY;
     const deltaX = touchX - startX.current;
     const deltaY = touchY - startY.current;
+
+    // Cancel long press if user starts moving (they're swiping, not long pressing)
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+      onLongPressEnd();
+    }
 
     if (isHorizontalSwipe.current === null) {
       if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
@@ -131,9 +139,12 @@ export function SwipeableEmailItem({
     }
 
     setSwipeX(newX);
-  }, [isSwiping, isSelectionMode]);
+  }, [isSwiping, isSelectionMode, onLongPressEnd]);
 
   const handleTouchEnd = useCallback(() => {
+    // Always end long press timer
+    onLongPressEnd();
+    
     if (isSelectionMode) return;
     setIsSwiping(false);
     
@@ -154,11 +165,13 @@ export function SwipeableEmailItem({
       setSwipeX(0);
       setIsRevealed(false);
     }
-  }, [swipeX, onDelete, isSelectionMode]);
+  }, [swipeX, onDelete, isSelectionMode, onLongPressEnd]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Always trigger long press start for potential selection mode entry
+    onLongPressStart();
+    
     if (isSelectionMode) {
-      onLongPressStart();
       return;
     }
     startX.current = e.clientX;
@@ -174,6 +187,11 @@ export function SwipeableEmailItem({
     const deltaX = e.clientX - startX.current;
     const deltaY = e.clientY - startY.current;
 
+    // Cancel long press if user starts moving (they're swiping, not long pressing)
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+      onLongPressEnd();
+    }
+
     if (isHorizontalSwipe.current === null) {
       if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
         isHorizontalSwipe.current = Math.abs(deltaX) > Math.abs(deltaY);
@@ -188,21 +206,26 @@ export function SwipeableEmailItem({
     if (newX < -maxSwipe) newX = -maxSwipe;
 
     setSwipeX(newX);
-  }, [isSwiping, isSelectionMode]);
+  }, [isSwiping, isSelectionMode, onLongPressEnd]);
 
   const handleMouseUp = useCallback(() => {
+    // Always end long press timer
+    onLongPressEnd();
+    
     if (isSelectionMode) {
-      onLongPressEnd();
       return;
     }
     handleTouchEnd();
   }, [handleTouchEnd, isSelectionMode, onLongPressEnd]);
 
   const handleMouseLeave = useCallback(() => {
+    // Cancel long press timer when mouse leaves
+    onLongPressEnd();
+    
     if (isSwiping && !isSelectionMode) {
       handleTouchEnd();
     }
-  }, [isSwiping, handleTouchEnd, isSelectionMode]);
+  }, [isSwiping, handleTouchEnd, isSelectionMode, onLongPressEnd]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     if (Math.abs(swipeX) > 5 && !isRevealed) {
