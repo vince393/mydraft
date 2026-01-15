@@ -37,6 +37,8 @@ export const users = pgTable("users", {
   aiPreferences: jsonb("ai_preferences").$type<AiPreferences>(),
   emailSignature: text("email_signature"),
   signatureEnabled: boolean("signature_enabled").default(false).notNull(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
