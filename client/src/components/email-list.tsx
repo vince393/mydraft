@@ -433,7 +433,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-x-hidden">
       <div className="p-4 border-b border-border/30">
         <div className="relative flex items-center gap-2 mb-3">
           <div className="relative flex-1">
@@ -583,7 +583,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       </div>
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto scrollbar-thin"
+        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin"
       >
         {filteredEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center p-8">

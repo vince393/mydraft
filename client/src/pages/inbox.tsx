@@ -389,7 +389,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   return (
     <div className="email-layout">
       {/* Email List Panel - hidden on mobile when viewing detail */}
-      <div className={`email-list-panel ${screen.isMobile && showMobileDetail ? 'hidden' : ''}`}>
+      <div className={`email-list-panel overflow-x-hidden ${screen.isMobile && showMobileDetail ? 'hidden' : ''}`}>
         <EmailList
           emails={emails}
           selectedEmailId={selectedEmail?.id ?? null}
