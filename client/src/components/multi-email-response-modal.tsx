@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { 
-  Sparkles, RefreshCw, Loader2, X, ChevronLeft, ChevronRight, 
+  Sparkles, RefreshCw, Loader2, ChevronLeft, ChevronRight, 
   ChevronDown, ChevronUp, Send, AlertCircle 
 } from "lucide-react";
 import {
@@ -283,10 +283,6 @@ export function MultiEmailResponseModal({
     }
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-  };
-
   const sentCount = Array.from(responses.values()).filter(r => r.sent).length;
   const loadingCount = Array.from(responses.values()).filter(r => r.isLoading).length;
   const readyCount = Array.from(responses.values()).filter(r => !r.sent && !r.isLoading && !r.error).length;
@@ -297,23 +293,12 @@ export function MultiEmailResponseModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600/20 to-purple-600/20">
-                <Sparkles className="w-5 h-5 text-primary" />
-              </div>
-              AI Batch Response
-            </DialogTitle>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleClose}
-              className="h-8 w-8"
-              data-testid="button-close-modal"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <DialogTitle className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600/20 to-purple-600/20">
+              <Sparkles className="w-5 h-5 text-primary" />
+            </div>
+            AI Batch Response
+          </DialogTitle>
           <div className="flex items-center gap-4 mt-3">
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <span className="text-foreground font-medium">{currentIndex + 1}</span>
