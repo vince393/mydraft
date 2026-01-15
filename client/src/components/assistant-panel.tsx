@@ -110,6 +110,9 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
     },
   });
 
+  // Pending user message for optimistic UI
+  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
+
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -120,17 +123,21 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
       return response.json();
     },
     onSuccess: (data) => {
+      setPendingUserMessage(null);
       queryClient.invalidateQueries({ queryKey: ["/api/assistant/messages"] });
       if (voiceOutputEnabled && data.response) {
         speakResponse(data.response);
       }
     },
+    onError: () => {
+      setPendingUserMessage(null);
+    },
   });
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change or pending message added
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, pendingUserMessage]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -205,7 +212,9 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
 
   const handleSendMessage = () => {
     if (!message.trim() || sendMessageMutation.isPending) return;
-    sendMessageMutation.mutate(message.trim());
+    const trimmedMessage = message.trim();
+    setPendingUserMessage(trimmedMessage);
+    sendMessageMutation.mutate(trimmedMessage);
     setMessage("");
   };
 
@@ -303,20 +312,41 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
                     </p>
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        "text-sm rounded-lg px-3 py-2 max-w-[90%]",
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground ml-auto"
-                          : "bg-background border border-border/50"
-                      )}
-                      data-testid={`message-${msg.role}-${msg.id}`}
-                    >
-                      {msg.content}
-                    </div>
-                  ))
+                  <>
+                    {messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "text-sm rounded-lg px-3 py-2 max-w-[90%]",
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground ml-auto"
+                            : "bg-background border border-border/50"
+                        )}
+                        data-testid={`message-${msg.role}-${msg.id}`}
+                      >
+                        {msg.content}
+                      </div>
+                    ))}
+                    {/* Show pending user message immediately */}
+                    {pendingUserMessage && (
+                      <div
+                        className="text-sm rounded-lg px-3 py-2 max-w-[90%] bg-primary text-primary-foreground ml-auto"
+                        data-testid="message-user-pending"
+                      >
+                        {pendingUserMessage}
+                      </div>
+                    )}
+                    {/* Show thinking indicator while waiting for response */}
+                    {sendMessageMutation.isPending && (
+                      <div
+                        className="text-sm rounded-lg px-3 py-2 max-w-[90%] bg-background border border-border/50 flex items-center gap-2"
+                        data-testid="message-assistant-thinking"
+                      >
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span className="text-muted-foreground italic">{currentVoiceName} is thinking...</span>
+                      </div>
+                    )}
+                  </>
                 )}
                 <div ref={messagesEndRef} />
               </div>
