@@ -63,16 +63,21 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 // Owner/Admin authentication middleware
 async function requireOwner(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
+    console.log("[requireOwner] No session userId");
     return res.status(401).json({ error: "Unauthorized" });
   }
   
   const user = await storage.getUser(req.session.userId);
   if (!user) {
+    console.log("[requireOwner] User not found for id:", req.session.userId);
     return res.status(401).json({ error: "User not found" });
   }
   
   const ownerEmail = process.env.OWNER_EMAIL?.toLowerCase().trim();
-  if (!ownerEmail || user.email.toLowerCase().trim() !== ownerEmail) {
+  const userEmail = user.email.toLowerCase().trim();
+  console.log("[requireOwner] Checking:", { userEmail, ownerEmail, match: userEmail === ownerEmail });
+  
+  if (!ownerEmail || userEmail !== ownerEmail) {
     return res.status(403).json({ error: "Access denied. Owner privileges required." });
   }
   
