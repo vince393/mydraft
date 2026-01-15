@@ -111,17 +111,17 @@ export default function PricingPage() {
         description: "Thank you for subscribing. Your plan is now active.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      // Clear the URL params
-      window.history.replaceState({}, "", "/pricing");
+      // Use wouter navigation to clear params
+      setLocation("/pricing", { replace: true });
     } else if (params.get("canceled") === "true") {
       toast({
         title: "Checkout canceled",
         description: "Your subscription was not completed.",
         variant: "destructive",
       });
-      window.history.replaceState({}, "", "/pricing");
+      setLocation("/pricing", { replace: true });
     }
-  }, [toast]);
+  }, [toast, setLocation]);
 
   const { data: userData } = useQuery<UserData>({
     queryKey: ["/api/auth/me"],
