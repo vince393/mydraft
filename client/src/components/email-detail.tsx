@@ -9,6 +9,7 @@ import {
   Archive, 
   Trash2,
   ChevronLeft,
+  ChevronUp,
   Sparkles,
   X,
   Clock,
@@ -372,79 +373,83 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
 
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="pl-6 pr-8 pt-4 pb-8">
-          {/* Thread emails - show older emails in the conversation */}
+          {/* Thread indicator - Gmail-style collapsed thread view */}
           {hasThread && olderEmails.length > 0 && (
-            <div className="mb-6 space-y-2">
-              {olderEmails.map((threadEmail) => {
-                const threadEmailId = threadEmail.nylasId || threadEmail.id;
-                const isExpanded = expandedThreadEmails.has(threadEmailId);
-                const threadInitials = threadEmail.sender
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2);
-                
-                return (
-                  <div 
-                    key={threadEmailId}
-                    className="border border-border/50 rounded-lg overflow-hidden bg-muted/20"
-                    data-testid={`thread-email-${threadEmailId}`}
+            <div className="mb-4">
+              {!expandedThreadEmails.has('all') ? (
+                <button
+                  onClick={() => toggleThreadEmail('all')}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-dashed border-border/50 transition-colors"
+                  data-testid="button-expand-thread"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  <span>{olderEmails.length} earlier {olderEmails.length === 1 ? "message" : "messages"}</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => toggleThreadEmail('all')}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-dashed border-border/50 transition-colors mb-4"
+                    data-testid="button-collapse-thread"
                   >
-                    <button
-                      onClick={() => toggleThreadEmail(threadEmailId)}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left"
-                      data-testid={`button-toggle-thread-${threadEmailId}`}
-                    >
-                      <Avatar className="w-8 h-8 ring-1 ring-border/30">
-                        <AvatarImage 
-                          src={getAvatarUrl(threadEmail.senderEmail, threadEmail.sender)} 
-                          alt={threadEmail.sender}
-                        />
-                        <AvatarFallback 
-                          style={{ backgroundColor: threadEmail.avatarColor }}
-                          className="text-white font-medium text-xs"
+                    <ChevronUp className="w-4 h-4" />
+                    <span>Hide earlier messages</span>
+                  </button>
+                  <div className="space-y-3 mb-4">
+                    {olderEmails.map((threadEmail) => {
+                      const threadEmailId = threadEmail.nylasId || threadEmail.id;
+                      const threadInitials = threadEmail.sender
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2);
+                      
+                      return (
+                        <div 
+                          key={threadEmailId}
+                          className="border border-border/40 rounded-lg p-4 bg-muted/10"
+                          data-testid={`thread-email-${threadEmailId}`}
                         >
-                          {threadInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">{threadEmail.sender}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatSmartDate(new Date(threadEmail.receivedAt))}
-                          </span>
-                        </div>
-                        {!isExpanded && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {threadEmail.preview || "No preview"}
-                          </p>
-                        )}
-                      </div>
-                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                    </button>
-                    
-                    {isExpanded && (
-                      <div className="px-3 pb-3 border-t border-border/30">
-                        {(threadEmail.body || threadEmail.preview || "").includes('<') ? (
-                          <div 
-                            className="prose prose-sm dark:prose-invert max-w-none mt-3 text-sm leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: threadEmail.body || threadEmail.preview || "" }}
-                          />
-                        ) : (
-                          <div className="mt-3 text-sm leading-relaxed text-foreground/90">
-                            {(threadEmail.body || threadEmail.preview || "").split("\n").map((paragraph, i) => (
-                              <p key={i} className={paragraph.trim() ? "mb-3" : "mb-1"}>
-                                {paragraph || "\u00A0"}
-                              </p>
-                            ))}
+                          <div className="flex items-start gap-3 mb-3">
+                            <Avatar className="w-8 h-8 ring-1 ring-border/30">
+                              <AvatarImage 
+                                src={getAvatarUrl(threadEmail.senderEmail, threadEmail.sender)} 
+                                alt={threadEmail.sender}
+                              />
+                              <AvatarFallback 
+                                style={{ backgroundColor: threadEmail.avatarColor }}
+                                className="text-white font-medium text-xs"
+                              >
+                                {threadInitials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{threadEmail.sender}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatSmartDate(new Date(threadEmail.receivedAt))}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{threadEmail.senderEmail}</p>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    )}
+                          <div className="text-sm text-foreground/80 leading-relaxed">
+                            {(threadEmail.body || threadEmail.preview || "").includes('<') ? (
+                              <div 
+                                className="prose prose-sm dark:prose-invert max-w-none"
+                                dangerouslySetInnerHTML={{ __html: threadEmail.body || threadEmail.preview || "" }}
+                              />
+                            ) : (
+                              <p className="whitespace-pre-wrap">{threadEmail.body || threadEmail.preview || ""}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </>
+              )}
             </div>
           )}
           
