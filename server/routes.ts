@@ -2346,14 +2346,11 @@ RESPONSE STYLE:
 
       const transcription = await openai.audio.transcriptions.create({
         file: audioFile,
-        model: "whisper-1",
-        language: "en",
-        response_format: "text",
+        model: "gpt-4o-mini-transcribe",
+        response_format: "json",
       });
 
-      const transcript = typeof transcription === "string" 
-        ? transcription.trim() 
-        : (transcription as any).text?.trim() || "";
+      const transcript = (transcription as any).text?.trim() || "";
       
       res.json({ transcript });
     } catch (error) {

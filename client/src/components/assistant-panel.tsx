@@ -29,23 +29,8 @@ import {
   Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import type { AssistantMessage, AssistantSettings } from "@shared/schema";
-
-// TypeScript declarations for Web Speech API
-interface SpeechRecognitionEvent {
-  results: { [key: number]: { [key: number]: { transcript: string } } };
-}
-
-interface SpeechRecognitionInstance {
-  continuous: boolean;
-  interimResults: boolean;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-}
 
 // Voice configuration
 const ASSISTANT_VOICES = [
@@ -65,10 +50,13 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const { toast } = useToast();
 
   // Fetch assistant settings
   const { data: settings } = useQuery<AssistantSettings>({
@@ -139,35 +127,42 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, pendingUserMessage]);
 
-  // Initialize speech recognition
-  useEffect(() => {
-    const win = window as { SpeechRecognition?: new () => SpeechRecognitionInstance; webkitSpeechRecognition?: new () => SpeechRecognitionInstance };
-    if (typeof window !== "undefined" && (win.SpeechRecognition || win.webkitSpeechRecognition)) {
-      const SpeechRecognitionClass = win.SpeechRecognition || win.webkitSpeechRecognition;
-      if (SpeechRecognitionClass) {
-        recognitionRef.current = new SpeechRecognitionClass();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
-        
-        recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-          const transcript = event.results[0][0].transcript;
-          setMessage(transcript);
-          setIsRecording(false);
-        };
-        
-        recognitionRef.current.onerror = () => {
-          setIsRecording(false);
-        };
-        
-        recognitionRef.current.onend = () => {
-          setIsRecording(false);
-        };
+  // Transcription mutation using OpenAI Whisper
+  const transcribeMutation = useMutation({
+    mutationFn: async (audioBlob: Blob) => {
+      // Convert blob to base64
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+      );
+      
+      const response = await apiRequest("POST", "/api/assistant/transcribe", {
+        audio: base64,
+        mimeType: audioBlob.type,
+      });
+      return response.json();
+    },
+    onSuccess: (data: { transcript?: string }) => {
+      setIsTranscribing(false);
+      if (data.transcript && data.transcript.trim()) {
+        setMessage(data.transcript.trim());
       }
-    }
-    
+    },
+    onError: (error: Error) => {
+      setIsTranscribing(false);
+      toast({
+        title: "Transcription failed",
+        description: error.message || "Could not transcribe audio",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Cleanup media recorder on unmount
+  useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
       }
     };
   }, []);
@@ -196,16 +191,43 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleStartRecording = () => {
-    if (recognitionRef.current) {
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (audioBlob.size > 0) {
+          setIsTranscribing(true);
+          transcribeMutation.mutate(audioBlob);
+        }
+      };
+      
+      mediaRecorder.start();
       setIsRecording(true);
-      recognitionRef.current.start();
+    } catch (error) {
+      console.error("Failed to start recording:", error);
+      toast({
+        title: "Microphone access denied",
+        description: "Please allow microphone access to use voice input",
+        variant: "destructive",
+      });
     }
   };
 
   const handleStopRecording = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
   };
@@ -357,19 +379,23 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
               <Button
                 size="icon"
                 variant={isRecording ? "default" : "outline"}
-                className={cn("h-9 w-9 shrink-0", isRecording && "bg-red-500 hover:bg-red-600")}
+                className={cn(
+                  "h-9 w-9 shrink-0", 
+                  isRecording && "bg-red-500 hover:bg-red-600",
+                  isTranscribing && "animate-pulse"
+                )}
                 onMouseDown={handleStartRecording}
                 onMouseUp={handleStopRecording}
                 onMouseLeave={handleStopRecording}
-                disabled={!recognitionRef.current}
+                disabled={isTranscribing || sendMessageMutation.isPending}
                 data-testid="button-voice-input"
               >
-                {isRecording ? (
+                {isTranscribing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isRecording ? (
                   <Mic className="w-4 h-4 animate-pulse" />
-                ) : recognitionRef.current ? (
-                  <Mic className="w-4 h-4" />
                 ) : (
-                  <MicOff className="w-4 h-4" />
+                  <Mic className="w-4 h-4" />
                 )}
               </Button>
               <Input
