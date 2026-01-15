@@ -238,6 +238,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
     },
   });
@@ -262,6 +263,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       setSelectedEmailId(null);
       setGeneratedDraft(null);
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
     },
   });

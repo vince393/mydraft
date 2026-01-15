@@ -1780,101 +1780,37 @@ Return only the improved text, nothing else.`;
     try {
       const folder = req.query.folder as string | undefined;
       const targetFolder = folder || "inbox";
-      const emails = await storage.getEmails(targetFolder);
       
-      const unreadEmails = emails.filter(e => !e.isRead);
+      // Try to get emails from Nylas first, fall back to storage
+      const grant = await storage.getNylasGrant(req.session.userId!);
+      let unreadCount = 0;
       
-      if (unreadEmails.length === 0) {
-        responseTimeCache.delete(targetFolder);
+      if (grant) {
+        try {
+          const messages = await nylas.getMessages(grant.grantId, targetFolder, grant.provider);
+          unreadCount = messages.filter((m: any) => !m.isRead && m.unread !== false).length;
+        } catch (err) {
+          console.log(`Could not fetch ${targetFolder} for response time`);
+        }
+      } else {
+        const emails = await storage.getEmails(targetFolder);
+        unreadCount = emails.filter(e => !e.isRead).length;
+      }
+      
+      if (unreadCount === 0) {
         return res.json({ 
           estimatedMinutes: 0, 
           unreadCount: 0,
-          totalWords: 0,
           message: "All caught up!" 
         });
       }
 
-      const unreadIds = unreadEmails.map(e => e.id);
-      const currentSignature = generateUnreadSignature(unreadIds);
-      
-      const cached = responseTimeCache.get(targetFolder);
-      if (cached && cached.signature === currentSignature) {
-        return res.json({
-          estimatedMinutes: cached.estimatedMinutes,
-          unreadCount: cached.unreadCount,
-          totalWords: cached.totalWords
-        });
-      }
-
-      const totalWords = unreadEmails.reduce((sum, email) => {
-        const bodyWords = email.body.split(/\s+/).filter(w => w.length > 0).length;
-        const subjectWords = email.subject.split(/\s+/).filter(w => w.length > 0).length;
-        return sum + bodyWords + subjectWords;
-      }, 0);
-
-      const emailSummaries = unreadEmails.slice(0, 5).map(e => ({
-        subject: e.subject,
-        preview: e.preview,
-        wordCount: e.body.split(/\s+/).filter(w => w.length > 0).length
-      }));
-
-      const prompt = `You are an email productivity assistant. Based on the following unread emails, estimate how many minutes it would take a typical professional to read and thoughtfully respond to all of them.
-
-Unread email count: ${unreadEmails.length}
-Total words across all unread emails: ${totalWords}
-
-Sample of unread emails:
-${emailSummaries.map((e, i) => `${i + 1}. Subject: "${e.subject}" - ${e.wordCount} words - Preview: "${e.preview}"`).join('\n')}
-
-Consider:
-- Average reading speed: 200-250 words per minute
-- Time to compose thoughtful replies (2-5 minutes per email depending on complexity)
-- Some emails may require research or more detailed responses
-
-Return ONLY a JSON object with this exact format:
-{"estimatedMinutes": <number>}`;
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are an email productivity assistant that estimates response times. Always respond with valid JSON only."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_completion_tokens: 100,
-      });
-
-      const content = response.choices[0]?.message?.content || '{"estimatedMinutes": 5}';
-      let estimatedMinutes = 5;
-      
-      try {
-        const parsed = JSON.parse(content);
-        estimatedMinutes = parsed.estimatedMinutes || 5;
-      } catch {
-        const match = content.match(/\d+/);
-        if (match) {
-          estimatedMinutes = parseInt(match[0]);
-        }
-      }
-
-      const finalMinutes = Math.max(1, Math.round(estimatedMinutes));
-      
-      responseTimeCache.set(targetFolder, {
-        signature: currentSignature,
-        estimatedMinutes: finalMinutes,
-        unreadCount: unreadEmails.length,
-        totalWords
-      });
+      // Fast calculation: ~3 minutes per email (reading + thinking + replying)
+      const estimatedMinutes = Math.max(1, Math.round(unreadCount * 3));
 
       res.json({ 
-        estimatedMinutes: finalMinutes,
-        unreadCount: unreadEmails.length,
-        totalWords
+        estimatedMinutes,
+        unreadCount
       });
     } catch (error) {
       console.error("Error estimating response time:", error);
