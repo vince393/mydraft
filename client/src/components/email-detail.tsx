@@ -373,85 +373,141 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
 
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="pl-6 pr-8 pt-4 pb-8">
-          {/* Thread indicator - Gmail-style collapsed thread view */}
-          {hasThread && olderEmails.length > 0 && (
-            <div className="mb-4">
-              {!expandedThreadEmails.has('all') ? (
-                <button
-                  onClick={() => toggleThreadEmail('all')}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-dashed border-border/50 transition-colors"
-                  data-testid="button-expand-thread"
+          {/* Thread indicator - Gmail-style with first message preview and expandable rest */}
+          {hasThread && olderEmails.length > 0 && (() => {
+            const firstOlderEmail = olderEmails[0];
+            const remainingEmails = olderEmails.slice(1);
+            const firstInitials = firstOlderEmail.sender
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2);
+            
+            return (
+              <div className="mb-4 space-y-2">
+                {/* First older message - always shown as preview */}
+                <div 
+                  className="border border-border/40 rounded-lg p-4 bg-muted/10"
+                  data-testid={`thread-email-${firstOlderEmail.nylasId || firstOlderEmail.id}`}
                 >
-                  <ChevronDown className="w-4 h-4" />
-                  <span>{olderEmails.length} earlier {olderEmails.length === 1 ? "message" : "messages"}</span>
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => toggleThreadEmail('all')}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-dashed border-border/50 transition-colors mb-4"
-                    data-testid="button-collapse-thread"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                    <span>Hide earlier messages</span>
-                  </button>
-                  <div className="space-y-3 mb-4">
-                    {olderEmails.map((threadEmail) => {
-                      const threadEmailId = threadEmail.nylasId || threadEmail.id;
-                      const threadInitials = threadEmail.sender
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2);
-                      
-                      return (
-                        <div 
-                          key={threadEmailId}
-                          className="border border-border/40 rounded-lg p-4 bg-muted/10"
-                          data-testid={`thread-email-${threadEmailId}`}
-                        >
-                          <div className="flex items-start gap-3 mb-3">
-                            <Avatar className="w-8 h-8 ring-1 ring-border/30">
-                              <AvatarImage 
-                                src={getAvatarUrl(threadEmail.senderEmail, threadEmail.sender)} 
-                                alt={threadEmail.sender}
-                              />
-                              <AvatarFallback 
-                                style={{ backgroundColor: threadEmail.avatarColor }}
-                                className="text-white font-medium text-xs"
-                              >
-                                {threadInitials}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm">{threadEmail.sender}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {formatSmartDate(new Date(threadEmail.receivedAt))}
-                                </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground">{threadEmail.senderEmail}</p>
-                            </div>
-                          </div>
-                          <div className="text-sm text-foreground/80 leading-relaxed">
-                            {(threadEmail.body || threadEmail.preview || "").includes('<') ? (
-                              <div 
-                                className="prose prose-sm dark:prose-invert max-w-none"
-                                dangerouslySetInnerHTML={{ __html: threadEmail.body || threadEmail.preview || "" }}
-                              />
-                            ) : (
-                              <p className="whitespace-pre-wrap">{threadEmail.body || threadEmail.preview || ""}</p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="flex items-start gap-3 mb-3">
+                    <Avatar className="w-8 h-8 ring-1 ring-border/30">
+                      <AvatarImage 
+                        src={getAvatarUrl(firstOlderEmail.senderEmail, firstOlderEmail.sender)} 
+                        alt={firstOlderEmail.sender}
+                      />
+                      <AvatarFallback 
+                        style={{ backgroundColor: firstOlderEmail.avatarColor }}
+                        className="text-white font-medium text-xs"
+                      >
+                        {firstInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{firstOlderEmail.sender}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatSmartDate(new Date(firstOlderEmail.receivedAt))}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{firstOlderEmail.senderEmail}</p>
+                    </div>
                   </div>
-                </>
-              )}
-            </div>
-          )}
+                  <div className="text-sm text-foreground/80 leading-relaxed">
+                    {(firstOlderEmail.body || firstOlderEmail.preview || "").includes('<') ? (
+                      <div 
+                        className="prose prose-sm dark:prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{ __html: firstOlderEmail.body || firstOlderEmail.preview || "" }}
+                      />
+                    ) : (
+                      <p className="whitespace-pre-wrap">{firstOlderEmail.body || firstOlderEmail.preview || ""}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Remaining messages - expandable */}
+                {remainingEmails.length > 0 && (
+                  <>
+                    {!expandedThreadEmails.has('all') ? (
+                      <button
+                        onClick={() => toggleThreadEmail('all')}
+                        className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-dashed border-border/50 transition-colors"
+                        data-testid="button-expand-thread"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                        <span>{remainingEmails.length} more {remainingEmails.length === 1 ? "message" : "messages"}</span>
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => toggleThreadEmail('all')}
+                          className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-dashed border-border/50 transition-colors"
+                          data-testid="button-collapse-thread"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                          <span>Hide messages</span>
+                        </button>
+                        <div className="space-y-2">
+                          {remainingEmails.map((threadEmail) => {
+                            const threadEmailId = threadEmail.nylasId || threadEmail.id;
+                            const threadInitials = threadEmail.sender
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2);
+                            
+                            return (
+                              <div 
+                                key={threadEmailId}
+                                className="border border-border/40 rounded-lg p-4 bg-muted/10"
+                                data-testid={`thread-email-${threadEmailId}`}
+                              >
+                                <div className="flex items-start gap-3 mb-3">
+                                  <Avatar className="w-8 h-8 ring-1 ring-border/30">
+                                    <AvatarImage 
+                                      src={getAvatarUrl(threadEmail.senderEmail, threadEmail.sender)} 
+                                      alt={threadEmail.sender}
+                                    />
+                                    <AvatarFallback 
+                                      style={{ backgroundColor: threadEmail.avatarColor }}
+                                      className="text-white font-medium text-xs"
+                                    >
+                                      {threadInitials}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-sm">{threadEmail.sender}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatSmartDate(new Date(threadEmail.receivedAt))}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">{threadEmail.senderEmail}</p>
+                                  </div>
+                                </div>
+                                <div className="text-sm text-foreground/80 leading-relaxed">
+                                  {(threadEmail.body || threadEmail.preview || "").includes('<') ? (
+                                    <div 
+                                      className="prose prose-sm dark:prose-invert max-w-none"
+                                      dangerouslySetInnerHTML={{ __html: threadEmail.body || threadEmail.preview || "" }}
+                                    />
+                                  ) : (
+                                    <p className="whitespace-pre-wrap">{threadEmail.body || threadEmail.preview || ""}</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })()}
           
           {/* Current/Latest email */}
           <div className="flex items-start gap-3 mb-5">
