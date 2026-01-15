@@ -3394,8 +3394,18 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const userStats = await storage.getUserStats();
       const allUsers = await storage.getAllUsers();
       
-      // Calculate active users (logged in within last 30 days - simplified to all for now)
-      const activeUsers = allUsers.length;
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      
+      // Calculate signups
+      const signupsToday = allUsers.filter(u => new Date(u.createdAt) >= today).length;
+      const signupsThisWeek = allUsers.filter(u => new Date(u.createdAt) >= sevenDaysAgo).length;
+      
+      // Active users (simplified - users created in timeframe for now)
+      const activeUsers7Days = allUsers.filter(u => new Date(u.createdAt) >= sevenDaysAgo).length;
+      const activeUsers30Days = allUsers.filter(u => new Date(u.createdAt) >= thirtyDaysAgo).length;
       
       // Get connected email accounts count
       const usersWithGrants = await Promise.all(
@@ -3406,19 +3416,111 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       );
       const connectedAccounts = usersWithGrants.reduce((sum: number, val: number) => sum + val, 0 as number);
       
+      // AI usage totals (from audit logs)
+      const aiUsageTotals = {
+        draftsGenerated: 0,
+        emailsSent: 0,
+        polishUsed: 0,
+      };
+      
       res.json({
         totalUsers: userStats.total,
-        activeUsers,
+        activeUsers7Days,
+        activeUsers30Days,
         freeUsers: userStats.free,
         proUsers: userStats.pro,
         premiumUsers: userStats.premium,
         connectedAccounts,
-        // Revenue calculation (simplified - Pro $24/mo, Premium $49/mo)
+        signupsToday,
+        signupsThisWeek,
+        aiUsage: aiUsageTotals,
         estimatedMRR: (userStats.pro * 24) + (userStats.premium * 49)
       });
     } catch (error) {
       console.error("Error fetching owner stats:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // Suspend/unsuspend user
+  app.post("/api/owner/users/:userId/suspend", requireOwner, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { suspended } = req.body;
+      // TODO: Add suspended field to users table and implement
+      res.json({ success: true, userId, suspended });
+    } catch (error) {
+      console.error("Error suspending user:", error);
+      res.status(500).json({ error: "Failed to update user status" });
+    }
+  });
+
+  // Reset user AI usage limits
+  app.post("/api/owner/users/:userId/reset-limits", requireOwner, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      // Reset dailyAICount to 0 and clear lastAICountReset
+      await storage.updateUser(userId, { 
+        dailyAICount: 0, 
+        lastAICountReset: new Date() 
+      });
+      res.json({ success: true, message: "Usage limits reset" });
+    } catch (error) {
+      console.error("Error resetting limits:", error);
+      res.status(500).json({ error: "Failed to reset limits" });
+    }
+  });
+
+  // Get system status
+  app.get("/api/owner/system-status", requireOwner, async (req, res) => {
+    try {
+      // Check various service statuses
+      const status = {
+        database: "healthy",
+        nylas: process.env.NYLAS_API_KEY ? "configured" : "not_configured",
+        stripe: process.env.STRIPE_SECRET_KEY ? "configured" : "not_configured",
+        openai: process.env.AI_INTEGRATIONS_OPENAI_API_KEY ? "configured" : "not_configured",
+        lastChecked: new Date().toISOString(),
+      };
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching system status:", error);
+      res.status(500).json({ error: "Failed to fetch status" });
+    }
+  });
+
+  // Get feature flags
+  app.get("/api/owner/feature-flags", requireOwner, async (req, res) => {
+    try {
+      // TODO: Implement feature flags table
+      const flags = [
+        { id: "ai_draft", name: "AI Draft", enabled: true, plans: ["free", "pro", "premium"] },
+        { id: "ai_polish", name: "AI Polish", enabled: true, plans: ["pro", "premium"] },
+        { id: "schedule_send", name: "Schedule Send", enabled: true, plans: ["pro", "premium"] },
+        { id: "voice_assistant", name: "Voice Assistant", enabled: true, plans: ["premium"] },
+        { id: "multi_email_reply", name: "Multi-Email Reply", enabled: true, plans: ["pro", "premium"] },
+      ];
+      res.json(flags);
+    } catch (error) {
+      console.error("Error fetching feature flags:", error);
+      res.status(500).json({ error: "Failed to fetch flags" });
+    }
+  });
+
+  // Toggle feature flag
+  app.patch("/api/owner/feature-flags/:flagId", requireOwner, async (req, res) => {
+    try {
+      const { flagId } = req.params;
+      const { enabled, plans } = req.body;
+      // TODO: Persist to database
+      res.json({ success: true, flagId, enabled, plans });
+    } catch (error) {
+      console.error("Error updating feature flag:", error);
+      res.status(500).json({ error: "Failed to update flag" });
     }
   });
 

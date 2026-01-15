@@ -1,0 +1,118 @@
+You are editing and improving an EXISTING Owner / Admin Panel in a SaaS web application.
+
+CONTEXT:
+- The Owner Panel already exists
+- Your task is to refine, expand, and clean up the current implementation
+- Do NOT redesign everything from scratch
+- Keep existing structure where possible and build on top of it
+
+PRODUCT:
+- AI-powered email inbox platform
+- Users connect Gmail / Outlook via API (ex: Nylas)
+- Subscription-based SaaS (Free, Pro, Business)
+- AI features have usage limits and cost money
+- Owner Panel is restricted to admin/owner accounts only
+
+GOALS:
+- Improve usability and clarity
+- Add missing critical owner features
+- Make the panel scalable for growth
+- Keep UI minimal, modern, and fast
+
+DESIGN RULES:
+- No clutter
+- Clear tables, cards, and sections
+- Owner-only controls clearly marked
+- No popups unless necessary
+- Consistent spacing and typography
+
+EDIT & ADD THE FOLLOWING FEATURES:
+
+1. DASHBOARD (KEEP EXISTING, IMPROVE)
+- Add overview cards:
+  - Total users
+  - Active users (7 / 30 days)
+  - Connected email accounts
+  - Monthly Recurring Revenue (MRR)
+  - New signups (today / week)
+  - AI usage totals
+- Add simple charts (lightweight, optional)
+
+2. USERS & ACCOUNTS (EXPAND EXISTING)
+- Improve user list:
+  - Search by email / ID
+  - Filter by plan and status
+- User detail view:
+  - Email
+  - Plan
+  - Status
+  - Last login
+  - Connected email providers
+  - AI usage
+- Owner actions:
+  - Upgrade / downgrade plan
+  - Suspend / ban user
+  - Reset usage limits
+  - Force logout
+  - Impersonate user (read-only)
+- Add internal owner-only notes per user
+
+3. PLANS & BILLING (ENHANCE)
+- Improve visibility into:
+  - Users per plan
+  - Revenue per plan
+  - Trial vs paid users
+- Add owner controls:
+  - Grant free premium access
+  - Extend trial periods
+  - Apply manual credits
+  - Flag failed payments
+
+4. AI USAGE & COST CONTROL (ADD IF MISSING)
+- Show AI usage totals across platform
+- Show AI usage per user
+- Display estimated AI cost
+- Enforce usage limits per plan
+- Add warnings when users approach limits
+
+5. FEEDBACK & SUPPORT (ADD SECTION)
+- Central feedback inbox
+- Each feedback item should include:
+  - User reference
+  - Category (bug / feature / billing)
+  - Status (open / in progress / resolved)
+- Allow internal notes
+- Allow replying or marking resolved
+
+6. NOTIFICATIONS MANAGEMENT
+- Add notification manager:
+  - Send notifications to all users
+  - Send notifications by plan
+  - Send notifications to specific users
+- Notifications should appear in-app with a bell icon
+- Show unread indicator (red dot)
+
+7. SYSTEM STATUS & LOGS
+- Display API status (email providers, AI services)
+- Show recent sync errors
+- Show webhook failures
+- Use simple status indicators (green / yellow / red)
+
+8. FEATURE FLAGS
+- Add feature toggle system
+- Enable / disable features globally
+- Enable features for:
+  - Specific plans
+  - Beta users
+  - Owner only
+
+RULES:
+- Do not break existing functionality
+- Use clear naming and comments
+- Keep everything modular and maintainable
+- Assume future admins may be added later
+
+OUTPUT:
+- Update the existing owner panel implementation
+- Clearly mark new additions
+- Leave TODO comments where backend logic is required

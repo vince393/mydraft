@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -27,16 +28,35 @@ import {
   Shield,
   TrendingUp,
   Send,
+  Search,
+  UserX,
+  RotateCcw,
+  Zap,
+  Server,
+  ToggleLeft,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  Sparkles,
+  UserPlus,
 } from "lucide-react";
 
 interface OwnerStats {
   totalUsers: number;
-  activeUsers: number;
+  activeUsers7Days: number;
+  activeUsers30Days: number;
   freeUsers: number;
   proUsers: number;
   premiumUsers: number;
   connectedAccounts: number;
+  signupsToday: number;
+  signupsThisWeek: number;
   estimatedMRR: number;
+  aiUsage: {
+    draftsGenerated: number;
+    emailsSent: number;
+    polishUsed: number;
+  };
 }
 
 interface UserData {
@@ -68,11 +88,28 @@ interface ActivityLog {
   createdAt: string;
 }
 
+interface SystemStatus {
+  database: string;
+  nylas: string;
+  stripe: string;
+  openai: string;
+  lastChecked: string;
+}
+
+interface FeatureFlag {
+  id: string;
+  name: string;
+  enabled: boolean;
+  plans: string[];
+}
+
 export default function OwnerPanel() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userPlanFilter, setUserPlanFilter] = useState("all");
 
   const [notificationTarget, setNotificationTarget] = useState("all");
   const [notificationPlan, setNotificationPlan] = useState("free");
@@ -103,6 +140,17 @@ export default function OwnerPanel() {
     enabled: isOwnerData?.isOwner === true,
   });
 
+  const { data: systemStatus, isLoading: statusLoading } = useQuery<SystemStatus>({
+    queryKey: ["/api/owner/system-status"],
+    enabled: isOwnerData?.isOwner === true && activeTab === "system",
+    refetchInterval: 30000,
+  });
+
+  const { data: featureFlags = [], isLoading: flagsLoading } = useQuery<FeatureFlag[]>({
+    queryKey: ["/api/owner/feature-flags"],
+    enabled: isOwnerData?.isOwner === true && activeTab === "features",
+  });
+
   const updateFeedbackMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
       return apiRequest("PATCH", `/api/owner/feedback/${id}/status`, { status });
@@ -130,6 +178,18 @@ export default function OwnerPanel() {
     },
   });
 
+  const resetUserLimitsMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return apiRequest("POST", `/api/owner/users/${userId}/reset-limits`, {});
+    },
+    onSuccess: () => {
+      toast({ title: "User limits reset successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to reset user limits", variant: "destructive" });
+    },
+  });
+
   const sendNotificationMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("POST", "/api/owner/notifications/send", {
@@ -147,6 +207,19 @@ export default function OwnerPanel() {
     },
     onError: () => {
       toast({ title: "Failed to send notifications", variant: "destructive" });
+    },
+  });
+
+  const toggleFeatureFlagMutation = useMutation({
+    mutationFn: async ({ flagId, enabled }: { flagId: string; enabled: boolean }) => {
+      return apiRequest("PATCH", `/api/owner/feature-flags/${flagId}`, { enabled });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/feature-flags"] });
+      toast({ title: "Feature flag updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update feature flag", variant: "destructive" });
     },
   });
 
@@ -177,6 +250,14 @@ export default function OwnerPanel() {
       </div>
     );
   }
+
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = userSearchQuery === "" || 
+      user.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      user.id.includes(userSearchQuery);
+    const matchesPlan = userPlanFilter === "all" || user.plan === userPlanFilter;
+    return matchesSearch && matchesPlan;
+  });
 
   const getPlanBadgeVariant = (plan: string) => {
     switch (plan) {
@@ -228,6 +309,18 @@ export default function OwnerPanel() {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "healthy":
+      case "configured":
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case "degraded":
+        return <AlertCircle className="w-4 h-4 text-yellow-500" />;
+      default:
+        return <XCircle className="w-4 h-4 text-red-500" />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b bg-card">
@@ -245,7 +338,7 @@ export default function OwnerPanel() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 flex-wrap">
             <TabsTrigger value="dashboard" data-testid="tab-dashboard">
               <TrendingUp className="w-4 h-4 mr-2" />
               Dashboard
@@ -262,6 +355,14 @@ export default function OwnerPanel() {
               <Bell className="w-4 h-4 mr-2" />
               Notifications
             </TabsTrigger>
+            <TabsTrigger value="system" data-testid="tab-system">
+              <Server className="w-4 h-4 mr-2" />
+              System
+            </TabsTrigger>
+            <TabsTrigger value="features" data-testid="tab-features">
+              <ToggleLeft className="w-4 h-4 mr-2" />
+              Features
+            </TabsTrigger>
             <TabsTrigger value="activity" data-testid="tab-activity">
               <Activity className="w-4 h-4 mr-2" />
               Activity
@@ -274,55 +375,110 @@ export default function OwnerPanel() {
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {stats?.connectedAccounts || 0} with connected email
-                    </p>
-                  </CardContent>
-                </Card>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {stats?.connectedAccounts || 0} with connected email
+                      </p>
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-                    <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
-                    <DollarSign className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">${stats?.estimatedMRR || 0}</div>
-                    <p className="text-xs text-muted-foreground">Estimated MRR</p>
-                  </CardContent>
-                </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+                      <DollarSign className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">${stats?.estimatedMRR || 0}</div>
+                      <p className="text-xs text-muted-foreground">Estimated MRR</p>
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-                    <CardTitle className="text-sm font-medium">Plan Distribution</CardTitle>
-                    <Crown className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline">{stats?.freeUsers || 0} Free</Badge>
-                      <Badge variant="secondary">{stats?.proUsers || 0} Pro</Badge>
-                      <Badge>{stats?.premiumUsers || 0} Business</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">New Signups</CardTitle>
+                      <UserPlus className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats?.signupsToday || 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {stats?.signupsThisWeek || 0} this week
+                      </p>
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-                    <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-                    <Activity className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats?.activeUsers || 0}</div>
-                    <p className="text-xs text-muted-foreground">Currently registered</p>
-                  </CardContent>
-                </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                      <Activity className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats?.activeUsers7Days || 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {stats?.activeUsers30Days || 0} in 30 days
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Plan Distribution</CardTitle>
+                      <Crown className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline">{stats?.freeUsers || 0} Free</Badge>
+                        <Badge variant="secondary">{stats?.proUsers || 0} Pro</Badge>
+                        <Badge>{stats?.premiumUsers || 0} Business</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">AI Usage</CardTitle>
+                      <Sparkles className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Drafts Generated</span>
+                          <span>{stats?.aiUsage?.draftsGenerated || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Emails Sent</span>
+                          <span>{stats?.aiUsage?.emailsSent || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Polish Used</span>
+                          <span>{stats?.aiUsage?.polishUsed || 0}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Connected Emails</CardTitle>
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats?.connectedAccounts || 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {stats?.totalUsers ? Math.round((stats.connectedAccounts / stats.totalUsers) * 100) : 0}% connection rate
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -333,7 +489,31 @@ export default function OwnerPanel() {
                 <CardTitle>All Users</CardTitle>
                 <CardDescription>View and manage all registered users</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by email or ID..."
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      className="pl-9"
+                      data-testid="input-user-search"
+                    />
+                  </div>
+                  <Select value={userPlanFilter} onValueChange={setUserPlanFilter}>
+                    <SelectTrigger className="w-[150px]" data-testid="select-plan-filter">
+                      <SelectValue placeholder="Filter by plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Plans</SelectItem>
+                      <SelectItem value="free">Free</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="premium">Business</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {usersLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -349,10 +529,11 @@ export default function OwnerPanel() {
                           <TableHead>Status</TableHead>
                           <TableHead>Connected Email</TableHead>
                           <TableHead>Joined</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {users.map((user) => (
+                        {filteredUsers.map((user) => (
                           <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
@@ -405,6 +586,20 @@ export default function OwnerPanel() {
                               <div className="flex items-center gap-1 text-muted-foreground">
                                 <Calendar className="w-3 h-3" />
                                 {format(new Date(user.createdAt), "MMM d, yyyy")}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => resetUserLimitsMutation.mutate(user.id)}
+                                  disabled={resetUserLimitsMutation.isPending}
+                                  title="Reset AI usage limits"
+                                  data-testid={`button-reset-limits-${user.id}`}
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -550,6 +745,162 @@ export default function OwnerPanel() {
                   )}
                   Send Notification
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="system">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Service Status</CardTitle>
+                  <CardDescription>Current status of connected services</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {statusLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <Server className="w-5 h-5 text-muted-foreground" />
+                          <span className="font-medium">Database</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(systemStatus?.database || "unknown")}
+                          <span className="text-sm capitalize">{systemStatus?.database || "Unknown"}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <Mail className="w-5 h-5 text-muted-foreground" />
+                          <span className="font-medium">Nylas (Email)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(systemStatus?.nylas || "unknown")}
+                          <span className="text-sm capitalize">{systemStatus?.nylas || "Unknown"}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <DollarSign className="w-5 h-5 text-muted-foreground" />
+                          <span className="font-medium">Stripe (Payments)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(systemStatus?.stripe || "unknown")}
+                          <span className="text-sm capitalize">{systemStatus?.stripe || "Unknown"}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <Zap className="w-5 h-5 text-muted-foreground" />
+                          <span className="font-medium">OpenAI (AI)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(systemStatus?.openai || "unknown")}
+                          <span className="text-sm capitalize">{systemStatus?.openai || "Unknown"}</span>
+                        </div>
+                      </div>
+
+                      {systemStatus?.lastChecked && (
+                        <p className="text-xs text-muted-foreground text-center pt-2">
+                          Last checked: {format(new Date(systemStatus.lastChecked), "MMM d, h:mm a")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Stats</CardTitle>
+                  <CardDescription>Platform overview</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <span className="text-muted-foreground">Total Users</span>
+                      <span className="font-bold">{stats?.totalUsers || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <span className="text-muted-foreground">Paying Users</span>
+                      <span className="font-bold">{(stats?.proUsers || 0) + (stats?.premiumUsers || 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <span className="text-muted-foreground">Conversion Rate</span>
+                      <span className="font-bold">
+                        {stats?.totalUsers 
+                          ? Math.round(((stats.proUsers + stats.premiumUsers) / stats.totalUsers) * 100) 
+                          : 0}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <span className="text-muted-foreground">Email Connection Rate</span>
+                      <span className="font-bold">
+                        {stats?.totalUsers 
+                          ? Math.round((stats.connectedAccounts / stats.totalUsers) * 100) 
+                          : 0}%
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="features">
+            <Card>
+              <CardHeader>
+                <CardTitle>Feature Flags</CardTitle>
+                <CardDescription>Toggle features on/off across the platform</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {flagsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {featureFlags.map((flag) => (
+                      <div
+                        key={flag.id}
+                        className="flex items-center justify-between p-4 rounded-lg border"
+                        data-testid={`feature-flag-${flag.id}`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{flag.name}</span>
+                            {flag.enabled ? (
+                              <Badge variant="secondary" className="text-xs">Enabled</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">Disabled</Badge>
+                            )}
+                          </div>
+                          <div className="flex gap-1">
+                            {flag.plans.map((plan) => (
+                              <Badge key={plan} variant="outline" className="text-xs">
+                                {plan === "premium" ? "Business" : plan.charAt(0).toUpperCase() + plan.slice(1)}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={flag.enabled}
+                          onCheckedChange={(checked) =>
+                            toggleFeatureFlagMutation.mutate({ flagId: flag.id, enabled: checked })
+                          }
+                          data-testid={`toggle-feature-${flag.id}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
