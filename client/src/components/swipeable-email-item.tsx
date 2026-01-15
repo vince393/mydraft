@@ -16,6 +16,7 @@ interface SwipeableEmailItemProps {
   isSelectionMode: boolean;
   avatarColor?: string;
   folder?: string;
+  threadCount?: number;
   onSelect: () => void;
   onArchive: () => void;
   onDelete: () => void;
@@ -47,6 +48,7 @@ export function SwipeableEmailItem({
   isSelectionMode,
   avatarColor,
   folder = "inbox",
+  threadCount = 1,
   onSelect,
   onArchive,
   onDelete,
@@ -367,9 +369,18 @@ export function SwipeableEmailItem({
 
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-2 mb-1">
-              <span className={`flex-1 min-w-0 text-sm truncate block ${!isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
+              <span className={`min-w-0 text-sm truncate block ${!isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
                 {sender}
               </span>
+              {threadCount > 1 && (
+                <span 
+                  className="flex-shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-medium rounded-full bg-muted text-muted-foreground"
+                  data-testid={`thread-count-badge-${threadCount}`}
+                >
+                  {threadCount}
+                </span>
+              )}
+              <span className="flex-1" />
               <span className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
                 {formatTime(new Date(receivedAt))}
               </span>

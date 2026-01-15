@@ -14,6 +14,8 @@ import type { Email } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
   nylasId?: string;
+  threadCount?: number;
+  threadEmails?: EmailWithNylasId[];
 }
 
 function getEmailId(email: EmailWithNylasId): string | number {
@@ -626,6 +628,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 isSelectionMode={isSelectionMode}
                 avatarColor={email.avatarColor || undefined}
                 folder={activeFolder}
+                threadCount={email.threadCount || 1}
                 onSelect={() => handleEmailClick(email)}
                 onArchive={() => onArchiveSingleEmail(emailId)}
                 onDelete={() => onTrashSingleEmail(emailId)}

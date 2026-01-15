@@ -238,7 +238,7 @@ export function invalidateMessagesCache(grantId: string, folder?: string): void 
 }
 
 async function fetchMessagesFromNylas(grantId: string, folder?: string, provider?: string): Promise<EmailListItem[]> {
-  let path = `/v3/grants/${grantId}/messages?limit=20`;
+  let path = `/v3/grants/${grantId}/messages?limit=100`;
   
   const isMicrosoft = provider === 'microsoft';
   

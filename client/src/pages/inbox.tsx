@@ -28,6 +28,8 @@ interface EmailWithNylasId extends Email {
   nylasId?: string;
   to?: string[];
   cc?: string[];
+  threadCount?: number;
+  threadEmails?: EmailWithNylasId[];
 }
 
 interface InboxProps {
@@ -44,6 +46,7 @@ function getEmailId(email: EmailWithNylasId): string | number {
 
 export default function Inbox({ activeFolder, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode }: InboxProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
+  const [selectedThreadEmails, setSelectedThreadEmails] = useState<EmailWithNylasId[]>([]);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -118,10 +121,11 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     },
   });
 
-  const { data: emails = [], isLoading: isLoadingEmails, isFetching } = useQuery<EmailWithNylasId[]>({
-    queryKey: ["/api/emails", activeFolder],
+  // Fetch all emails from all folders for proper threading
+  const { data: allEmails = [], isLoading: isLoadingEmails, isFetching } = useQuery<EmailWithNylasId[]>({
+    queryKey: ["/api/emails", "all"],
     queryFn: async () => {
-      const response = await fetch(`/api/emails?folder=${activeFolder}`);
+      const response = await fetch(`/api/emails?allFolders=true`);
       if (!response.ok) throw new Error("Failed to fetch emails");
       return response.json();
     },
@@ -130,8 +134,97 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     refetchOnWindowFocus: true,
   });
 
+  // Group emails by threadId and filter by active folder
+  const { threads, emails } = useMemo(() => {
+    // Group all emails by threadId
+    const threadMap = new Map<string, EmailWithNylasId[]>();
+    const noThreadEmails: EmailWithNylasId[] = [];
+    
+    for (const email of allEmails) {
+      if (email.threadId) {
+        const existing = threadMap.get(email.threadId) || [];
+        existing.push(email);
+        threadMap.set(email.threadId, existing);
+      } else {
+        noThreadEmails.push(email);
+      }
+    }
+    
+    // Sort emails within each thread by date (newest first)
+    Array.from(threadMap.entries()).forEach(([threadId, threadEmails]) => {
+      threadMap.set(threadId, threadEmails.sort((a: EmailWithNylasId, b: EmailWithNylasId) => 
+        new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+      ));
+    });
+    
+    // Filter threads that have at least one email in the active folder
+    const filteredThreads: EmailWithNylasId[][] = [];
+    const seenThreadIds = new Set<string>();
+    
+    for (const email of allEmails) {
+      // Check if this email's folder matches the active folder
+      const emailFolder = email.folder || "inbox";
+      const matchesFolder = emailFolder === activeFolder || 
+        (activeFolder === "inbox" && emailFolder === "inbox");
+      
+      if (matchesFolder && email.threadId && !seenThreadIds.has(email.threadId)) {
+        const threadEmails = threadMap.get(email.threadId);
+        if (threadEmails && threadEmails.length > 0) {
+          filteredThreads.push(threadEmails);
+          seenThreadIds.add(email.threadId);
+        }
+      }
+    }
+    
+    // Add non-threaded emails that match the folder
+    for (const email of noThreadEmails) {
+      const emailFolder = email.folder || "inbox";
+      if (emailFolder === activeFolder) {
+        filteredThreads.push([email]);
+      }
+    }
+    
+    // Get representative for sorting (most recent email in active folder)
+    const getRepresentative = (thread: EmailWithNylasId[]) => {
+      const folderEmails = thread.filter(e => (e.folder || "inbox") === activeFolder);
+      if (folderEmails.length > 0) {
+        return folderEmails.reduce((latest, e) => 
+          new Date(e.receivedAt).getTime() > new Date(latest.receivedAt).getTime() ? e : latest
+        );
+      }
+      return thread[0];
+    };
+    
+    // Sort threads by the representative email date (most recent in active folder)
+    filteredThreads.sort((a, b) => 
+      new Date(getRepresentative(b).receivedAt).getTime() - new Date(getRepresentative(a).receivedAt).getTime()
+    );
+    
+    // Create flattened email list for compatibility
+    // Use the most recent email IN THE ACTIVE FOLDER as the representative
+    const flatEmails = filteredThreads.map(thread => {
+      // Find the most recent email that belongs to the active folder
+      const folderEmails = thread.filter(e => (e.folder || "inbox") === activeFolder);
+      // If we have emails in this folder, use the most recent one, otherwise fall back to thread[0]
+      const representative = folderEmails.length > 0 
+        ? folderEmails.reduce((latest, e) => 
+            new Date(e.receivedAt).getTime() > new Date(latest.receivedAt).getTime() ? e : latest
+          )
+        : thread[0];
+      
+      return {
+        ...representative,
+        threadCount: thread.length,
+        threadEmails: thread,
+      };
+    });
+    
+    return { threads: filteredThreads, emails: flatEmails };
+  }, [allEmails, activeFolder]);
+
   useEffect(() => {
     setSelectedEmailId(null);
+    setSelectedThreadEmails([]);
     setGeneratedDraft(null);
   }, [activeFolder]);
 
@@ -173,6 +266,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const handleSelectEmail = (email: EmailWithNylasId) => {
     const emailId = getEmailId(email);
     setSelectedEmailId(emailId);
+    setSelectedThreadEmails(email.threadEmails || [email]);
     setGeneratedDraft(null);
     if (!email.isRead) {
       markAsReadMutation.mutate(emailId);
@@ -382,7 +476,8 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
         </header>
         <div className="flex-1 overflow-auto">
           <EmailDetail 
-            email={selectedEmail ?? null} 
+            email={selectedEmail ?? null}
+            threadEmails={selectedThreadEmails}
             generatedDraft={generatedDraft} 
             onClearDraft={() => setGeneratedDraft(null)}
             onDraftUpdate={(draft) => setGeneratedDraft(draft)}

@@ -702,11 +702,45 @@ export async function registerRoutes(
   app.get("/api/emails", requireAuth, async (req, res) => {
     try {
       const folder = req.query.folder as string | undefined;
+      const allFolders = req.query.allFolders === "true";
       
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant) {
-        const messages = await nylas.getMessages(grant.grantId, folder || "inbox", grant.provider);
-        const emails = messages.map((msg, index) => ({
+        let allMessages: any[] = [];
+        
+        if (allFolders) {
+          // Fetch from all folders for threading
+          const folders = ["inbox", "sent", "trash", "junk", "archived"] as const;
+          const folderResults = await Promise.allSettled(
+            folders.map(async (f) => {
+              try {
+                const messages = await nylas.getMessages(grant.grantId, f, grant.provider);
+                return messages.map(m => ({ ...m, folder: f }));
+              } catch {
+                return [];
+              }
+            })
+          );
+          
+          for (const result of folderResults) {
+            if (result.status === "fulfilled") {
+              allMessages.push(...result.value);
+            }
+          }
+          
+          // Deduplicate by message ID
+          const seen = new Set<string>();
+          allMessages = allMessages.filter(msg => {
+            if (seen.has(msg.id)) return false;
+            seen.add(msg.id);
+            return true;
+          });
+        } else {
+          const messages = await nylas.getMessages(grant.grantId, folder || "inbox", grant.provider);
+          allMessages = messages.map(m => ({ ...m, folder: folder || "inbox" }));
+        }
+        
+        const emails = allMessages.map((msg, index) => ({
           id: index + 1,
           nylasId: msg.id,
           sender: msg.from,
@@ -717,7 +751,7 @@ export async function registerRoutes(
           receivedAt: msg.date,
           isRead: msg.isRead,
           isStarred: msg.isStarred,
-          folder: folder || "inbox",
+          folder: msg.folder || folder || "inbox",
           threadId: msg.threadId,
           avatarColor: msg.avatarColor,
         }));

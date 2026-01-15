@@ -32,8 +32,15 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Email, Draft } from "@shared/schema";
 
+interface ExtendedEmail extends Email {
+  nylasId?: string;
+  to?: string[];
+  cc?: string[];
+}
+
 interface EmailDetailProps {
   email: Email | null;
+  threadEmails?: ExtendedEmail[];
   generatedDraft?: Draft | null;
   onClearDraft?: () => void;
   onDraftUpdate?: (draft: Draft) => void;
@@ -62,7 +69,7 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward }: EmailDetailProps) {
+export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
@@ -72,7 +79,46 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
   const [detectedLanguage, setDetectedLanguage] = useState<{ code: string; name: string; isEnglish: boolean } | null>(null);
   const [translatedContent, setTranslatedContent] = useState<{ subject: string; body: string } | null>(null);
   const [showTranslated, setShowTranslated] = useState(false);
+  const [expandedThreadEmails, setExpandedThreadEmails] = useState<Set<string | number>>(new Set());
   const { toast } = useToast();
+  
+  // Get the selected email's ID and date for comparison
+  const selectedEmailId = email ? ((email as any).nylasId || email.id) : null;
+  const selectedEmailDate = email ? new Date(email.receivedAt).getTime() : 0;
+  
+  // Sort thread emails by date (oldest first for thread display)
+  const sortedThreadEmails = [...threadEmails].sort((a, b) => 
+    new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime()
+  );
+  
+  // Get emails older than the selected email
+  const olderEmails = sortedThreadEmails.filter(e => {
+    const emailId = (e as any).nylasId || e.id;
+    const emailDate = new Date(e.receivedAt).getTime();
+    return emailId !== selectedEmailId && emailDate < selectedEmailDate;
+  });
+  
+  // Get emails newer than the selected email (for showing "more messages in thread")
+  const newerEmails = sortedThreadEmails.filter(e => {
+    const emailId = (e as any).nylasId || e.id;
+    const emailDate = new Date(e.receivedAt).getTime();
+    return emailId !== selectedEmailId && emailDate > selectedEmailDate;
+  });
+  
+  const hasThread = threadEmails.length > 1;
+  const hasNewerMessages = newerEmails.length > 0;
+  
+  const toggleThreadEmail = (emailId: string | number) => {
+    setExpandedThreadEmails(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(emailId)) {
+        newSet.delete(emailId);
+      } else {
+        newSet.add(emailId);
+      }
+      return newSet;
+    });
+  };
 
   const showDraft = !!generatedDraft;
 
@@ -326,6 +372,83 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
 
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="pl-6 pr-8 pt-4 pb-8">
+          {/* Thread emails - show older emails in the conversation */}
+          {hasThread && olderEmails.length > 0 && (
+            <div className="mb-6 space-y-2">
+              {olderEmails.map((threadEmail) => {
+                const threadEmailId = threadEmail.nylasId || threadEmail.id;
+                const isExpanded = expandedThreadEmails.has(threadEmailId);
+                const threadInitials = threadEmail.sender
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2);
+                
+                return (
+                  <div 
+                    key={threadEmailId}
+                    className="border border-border/50 rounded-lg overflow-hidden bg-muted/20"
+                    data-testid={`thread-email-${threadEmailId}`}
+                  >
+                    <button
+                      onClick={() => toggleThreadEmail(threadEmailId)}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors text-left"
+                      data-testid={`button-toggle-thread-${threadEmailId}`}
+                    >
+                      <Avatar className="w-8 h-8 ring-1 ring-border/30">
+                        <AvatarImage 
+                          src={getAvatarUrl(threadEmail.senderEmail, threadEmail.sender)} 
+                          alt={threadEmail.sender}
+                        />
+                        <AvatarFallback 
+                          style={{ backgroundColor: threadEmail.avatarColor }}
+                          className="text-white font-medium text-xs"
+                        >
+                          {threadInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm truncate">{threadEmail.sender}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatSmartDate(new Date(threadEmail.receivedAt))}
+                          </span>
+                        </div>
+                        {!isExpanded && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {threadEmail.preview || "No preview"}
+                          </p>
+                        )}
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
+                    
+                    {isExpanded && (
+                      <div className="px-3 pb-3 border-t border-border/30">
+                        {(threadEmail.body || threadEmail.preview || "").includes('<') ? (
+                          <div 
+                            className="prose prose-sm dark:prose-invert max-w-none mt-3 text-sm leading-relaxed"
+                            dangerouslySetInnerHTML={{ __html: threadEmail.body || threadEmail.preview || "" }}
+                          />
+                        ) : (
+                          <div className="mt-3 text-sm leading-relaxed text-foreground/90">
+                            {(threadEmail.body || threadEmail.preview || "").split("\n").map((paragraph, i) => (
+                              <p key={i} className={paragraph.trim() ? "mb-3" : "mb-1"}>
+                                {paragraph || "\u00A0"}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          
+          {/* Current/Latest email */}
           <div className="flex items-start gap-3 mb-5">
             <Avatar className="w-10 h-10 ring-2 ring-border/30">
               <AvatarImage 
@@ -474,6 +597,15 @@ export function EmailDetail({ email, generatedDraft, onClearDraft, onDraftUpdate
               </>
             )}
           </div>
+
+          {/* Show indicator for newer messages in thread */}
+          {hasNewerMessages && (
+            <div className="mt-4 mb-6 p-3 bg-muted/30 rounded-lg border border-border/40" data-testid="newer-messages-indicator">
+              <p className="text-sm text-muted-foreground">
+                {newerEmails.length} newer {newerEmails.length === 1 ? "message" : "messages"} in this conversation
+              </p>
+            </div>
+          )}
 
           {showDraft && (
             <div className="mb-8 p-5 bg-muted/30 rounded-xl border border-border/40" data-testid="ai-draft-container">
