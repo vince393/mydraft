@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Dialog,
@@ -7,12 +7,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 
 interface ComposeDialogProps {
   open: boolean;
@@ -31,6 +38,12 @@ interface ComposeDialogProps {
   currentUserEmail?: string;
 }
 
+interface UserData {
+  user: {
+    plan: string;
+  };
+}
+
 export function ComposeDialog({ 
   open, 
   onOpenChange, 
@@ -45,6 +58,18 @@ export function ComposeDialog({
   const [bcc, setBcc] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  
+  // Schedule send state (Pro/Business only)
+  const [showSchedulePicker, setShowSchedulePicker] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
+  const [scheduledTime, setScheduledTime] = useState("09:00");
+  
+  // Get user plan for feature gating
+  const { data: userData } = useQuery<UserData>({
+    queryKey: ["/api/auth/me"],
+  });
+  const userPlan = userData?.user?.plan || "free";
+  const canScheduleSend = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
   
   // Track if form has been initialized to prevent overwriting user edits
   const initializedRef = useRef(false);
@@ -212,7 +237,7 @@ export function ComposeDialog({
   }, [toast, cancelMutation]);
 
   const sendMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (options?: { scheduledFor?: Date }) => {
       const toRecipients = to.split(",").map(e => e.trim()).filter(Boolean);
       if (toRecipients.length === 0) {
         throw new Error("Please enter at least one recipient");
@@ -227,8 +252,13 @@ export function ComposeDialog({
         bcc: bccRecipients,
         subject,
         body,
-        delaySeconds: 5,
+        delaySeconds: options?.scheduledFor ? 0 : 5,
       };
+      
+      // Add scheduled time if provided
+      if (options?.scheduledFor) {
+        payload.scheduledFor = options.scheduledFor.toISOString();
+      }
       
       if ((mode === "reply" || mode === "replyAll") && originalEmail) {
         payload.replyToMessageId = originalEmail.id;
@@ -242,7 +272,13 @@ export function ComposeDialog({
       onOpenChange(false);
       resetForm();
       
-      if (data.pendingSendId) {
+      if (data.isScheduledSend) {
+        toast({
+          title: "Email scheduled",
+          description: `Your message will be sent at the scheduled time.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/pending-sends"] });
+      } else if (data.pendingSendId) {
         showUndoToast(data.pendingSendId, data.delaySeconds || 5, data.toRecipients);
       } else {
         toast({
@@ -267,8 +303,37 @@ export function ComposeDialog({
     setBcc("");
     setSubject("");
     setBody("");
+    setScheduledDate(undefined);
+    setScheduledTime("09:00");
+    setShowSchedulePicker(false);
     initializedRef.current = false;
     lastEmailIdRef.current = undefined;
+  };
+  
+  const handleScheduleSend = () => {
+    if (!scheduledDate) {
+      toast({
+        title: "Select a date",
+        description: "Please select a date to schedule your email.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const [hours, minutes] = scheduledTime.split(":").map(Number);
+    const scheduledDateTime = new Date(scheduledDate);
+    scheduledDateTime.setHours(hours, minutes, 0, 0);
+    
+    if (scheduledDateTime <= new Date()) {
+      toast({
+        title: "Invalid time",
+        description: "Please select a future date and time.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    sendMutation.mutate({ scheduledFor: scheduledDateTime });
   };
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -432,8 +497,8 @@ export function ComposeDialog({
             />
           </div>
           
-          <div className="flex items-center justify-between pt-2 border-t flex-shrink-0">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between pt-2 border-t flex-shrink-0 gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="ghost"
                 onClick={handleClose}
@@ -457,18 +522,75 @@ export function ComposeDialog({
                 {isGenerating ? "Generating..." : "AI Draft"}
               </Button>
             </div>
-            <Button
-              onClick={() => sendMutation.mutate()}
-              disabled={sendMutation.isPending || !to.trim() || isGenerating}
-              data-testid="button-compose-send"
-            >
-              {sendMutation.isPending ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-              ) : (
-                <Send className="w-4 h-4 mr-2" />
+            
+            <div className="flex items-center gap-1">
+              {/* Schedule Send - Pro/Business only */}
+              {canScheduleSend && (
+                <Popover open={showSchedulePicker} onOpenChange={setShowSchedulePicker}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      disabled={sendMutation.isPending || !to.trim() || isGenerating}
+                      data-testid="button-schedule-send"
+                    >
+                      <Clock className="w-4 h-4 mr-2" />
+                      Schedule
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-4" align="end">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Select date</Label>
+                        <Calendar
+                          mode="single"
+                          selected={scheduledDate}
+                          onSelect={setScheduledDate}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          initialFocus
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Select time</Label>
+                        <Input
+                          type="time"
+                          value={scheduledTime}
+                          onChange={(e) => setScheduledTime(e.target.value)}
+                          className="w-full"
+                          data-testid="input-schedule-time"
+                        />
+                      </div>
+                      {scheduledDate && (
+                        <div className="text-sm text-muted-foreground">
+                          Send on {format(scheduledDate, "MMM d, yyyy")} at {scheduledTime}
+                        </div>
+                      )}
+                      <Button
+                        onClick={handleScheduleSend}
+                        disabled={sendMutation.isPending || !scheduledDate}
+                        className="w-full"
+                        data-testid="button-confirm-schedule"
+                      >
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        Schedule Send
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
-              Send
-            </Button>
+              
+              <Button
+                onClick={() => sendMutation.mutate({})}
+                disabled={sendMutation.isPending || !to.trim() || isGenerating}
+                data-testid="button-compose-send"
+              >
+                {sendMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                Send
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

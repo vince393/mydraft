@@ -1121,7 +1121,7 @@ Rules:
 
   app.post("/api/send", requireAuth, async (req, res) => {
     try {
-      const { to, cc, bcc, subject, body, replyToMessageId, delaySeconds = 5, immediate = false } = req.body;
+      const { to, cc, bcc, subject, body, replyToMessageId, delaySeconds = 5, immediate = false, scheduledFor } = req.body;
       
       if (!to || !Array.isArray(to) || to.length === 0) {
         return res.status(400).json({ error: "Recipients required" });
@@ -1134,6 +1134,20 @@ Rules:
       if (!grant) {
         return res.status(401).json({ error: "Not connected to email provider" });
       }
+      
+      // Check if user has Pro/Business plan for scheduled sends
+      if (scheduledFor) {
+        // Validate scheduledFor is a valid date
+        const parsedDate = new Date(scheduledFor);
+        if (isNaN(parsedDate.getTime())) {
+          return res.status(400).json({ error: "Invalid scheduled time format" });
+        }
+        
+        const user = await storage.getUser(req.session.userId!);
+        if (!user || (user.plan !== "pro" && user.plan !== "premium" && user.plan !== "business")) {
+          return res.status(403).json({ error: "Schedule send is a Pro/Business feature" });
+        }
+      }
 
       // If immediate send is requested (e.g., from undo confirmation), send now
       if (immediate) {
@@ -1142,16 +1156,29 @@ Rules:
         return res.json({ success: true, sent: true });
       }
       
-      // Otherwise, queue for delayed send with undo window
-      const delay = Math.min(Math.max(delaySeconds, 1), 30); // Clamp between 1-30 seconds
-      const scheduledSendAt = new Date(Date.now() + delay * 1000);
+      // Determine scheduled send time
+      let scheduledSendAt: Date;
+      let isScheduledSend = false;
+      
+      if (scheduledFor) {
+        // Future scheduled send (Pro/Business feature)
+        scheduledSendAt = new Date(scheduledFor);
+        if (scheduledSendAt <= new Date()) {
+          return res.status(400).json({ error: "Scheduled time must be in the future" });
+        }
+        isScheduledSend = true;
+      } else {
+        // Regular delayed send with undo window
+        const delay = Math.min(Math.max(delaySeconds, 1), 30); // Clamp between 1-30 seconds
+        scheduledSendAt = new Date(Date.now() + delay * 1000);
+      }
       
       const pendingSend = await storage.createPendingSend({
         userId: req.session.userId!,
         grantId: grant.grantId,
         payload: { to, cc, bcc, subject, body, replyToMessageId },
         scheduledSendAt,
-        delaySeconds: delay,
+        delaySeconds: isScheduledSend ? 0 : Math.min(Math.max(delaySeconds, 1), 30),
         status: "pending",
       });
       
@@ -1159,7 +1186,8 @@ Rules:
         success: true, 
         pendingSendId: pendingSend.id, 
         scheduledSendAt: pendingSend.scheduledSendAt,
-        delaySeconds: delay 
+        delaySeconds: isScheduledSend ? 0 : Math.min(Math.max(delaySeconds, 1), 30),
+        isScheduledSend
       });
     } catch (error) {
       console.error("Error scheduling email:", error);
