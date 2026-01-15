@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
 import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -127,6 +127,12 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef(false);
   const dragStarted = useRef(false);
+  
+  // Auto-scroll refs for drag selection
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const autoScrollTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastMouseY = useRef<number>(0);
+  const emailElementsRef = useRef<Map<string | number, HTMLDivElement>>(new Map());
 
   const hasActiveFilters = filters.unreadOnly || filters.dateRange !== "all" || filters.sender.trim() !== "";
 
@@ -227,6 +233,137 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       });
     }
   }, [isDragging, isSelectionMode]);
+
+  // Find email element at a given Y position
+  const findEmailAtPosition = useCallback((clientY: number): string | number | null => {
+    const entries = Array.from(emailElementsRef.current.entries());
+    for (const [emailId, element] of entries) {
+      const rect = element.getBoundingClientRect();
+      if (clientY >= rect.top && clientY <= rect.bottom) {
+        return emailId;
+      }
+    }
+    return null;
+  }, []);
+
+  // Auto-scroll and select during drag
+  const handleDragMove = useCallback((clientY: number) => {
+    if (!isDragging || !isSelectionMode) return;
+    
+    lastMouseY.current = clientY;
+    
+    // Find and select email at current position
+    const emailId = findEmailAtPosition(clientY);
+    if (emailId !== null) {
+      setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(emailId);
+        return newSet;
+      });
+    }
+    
+    // Auto-scroll logic
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+    
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const scrollThreshold = 60; // pixels from edge to start scrolling
+    const scrollSpeed = 8; // pixels per frame
+    
+    // Clear existing auto-scroll
+    if (autoScrollTimer.current) {
+      clearInterval(autoScrollTimer.current);
+      autoScrollTimer.current = null;
+    }
+    
+    // Check if near top edge
+    if (clientY < containerRect.top + scrollThreshold && clientY > containerRect.top) {
+      autoScrollTimer.current = setInterval(() => {
+        if (scrollContainer.scrollTop > 0) {
+          scrollContainer.scrollTop -= scrollSpeed;
+          // Select email at current position after scroll
+          const emailAtPos = findEmailAtPosition(lastMouseY.current);
+          if (emailAtPos !== null) {
+            setSelectedIds(prev => {
+              const newSet = new Set(prev);
+              newSet.add(emailAtPos);
+              return newSet;
+            });
+          }
+        }
+      }, 16);
+    }
+    // Check if near bottom edge
+    else if (clientY > containerRect.bottom - scrollThreshold && clientY < containerRect.bottom) {
+      autoScrollTimer.current = setInterval(() => {
+        const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        if (scrollContainer.scrollTop < maxScroll) {
+          scrollContainer.scrollTop += scrollSpeed;
+          // Select email at current position after scroll
+          const emailAtPos = findEmailAtPosition(lastMouseY.current);
+          if (emailAtPos !== null) {
+            setSelectedIds(prev => {
+              const newSet = new Set(prev);
+              newSet.add(emailAtPos);
+              return newSet;
+            });
+          }
+        }
+      }, 16);
+    }
+  }, [isDragging, isSelectionMode, findEmailAtPosition]);
+
+  // Stop auto-scroll when drag ends
+  useEffect(() => {
+    if (!isDragging && autoScrollTimer.current) {
+      clearInterval(autoScrollTimer.current);
+      autoScrollTimer.current = null;
+    }
+  }, [isDragging]);
+
+  // Global mouse/touch move handler for drag selection
+  useEffect(() => {
+    if (!isDragging || !isSelectionMode) return;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      handleDragMove(e.clientY);
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        handleDragMove(e.touches[0].clientY);
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      if (autoScrollTimer.current) {
+        clearInterval(autoScrollTimer.current);
+        autoScrollTimer.current = null;
+      }
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchend', handleMouseUp);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [isDragging, isSelectionMode, handleDragMove]);
+
+  // Register email element ref
+  const registerEmailRef = useCallback((emailId: string | number, element: HTMLDivElement | null) => {
+    if (element) {
+      emailElementsRef.current.set(emailId, element);
+    } else {
+      emailElementsRef.current.delete(emailId);
+    }
+  }, []);
 
   const handleEmailClick = useCallback((email: EmailWithNylasId) => {
     if (longPressTriggered.current) {
@@ -442,7 +579,10 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </span>
         </div>
       </div>
-      <ScrollArea className="flex-1 scrollbar-thin">
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto scrollbar-thin"
+      >
         {filteredEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center p-8">
             <Search className="w-10 h-10 text-muted-foreground/40 mb-4" />
@@ -468,37 +608,41 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           const isChecked = selectedIds.has(emailId);
 
           return (
-            <SwipeableEmailItem
+            <div 
               key={emailId}
-              emailId={emailId}
-              sender={email.sender}
-              senderEmail={email.senderEmail}
-              subject={email.subject}
-              preview={email.preview || ""}
-              receivedAt={email.receivedAt.toString()}
-              isRead={email.isRead}
-              isStarred={email.isStarred}
-              isSelected={isSelected}
-              isChecked={isChecked}
-              isSelectionMode={isSelectionMode}
-              avatarColor={email.avatarColor || undefined}
-              folder={activeFolder}
-              onSelect={() => handleEmailClick(email)}
-              onArchive={() => onArchiveSingleEmail(emailId)}
-              onDelete={() => onTrashSingleEmail(emailId)}
-              onRestore={onRestoreSingleEmail ? () => onRestoreSingleEmail(emailId) : undefined}
-              onToggleStar={() => onToggleStar(emailId)}
-              onLongPressStart={() => handleLongPressStart(emailId)}
-              onLongPressEnd={handleLongPressEnd}
-              onMouseEnterWhileDragging={() => handleMouseEnterWhileDragging(emailId)}
-              formatTime={formatEmailTime}
-              getAvatarUrl={getAvatarUrl}
-            />
+              ref={(el) => registerEmailRef(emailId, el)}
+            >
+              <SwipeableEmailItem
+                emailId={emailId}
+                sender={email.sender}
+                senderEmail={email.senderEmail}
+                subject={email.subject}
+                preview={email.preview || ""}
+                receivedAt={email.receivedAt.toString()}
+                isRead={email.isRead}
+                isStarred={email.isStarred}
+                isSelected={isSelected}
+                isChecked={isChecked}
+                isSelectionMode={isSelectionMode}
+                avatarColor={email.avatarColor || undefined}
+                folder={activeFolder}
+                onSelect={() => handleEmailClick(email)}
+                onArchive={() => onArchiveSingleEmail(emailId)}
+                onDelete={() => onTrashSingleEmail(emailId)}
+                onRestore={onRestoreSingleEmail ? () => onRestoreSingleEmail(emailId) : undefined}
+                onToggleStar={() => onToggleStar(emailId)}
+                onLongPressStart={() => handleLongPressStart(emailId)}
+                onLongPressEnd={handleLongPressEnd}
+                onMouseEnterWhileDragging={() => handleMouseEnterWhileDragging(emailId)}
+                formatTime={formatEmailTime}
+                getAvatarUrl={getAvatarUrl}
+              />
+            </div>
           );
         })}
         </div>
         )}
-      </ScrollArea>
+      </div>
 
       <div className="p-3 border-t border-border/30 bg-background/95 backdrop-blur-xl">
         {isSelectionMode ? (
