@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, RefreshCw, Loader2, X } from "lucide-react";
+import { Sparkles, RefreshCw, Loader2, X, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { Email, Draft } from "@shared/schema";
+
+interface GenerateError {
+  error: string;
+  reason?: string;
+  canRetry?: boolean;
+}
 
 const TONE_OPTIONS = [
   { value: "professional", label: "Professional" },
@@ -33,15 +39,26 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
   const [selectedTone, setSelectedTone] = useState<ToneType>("professional");
   const [draftContent, setDraftContent] = useState("");
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
+  const [generateError, setGenerateError] = useState<GenerateError | null>(null);
 
   const generateMutation = useMutation({
     mutationFn: async ({ emailId, tone }: { emailId: number; tone: string }) => {
       const response = await apiRequest("POST", "/api/drafts/generate", { emailId, tone });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw errorData;
+      }
       return response.json();
     },
     onSuccess: (draft: Draft) => {
       setGeneratedDraft(draft);
       setDraftContent(draft.content);
+      setGenerateError(null);
+    },
+    onError: (error: GenerateError) => {
+      setGenerateError(error);
+      setGeneratedDraft(null);
+      setDraftContent("");
     },
   });
 
@@ -49,6 +66,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
     if (open && email) {
       setDraftContent("");
       setGeneratedDraft(null);
+      setGenerateError(null);
       generateMutation.mutate({ emailId: email.id, tone: selectedTone });
     }
   }, [open, email?.id]);
@@ -141,6 +159,32 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     <span className="text-sm text-muted-foreground">Generating your reply...</span>
+                  </div>
+                </div>
+              ) : generateError ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/30 rounded-lg border border-destructive/30">
+                  <div className="flex flex-col items-center gap-3 p-6 text-center max-w-md">
+                    <div className="p-3 rounded-full bg-destructive/10">
+                      <AlertCircle className="w-8 h-8 text-destructive" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">{generateError.error}</p>
+                      {generateError.reason && (
+                        <p className="text-xs text-muted-foreground">{generateError.reason}</p>
+                      )}
+                    </div>
+                    {generateError.canRetry && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleRegenerate}
+                        className="gap-2 mt-2"
+                        data-testid="button-retry-generate"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Try Again
+                      </Button>
+                    )}
                   </div>
                 </div>
               ) : (

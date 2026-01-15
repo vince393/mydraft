@@ -1349,7 +1349,15 @@ Reply:`;
         max_completion_tokens: 1024,
       });
 
-      const generatedContent = response.choices[0]?.message?.content || "Unable to generate reply. Please try again.";
+      const generatedContent = response.choices[0]?.message?.content;
+      
+      if (!generatedContent || generatedContent.trim().length === 0) {
+        return res.status(422).json({ 
+          error: "Unable to generate AI response",
+          reason: "The email format or content could not be processed. This may be due to unusual formatting, empty content, or unsupported characters.",
+          canRetry: true
+        });
+      }
 
       const draft = await storage.createDraft({
         emailId,
@@ -1364,9 +1372,24 @@ Reply:`;
       }
 
       res.json(draft);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating draft:", error);
-      res.status(500).json({ error: "Failed to generate draft" });
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = "Unable to generate AI response";
+      let reason = "An unexpected error occurred while processing your request.";
+      
+      if (error?.code === "content_filter") {
+        reason = "The email content was flagged by content filters and cannot be processed.";
+      } else if (error?.code === "context_length_exceeded") {
+        reason = "The email is too long to process. Try with a shorter email.";
+      } else if (error?.message?.includes("rate limit")) {
+        reason = "Too many requests. Please wait a moment and try again.";
+      } else if (error?.message?.includes("timeout")) {
+        reason = "The request timed out. Please try again.";
+      }
+      
+      res.status(500).json({ error: errorMessage, reason, canRetry: true });
     }
   });
 
@@ -1461,7 +1484,15 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
         response_format: { type: "json_object" },
       });
 
-      const content = response.choices[0]?.message?.content || '{"subject": "", "body": ""}';
+      const content = response.choices[0]?.message?.content;
+      
+      if (!content || content.trim().length === 0) {
+        return res.status(422).json({ 
+          error: "Unable to generate AI response",
+          reason: "The email format or content could not be processed. This may be due to unusual formatting or unsupported content.",
+          canRetry: true
+        });
+      }
       
       // Increment usage for free plan users
       if (userPlan === "free") {
@@ -1483,9 +1514,23 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
       } catch {
         res.json({ subject: "", body: content });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating quick draft:", error);
-      res.status(500).json({ error: "Failed to generate draft" });
+      
+      let errorMessage = "Unable to generate AI response";
+      let reason = "An unexpected error occurred while processing your request.";
+      
+      if (error?.code === "content_filter") {
+        reason = "The email content was flagged by content filters and cannot be processed.";
+      } else if (error?.code === "context_length_exceeded") {
+        reason = "The email is too long to process. Try with a shorter email.";
+      } else if (error?.message?.includes("rate limit")) {
+        reason = "Too many requests. Please wait a moment and try again.";
+      } else if (error?.message?.includes("timeout")) {
+        reason = "The request timed out. Please try again.";
+      }
+      
+      res.status(500).json({ error: errorMessage, reason, canRetry: true });
     }
   });
 
