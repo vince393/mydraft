@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, count, sql } from "drizzle-orm";
@@ -118,6 +118,10 @@ export interface IStorage {
   getActivityLogs(limit?: number): Promise<ActivityLog[]>;
   sendNotificationToUsers(userIds: string[], type: string, title: string, message: string, data?: Record<string, unknown>): Promise<void>;
   getUsersByPlan(plan: string): Promise<User[]>;
+
+  // AI usage tracking methods
+  getAiUsageToday(userId: string): Promise<number>;
+  incrementAiUsage(userId: string): Promise<void>;
 }
 
 const avatarColors = [
@@ -1225,6 +1229,37 @@ Business Development`,
 
   async getUsersByPlan(plan: string): Promise<User[]> {
     return db.select().from(users).where(eq(users.plan, plan as "free" | "pro" | "premium"));
+  }
+
+  // AI usage tracking methods
+  async getAiUsageToday(userId: string): Promise<number> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const [usage] = await db.select()
+      .from(aiUsage)
+      .where(and(eq(aiUsage.userId, userId), eq(aiUsage.usageDate, today)));
+    return usage?.draftsGenerated || 0;
+  }
+
+  async incrementAiUsage(userId: string): Promise<void> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const [existing] = await db.select()
+      .from(aiUsage)
+      .where(and(eq(aiUsage.userId, userId), eq(aiUsage.usageDate, today)));
+    
+    if (existing) {
+      await db.update(aiUsage)
+        .set({ 
+          draftsGenerated: existing.draftsGenerated + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(aiUsage.id, existing.id));
+    } else {
+      await db.insert(aiUsage).values({
+        userId,
+        usageDate: today,
+        draftsGenerated: 1,
+      });
+    }
   }
 }
 

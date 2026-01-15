@@ -71,6 +71,21 @@ export function ComposeDialog({
   const userPlan = userData?.user?.plan || "free";
   const canScheduleSend = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
   
+  // Get AI usage for free plan users
+  const { data: aiUsageData, refetch: refetchAiUsage } = useQuery<{
+    unlimited: boolean;
+    plan: string;
+    used?: number;
+    limit?: number;
+    remaining?: number;
+  }>({
+    queryKey: ["/api/ai-usage"],
+    enabled: open && userPlan === "free",
+  });
+  
+  const aiRemaining = aiUsageData?.remaining ?? 5;
+  const aiLimitReached = userPlan === "free" && aiRemaining <= 0;
+  
   // Track if form has been initialized to prevent overwriting user edits
   const initializedRef = useRef(false);
   const lastEmailIdRef = useRef<string | undefined>(undefined);
@@ -356,8 +371,14 @@ export function ComposeDialog({
       });
       return response.json();
     },
-    onSuccess: (data: { subject?: string; body?: string }) => {
+    onSuccess: (data: { subject?: string; body?: string; usage?: { used: number; limit: number; remaining: number } }) => {
       setIsGenerating(false);
+      
+      // Refetch AI usage for free users
+      if (userPlan === "free") {
+        refetchAiUsage();
+      }
+      
       if (data.subject && mode !== "reply" && mode !== "replyAll") {
         setSubject(data.subject);
       } else if (data.subject && (mode === "reply" || mode === "replyAll")) {
@@ -379,13 +400,22 @@ export function ComposeDialog({
         } else {
           setBody(data.body);
         }
+        
+        // Show remaining for free users
+        if (data.usage && data.usage.remaining >= 0) {
+          toast({
+            title: "Draft generated",
+            description: `${data.usage.remaining} AI drafts remaining today`,
+          });
+        }
       } else {
         setBody(previousBody);
       }
     },
-    onError: (error: Error) => {
+    onError: (error: Error & { limitReached?: boolean }) => {
       setIsGenerating(false);
       setBody(previousBody);
+      refetchAiUsage();
       toast({
         title: "Failed to generate draft",
         description: error.message,
@@ -510,16 +540,17 @@ export function ComposeDialog({
               <Button
                 variant="outline"
                 onClick={() => aiDraftMutation.mutate()}
-                disabled={isGenerating || sendMutation.isPending}
+                disabled={isGenerating || sendMutation.isPending || aiLimitReached}
                 className="gap-2 bg-gradient-to-r from-blue-600/10 to-purple-600/10 border-blue-500/30 hover:border-blue-500/50 text-blue-400"
                 data-testid="button-ai-draft"
+                title={aiLimitReached ? "Daily limit reached. Upgrade to Pro for unlimited AI drafts." : undefined}
               >
                 {isGenerating ? (
                   <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Sparkles className="w-4 h-4" />
                 )}
-                {isGenerating ? "Generating..." : "AI Draft"}
+                {isGenerating ? "Generating..." : userPlan === "free" ? `AI Draft (${aiRemaining}/5)` : "AI Draft"}
               </Button>
             </div>
             

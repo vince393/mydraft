@@ -1237,16 +1237,26 @@ Rules:
     }
   });
 
+  // AI draft generation - all plans can use, free plan has 5/day limit
   app.post("/api/drafts/generate", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
       const userPlan = user?.plan || "free";
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Pro plan required for AI draft generation",
-          requiredPlan: "pro",
-          currentPlan: userPlan
-        });
+      
+      // Check free plan daily limit
+      const FREE_DAILY_LIMIT = 5;
+      if (userPlan === "free") {
+        const todayUsage = await storage.getAiUsageToday(req.session.userId!);
+        if (todayUsage >= FREE_DAILY_LIMIT) {
+          return res.status(403).json({
+            error: "Daily AI draft limit reached",
+            limitReached: true,
+            used: todayUsage,
+            limit: FREE_DAILY_LIMIT,
+            remaining: 0,
+            currentPlan: userPlan
+          });
+        }
       }
       
       const { emailId, tone = "professional" } = req.body;
@@ -1314,6 +1324,11 @@ Reply:`;
         status: "draft",
       });
 
+      // Increment usage for free plan users
+      if (userPlan === "free") {
+        await storage.incrementAiUsage(req.session.userId!);
+      }
+
       res.json(draft);
     } catch (error) {
       console.error("Error generating draft:", error);
@@ -1322,16 +1337,26 @@ Reply:`;
   });
 
   // Quick AI draft generation for compose dialog (returns subject + body)
+  // All plans can use AI drafts - free plan has 5/day limit
   app.post("/api/drafts/quick-generate", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
       const userPlan = user?.plan || "free";
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Pro plan required for AI draft generation",
-          requiredPlan: "pro",
-          currentPlan: userPlan
-        });
+      
+      // Check free plan daily limit
+      const FREE_DAILY_LIMIT = 5;
+      if (userPlan === "free") {
+        const todayUsage = await storage.getAiUsageToday(req.session.userId!);
+        if (todayUsage >= FREE_DAILY_LIMIT) {
+          return res.status(403).json({
+            error: "Daily AI draft limit reached",
+            limitReached: true,
+            used: todayUsage,
+            limit: FREE_DAILY_LIMIT,
+            remaining: 0,
+            currentPlan: userPlan
+          });
+        }
       }
       
       const { mode, originalEmail } = req.body;
@@ -1404,11 +1429,22 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
 
       const content = response.choices[0]?.message?.content || '{"subject": "", "body": ""}';
       
+      // Increment usage for free plan users
+      if (userPlan === "free") {
+        await storage.incrementAiUsage(req.session.userId!);
+      }
+      
       try {
         const parsed = JSON.parse(content);
+        
+        // Get remaining count for free users
+        const todayUsage = userPlan === "free" ? await storage.getAiUsageToday(req.session.userId!) : 0;
+        const remaining = userPlan === "free" ? Math.max(0, 5 - todayUsage) : null;
+        
         res.json({
           subject: parsed.subject || "",
           body: parsed.body || "",
+          usage: userPlan === "free" ? { used: todayUsage, limit: 5, remaining } : null,
         });
       } catch {
         res.json({ subject: "", body: content });
@@ -1416,6 +1452,33 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
     } catch (error) {
       console.error("Error generating quick draft:", error);
       res.status(500).json({ error: "Failed to generate draft" });
+    }
+  });
+
+  // Get AI usage status for current user
+  app.get("/api/ai-usage", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      const userPlan = user?.plan || "free";
+      
+      if (userPlan !== "free") {
+        return res.json({ unlimited: true, plan: userPlan });
+      }
+      
+      const todayUsage = await storage.getAiUsageToday(req.session.userId!);
+      const limit = 5;
+      const remaining = Math.max(0, limit - todayUsage);
+      
+      res.json({
+        unlimited: false,
+        plan: userPlan,
+        used: todayUsage,
+        limit,
+        remaining,
+      });
+    } catch (error) {
+      console.error("Error getting AI usage:", error);
+      res.status(500).json({ error: "Failed to get AI usage" });
     }
   });
 
@@ -3226,11 +3289,12 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const updatedUser = await storage.updateUser(userId, { plan: storedPlan });
       
       // Log the plan change
-      await storage.createActivityLog({
+      await storage.createActivityLog(
         userId,
-        actionType: storedPlan === "free" ? "plan_downgrade" : "plan_upgrade",
-        details: `Plan changed from ${oldPlan} to ${storedPlan} by owner`,
-      });
+        user.email,
+        storedPlan === "free" ? "plan_downgrade" : "plan_upgrade",
+        `Plan changed from ${oldPlan} to ${storedPlan} by owner`
+      );
       
       res.json({ 
         success: true, 

@@ -425,3 +425,22 @@ export const activityLogs = pgTable("activity_logs", {
 });
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
+
+// AI usage tracking for free plan limits
+export const aiUsage = pgTable("ai_usage", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  usageDate: text("usage_date").notNull(), // YYYY-MM-DD format for daily tracking
+  draftsGenerated: integer("drafts_generated").default(0).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertAiUsageSchema = createInsertSchema(aiUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AiUsage = typeof aiUsage.$inferSelect;
+export type InsertAiUsage = z.infer<typeof insertAiUsageSchema>;
