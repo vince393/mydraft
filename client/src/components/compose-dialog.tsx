@@ -394,6 +394,11 @@ export function ComposeDialog({
           : "";
         setBody(data.body + originalQuote);
         
+        // Set the AI-generated subject in the subject field
+        if (data.subject) {
+          setSubject(data.subject);
+        }
+        
         if (data.usage && data.usage.remaining >= 0) {
           toast({
             title: "Reply generated",
