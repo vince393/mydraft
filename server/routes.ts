@@ -1482,6 +1482,99 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
     }
   });
 
+  // AI Polish endpoint - improve existing text
+  // Basic polish is free for all, advanced options (longer, shorter, concise) are Pro+
+  app.post("/api/drafts/polish", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      const userPlan = user?.plan || "free";
+      const isPro = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
+      
+      const { content, polishType = "polish", subject } = req.body;
+      
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: "Content is required" });
+      }
+      
+      // Check if user has access to advanced polish options
+      if ((polishType === "longer" || polishType === "shorter" || polishType === "concise") && !isPro) {
+        return res.status(403).json({
+          error: "Pro plan required for advanced polish options",
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
+      let prompt: string;
+      let systemMessage: string;
+      
+      switch (polishType) {
+        case "longer":
+          systemMessage = "You are an expert editor. Expand the given text while maintaining its core message and tone.";
+          prompt = `Expand this email text to be longer and more detailed. Add more context, examples, or explanations while keeping the same professional tone. Do not add unnecessary fluff - make the additions meaningful.
+
+Original text:
+${content}
+
+${subject ? `Context - Email subject: ${subject}` : ""}
+
+Return only the expanded text, nothing else.`;
+          break;
+          
+        case "shorter":
+          systemMessage = "You are an expert editor. Shorten the given text while preserving key information.";
+          prompt = `Make this email text shorter while keeping the essential message. Remove redundancy and unnecessary words.
+
+Original text:
+${content}
+
+${subject ? `Context - Email subject: ${subject}` : ""}
+
+Return only the shortened text, nothing else.`;
+          break;
+          
+        case "concise":
+          systemMessage = "You are an expert editor. Make the text more concise and direct.";
+          prompt = `Rewrite this email text to be more concise and direct. Get straight to the point while maintaining professionalism.
+
+Original text:
+${content}
+
+${subject ? `Context - Email subject: ${subject}` : ""}
+
+Return only the concise version, nothing else.`;
+          break;
+          
+        default: // "polish" - basic improvement
+          systemMessage = "You are an expert editor. Improve the given text for clarity, grammar, and professionalism.";
+          prompt = `Improve this email text for better clarity, grammar, and professional tone. Fix any errors and enhance readability while keeping the original meaning.
+
+Original text:
+${content}
+
+${subject ? `Context - Email subject: ${subject}` : ""}
+
+Return only the improved text, nothing else.`;
+      }
+      
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemMessage },
+          { role: "user", content: prompt }
+        ],
+        max_completion_tokens: 1024,
+      });
+      
+      const polishedContent = response.choices[0]?.message?.content || content;
+      
+      res.json({ content: polishedContent.trim() });
+    } catch (error) {
+      console.error("Error polishing content:", error);
+      res.status(500).json({ error: "Failed to polish content" });
+    }
+  });
+
   app.patch("/api/drafts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);

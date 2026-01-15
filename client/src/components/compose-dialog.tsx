@@ -12,12 +12,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock } from "lucide-react";
 import { format } from "date-fns";
 
 interface ComposeDialogProps {
@@ -68,9 +76,13 @@ export function ComposeDialog({
     queryKey: ["/api/auth/me"],
   });
   const userPlan = userData?.user?.plan || "free";
-  const canScheduleSend = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
+  const isPro = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
+  const canScheduleSend = isPro;
   
-  // Get AI usage for free plan users
+  // AI Reply is for reply/replyAll modes - free plan has 5/day limit
+  const isReplyMode = mode === "reply" || mode === "replyAll";
+  
+  // Get AI usage for free plan users (only for replies)
   const { data: aiUsageData, refetch: refetchAiUsage } = useQuery<{
     unlimited: boolean;
     plan: string;
@@ -79,7 +91,7 @@ export function ComposeDialog({
     remaining?: number;
   }>({
     queryKey: ["/api/ai-usage"],
-    enabled: open && userPlan === "free",
+    enabled: open && userPlan === "free" && isReplyMode,
   });
   
   const aiRemaining = aiUsageData?.remaining ?? 5;
@@ -268,7 +280,6 @@ export function ComposeDialog({
         delaySeconds: options?.scheduledFor ? 0 : 5,
       };
       
-      // Add scheduled time if provided
       if (options?.scheduledFor) {
         payload.scheduledFor = options.scheduledFor.toISOString();
       }
@@ -352,11 +363,12 @@ export function ComposeDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [previousBody, setPreviousBody] = useState("");
 
-  const aiDraftMutation = useMutation({
+  // AI Reply mutation - for reply/replyAll modes (5/day limit for free)
+  const aiReplyMutation = useMutation({
     mutationFn: async () => {
       setPreviousBody(body);
       setIsGenerating(true);
-      setBody("Generating...");
+      setBody("Generating reply...");
       
       const response = await apiRequest("POST", "/api/drafts/quick-generate", {
         mode,
@@ -372,47 +384,87 @@ export function ComposeDialog({
     onSuccess: (data: { subject?: string; body?: string; usage?: { used: number; limit: number; remaining: number } }) => {
       setIsGenerating(false);
       
-      // Refetch AI usage for free users
       if (userPlan === "free") {
         refetchAiUsage();
       }
       
-      if (data.subject && mode !== "reply" && mode !== "replyAll") {
-        setSubject(data.subject);
-      } else if (data.subject && (mode === "reply" || mode === "replyAll")) {
-        if (!subject.startsWith("Re:")) {
-          setSubject(data.subject);
-        }
-      }
-      
       if (data.body) {
-        if ((mode === "reply" || mode === "replyAll" || mode === "forward") && originalEmail) {
-          const originalQuote = previousBody.includes("---------- Original message ----------") 
-            ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
-            : previousBody.includes("---------- Forwarded message ----------")
-            ? previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2)
-            : "";
-          setBody(data.body + originalQuote);
-        } else {
-          setBody(data.body);
-        }
+        const originalQuote = previousBody.includes("---------- Original message ----------") 
+          ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
+          : "";
+        setBody(data.body + originalQuote);
         
         if (data.usage && data.usage.remaining >= 0) {
           toast({
-            title: "Draft generated",
-            description: `${data.usage.remaining} AI drafts remaining today`,
+            title: "Reply generated",
+            description: `${data.usage.remaining} AI replies remaining today`,
           });
         }
       } else {
         setBody(previousBody);
       }
     },
-    onError: (error: Error & { limitReached?: boolean }) => {
+    onError: (error: Error) => {
       setIsGenerating(false);
       setBody(previousBody);
       refetchAiUsage();
       toast({
-        title: "Failed to generate draft",
+        title: "Failed to generate reply",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // AI Polish mutation - for improving existing text
+  const aiPolishMutation = useMutation({
+    mutationFn: async (polishType: "polish" | "longer" | "shorter" | "concise") => {
+      // Extract user's written content (before the original message quote)
+      const userContent = body.includes("---------- Original message ----------")
+        ? body.substring(0, body.indexOf("---------- Original message ----------") - 2).trim()
+        : body.includes("---------- Forwarded message ----------")
+        ? body.substring(0, body.indexOf("---------- Forwarded message ----------") - 2).trim()
+        : body.trim();
+      
+      if (!userContent) {
+        throw new Error("Please write some content first");
+      }
+      
+      setPreviousBody(body);
+      setIsGenerating(true);
+      
+      const response = await apiRequest("POST", "/api/drafts/polish", {
+        content: userContent,
+        polishType,
+        subject,
+      });
+      return response.json();
+    },
+    onSuccess: (data: { content?: string }) => {
+      setIsGenerating(false);
+      
+      if (data.content) {
+        // Preserve original quote if present
+        const originalQuote = previousBody.includes("---------- Original message ----------") 
+          ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
+          : previousBody.includes("---------- Forwarded message ----------")
+          ? previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2)
+          : "";
+        setBody(data.content + originalQuote);
+        
+        toast({
+          title: "Text polished",
+          description: "Your message has been improved",
+        });
+      } else {
+        setBody(previousBody);
+      }
+    },
+    onError: (error: Error) => {
+      setIsGenerating(false);
+      setBody(previousBody);
+      toast({
+        title: "Failed to polish",
         description: error.message,
         variant: "destructive",
       });
@@ -440,6 +492,16 @@ export function ComposeDialog({
       case "forward": return "Forward";
       default: return "New Message";
     }
+  };
+
+  // Check if there's user content to polish
+  const hasUserContent = () => {
+    const userContent = body.includes("---------- Original message ----------")
+      ? body.substring(0, body.indexOf("---------- Original message ----------") - 2).trim()
+      : body.includes("---------- Forwarded message ----------")
+      ? body.substring(0, body.indexOf("---------- Forwarded message ----------") - 2).trim()
+      : body.trim();
+    return userContent.length > 0;
   };
 
   return (
@@ -552,25 +614,118 @@ export function ComposeDialog({
                 Discard
               </Button>
               
-              {/* AI Draft Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => aiDraftMutation.mutate()}
-                disabled={isGenerating || sendMutation.isPending || aiLimitReached}
-                className="h-9 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-primary transition-all duration-200"
-                data-testid="button-ai-draft"
-                title={aiLimitReached ? "Daily limit reached. Upgrade to Pro for unlimited AI drafts." : "Generate an AI-powered draft"}
-              >
-                {isGenerating ? (
-                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                <span className="font-medium">
-                  {isGenerating ? "Writing..." : userPlan === "free" ? `AI Draft (${aiRemaining}/5)` : "AI Draft"}
-                </span>
-              </Button>
+              {/* AI Reply Button - Only for reply/replyAll modes */}
+              {isReplyMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => aiReplyMutation.mutate()}
+                  disabled={isGenerating || sendMutation.isPending || aiLimitReached}
+                  className="h-9 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-primary transition-all duration-200"
+                  data-testid="button-ai-reply"
+                  title={aiLimitReached ? "Daily limit reached. Upgrade to Pro for unlimited AI replies." : "Generate an AI-powered reply"}
+                >
+                  {isGenerating ? (
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  <span className="font-medium">
+                    {isGenerating ? "Writing..." : userPlan === "free" ? `AI Reply (${aiRemaining}/5)` : "AI Reply"}
+                  </span>
+                </Button>
+              )}
+              
+              {/* AI Polish Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
+                    className="h-9 gap-2"
+                    data-testid="button-ai-polish"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    <span>Polish</span>
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem
+                    onClick={() => aiPolishMutation.mutate("polish")}
+                    disabled={isGenerating}
+                    data-testid="button-polish-improve"
+                  >
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Improve Writing
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (isPro) {
+                        aiPolishMutation.mutate("longer");
+                      } else {
+                        toast({
+                          title: "Pro feature",
+                          description: "Upgrade to Pro to make your text longer",
+                        });
+                      }
+                    }}
+                    disabled={isGenerating}
+                    className="flex items-center justify-between"
+                    data-testid="button-polish-longer"
+                  >
+                    <div className="flex items-center">
+                      <ArrowUpRight className="w-4 h-4 mr-2" />
+                      Make Longer
+                    </div>
+                    {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (isPro) {
+                        aiPolishMutation.mutate("shorter");
+                      } else {
+                        toast({
+                          title: "Pro feature",
+                          description: "Upgrade to Pro to make your text shorter",
+                        });
+                      }
+                    }}
+                    disabled={isGenerating}
+                    className="flex items-center justify-between"
+                    data-testid="button-polish-shorter"
+                  >
+                    <div className="flex items-center">
+                      <ArrowDownRight className="w-4 h-4 mr-2" />
+                      Make Shorter
+                    </div>
+                    {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (isPro) {
+                        aiPolishMutation.mutate("concise");
+                      } else {
+                        toast({
+                          title: "Pro feature",
+                          description: "Upgrade to Pro for concise rewrites",
+                        });
+                      }
+                    }}
+                    disabled={isGenerating}
+                    className="flex items-center justify-between"
+                    data-testid="button-polish-concise"
+                  >
+                    <div className="flex items-center">
+                      <FileText className="w-4 h-4 mr-2" />
+                      More Concise
+                    </div>
+                    {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             
             {/* Right Actions */}
