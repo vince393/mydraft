@@ -79,10 +79,10 @@ export function ComposeDialog({
   const isPro = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
   const canScheduleSend = isPro;
   
-  // AI Reply is for reply/replyAll modes - free plan has 5/day limit
+  // Check if this is a reply mode (used for original email context)
   const isReplyMode = mode === "reply" || mode === "replyAll";
   
-  // Get AI usage for free plan users (only for replies)
+  // Get AI usage for free plan users
   const { data: aiUsageData, refetch: refetchAiUsage } = useQuery<{
     unlimited: boolean;
     plan: string;
@@ -91,7 +91,7 @@ export function ComposeDialog({
     remaining?: number;
   }>({
     queryKey: ["/api/ai-usage"],
-    enabled: open && userPlan === "free" && isReplyMode,
+    enabled: open && userPlan === "free",
   });
   
   const aiRemaining = aiUsageData?.remaining ?? 5;
@@ -619,27 +619,25 @@ export function ComposeDialog({
                 Discard
               </Button>
               
-              {/* AI Reply Button - Only for reply/replyAll modes */}
-              {isReplyMode && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => aiReplyMutation.mutate()}
-                  disabled={isGenerating || sendMutation.isPending || aiLimitReached}
-                  className="h-9 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-primary transition-all duration-200"
-                  data-testid="button-ai-reply"
-                  title={aiLimitReached ? "Daily limit reached. Upgrade to Pro for unlimited AI replies." : "Generate an AI-powered reply"}
-                >
-                  {isGenerating ? (
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Sparkles className="w-4 h-4" />
-                  )}
-                  <span className="font-medium">
-                    {isGenerating ? "Writing..." : userPlan === "free" ? `AI Reply (${aiRemaining}/5)` : "AI Reply"}
-                  </span>
-                </Button>
-              )}
+              {/* AI Draft Button - for all modes (5/day limit for free users) */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => aiReplyMutation.mutate()}
+                disabled={isGenerating || sendMutation.isPending || aiLimitReached}
+                className="h-9 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-primary transition-all duration-200"
+                data-testid="button-ai-draft"
+                title={aiLimitReached ? "Daily limit reached. Upgrade to Pro for unlimited AI drafts." : "Generate an AI-powered draft"}
+              >
+                {isGenerating ? (
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                <span className="font-medium">
+                  {isGenerating ? "Writing..." : userPlan === "free" ? `AI Draft (${aiRemaining}/5)` : "AI Draft"}
+                </span>
+              </Button>
               
               {/* AI Polish Dropdown */}
               <DropdownMenu>
