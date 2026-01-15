@@ -426,6 +426,8 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           isMoving={moveEmailMutation.isPending}
           isLoading={isLoadingEmails}
           activeFolder={activeFolder}
+          hasConnectedAccount={!!userData?.user?.connectedEmail}
+          onConnectAccount={() => setLocation("/connect-email")}
         />
       </div>
       

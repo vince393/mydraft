@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,8 @@ interface EmailListProps {
   isMoving?: boolean;
   isLoading?: boolean;
   activeFolder?: string;
+  hasConnectedAccount?: boolean;
+  onConnectAccount?: () => void;
 }
 
 interface ResponseTimeEstimate {
@@ -86,7 +88,31 @@ function EmailListSkeleton() {
   );
 }
 
-function EmailListEmpty() {
+function EmailListEmpty({ hasConnectedAccount, onConnectAccount }: { hasConnectedAccount: boolean; onConnectAccount?: () => void }) {
+  if (!hasConnectedAccount) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600/20 to-purple-600/20 flex items-center justify-center mb-6">
+          <svg className="w-9 h-9 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+        </div>
+        <h3 className="font-medium text-xl mb-2 tracking-tight">Connect your email</h3>
+        <p className="text-sm text-muted-foreground mb-4">Add an account to start managing your inbox</p>
+        {onConnectAccount && (
+          <Button 
+            onClick={onConnectAccount}
+            className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white"
+            data-testid="button-connect-email-empty"
+          >
+            <Link className="w-4 h-4" />
+            Add Account
+          </Button>
+        )}
+      </div>
+    );
+  }
+  
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-8">
       <div className="w-20 h-20 rounded-full bg-gradient-to-br from-muted/80 to-muted/30 flex items-center justify-center mb-6">
@@ -106,7 +132,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox" }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Filters>({
@@ -439,7 +465,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   }
 
   if (emails.length === 0 && !searchQuery && !hasActiveFilters) {
-    return <EmailListEmpty />;
+    return <EmailListEmpty hasConnectedAccount={hasConnectedAccount} onConnectAccount={onConnectAccount} />;
   }
 
   return (
