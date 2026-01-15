@@ -5,6 +5,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
 import { AIDraftDialog } from "@/components/ai-draft-dialog";
+import { MultiEmailResponseModal } from "@/components/multi-email-response-modal";
 import { ComposeDialog } from "@/components/compose-dialog";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -50,6 +51,8 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const [selectedThreadEmails, setSelectedThreadEmails] = useState<EmailWithNylasId[]>([]);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [showAiDialog, setShowAiDialog] = useState(false);
+  const [showMultiEmailModal, setShowMultiEmailModal] = useState(false);
+  const [multiEmailSelection, setMultiEmailSelection] = useState<EmailWithNylasId[]>([]);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
   const [, setLocation] = useLocation();
@@ -299,6 +302,15 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     }
   };
 
+  const handleAiReplyMultiple = (selectedEmails: EmailWithNylasId[]) => {
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+    } else {
+      setMultiEmailSelection(selectedEmails);
+      setShowMultiEmailModal(true);
+    }
+  };
+
   const handleDraftAccepted = (draft: Draft) => {
     setGeneratedDraft(draft);
     queryClient.invalidateQueries({ queryKey: ["/api/drafts", selectedEmail?.id] });
@@ -401,6 +413,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           selectedEmailId={selectedEmail?.id ?? null}
           onSelectEmail={handleSelectEmail}
           onAiReply={handleAiReply}
+          onAiReplyMultiple={handleAiReplyMultiple}
           onTrashEmail={handleTrashEmail}
           onArchiveEmail={handleArchiveEmail}
           onTrashMultipleEmails={handleTrashMultipleEmails}
@@ -545,6 +558,21 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
         onOpenChange={setShowUpgradeModal}
         requiredPlan="pro"
         feature="AI Draft Generator"
+      />
+
+      <MultiEmailResponseModal
+        emails={multiEmailSelection}
+        open={showMultiEmailModal}
+        onOpenChange={(open) => {
+          setShowMultiEmailModal(open);
+          if (!open) {
+            setMultiEmailSelection([]);
+          }
+        }}
+        onComplete={() => {
+          setMultiEmailSelection([]);
+          queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        }}
       />
     </div>
   );

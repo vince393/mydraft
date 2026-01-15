@@ -42,6 +42,7 @@ interface EmailListProps {
   selectedEmailId: number | null;
   onSelectEmail: (email: EmailWithNylasId) => void;
   onAiReply: () => void;
+  onAiReplyMultiple?: (emails: EmailWithNylasId[]) => void;
   onTrashEmail: () => void;
   onArchiveEmail: () => void;
   onTrashMultipleEmails: (emailIds: (string | number)[]) => void;
@@ -105,7 +106,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox" }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox" }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Filters>({
@@ -422,6 +423,15 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     }
   }, [selectedIds, onArchiveMultipleEmails]);
 
+  const handleAiSelected = useCallback(() => {
+    if (selectedIds.size > 0 && onAiReplyMultiple) {
+      const selectedEmails = filteredEmails.filter(e => selectedIds.has(getEmailId(e)));
+      onAiReplyMultiple(selectedEmails);
+      setIsSelectionMode(false);
+      setSelectedIds(new Set());
+    }
+  }, [selectedIds, filteredEmails, onAiReplyMultiple]);
+
   const allSelected = filteredEmails.length > 0 && selectedIds.size === filteredEmails.length;
 
   if (isLoading) {
@@ -698,6 +708,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               size="icon"
               variant="ghost"
               disabled={selectedIds.size === 0}
+              onClick={handleAiSelected}
               className="h-10 w-10 rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
               data-testid="button-ai-selected"
             >
