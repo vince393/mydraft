@@ -16,9 +16,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward } from "lucide-react";
 import { format } from "date-fns";
 
 interface ComposeDialogProps {
@@ -109,7 +108,6 @@ export function ComposeDialog({
     }
     
     // For reply/replyAll/forward, wait until we have valid originalEmail data
-    // Skip initialization if originalEmail is undefined or doesn't have the required fields
     if (!originalEmail || !originalEmail.id) return;
     
     // Only initialize if this is a new dialog opening or different email
@@ -382,14 +380,12 @@ export function ComposeDialog({
       if (data.subject && mode !== "reply" && mode !== "replyAll") {
         setSubject(data.subject);
       } else if (data.subject && (mode === "reply" || mode === "replyAll")) {
-        // For replies, keep the Re: prefix but update if AI provides better subject
         if (!subject.startsWith("Re:")) {
           setSubject(data.subject);
         }
       }
       
       if (data.body) {
-        // For replies, prepend AI body to the original email quote
         if ((mode === "reply" || mode === "replyAll" || mode === "forward") && originalEmail) {
           const originalQuote = previousBody.includes("---------- Original message ----------") 
             ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
@@ -401,7 +397,6 @@ export function ComposeDialog({
           setBody(data.body);
         }
         
-        // Show remaining for free users
         if (data.usage && data.usage.remaining >= 0) {
           toast({
             title: "Draft generated",
@@ -429,6 +424,15 @@ export function ComposeDialog({
     resetForm();
   };
 
+  const getModeIcon = () => {
+    switch (mode) {
+      case "reply": return <Mail className="w-4 h-4" />;
+      case "replyAll": return <Users className="w-4 h-4" />;
+      case "forward": return <Forward className="w-4 h-4" />;
+      default: return <Mail className="w-4 h-4" />;
+    }
+  };
+
   const getDialogTitle = () => {
     switch (mode) {
       case "reply": return "Reply";
@@ -440,138 +444,156 @@ export function ComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>{getDialogTitle()}</DialogTitle>
+      <DialogContent className="sm:max-w-[680px] max-h-[85vh] p-0 overflow-hidden flex flex-col gap-0 bg-background/95 backdrop-blur-xl border-border/50">
+        {/* Header */}
+        <DialogHeader className="flex-shrink-0 px-6 py-4 border-b border-border/50 bg-muted/30">
+          <DialogTitle className="flex items-center gap-3 text-lg font-semibold">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary">
+              {getModeIcon()}
+            </div>
+            {getDialogTitle()}
+          </DialogTitle>
         </DialogHeader>
         
-        <div className="flex flex-col gap-4 flex-1 overflow-hidden">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="to" className="w-12 text-right text-muted-foreground text-sm">
-                To
-              </Label>
-              <Input
-                id="to"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                placeholder="recipient@example.com"
-                className="flex-1"
-                data-testid="input-compose-to"
-              />
+        {/* Form Content */}
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {/* Recipients Section */}
+          <div className="px-6 py-4 space-y-3 border-b border-border/30">
+            {/* To Field */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-muted/50 text-muted-foreground">
+                <User className="w-4 h-4" />
+              </div>
+              <div className="flex-1 relative">
+                <Input
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  placeholder="Recipients"
+                  className="border-0 bg-transparent px-0 h-9 text-base placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  data-testid="input-compose-to"
+                />
+              </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowCcBcc(!showCcBcc)}
-                className="text-muted-foreground text-xs"
+                className="text-muted-foreground hover:text-foreground text-xs h-7 px-2 rounded-md"
               >
-                Cc/Bcc
+                {showCcBcc ? "Hide" : "Cc/Bcc"}
                 {showCcBcc ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
               </Button>
             </div>
             
-            {showCcBcc && (
-              <>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="cc" className="w-12 text-right text-muted-foreground text-sm">
-                    Cc
-                  </Label>
-                  <Input
-                    id="cc"
-                    value={cc}
-                    onChange={(e) => setCc(e.target.value)}
-                    placeholder="cc@example.com"
-                    className="flex-1"
-                    data-testid="input-compose-cc"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="bcc" className="w-12 text-right text-muted-foreground text-sm">
-                    Bcc
-                  </Label>
-                  <Input
-                    id="bcc"
-                    value={bcc}
-                    onChange={(e) => setBcc(e.target.value)}
-                    placeholder="bcc@example.com"
-                    className="flex-1"
-                    data-testid="input-compose-bcc"
-                  />
-                </div>
-              </>
-            )}
+            {/* Cc/Bcc Fields */}
+            <div className={`space-y-3 overflow-hidden transition-all duration-200 ${showCcBcc ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="flex items-center gap-3 pl-11">
+                <span className="text-xs text-muted-foreground w-6">Cc</span>
+                <Input
+                  value={cc}
+                  onChange={(e) => setCc(e.target.value)}
+                  placeholder="Carbon copy recipients"
+                  className="border-0 bg-transparent px-0 h-8 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  data-testid="input-compose-cc"
+                />
+              </div>
+              <div className="flex items-center gap-3 pl-11">
+                <span className="text-xs text-muted-foreground w-6">Bcc</span>
+                <Input
+                  value={bcc}
+                  onChange={(e) => setBcc(e.target.value)}
+                  placeholder="Blind carbon copy"
+                  className="border-0 bg-transparent px-0 h-8 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  data-testid="input-compose-bcc"
+                />
+              </div>
+            </div>
             
-            <div className="flex items-center gap-2">
-              <Label htmlFor="subject" className="w-12 text-right text-muted-foreground text-sm">
-                Subject
-              </Label>
+            {/* Subject Field */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-muted/50 text-muted-foreground">
+                <Mail className="w-4 h-4" />
+              </div>
               <Input
-                id="subject"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Subject"
-                className="flex-1"
+                className="flex-1 border-0 bg-transparent px-0 h-9 text-base font-medium placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                 data-testid="input-compose-subject"
               />
             </div>
           </div>
           
-          <div className="flex-1 min-h-0">
+          {/* Message Body */}
+          <div className="flex-1 min-h-0 px-6 py-4">
             <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write your message..."
-              className="h-full min-h-[200px] resize-none"
+              className="h-full min-h-[220px] resize-none border-0 bg-transparent px-0 text-base leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
               data-testid="textarea-compose-body"
             />
           </div>
-          
-          <div className="flex items-center justify-between pt-2 border-t flex-shrink-0 gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
+        </div>
+        
+        {/* Footer Actions */}
+        <div className="flex-shrink-0 px-6 py-4 border-t border-border/50 bg-muted/20">
+          <div className="flex items-center justify-between gap-3">
+            {/* Left Actions */}
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
+                size="sm"
                 onClick={handleClose}
+                className="text-muted-foreground hover:text-foreground h-9"
                 data-testid="button-compose-cancel"
               >
-                <X className="w-4 h-4 mr-2" />
+                <X className="w-4 h-4 mr-1.5" />
                 Discard
               </Button>
+              
+              {/* AI Draft Button */}
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => aiDraftMutation.mutate()}
                 disabled={isGenerating || sendMutation.isPending || aiLimitReached}
-                className="gap-2 bg-gradient-to-r from-blue-600/10 to-purple-600/10 border-blue-500/30 hover:border-blue-500/50 text-blue-400"
+                className="h-9 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-primary transition-all duration-200"
                 data-testid="button-ai-draft"
-                title={aiLimitReached ? "Daily limit reached. Upgrade to Pro for unlimited AI drafts." : undefined}
+                title={aiLimitReached ? "Daily limit reached. Upgrade to Pro for unlimited AI drafts." : "Generate an AI-powered draft"}
               >
                 {isGenerating ? (
-                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Sparkles className="w-4 h-4" />
                 )}
-                {isGenerating ? "Generating..." : userPlan === "free" ? `AI Draft (${aiRemaining}/5)` : "AI Draft"}
+                <span className="font-medium">
+                  {isGenerating ? "Writing..." : userPlan === "free" ? `AI Draft (${aiRemaining}/5)` : "AI Draft"}
+                </span>
               </Button>
             </div>
             
-            <div className="flex items-center gap-1">
+            {/* Right Actions */}
+            <div className="flex items-center gap-2">
               {/* Schedule Send - Pro/Business only */}
               {canScheduleSend && (
                 <Popover open={showSchedulePicker} onOpenChange={setShowSchedulePicker}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
+                      size="sm"
                       disabled={sendMutation.isPending || !to.trim() || isGenerating}
+                      className="h-9"
                       data-testid="button-schedule-send"
                     >
-                      <Clock className="w-4 h-4 mr-2" />
+                      <Clock className="w-4 h-4 mr-1.5" />
                       Schedule
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-4" align="end">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Select date</Label>
+                        <span className="text-sm font-medium">Select date</span>
                         <Calendar
                           mode="single"
                           selected={scheduledDate}
@@ -581,7 +603,7 @@ export function ComposeDialog({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Select time</Label>
+                        <span className="text-sm font-medium">Select time</span>
                         <Input
                           type="time"
                           value={scheduledTime}
@@ -609,17 +631,19 @@ export function ComposeDialog({
                 </Popover>
               )}
               
+              {/* Send Button */}
               <Button
                 onClick={() => sendMutation.mutate({})}
                 disabled={sendMutation.isPending || !to.trim() || isGenerating}
+                className="h-9 px-5 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-200"
                 data-testid="button-compose-send"
               >
                 {sendMutation.isPending ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Send className="w-4 h-4 mr-2" />
+                  <Send className="w-4 h-4" />
                 )}
-                Send
+                <span className="font-medium">Send</span>
               </Button>
             </div>
           </div>
