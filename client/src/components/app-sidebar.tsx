@@ -35,6 +35,11 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { AssistantModal } from "./assistant-modal";
 
@@ -86,10 +91,27 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
   const [renameFolderName, setRenameFolderName] = useState("");
+  const [folderActionMenuOpen, setFolderActionMenuOpen] = useState<string | null>(null);
   
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const justCollapsedRef = useRef(false);
   const { hasPro } = usePlan();
+
+  // Long press handlers for folder actions
+  const handleFolderTouchStart = useCallback((folder: FolderItem) => {
+    if (!folder.isCustom) return;
+    longPressTimeoutRef.current = setTimeout(() => {
+      setFolderActionMenuOpen(folder.title);
+    }, 500); // 500ms long press
+  }, []);
+
+  const handleFolderTouchEnd = useCallback(() => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  }, []);
   
   const handleOpenAssistant = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -333,31 +355,77 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     </SidebarMenuButton>
                   );
 
-                  // Custom folders get context menu for rename/delete
+                  // Custom folders get long-press popup for rename/delete
                   if (item.isCustom) {
                     return (
                       <SidebarMenuItem key={item.title}>
-                        <ContextMenu>
-                          <ContextMenuTrigger asChild>
-                            {folderButton}
-                          </ContextMenuTrigger>
-                          <ContextMenuContent className="w-40">
-                            <ContextMenuItem 
-                              onClick={() => handleOpenRename(item)}
-                              className="gap-2"
+                        <Popover 
+                          open={folderActionMenuOpen === item.title} 
+                          onOpenChange={(open) => setFolderActionMenuOpen(open ? item.title : null)}
+                        >
+                          <PopoverTrigger asChild>
+                            <SidebarMenuButton 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Only navigate if menu is not open
+                                if (folderActionMenuOpen !== item.title) {
+                                  onFolderChange(item.title.toLowerCase());
+                                }
+                              }}
+                              onTouchStart={() => handleFolderTouchStart(item)}
+                              onTouchEnd={handleFolderTouchEnd}
+                              onTouchCancel={handleFolderTouchEnd}
+                              onMouseDown={() => handleFolderTouchStart(item)}
+                              onMouseUp={handleFolderTouchEnd}
+                              onMouseLeave={handleFolderTouchEnd}
+                              className={`
+                                w-full justify-between h-11 rounded-xl transition-all duration-200
+                                ${isActive 
+                                  ? "bg-muted/60 text-foreground" 
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                }
+                              `}
+                              data-testid={`nav-${item.title.toLowerCase()}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <item.icon className="w-[18px] h-[18px]" />
+                                <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
+                                {item.aiDescription && (
+                                  <Sparkles className="w-3 h-3 text-primary/60" />
+                                )}
+                              </div>
+                              {showCount && (
+                                <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
+                                  {folderCount}
+                                </Badge>
+                              )}
+                            </SidebarMenuButton>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-40 p-1" align="start" side="right">
+                            <button
+                              onClick={() => {
+                                setFolderActionMenuOpen(null);
+                                handleOpenRename(item);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
+                              data-testid={`button-rename-${item.title.toLowerCase()}`}
                             >
                               <Pencil className="w-4 h-4" />
                               Rename
-                            </ContextMenuItem>
-                            <ContextMenuItem 
-                              onClick={() => handleOpenDelete(item)}
-                              className="gap-2 text-destructive focus:text-destructive"
+                            </button>
+                            <button
+                              onClick={() => {
+                                setFolderActionMenuOpen(null);
+                                handleOpenDelete(item);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted text-destructive transition-colors"
+                              data-testid={`button-delete-${item.title.toLowerCase()}`}
                             >
                               <Trash2 className="w-4 h-4" />
                               Delete
-                            </ContextMenuItem>
-                          </ContextMenuContent>
-                        </ContextMenu>
+                            </button>
+                          </PopoverContent>
+                        </Popover>
                       </SidebarMenuItem>
                     );
                   }
