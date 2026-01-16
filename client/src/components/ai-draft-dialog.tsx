@@ -151,30 +151,50 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600/20 to-purple-600/20">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            AI Draft Generator
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-pink-600/10 px-6 py-5 border-b border-border/30">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg shadow-blue-600/20">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <span className="text-lg font-semibold">AI Draft</span>
+                <p className="text-xs font-normal text-muted-foreground mt-0.5">Generate and refine your reply with AI</p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {email && (
+            <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-muted/40 to-muted/20 rounded-xl border border-border/20">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-medium text-primary">
+                  {email.sender.split('@')[0].charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Replying to</p>
+                <p className="text-sm font-medium truncate">{email.sender}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{email.subject}</p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Subject</label>
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Subject</label>
             <Input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Email subject..."
-              className="bg-muted/20 border-border/30"
+              className="bg-background border-border/50 focus:border-primary/50 transition-colors"
               data-testid="input-subject"
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Tone</label>
+          <div className="space-y-3">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tone</label>
             <div className="flex flex-wrap gap-2">
               {TONE_OPTIONS.map((tone) => (
                 <button
@@ -182,10 +202,10 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
                   onClick={() => handleToneChange(tone.value)}
                   disabled={generateMutation.isPending}
                   className={`
-                    px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                    px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border
                     ${selectedTone === tone.value
-                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white border-transparent shadow-md shadow-blue-600/20"
+                      : "bg-background border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
                     }
                     disabled:opacity-50 disabled:cursor-not-allowed
                   `}
@@ -197,39 +217,42 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden flex flex-col space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-muted-foreground">Generated Reply</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Your Reply</label>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={handleRegenerate}
                 disabled={generateMutation.isPending || !email}
-                className="gap-2 text-muted-foreground hover:text-foreground"
+                className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
                 data-testid="button-regenerate"
               >
                 {generateMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3 h-3 animate-spin" />
                 ) : (
-                  <RefreshCw className="w-4 h-4" />
+                  <RefreshCw className="w-3 h-3" />
                 )}
                 Regenerate
               </Button>
             </div>
             
-            <div className="flex-1 min-h-[200px] relative">
+            <div className="min-h-[180px] relative">
               {generateMutation.isPending ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-muted/30 rounded-lg border border-border/30">
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">Generating your reply...</span>
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-600/5 to-purple-600/5 rounded-xl border border-primary/20">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600/20 to-purple-600/20 animate-pulse" />
+                      <Loader2 className="w-6 h-6 animate-spin text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Crafting your reply...</span>
                   </div>
                 </div>
               ) : generateError ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-muted/30 rounded-lg border border-destructive/30">
-                  <div className="flex flex-col items-center gap-3 p-6 text-center max-w-md">
+                <div className="absolute inset-0 flex items-center justify-center bg-destructive/5 rounded-xl border border-destructive/30">
+                  <div className="flex flex-col items-center gap-4 p-6 text-center max-w-md">
                     <div className="p-3 rounded-full bg-destructive/10">
-                      <AlertCircle className="w-8 h-8 text-destructive" />
+                      <AlertCircle className="w-6 h-6 text-destructive" />
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-foreground">{generateError.error}</p>
@@ -242,10 +265,10 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
                         size="sm"
                         variant="outline"
                         onClick={handleRegenerate}
-                        className="gap-2 mt-2"
+                        className="gap-2"
                         data-testid="button-retry-generate"
                       >
-                        <RefreshCw className="w-4 h-4" />
+                        <RefreshCw className="w-3 h-3" />
                         Try Again
                       </Button>
                     )}
@@ -255,7 +278,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
                 <Textarea
                   value={draftContent}
                   onChange={(e) => setDraftContent(e.target.value)}
-                  className="h-full min-h-[200px] resize-none bg-muted/20 border-border/30 rounded-lg"
+                  className="h-full min-h-[180px] resize-none bg-background border-border/50 rounded-xl focus:border-primary/50 transition-colors"
                   placeholder="Your AI-generated reply will appear here..."
                   data-testid="textarea-ai-draft"
                 />
@@ -263,13 +286,15 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
             </div>
           </div>
 
-          <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg border border-border/30">
-            <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+          <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-600/5 to-purple-600/5 rounded-xl border border-primary/20">
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-600/20 to-purple-600/20">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
             <Input
               value={aiInstructions}
               onChange={(e) => setAiInstructions(e.target.value)}
-              placeholder="Tell AI what to change (e.g., 'make it shorter', 'add a thank you')..."
-              className="flex-1 h-8 border-0 bg-transparent focus-visible:ring-0 text-sm"
+              placeholder="Ask AI to make changes... (e.g., 'make it shorter')"
+              className="flex-1 h-9 border-0 bg-transparent focus-visible:ring-0 text-sm placeholder:text-muted-foreground/60"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -283,7 +308,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
               size="sm"
               onClick={handleRefine}
               disabled={!aiInstructions.trim() || isRefining || !draftContent.trim()}
-              className="h-7 px-3 text-xs"
+              className="h-8 px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0 text-white shadow-md shadow-blue-600/20"
               data-testid="button-apply-instructions"
             >
               {isRefining ? (
@@ -293,37 +318,30 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
               )}
             </Button>
           </div>
+        </div>
 
-          {email && (
-            <div className="p-3 bg-muted/20 rounded-lg border border-border/30">
-              <p className="text-xs text-muted-foreground mb-1">Replying to:</p>
-              <p className="text-sm font-medium truncate">{email.subject}</p>
-              <p className="text-xs text-muted-foreground">{email.sender}</p>
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-border/30">
-            <Button
-              variant="ghost"
-              onClick={handleClose}
-              data-testid="button-cancel-draft"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSend}
-              disabled={generateMutation.isPending || !draftContent.trim() || isSending}
-              className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0"
-              data-testid="button-send-draft"
-            >
-              {isSending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-              Send
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/20 border-t border-border/30">
+          <Button
+            variant="ghost"
+            onClick={handleClose}
+            className="text-muted-foreground"
+            data-testid="button-cancel-draft"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSend}
+            disabled={generateMutation.isPending || !draftContent.trim() || isSending}
+            className="gap-2 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0 shadow-lg shadow-blue-600/25"
+            data-testid="button-send-draft"
+          >
+            {isSending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            Send Email
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
