@@ -406,6 +406,8 @@ export async function registerRoutes(
     });
   });
 
+  // Plan selection endpoint - ONLY allows selecting free plan or requesting upgrade
+  // Actual paid plan activation happens through Stripe webhooks after payment
   app.post("/api/user/plan", requireAuth, async (req, res) => {
     try {
       const { plan } = req.body;
@@ -416,21 +418,32 @@ export async function registerRoutes(
       const currentUser = await storage.getUser(req.session.userId!);
       const oldPlan = currentUser?.plan || "free";
       
-      const user = await storage.updateUser(req.session.userId!, { plan });
+      // SECURITY: Only allow direct plan changes to "free" (downgrade/cancel)
+      // Upgrades to pro/premium must go through Stripe checkout and webhooks
+      if (plan !== "free" && plan !== oldPlan) {
+        return res.status(403).json({ 
+          error: "Plan upgrades require payment. Please use the checkout process.",
+          requiresPayment: true,
+          requestedPlan: plan
+        });
+      }
       
-      // Log plan change activity
-      if (oldPlan !== plan) {
-        const planHierarchy: Record<string, number> = { free: 0, pro: 1, premium: 2 };
-        const actionType = planHierarchy[plan] > planHierarchy[oldPlan] ? "plan_upgrade" : "plan_downgrade";
+      // Only process if downgrading to free
+      if (plan === "free" && oldPlan !== "free") {
+        const user = await storage.updateUser(req.session.userId!, { plan: "free" });
+        
         await storage.createActivityLog(
           user!.id, 
           user!.email, 
-          actionType, 
-          `Plan changed from ${oldPlan} to ${plan}`
+          "plan_downgrade", 
+          `Plan cancelled: changed from ${oldPlan} to free`
         );
+        
+        return res.json({ user: { id: user!.id, email: user!.email, plan: user!.plan } });
       }
       
-      res.json({ user: { id: user!.id, email: user!.email, plan: user!.plan } });
+      // No change needed
+      res.json({ user: { id: currentUser!.id, email: currentUser!.email, plan: currentUser!.plan } });
     } catch (error) {
       console.error("Plan update error:", error);
       res.status(500).json({ error: "Failed to update plan" });
