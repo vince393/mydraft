@@ -300,7 +300,13 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
     try {
       const response = await apiRequest("POST", "/api/ai/refine", {
         text: draftContent,
-        instructions: refineInput,
+        instruction: refineInput,
+        originalEmail: email ? {
+          sender: email.sender,
+          senderEmail: (email as any).senderEmail || email.sender,
+          subject: email.subject,
+          preview: (email as any).preview || "",
+        } : undefined,
       });
       const data = await response.json();
       setDraftContent(data.refinedText);
