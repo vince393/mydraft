@@ -360,14 +360,34 @@ function AccountTab({ settings }: { settings: Settings }) {
 
 function BillingTab({ settings }: { settings: Settings }) {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const planDetails = {
-    free: { name: "Free", price: "$0/month", features: ["5 AI replies/day", "Basic email management", "Single inbox"] },
-    pro: { name: "Pro", price: "$12/month", features: ["Unlimited AI replies", "Smart categorization", "Priority support"] },
-    business: { name: "Business", price: "$29/month", features: ["Everything in Pro", "Team collaboration", "Custom AI training", "API access"] },
+    free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "Standard support"] },
+    pro: { name: "Pro", price: "$24/month or $199/year", features: ["Unlimited AI replies", "Advanced tone customization", "Email scheduling", "Priority support"] },
+    business: { name: "Business", price: "$49/month or $399/year", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
   };
 
   const currentPlan = settings.plan ? planDetails[settings.plan as keyof typeof planDetails] : planDetails.free;
+
+  const portalMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/stripe/portal", {});
+      return response.json();
+    },
+    onSuccess: (data: { url: string }) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to open billing portal",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -406,32 +426,46 @@ function BillingTab({ settings }: { settings: Settings }) {
           <CardTitle>Manage Subscription</CardTitle>
           <CardDescription>Change or cancel your plan</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-wrap gap-3">
           <Button onClick={() => setLocation("/select-plan")} data-testid="button-change-plan">
             Change Plan
           </Button>
           {settings.plan && settings.plan !== "free" && (
-            <Button variant="outline" className="ml-2" data-testid="button-cancel-subscription">
+            <Button 
+              variant="outline" 
+              onClick={() => portalMutation.mutate()}
+              disabled={portalMutation.isPending}
+              data-testid="button-cancel-subscription"
+            >
+              {portalMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Cancel Subscription
             </Button>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Method</CardTitle>
-          <CardDescription>Manage your payment details</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Payment processing is handled securely through our payment provider.
-          </p>
-          <Button variant="outline" data-testid="button-manage-payment">
-            Manage Payment Method
-          </Button>
-        </CardContent>
-      </Card>
+      {settings.plan && settings.plan !== "free" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Method</CardTitle>
+            <CardDescription>Manage your payment details and billing history</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              View invoices, update payment method, or download receipts through the billing portal.
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => portalMutation.mutate()}
+              disabled={portalMutation.isPending}
+              data-testid="button-manage-payment"
+            >
+              {portalMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Open Billing Portal
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
