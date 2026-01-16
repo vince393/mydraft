@@ -111,7 +111,6 @@ export default function PublicPricingPage() {
               name="Pro"
               price={billingInterval === "annual" ? "$199" : "$24"}
               period={billingInterval === "annual" ? "year" : "month"}
-              monthlyEquivalent={billingInterval === "annual" ? "$16.58" : undefined}
               description="For professionals who need more"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -129,7 +128,6 @@ export default function PublicPricingPage() {
               name="Business"
               price={billingInterval === "annual" ? "$399" : "$49"}
               period={billingInterval === "annual" ? "year" : "month"}
-              monthlyEquivalent={billingInterval === "annual" ? "$33.25" : undefined}
               description="For teams and power users"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -178,7 +176,6 @@ function PricingCard({
   name, 
   price, 
   period = "month",
-  monthlyEquivalent,
   description, 
   features, 
   href,
@@ -188,7 +185,6 @@ function PricingCard({
   name: string;
   price: string;
   period?: string;
-  monthlyEquivalent?: string;
   description: string;
   features: { text: string; included: boolean }[];
   href: string;
@@ -216,9 +212,6 @@ function PricingCard({
             <span className="text-5xl font-semibold tracking-tight">{price}</span>
             {price !== "$0" && <span className="text-muted-foreground/60">/{period}</span>}
           </div>
-          {monthlyEquivalent && (
-            <p className="mt-2 text-sm text-muted-foreground">{monthlyEquivalent}/mo billed annually</p>
-          )}
         </div>
       </CardHeader>
       <CardContent className="pt-6">

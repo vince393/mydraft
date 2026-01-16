@@ -286,11 +286,6 @@ export default function PricingPage() {
                     <span className="text-4xl font-bold">{displayPrice}</span>
                     <span className="text-muted-foreground">/{displayPeriod}</span>
                   </div>
-                  {billingInterval === "annual" && plan.annualPrice > 0 && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      ${(plan.annualPrice / 12).toFixed(2)}/mo billed annually
-                    </p>
-                  )}
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
