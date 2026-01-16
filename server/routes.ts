@@ -8,6 +8,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { aiPreferencesSchema } from "@shared/schema";
 import { z } from "zod";
+import { registerAudioRoutes } from "./replit_integrations/audio";
 
 const assistantPermissionsUpdateSchema = z.object({
   canReadEmails: z.boolean().optional(),
@@ -199,6 +200,8 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  registerAudioRoutes(app);
 
   app.post("/api/auth/register", async (req, res) => {
     try {
