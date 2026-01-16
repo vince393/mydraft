@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, RefreshCw, Loader2, X, AlertCircle } from "lucide-react";
+import { Sparkles, RefreshCw, Loader2, AlertCircle, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +8,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Email, Draft } from "@shared/schema";
 
 interface GenerateError {
@@ -38,12 +40,17 @@ interface AIDraftDialogProps {
 export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AIDraftDialogProps) {
   const [selectedTone, setSelectedTone] = useState<ToneType>("professional");
   const [draftContent, setDraftContent] = useState("");
+  const [subject, setSubject] = useState("");
+  const [aiInstructions, setAiInstructions] = useState("");
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
   const [generateError, setGenerateError] = useState<GenerateError | null>(null);
+  const [isRefining, setIsRefining] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const { toast } = useToast();
 
   const generateMutation = useMutation({
-    mutationFn: async ({ emailId, tone }: { emailId: number; tone: string }) => {
-      const response = await apiRequest("POST", "/api/drafts/generate", { emailId, tone });
+    mutationFn: async ({ emailId, tone, instructions }: { emailId: number; tone: string; instructions?: string }) => {
+      const response = await apiRequest("POST", "/api/drafts/generate", { emailId, tone, instructions });
       if (!response.ok) {
         const errorData = await response.json();
         throw errorData;
@@ -65,6 +72,8 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
   useEffect(() => {
     if (open && email) {
       setDraftContent("");
+      setSubject(email.subject.startsWith("Re:") ? email.subject : `Re: ${email.subject}`);
+      setAiInstructions("");
       setGeneratedDraft(null);
       setGenerateError(null);
       generateMutation.mutate({ emailId: email.id, tone: selectedTone });
@@ -73,22 +82,66 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
 
   const handleRegenerate = () => {
     if (email) {
-      generateMutation.mutate({ emailId: email.id, tone: selectedTone });
+      generateMutation.mutate({ emailId: email.id, tone: selectedTone, instructions: aiInstructions || undefined });
     }
   };
 
   const handleToneChange = (tone: ToneType) => {
     setSelectedTone(tone);
     if (email) {
-      generateMutation.mutate({ emailId: email.id, tone });
+      generateMutation.mutate({ emailId: email.id, tone, instructions: aiInstructions || undefined });
     }
   };
 
-  const handleAccept = () => {
-    if (generatedDraft) {
-      const updatedDraft = { ...generatedDraft, content: draftContent };
-      onDraftAccepted(updatedDraft);
+  const handleRefine = async () => {
+    if (!aiInstructions.trim() || !draftContent.trim()) return;
+    setIsRefining(true);
+    try {
+      const response = await apiRequest("POST", "/api/ai/refine", {
+        text: draftContent,
+        instructions: aiInstructions,
+      });
+      const data = await response.json();
+      setDraftContent(data.refinedText);
+      setAiInstructions("");
+      toast({
+        title: "Draft updated",
+        description: "Your draft has been modified based on your instructions.",
+      });
+    } catch {
+      toast({
+        title: "Refinement failed",
+        description: "Could not update the draft. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!draftContent.trim() || !email) return;
+    setIsSending(true);
+    try {
+      await apiRequest("POST", "/api/emails/send", {
+        to: [email.sender],
+        subject: subject,
+        body: draftContent,
+        replyToMessageId: (email as any).nylasId || email.id,
+      });
+      toast({
+        title: "Email sent",
+        description: "Your reply has been sent successfully.",
+      });
       onOpenChange(false);
+    } catch {
+      toast({
+        title: "Failed to send",
+        description: "Could not send the email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -109,6 +162,17 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
         </DialogHeader>
 
         <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Subject</label>
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Email subject..."
+              className="bg-muted/20 border-border/30"
+              data-testid="input-subject"
+            />
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">Tone</label>
             <div className="flex flex-wrap gap-2">
@@ -199,6 +263,37 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
             </div>
           </div>
 
+          <div className="flex items-center gap-2 p-2 bg-muted/20 rounded-lg border border-border/30">
+            <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+            <Input
+              value={aiInstructions}
+              onChange={(e) => setAiInstructions(e.target.value)}
+              placeholder="Tell AI what to change (e.g., 'make it shorter', 'add a thank you')..."
+              className="flex-1 h-8 border-0 bg-transparent focus-visible:ring-0 text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleRefine();
+                }
+              }}
+              disabled={isRefining || !draftContent.trim()}
+              data-testid="input-ai-instructions"
+            />
+            <Button
+              size="sm"
+              onClick={handleRefine}
+              disabled={!aiInstructions.trim() || isRefining || !draftContent.trim()}
+              className="h-7 px-3 text-xs"
+              data-testid="button-apply-instructions"
+            >
+              {isRefining ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                "Apply"
+              )}
+            </Button>
+          </div>
+
           {email && (
             <div className="p-3 bg-muted/20 rounded-lg border border-border/30">
               <p className="text-xs text-muted-foreground mb-1">Replying to:</p>
@@ -216,13 +311,17 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
               Cancel
             </Button>
             <Button
-              onClick={handleAccept}
-              disabled={generateMutation.isPending || !draftContent.trim()}
+              onClick={handleSend}
+              disabled={generateMutation.isPending || !draftContent.trim() || isSending}
               className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0"
-              data-testid="button-use-draft"
+              data-testid="button-send-draft"
             >
-              <Sparkles className="w-4 h-4" />
-              Use This Draft
+              {isSending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Send
             </Button>
           </div>
         </div>
