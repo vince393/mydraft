@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, RefreshCw, Loader2, AlertCircle, Send } from "lucide-react";
+import { Sparkles, RefreshCw, Loader2, AlertCircle, Send, Wand2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -94,7 +94,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
   };
 
   const handleRefine = async () => {
-    if (!aiInstructions.trim() || !draftContent.trim()) return;
+    if (!aiInstructions.trim() || !draftContent || !draftContent.trim()) return;
     setIsRefining(true);
     try {
       const response = await apiRequest("POST", "/api/ai/refine", {
@@ -126,7 +126,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
   };
 
   const handleSend = async () => {
-    if (!draftContent.trim() || !email) return;
+    if (!draftContent || !draftContent.trim() || !email) return;
     setIsSending(true);
     try {
       await apiRequest("POST", "/api/emails/send", {
@@ -155,65 +155,50 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
     onOpenChange(false);
   };
 
+  const hasDraftContent = draftContent && draftContent.trim();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-card border-border">
-        <div className="px-6 py-4 border-b border-border">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Sparkles className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <span className="text-base font-medium">AI Draft</span>
-                <p className="text-xs font-normal text-muted-foreground mt-0.5">Generate and refine your reply</p>
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-        </div>
+      <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-5 py-4 border-b border-border/50 flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2.5 text-base font-medium">
+            <Sparkles className="w-4 h-4 text-primary" />
+            AI Draft
+          </DialogTitle>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          {email && (
-            <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-sm font-medium text-primary">
-                  {email.sender.split('@')[0].charAt(0).toUpperCase()}
-                </span>
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-5 py-4 space-y-4">
+            {email && (
+              <div className="text-sm">
+                <span className="text-muted-foreground">To: </span>
+                <span className="font-medium">{email.sender}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">Replying to</p>
-                <p className="text-sm font-medium truncate">{email.sender}</p>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">{email.subject}</p>
-              </div>
+            )}
+
+            <div>
+              <Input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Subject"
+                className="h-9 text-sm"
+                data-testid="input-subject"
+              />
             </div>
-          )}
 
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Subject</label>
-            <Input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Email subject..."
-              className="bg-background border-border focus:border-primary/50"
-              data-testid="input-subject"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Tone</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {TONE_OPTIONS.map((tone) => (
                 <button
                   key={tone.value}
                   onClick={() => handleToneChange(tone.value)}
                   disabled={generateMutation.isPending}
                   className={`
-                    px-3 py-1.5 rounded-md text-sm transition-all duration-150 border
+                    px-2.5 py-1 rounded text-xs font-medium transition-colors
                     ${selectedTone === tone.value
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted/30 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:text-foreground"
                     }
-                    disabled:opacity-50 disabled:cursor-not-allowed
+                    disabled:opacity-50
                   `}
                   data-testid={`tone-${tone.value}`}
                 >
@@ -221,123 +206,92 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
                 </button>
               ))}
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">Your Reply</label>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleRegenerate}
-                disabled={generateMutation.isPending || !email}
-                className="h-7 gap-1.5 text-xs text-muted-foreground"
-                data-testid="button-regenerate"
-              >
-                {generateMutation.isPending ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-3 h-3" />
-                )}
-                Regenerate
-              </Button>
-            </div>
-            
-            <div className="min-h-[180px] relative">
+            <div className="relative">
               {generateMutation.isPending ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-muted/20 rounded-lg border border-border">
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">Generating reply...</span>
+                <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-md border border-border/50">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Generating...</span>
                   </div>
                 </div>
               ) : generateError ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-destructive/5 rounded-lg border border-destructive/30">
-                  <div className="flex flex-col items-center gap-3 p-6 text-center max-w-md">
-                    <AlertCircle className="w-6 h-6 text-destructive" />
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{generateError.error}</p>
-                      {generateError.reason && (
-                        <p className="text-xs text-muted-foreground">{generateError.reason}</p>
-                      )}
-                    </div>
-                    {generateError.canRetry && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleRegenerate}
-                        className="gap-2"
-                        data-testid="button-retry-generate"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                        Try Again
-                      </Button>
-                    )}
-                  </div>
+                <div className="h-[200px] flex flex-col items-center justify-center bg-muted/30 rounded-md border border-destructive/30 gap-3">
+                  <AlertCircle className="w-5 h-5 text-destructive" />
+                  <p className="text-sm text-center max-w-[280px]">{generateError.error}</p>
+                  {generateError.canRetry && (
+                    <Button size="sm" variant="outline" onClick={handleRegenerate} className="gap-1.5">
+                      <RefreshCw className="w-3 h-3" />
+                      Retry
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Textarea
                   value={draftContent}
                   onChange={(e) => setDraftContent(e.target.value)}
-                  className="h-full min-h-[180px] resize-none bg-background border-border rounded-lg focus:border-primary/50"
-                  placeholder="Your AI-generated reply will appear here..."
+                  className="min-h-[200px] resize-none text-sm"
+                  placeholder="Your reply will appear here..."
                   data-testid="textarea-ai-draft"
                 />
               )}
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 p-2.5 bg-primary/5 rounded-lg border border-primary/20">
-            <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
-            <Input
-              value={aiInstructions}
-              onChange={(e) => setAiInstructions(e.target.value)}
-              placeholder="Tell AI what to change..."
-              className="flex-1 h-8 border-0 bg-transparent focus-visible:ring-0 text-sm"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleRefine();
-                }
-              }}
-              disabled={isRefining || !draftContent.trim()}
-              data-testid="input-ai-instructions"
-            />
-            <Button
-              size="sm"
-              onClick={handleRefine}
-              disabled={!aiInstructions.trim() || isRefining || !draftContent.trim()}
-              className="h-7 px-3"
-              data-testid="button-apply-instructions"
-            >
-              {isRefining ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                "Apply"
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md border border-border/50">
+                <Wand2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <input
+                  type="text"
+                  value={aiInstructions}
+                  onChange={(e) => setAiInstructions(e.target.value)}
+                  placeholder="Make it shorter, add greeting..."
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleRefine();
+                    }
+                  }}
+                  disabled={isRefining || !hasDraftContent}
+                  data-testid="input-ai-instructions"
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleRefine}
+                  disabled={!aiInstructions.trim() || isRefining || !hasDraftContent}
+                  className="h-6 px-2 text-xs"
+                  data-testid="button-apply-instructions"
+                >
+                  {isRefining ? <Loader2 className="w-3 h-3 animate-spin" /> : "Apply"}
+                </Button>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleRegenerate}
+                disabled={generateMutation.isPending || !email}
+                className="h-9 px-2"
+                data-testid="button-regenerate"
+              >
+                <RefreshCw className={`w-4 h-4 ${generateMutation.isPending ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-muted/10 border-t border-border">
-          <Button
-            variant="ghost"
-            onClick={handleClose}
-            data-testid="button-cancel-draft"
-          >
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-border/50 bg-muted/20 flex-shrink-0">
+          <Button variant="ghost" size="sm" onClick={handleClose} data-testid="button-cancel-draft">
             Cancel
           </Button>
           <Button
+            size="sm"
             onClick={handleSend}
-            disabled={generateMutation.isPending || !draftContent.trim() || isSending}
-            className="gap-2"
+            disabled={generateMutation.isPending || !hasDraftContent || isSending}
+            className="gap-1.5"
             data-testid="button-send-draft"
           >
-            {isSending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
+            {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             Send
           </Button>
         </div>
