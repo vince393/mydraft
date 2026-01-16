@@ -602,20 +602,22 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </Button>
           </div>
         )}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-900/40 backdrop-blur-sm rounded-md border border-blue-800/30">
-          <Clock className="w-3.5 h-3.5 text-blue-400/80" />
-          <span className="text-sm text-blue-100/80">
-            {isLoadingTime ? (
-              "Calculating..."
-            ) : responseTime?.message ? (
-              responseTime.message
-            ) : responseTime?.estimatedMinutes ? (
-              `Est. response time: ${responseTime.estimatedMinutes} min`
-            ) : (
-              "Est. response time: --"
-            )}
-          </span>
-        </div>
+        {activeFolder.toLowerCase() !== "sent" && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-900/40 backdrop-blur-sm rounded-md border border-blue-800/30">
+            <Clock className="w-3.5 h-3.5 text-blue-400/80" />
+            <span className="text-sm text-blue-100/80">
+              {isLoadingTime ? (
+                "Calculating..."
+              ) : responseTime?.message ? (
+                responseTime.message
+              ) : responseTime?.estimatedMinutes ? (
+                `Est. response time: ${responseTime.estimatedMinutes} min`
+              ) : (
+                "Est. response time: --"
+              )}
+            </span>
+          </div>
+        )}
       </div>
       <div 
         ref={scrollContainerRef}
