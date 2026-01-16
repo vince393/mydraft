@@ -309,7 +309,7 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
         } : undefined,
       });
       const data = await response.json();
-      setDraftContent(data.refinedText);
+      setDraftContent(data.refined || data.refinedText);
       setRefineInput("");
       toast({
         title: "Draft refined",

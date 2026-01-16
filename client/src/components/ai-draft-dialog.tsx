@@ -108,7 +108,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
         } : undefined,
       });
       const data = await response.json();
-      setDraftContent(data.refinedText);
+      setDraftContent(data.refined || data.refinedText);
       setAiInstructions("");
       toast({
         title: "Draft updated",
