@@ -4104,9 +4104,14 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   // Create checkout session for subscription
   app.post("/api/stripe/checkout", requireAuth, async (req, res) => {
     try {
-      const { priceId } = req.body;
-      if (!priceId) {
-        return res.status(400).json({ error: "Price ID is required" });
+      const { plan, interval } = req.body;
+      
+      if (!plan || !["pro", "business"].includes(plan)) {
+        return res.status(400).json({ error: "Valid plan (pro or business) is required" });
+      }
+      
+      if (!interval || !["annual", "monthly"].includes(interval)) {
+        return res.status(400).json({ error: "Valid interval (annual or monthly) is required" });
       }
       
       const user = await storage.getUser(req.session.userId!);
@@ -4116,6 +4121,22 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
+      
+      // Define pricing
+      const pricing: Record<string, Record<string, number>> = {
+        pro: {
+          monthly: 2400,  // $24.00 in cents
+          annual: 19900,  // $199.00 in cents
+        },
+        business: {
+          monthly: 4900,  // $49.00 in cents
+          annual: 39900,  // $399.00 in cents
+        },
+      };
+      
+      const amount = pricing[plan][interval];
+      const recurringInterval = interval === "annual" ? "year" : "month";
+      const productName = plan === "pro" ? "MailFlow Pro" : "MailFlow Business";
       
       // Create or get customer
       let customerId = user.stripeCustomerId;
@@ -4128,19 +4149,49 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         customerId = customer.id;
       }
       
+      // Find or create the product
+      let product;
+      const existingProducts = await stripe.products.list({ limit: 100 });
+      product = existingProducts.data.find(p => p.name === productName && p.active);
+      
+      if (!product) {
+        product = await stripe.products.create({
+          name: productName,
+          metadata: { plan: plan === "business" ? "premium" : plan },
+        });
+      }
+      
+      // Find or create the price for this interval
+      const existingPrices = await stripe.prices.list({ product: product.id, limit: 100 });
+      let price = existingPrices.data.find(p => 
+        p.active && 
+        p.unit_amount === amount && 
+        p.recurring?.interval === recurringInterval
+      );
+      
+      if (!price) {
+        price = await stripe.prices.create({
+          product: product.id,
+          unit_amount: amount,
+          currency: 'usd',
+          recurring: { interval: recurringInterval },
+          metadata: { plan: plan === "business" ? "premium" : plan },
+        });
+      }
+      
       // Create checkout session with 14-day free trial
       const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
-        line_items: [{ price: priceId, quantity: 1 }],
+        line_items: [{ price: price.id, quantity: 1 }],
         mode: 'subscription',
         subscription_data: {
           trial_period_days: 14,
         },
         success_url: `${baseUrl}/pricing?success=true`,
         cancel_url: `${baseUrl}/pricing?canceled=true`,
-        metadata: { userId: user.id },
+        metadata: { userId: user.id, plan: plan === "business" ? "premium" : plan },
       });
       
       res.json({ url: session.url });

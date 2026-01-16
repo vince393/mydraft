@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, Loader2, Star, ExternalLink } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface AIPreferences {
   emailVolume?: string;
@@ -20,21 +20,6 @@ interface UserData {
     plan?: string;
     stripeCustomerId?: string;
   } | null;
-}
-
-interface StripePrice {
-  id: string;
-  unit_amount: number;
-  currency: string;
-  recurring: { interval: string } | null;
-}
-
-interface StripeProduct {
-  id: string;
-  name: string;
-  description: string;
-  metadata: { plan?: string };
-  prices: StripePrice[];
 }
 
 function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): string {
@@ -54,8 +39,8 @@ const basePlans = [
   {
     id: "free",
     name: "Free",
-    price: "$0",
-    period: "forever",
+    monthlyPrice: 0,
+    annualPrice: 0,
     description: "Perfect for trying out MailFlow",
     features: [
       "Connect 1 email account",
@@ -66,8 +51,9 @@ const basePlans = [
   {
     id: "pro",
     name: "Pro",
-    price: "$24",
-    period: "month",
+    monthlyPrice: 24,
+    annualPrice: 199,
+    annualSavings: 89, // $24 * 12 = $288 - $199 = $89
     description: "For professionals who need more",
     stripeName: "MailFlow Pro",
     features: [
@@ -82,8 +68,9 @@ const basePlans = [
   {
     id: "business",
     name: "Business",
-    price: "$49",
-    period: "month",
+    monthlyPrice: 49,
+    annualPrice: 399,
+    annualSavings: 189, // $49 * 12 = $588 - $399 = $189
     description: "For teams and power users",
     stripeName: "MailFlow Business",
     features: [
@@ -101,6 +88,7 @@ const basePlans = [
 export default function PricingPage() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const [billingInterval, setBillingInterval] = useState<"annual" | "monthly">("annual");
 
   const { data: userData } = useQuery<UserData>({
     queryKey: ["/api/auth/me"],
@@ -139,11 +127,6 @@ export default function PricingPage() {
     }
   }, [userData, setLocation]);
 
-  // Fetch Stripe products
-  const { data: stripeData } = useQuery<{ products: StripeProduct[] }>({
-    queryKey: ["/api/stripe/products"],
-  });
-
   const recommendedPlan = getRecommendedPlan(userData?.user?.aiPreferences);
   const currentPlan = userData?.user?.plan || "free";
 
@@ -168,8 +151,8 @@ export default function PricingPage() {
 
   // Stripe checkout for paid plans
   const checkoutMutation = useMutation({
-    mutationFn: async (priceId: string) => {
-      const response = await apiRequest("POST", "/api/stripe/checkout", { priceId });
+    mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
+      const response = await apiRequest("POST", "/api/stripe/checkout", { plan, interval });
       return response.json();
     },
     onSuccess: (data: { url: string }) => {
@@ -206,25 +189,14 @@ export default function PricingPage() {
     },
   });
 
-  const handlePlanSelect = (planId: string, stripeName?: string) => {
+  const handlePlanSelect = (planId: string) => {
     if (planId === "free") {
       selectFreePlanMutation.mutate();
       return;
     }
 
-    // Find the Stripe product and price for this plan
-    const product = stripeData?.products?.find(p => p.name === stripeName);
-    const price = product?.prices?.[0];
-
-    if (price) {
-      checkoutMutation.mutate(price.id);
-    } else {
-      toast({
-        title: "Product not available",
-        description: "This plan is not yet configured. Please try again later.",
-        variant: "destructive",
-      });
-    }
+    // For paid plans, use the plan name and billing interval
+    checkoutMutation.mutate({ plan: planId, interval: billingInterval });
   };
 
   const isLoading = selectFreePlanMutation.isPending || checkoutMutation.isPending || portalMutation.isPending;
@@ -232,7 +204,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-3xl font-semibold mb-3">Choose your plan</h1>
           <p className="text-muted-foreground">
             {currentPlan !== "free" 
@@ -242,11 +214,44 @@ export default function PricingPage() {
           </p>
         </div>
 
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex items-center bg-muted rounded-lg p-1" data-testid="billing-toggle">
+            <Button
+              variant={billingInterval === "annual" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setBillingInterval("annual")}
+              data-testid="button-billing-annual"
+            >
+              Annual
+              <Badge variant="secondary" className="ml-2 text-xs" data-testid="badge-annual-savings">Save up to $189</Badge>
+            </Button>
+            <Button
+              variant={billingInterval === "monthly" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setBillingInterval("monthly")}
+              data-testid="button-billing-monthly"
+            >
+              Monthly
+            </Button>
+          </div>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-6">
           {basePlans.map((plan) => {
             const isRecommended = plan.id === recommendedPlan;
             const isCurrentPlan = plan.id === currentPlan || (plan.id === "business" && currentPlan === "premium");
-            const stripePlan = plan.id === "business" ? "premium" : plan.id;
+            
+            const displayPrice = plan.id === "free" 
+              ? "$0" 
+              : billingInterval === "annual" 
+                ? `$${plan.annualPrice}` 
+                : `$${plan.monthlyPrice}`;
+            
+            const displayPeriod = plan.id === "free" 
+              ? "forever" 
+              : billingInterval === "annual" 
+                ? "year" 
+                : "month";
             
             return (
               <Card 
@@ -273,9 +278,14 @@ export default function PricingPage() {
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="mt-4">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">/{plan.period}</span>
+                    <span className="text-4xl font-bold">{displayPrice}</span>
+                    <span className="text-muted-foreground">/{displayPeriod}</span>
                   </div>
+                  {billingInterval === "annual" && plan.annualSavings && (
+                    <Badge variant="outline" className="mt-2 text-green-600 border-green-600" data-testid={`badge-savings-${plan.id}`}>
+                      Save ${plan.annualSavings}/year
+                    </Badge>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
@@ -313,7 +323,7 @@ export default function PricingPage() {
                     <Button
                       className="w-full"
                       variant={isRecommended ? "default" : "outline"}
-                      onClick={() => handlePlanSelect(plan.id, plan.stripeName)}
+                      onClick={() => handlePlanSelect(plan.id)}
                       disabled={isLoading}
                       data-testid={`button-select-plan-${plan.id}`}
                     >

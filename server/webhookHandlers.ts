@@ -67,12 +67,14 @@ export class WebhookHandlers {
           } else if (planFromMetadata === 'premium' || planFromMetadata === 'business') {
             plan = 'premium';
           } else {
-            // Determine by price amount
+            // Determine by price amount (handles both monthly and annual)
+            // Pro: $24/mo (2400) or $199/yr (19900)
+            // Business: $49/mo (4900) or $399/yr (39900)
             const amount = price.unit_amount || 0;
-            if (amount >= 4900) {
-              plan = 'premium';
-            } else if (amount >= 2400) {
-              plan = 'pro';
+            if (amount >= 39900 || (amount >= 4900 && amount < 19900)) {
+              plan = 'premium'; // Business: $49/mo or $399/yr
+            } else if (amount >= 19900 || amount >= 2400) {
+              plan = 'pro'; // Pro: $24/mo or $199/yr
             }
           }
         }
