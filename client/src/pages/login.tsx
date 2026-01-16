@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Mail, Loader2, Eye, EyeOff } from "lucide-react";
+import { Mail, Loader2, Eye, EyeOff, ArrowRight, LogOut } from "lucide-react";
+
+interface AuthResponse {
+  user: { id: string; email: string; plan?: string } | null;
+}
 
 export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
@@ -19,6 +23,27 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{email?: string; password?: string; confirmPassword?: string}>({});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const { data: authData } = useQuery<AuthResponse>({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+  });
+
+  const isLoggedIn = !!authData?.user;
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/logout");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully.",
+      });
+    },
+  });
 
   const loginMutation = useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
@@ -109,6 +134,52 @@ export default function LoginPage() {
   };
 
   const isPending = loginMutation.isPending || registerMutation.isPending;
+
+  // Show a different view if user is already logged in
+  if (isLoggedIn) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+              <Mail className="w-6 h-6 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Welcome back!</CardTitle>
+            <CardDescription>
+              You're signed in as {authData?.user?.email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Link href="/inbox">
+              <Button className="w-full gap-2" data-testid="button-go-to-inbox">
+                Go to Inbox
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              data-testid="button-sign-out"
+            >
+              {logoutMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <LogOut className="w-4 h-4" />
+              )}
+              Sign out to use a different account
+            </Button>
+            <div className="text-center pt-2">
+              <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Back to home
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">

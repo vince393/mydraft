@@ -161,7 +161,7 @@ function AppRoutes() {
   return (
     <Switch>
       <Route path="/login">
-        <PublicRoute>
+        <PublicRoute redirectIfAuthenticated={false}>
           <LoginPage />
         </PublicRoute>
       </Route>
@@ -213,7 +213,7 @@ function AppRoutes() {
         </ProtectedRoute>
       </Route>
       <Route path="/">
-        <PublicRoute redirectIfAuthenticated={true}>
+        <PublicRoute redirectIfAuthenticated={false}>
           <LandingPage />
         </PublicRoute>
       </Route>
