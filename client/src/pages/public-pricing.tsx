@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { MarketingNav } from "@/components/marketing-nav";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -18,6 +19,8 @@ interface AuthResponse {
 }
 
 export default function PublicPricingPage() {
+  const [billingInterval, setBillingInterval] = useState<"annual" | "monthly">("annual");
+  
   const { data: authData } = useQuery<AuthResponse>({
     queryKey: ["/api/auth/me"],
     retry: false,
@@ -60,10 +63,33 @@ export default function PublicPricingPage() {
 
       <section className="pb-24 px-6">
         <div className="max-w-5xl mx-auto">
+          <div className="flex justify-center mb-10">
+            <div className="inline-flex items-center bg-white/[0.04] rounded-lg p-1 border border-white/[0.08]" data-testid="billing-toggle">
+              <Button
+                variant={billingInterval === "annual" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setBillingInterval("annual")}
+                data-testid="button-billing-annual"
+              >
+                Annual
+                <Badge variant="secondary" className="ml-2 text-xs" data-testid="badge-annual-savings">Save up to $189</Badge>
+              </Button>
+              <Button
+                variant={billingInterval === "monthly" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setBillingInterval("monthly")}
+                data-testid="button-billing-monthly"
+              >
+                Monthly
+              </Button>
+            </div>
+          </div>
+          
           <div className="grid md:grid-cols-3 gap-6 mb-20">
             <PricingCard
               name="Free"
               price="$0"
+              period="forever"
               description="Perfect for trying out MailFlow"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -78,7 +104,9 @@ export default function PublicPricingPage() {
             />
             <PricingCard
               name="Pro"
-              price="$24"
+              price={billingInterval === "annual" ? "$199" : "$24"}
+              period={billingInterval === "annual" ? "year" : "month"}
+              savings={billingInterval === "annual" ? 89 : undefined}
               description="For professionals who need more"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -94,7 +122,9 @@ export default function PublicPricingPage() {
             />
             <PricingCard
               name="Business"
-              price="$49"
+              price={billingInterval === "annual" ? "$399" : "$49"}
+              period={billingInterval === "annual" ? "year" : "month"}
+              savings={billingInterval === "annual" ? 189 : undefined}
               description="For teams and power users"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -142,6 +172,8 @@ export default function PublicPricingPage() {
 function PricingCard({ 
   name, 
   price, 
+  period = "month",
+  savings,
   description, 
   features, 
   href,
@@ -150,6 +182,8 @@ function PricingCard({
 }: { 
   name: string;
   price: string;
+  period?: string;
+  savings?: number;
   description: string;
   features: { text: string; included: boolean }[];
   href: string;
@@ -175,8 +209,13 @@ function PricingCard({
           <p className="text-sm text-muted-foreground/70 mb-5">{description}</p>
           <div className="flex items-baseline justify-center gap-1">
             <span className="text-5xl font-semibold tracking-tight">{price}</span>
-            {price !== "$0" && <span className="text-muted-foreground/60">/mo</span>}
+            {price !== "$0" && <span className="text-muted-foreground/60">/{period}</span>}
           </div>
+          {savings && (
+            <Badge variant="outline" className="mt-3 text-green-500 border-green-500/50" data-testid={`badge-savings-${name.toLowerCase()}`}>
+              Save ${savings}/year
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent className="pt-6">
