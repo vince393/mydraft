@@ -5,6 +5,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
 import { AIDraftDialog } from "@/components/ai-draft-dialog";
+import { DraftsList } from "@/components/drafts-list";
 import { MultiEmailResponseModal } from "@/components/multi-email-response-modal";
 import { ComposeDialog } from "@/components/compose-dialog";
 import { UpgradeModal } from "@/components/upgrade-modal";
@@ -408,27 +409,31 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     <div className="email-layout">
       {/* Email List Panel - hidden on mobile when viewing detail */}
       <div className={`email-list-panel overflow-x-hidden ${screen.isMobile && showMobileDetail ? 'hidden' : ''}`}>
-        <EmailList
-          emails={emails}
-          selectedEmailId={selectedEmail?.id ?? null}
-          onSelectEmail={handleSelectEmail}
-          onAiReply={handleAiReply}
-          onAiReplyMultiple={handleAiReplyMultiple}
-          onTrashEmail={handleTrashEmail}
-          onArchiveEmail={handleArchiveEmail}
-          onTrashMultipleEmails={handleTrashMultipleEmails}
-          onArchiveMultipleEmails={handleArchiveMultipleEmails}
-          onToggleStar={(emailId) => toggleStarMutation.mutate(emailId)}
-          onTrashSingleEmail={handleTrashSingleEmail}
-          onArchiveSingleEmail={handleArchiveSingleEmail}
-          onRestoreSingleEmail={handleRestoreSingleEmail}
-          isAiLoading={false}
-          isMoving={moveEmailMutation.isPending}
-          isLoading={isLoadingEmails}
-          activeFolder={activeFolder}
-          hasConnectedAccount={!!userData?.user?.connectedEmail}
-          onConnectAccount={() => setLocation("/connect-email")}
-        />
+        {activeFolder.toLowerCase() === "drafts" ? (
+          <DraftsList />
+        ) : (
+          <EmailList
+            emails={emails}
+            selectedEmailId={selectedEmail?.id ?? null}
+            onSelectEmail={handleSelectEmail}
+            onAiReply={handleAiReply}
+            onAiReplyMultiple={handleAiReplyMultiple}
+            onTrashEmail={handleTrashEmail}
+            onArchiveEmail={handleArchiveEmail}
+            onTrashMultipleEmails={handleTrashMultipleEmails}
+            onArchiveMultipleEmails={handleArchiveMultipleEmails}
+            onToggleStar={(emailId) => toggleStarMutation.mutate(emailId)}
+            onTrashSingleEmail={handleTrashSingleEmail}
+            onArchiveSingleEmail={handleArchiveSingleEmail}
+            onRestoreSingleEmail={handleRestoreSingleEmail}
+            isAiLoading={false}
+            isMoving={moveEmailMutation.isPending}
+            isLoading={isLoadingEmails}
+            activeFolder={activeFolder}
+            hasConnectedAccount={!!userData?.user?.connectedEmail}
+            onConnectAccount={() => setLocation("/connect-email")}
+          />
+        )}
       </div>
       
       {/* Email Detail Panel - full screen on mobile */}

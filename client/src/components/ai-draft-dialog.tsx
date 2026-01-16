@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, RefreshCw, Loader2, AlertCircle, Send, Wand2 } from "lucide-react";
+import { Sparkles, RefreshCw, Loader2, AlertCircle, Send, Wand2, Save } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Email, Draft } from "@shared/schema";
@@ -46,7 +46,9 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
   const [generateError, setGenerateError] = useState<GenerateError | null>(null);
   const [isRefining, setIsRefining] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const generateMutation = useMutation({
     mutationFn: async ({ emailId, tone, instructions }: { emailId: number; tone: string; instructions?: string }) => {
@@ -122,6 +124,35 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
       });
     } finally {
       setIsRefining(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!draftContent || !draftContent.trim() || !email) return;
+    setIsSaving(true);
+    try {
+      await apiRequest("POST", "/api/drafts", {
+        recipientEmail: email.sender,
+        recipientName: (email as any).senderName || email.sender.split('@')[0],
+        subject: subject,
+        content: draftContent,
+        emailId: email.id,
+        isAiGenerated: true,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+      toast({
+        title: "Draft saved",
+        description: "Your draft has been saved. You can find it in Drafts.",
+      });
+      onOpenChange(false);
+    } catch {
+      toast({
+        title: "Failed to save",
+        description: "Could not save the draft. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -284,16 +315,29 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
           <Button variant="ghost" size="sm" onClick={handleClose} data-testid="button-cancel-draft">
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSend}
-            disabled={generateMutation.isPending || !hasDraftContent || isSending}
-            className="gap-1.5"
-            data-testid="button-send-draft"
-          >
-            {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-            Send
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveDraft}
+              disabled={generateMutation.isPending || !hasDraftContent || isSaving || isSending}
+              className="gap-1.5"
+              data-testid="button-save-draft"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              Save Draft
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSend}
+              disabled={generateMutation.isPending || !hasDraftContent || isSending || isSaving}
+              className="gap-1.5"
+              data-testid="button-send-draft"
+            >
+              {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Send
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

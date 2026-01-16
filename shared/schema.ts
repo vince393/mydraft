@@ -75,7 +75,11 @@ export type InsertEmail = z.infer<typeof insertEmailSchema>;
 
 export const drafts = pgTable("drafts", {
   id: serial("id").primaryKey(),
-  emailId: integer("email_id").notNull(),
+  userId: varchar("user_id"),
+  emailId: integer("email_id"),
+  recipientEmail: text("recipient_email").notNull(),
+  recipientName: text("recipient_name"),
+  subject: text("subject").notNull(),
   content: text("content").notNull(),
   isAiGenerated: boolean("is_ai_generated").default(true).notNull(),
   status: text("status").default("draft").notNull(),

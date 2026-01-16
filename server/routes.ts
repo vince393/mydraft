@@ -2010,6 +2010,65 @@ Return only the improved text, nothing else.`;
     }
   });
 
+  app.get("/api/drafts", requireAuth, async (req, res) => {
+    try {
+      const drafts = await storage.getUserDrafts(req.session.userId!);
+      res.json(drafts);
+    } catch (error) {
+      console.error("Error fetching drafts:", error);
+      res.status(500).json({ error: "Failed to fetch drafts" });
+    }
+  });
+
+  app.post("/api/drafts", requireAuth, async (req, res) => {
+    try {
+      const { recipientEmail, recipientName, subject, content, emailId, isAiGenerated } = req.body;
+      
+      if (!recipientEmail || !subject || !content) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const draft = await storage.createDraft({
+        userId: req.session.userId!,
+        emailId: emailId || null,
+        recipientEmail,
+        recipientName: recipientName || null,
+        subject,
+        content,
+        isAiGenerated: isAiGenerated || false,
+        status: "draft",
+      });
+      
+      res.json(draft);
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      res.status(500).json({ error: "Failed to save draft" });
+    }
+  });
+
+  app.put("/api/drafts/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { subject, content } = req.body;
+      
+      const draft = await storage.getDraft(id);
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+      
+      const updated = await storage.updateDraft(id, {
+        subject: subject !== undefined ? subject : draft.subject,
+        content: content !== undefined ? content : draft.content,
+        updatedAt: new Date(),
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating draft:", error);
+      res.status(500).json({ error: "Failed to update draft" });
+    }
+  });
+
   app.delete("/api/drafts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);

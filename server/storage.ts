@@ -23,6 +23,7 @@ export interface IStorage {
   updateDraft(id: number, updates: Partial<Draft>): Promise<Draft | undefined>;
   deleteDraft(id: number): Promise<boolean>;
   getScheduledDrafts(): Promise<Draft[]>;
+  getUserDrafts(userId: string): Promise<Draft[]>;
 
   getNylasGrant(userId: string): Promise<NylasGrant | undefined>;
   getNylasGrantByEmail(email: string): Promise<NylasGrant | undefined>;
@@ -668,6 +669,12 @@ Business Development`,
         const timeB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
         return timeA - timeB;
       });
+  }
+
+  async getUserDrafts(userId: string): Promise<Draft[]> {
+    return Array.from(this.drafts.values())
+      .filter(d => d.userId === userId && d.status === "draft")
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
 
   async getNylasGrant(userId: string): Promise<NylasGrant | undefined> {
