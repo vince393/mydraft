@@ -46,7 +46,7 @@ export default function PublicPricingPage() {
         <div className="max-w-4xl mx-auto text-center relative">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
             <Sparkles className="w-3.5 h-3.5" />
-            Plans
+            Start Free Today
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.1] mb-6">
             Simple, transparent
