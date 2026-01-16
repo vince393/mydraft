@@ -39,6 +39,12 @@ import {
   XCircle,
   Sparkles,
   UserPlus,
+  Wallet,
+  PieChart,
+  BarChart3,
+  Plus,
+  Trash2,
+  TrendingDown,
 } from "lucide-react";
 
 interface OwnerStats {
@@ -103,6 +109,47 @@ interface FeatureFlag {
   plans: string[];
 }
 
+interface FinancialSummary {
+  totalExpenses: number;
+  totalRevenue: number;
+  netProfit: number;
+  expensesByCategory: Record<string, number>;
+  revenueByPlan: Record<string, number>;
+}
+
+interface Expense {
+  id: number;
+  category: string;
+  serviceName: string;
+  amount: number;
+  currency: string;
+  description: string | null;
+  billingPeriod: string | null;
+  expenseDate: string;
+  isRecurring: boolean;
+  createdAt: string;
+}
+
+interface Revenue {
+  id: number;
+  userId: string | null;
+  userEmail: string | null;
+  plan: string;
+  amount: number;
+  type: string;
+  description: string | null;
+  revenueDate: string;
+  createdAt: string;
+}
+
+const EXPENSE_CATEGORIES = [
+  { value: "replit", label: "Replit", color: "#3B82F6" },
+  { value: "nylas", label: "Nylas", color: "#8B5CF6" },
+  { value: "openai", label: "OpenAI", color: "#10B981" },
+  { value: "stripe", label: "Stripe", color: "#F59E0B" },
+  { value: "other", label: "Other", color: "#6B7280" },
+];
+
 export default function OwnerPanel() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -115,6 +162,18 @@ export default function OwnerPanel() {
   const [notificationPlan, setNotificationPlan] = useState("free");
   const [notificationTitle, setNotificationTitle] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
+  
+  // Finance state
+  const [financePeriod, setFinancePeriod] = useState("month");
+  const [showAddExpenseForm, setShowAddExpenseForm] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    category: "replit",
+    serviceName: "",
+    amount: "",
+    description: "",
+    billingPeriod: "monthly",
+    isRecurring: false,
+  });
 
   const { data: isOwnerData, isLoading: checkingOwner } = useQuery<{ isOwner: boolean }>({
     queryKey: ["/api/owner/check"],
@@ -149,6 +208,27 @@ export default function OwnerPanel() {
   const { data: featureFlags = [], isLoading: flagsLoading } = useQuery<FeatureFlag[]>({
     queryKey: ["/api/owner/feature-flags"],
     enabled: isOwnerData?.isOwner === true && activeTab === "features",
+  });
+
+  // Finance queries
+  const { data: financialSummary, isLoading: summaryLoading } = useQuery<FinancialSummary>({
+    queryKey: ["/api/owner/finances/summary", financePeriod],
+    queryFn: async () => {
+      const res = await fetch(`/api/owner/finances/summary?period=${financePeriod}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch financial summary");
+      return res.json();
+    },
+    enabled: isOwnerData?.isOwner === true && activeTab === "finances",
+  });
+
+  const { data: expensesList = [], isLoading: expensesLoading } = useQuery<Expense[]>({
+    queryKey: ["/api/owner/finances/expenses"],
+    enabled: isOwnerData?.isOwner === true && activeTab === "finances",
+  });
+
+  const { data: revenueList = [], isLoading: revenueLoading } = useQuery<Revenue[]>({
+    queryKey: ["/api/owner/finances/revenue"],
+    enabled: isOwnerData?.isOwner === true && activeTab === "finances",
   });
 
   const updateFeedbackMutation = useMutation({
@@ -222,6 +302,54 @@ export default function OwnerPanel() {
       toast({ title: "Failed to update feature flag", variant: "destructive" });
     },
   });
+
+  const createExpenseMutation = useMutation({
+    mutationFn: async (expense: typeof newExpense) => {
+      return apiRequest("POST", "/api/owner/finances/expenses", {
+        ...expense,
+        amount: parseFloat(expense.amount),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/finances/expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/finances/summary"] });
+      toast({ title: "Expense added successfully" });
+      setShowAddExpenseForm(false);
+      setNewExpense({
+        category: "replit",
+        serviceName: "",
+        amount: "",
+        description: "",
+        billingPeriod: "monthly",
+        isRecurring: false,
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to add expense", variant: "destructive" });
+    },
+  });
+
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/owner/finances/expenses/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/finances/expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/finances/summary"] });
+      toast({ title: "Expense deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete expense", variant: "destructive" });
+    },
+  });
+
+  // Format currency helper
+  const formatCurrency = (cents: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(cents / 100);
+  };
 
   if (checkingOwner) {
     return (
@@ -366,6 +494,10 @@ export default function OwnerPanel() {
             <TabsTrigger value="activity" data-testid="tab-activity">
               <Activity className="w-4 h-4 mr-2" />
               Activity
+            </TabsTrigger>
+            <TabsTrigger value="finances" data-testid="tab-finances">
+              <Wallet className="w-4 h-4 mr-2" />
+              Finances
             </TabsTrigger>
           </TabsList>
 
@@ -953,6 +1085,420 @@ export default function OwnerPanel() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="finances">
+            <div className="space-y-6">
+              {/* Period Selector */}
+              <div className="flex items-center gap-4">
+                <Select value={financePeriod} onValueChange={setFinancePeriod}>
+                  <SelectTrigger className="w-[180px]" data-testid="select-finance-period">
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Today</SelectItem>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                    <SelectItem value="year">This Year</SelectItem>
+                    <SelectItem value="all">All Time</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Financial Summary Cards */}
+              {summaryLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                      <TrendingUp className="w-4 h-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">
+                        {formatCurrency(financialSummary?.totalRevenue || 0)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {financePeriod === "day" ? "Today" : 
+                         financePeriod === "week" ? "This week" :
+                         financePeriod === "month" ? "This month" :
+                         financePeriod === "year" ? "This year" : "All time"}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+                      <TrendingDown className="w-4 h-4 text-red-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-red-600">
+                        {formatCurrency(financialSummary?.totalExpenses || 0)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Across all services
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+                      <DollarSign className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className={`text-2xl font-bold ${(financialSummary?.netProfit || 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {formatCurrency(financialSummary?.netProfit || 0)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Revenue - Expenses
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Expense Breakdown by Category */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <PieChart className="w-5 h-5" />
+                      Expenses by Service
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!financialSummary?.expensesByCategory || Object.keys(financialSummary.expensesByCategory).length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Wallet className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No expenses recorded yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {EXPENSE_CATEGORIES.map((cat) => {
+                          const amount = financialSummary?.expensesByCategory[cat.value] || 0;
+                          const total = financialSummary?.totalExpenses || 1;
+                          const percentage = total > 0 ? (amount / total) * 100 : 0;
+                          return (
+                            <div key={cat.value} className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                                  {cat.label}
+                                </span>
+                                <span className="font-medium">{formatCurrency(amount)}</span>
+                              </div>
+                              <div className="w-full bg-muted rounded-full h-2">
+                                <div
+                                  className="h-2 rounded-full transition-all"
+                                  style={{ width: `${percentage}%`, backgroundColor: cat.color }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5" />
+                      Revenue by Plan
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!financialSummary?.revenueByPlan || Object.keys(financialSummary.revenueByPlan).length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No revenue recorded yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {[
+                          { value: "pro", label: "Pro ($24/mo)", color: "#8B5CF6" },
+                          { value: "premium", label: "Business ($49/mo)", color: "#F59E0B" },
+                          { value: "free", label: "Free", color: "#6B7280" },
+                        ].map((plan) => {
+                          const amount = financialSummary?.revenueByPlan[plan.value] || 0;
+                          const total = financialSummary?.totalRevenue || 1;
+                          const percentage = total > 0 ? (amount / total) * 100 : 0;
+                          return (
+                            <div key={plan.value} className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: plan.color }} />
+                                  {plan.label}
+                                </span>
+                                <span className="font-medium">{formatCurrency(amount)}</span>
+                              </div>
+                              <div className="w-full bg-muted rounded-full h-2">
+                                <div
+                                  className="h-2 rounded-full transition-all"
+                                  style={{ width: `${percentage}%`, backgroundColor: plan.color }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Add Expense Form */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Service Expenses</CardTitle>
+                      <CardDescription>Track costs for Replit, Nylas, OpenAI, Stripe, and other services</CardDescription>
+                    </div>
+                    <Button
+                      onClick={() => setShowAddExpenseForm(!showAddExpenseForm)}
+                      data-testid="button-add-expense"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Expense
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {showAddExpenseForm && (
+                    <div className="mb-6 p-4 border rounded-lg bg-muted/50 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Service Category</label>
+                          <Select
+                            value={newExpense.category}
+                            onValueChange={(value) => setNewExpense({ ...newExpense, category: value })}
+                          >
+                            <SelectTrigger data-testid="select-expense-category">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {EXPENSE_CATEGORIES.map((cat) => (
+                                <SelectItem key={cat.value} value={cat.value}>
+                                  {cat.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Service Name</label>
+                          <Input
+                            placeholder="e.g., Replit Core, OpenAI API"
+                            value={newExpense.serviceName}
+                            onChange={(e) => setNewExpense({ ...newExpense, serviceName: e.target.value })}
+                            data-testid="input-expense-service"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Amount ($)</label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={newExpense.amount}
+                            onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                            data-testid="input-expense-amount"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Billing Period</label>
+                          <Select
+                            value={newExpense.billingPeriod}
+                            onValueChange={(value) => setNewExpense({ ...newExpense, billingPeriod: value })}
+                          >
+                            <SelectTrigger data-testid="select-expense-billing">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="yearly">Yearly</SelectItem>
+                              <SelectItem value="per-usage">Per Usage</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Description (optional)</label>
+                        <Textarea
+                          placeholder="Additional details about this expense..."
+                          value={newExpense.description}
+                          onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+                          data-testid="input-expense-description"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={newExpense.isRecurring}
+                          onCheckedChange={(checked) => setNewExpense({ ...newExpense, isRecurring: checked })}
+                          data-testid="toggle-expense-recurring"
+                        />
+                        <label className="text-sm">Recurring expense</label>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => createExpenseMutation.mutate(newExpense)}
+                          disabled={!newExpense.serviceName || !newExpense.amount || createExpenseMutation.isPending}
+                          data-testid="button-save-expense"
+                        >
+                          {createExpenseMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Save Expense
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowAddExpenseForm(false)}
+                          data-testid="button-cancel-expense"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {expensesLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : expensesList.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Wallet className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No expenses recorded yet</p>
+                      <p className="text-sm mt-2">Click "Add Expense" to track your service costs</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[400px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Service</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Billing</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead className="w-[50px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {expensesList.map((expense) => {
+                            const categoryInfo = EXPENSE_CATEGORIES.find(c => c.value === expense.category);
+                            return (
+                              <TableRow key={expense.id} data-testid={`row-expense-${expense.id}`}>
+                                <TableCell className="font-medium">{expense.serviceName}</TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className="flex items-center gap-1 w-fit"
+                                  >
+                                    <div
+                                      className="w-2 h-2 rounded-full"
+                                      style={{ backgroundColor: categoryInfo?.color }}
+                                    />
+                                    {categoryInfo?.label || expense.category}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-medium text-red-600">
+                                  {formatCurrency(expense.amount)}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {expense.billingPeriod || "-"}
+                                  {expense.isRecurring && (
+                                    <Badge variant="secondary" className="ml-2 text-xs">Recurring</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {format(new Date(expense.expenseDate), "MMM d, yyyy")}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => deleteExpenseMutation.mutate(expense.id)}
+                                    disabled={deleteExpenseMutation.isPending}
+                                    data-testid={`button-delete-expense-${expense.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Revenue List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue History</CardTitle>
+                  <CardDescription>Subscription payments and income</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {revenueLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : revenueList.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No revenue recorded yet</p>
+                      <p className="text-sm mt-2">Revenue from Stripe subscriptions will appear here</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[300px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>User</TableHead>
+                            <TableHead>Plan</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {revenueList.map((rev) => (
+                            <TableRow key={rev.id} data-testid={`row-revenue-${rev.id}`}>
+                              <TableCell className="font-medium">
+                                {rev.userEmail || "Unknown"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={rev.plan === "premium" ? "default" : "secondary"}>
+                                  {rev.plan === "premium" ? "Business" : rev.plan === "pro" ? "Pro" : "Free"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-medium text-green-600">
+                                {formatCurrency(rev.amount)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground capitalize">
+                                {rev.type}
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(rev.revenueDate), "MMM d, yyyy")}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

@@ -448,3 +448,91 @@ export const insertAiUsageSchema = createInsertSchema(aiUsage).omit({
 
 export type AiUsage = typeof aiUsage.$inferSelect;
 export type InsertAiUsage = z.infer<typeof insertAiUsageSchema>;
+
+// Expense categories for tracking service costs
+export const expenseCategorySchema = z.enum([
+  "replit",
+  "nylas",
+  "openai",
+  "stripe",
+  "other"
+]);
+export type ExpenseCategory = z.infer<typeof expenseCategorySchema>;
+
+// Service expenses tracking
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  category: text("category").$type<ExpenseCategory>().notNull(),
+  serviceName: text("service_name").notNull(), // e.g., "Replit Core", "Nylas API", "OpenAI GPT-4"
+  amount: bigint("amount", { mode: "number" }).notNull(), // Amount in cents
+  currency: text("currency").default("USD").notNull(),
+  description: text("description"),
+  billingPeriod: text("billing_period"), // "monthly", "daily", "per-usage"
+  expenseDate: timestamp("expense_date").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  invoiceId: text("invoice_id"), // External invoice reference
+  isRecurring: boolean("is_recurring").default(false).notNull(),
+  metadata: jsonb("metadata").$type<{
+    usageDetails?: string;
+    invoiceUrl?: string;
+    apiCalls?: number;
+    tokensUsed?: number;
+  }>(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Expense = typeof expenses.$inferSelect;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+
+// Revenue tracking from subscriptions
+export const revenue = pgTable("revenue", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id"),
+  userEmail: text("user_email"),
+  plan: text("plan").$type<Plan>().notNull(),
+  amount: bigint("amount", { mode: "number" }).notNull(), // Amount in cents
+  currency: text("currency").default("USD").notNull(),
+  type: text("type").default("subscription").notNull(), // "subscription", "one-time", "refund"
+  stripePaymentId: text("stripe_payment_id"),
+  stripeInvoiceId: text("stripe_invoice_id"),
+  description: text("description"),
+  revenueDate: timestamp("revenue_date").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertRevenueSchema = createInsertSchema(revenue).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Revenue = typeof revenue.$inferSelect;
+export type InsertRevenue = z.infer<typeof insertRevenueSchema>;
+
+// Daily financial summary for quick dashboard
+export const dailyFinancials = pgTable("daily_financials", {
+  id: serial("id").primaryKey(),
+  date: text("date").notNull().unique(), // YYYY-MM-DD format
+  totalExpenses: bigint("total_expenses", { mode: "number" }).default(0).notNull(),
+  totalRevenue: bigint("total_revenue", { mode: "number" }).default(0).notNull(),
+  netProfit: bigint("net_profit", { mode: "number" }).default(0).notNull(),
+  expenseBreakdown: jsonb("expense_breakdown").$type<{
+    replit?: number;
+    nylas?: number;
+    openai?: number;
+    stripe?: number;
+    other?: number;
+  }>(),
+  revenueBreakdown: jsonb("revenue_breakdown").$type<{
+    free?: number;
+    pro?: number;
+    premium?: number;
+  }>(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type DailyFinancials = typeof dailyFinancials.$inferSelect;

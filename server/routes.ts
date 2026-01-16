@@ -3850,6 +3850,177 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  // ==================== FINANCIAL TRACKING ROUTES ====================
+
+  // Get financial summary for owner panel
+  app.get("/api/owner/finances/summary", requireOwner, async (req, res) => {
+    try {
+      const { period = "month" } = req.query;
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (period) {
+        case "day":
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case "week":
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case "month":
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case "year":
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        case "all":
+          startDate = new Date(2020, 0, 1);
+          break;
+        default:
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+      
+      const summary = await storage.getFinancialSummary(startDate, now);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching financial summary:", error);
+      res.status(500).json({ error: "Failed to fetch financial summary" });
+    }
+  });
+
+  // Get all expenses
+  app.get("/api/owner/finances/expenses", requireOwner, async (req, res) => {
+    try {
+      const { startDate, endDate, category } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+      const cat = category as any;
+      
+      const expensesList = await storage.getExpenses(start, end, cat);
+      res.json(expensesList);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+      res.status(500).json({ error: "Failed to fetch expenses" });
+    }
+  });
+
+  // Create expense
+  app.post("/api/owner/finances/expenses", requireOwner, async (req, res) => {
+    try {
+      const { category, serviceName, amount, description, billingPeriod, expenseDate, isRecurring, metadata } = req.body;
+      
+      if (!category || !serviceName || amount === undefined) {
+        return res.status(400).json({ error: "Category, service name, and amount are required" });
+      }
+      
+      const expense = await storage.createExpense({
+        category,
+        serviceName,
+        amount: Math.round(amount * 100), // Convert to cents
+        description,
+        billingPeriod,
+        expenseDate: expenseDate ? new Date(expenseDate) : new Date(),
+        isRecurring: isRecurring || false,
+        metadata,
+      });
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error creating expense:", error);
+      res.status(500).json({ error: "Failed to create expense" });
+    }
+  });
+
+  // Update expense
+  app.patch("/api/owner/finances/expenses/:id", requireOwner, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      if (updates.amount !== undefined) {
+        updates.amount = Math.round(updates.amount * 100);
+      }
+      
+      const expense = await storage.updateExpense(id, updates);
+      if (!expense) {
+        return res.status(404).json({ error: "Expense not found" });
+      }
+      res.json(expense);
+    } catch (error) {
+      console.error("Error updating expense:", error);
+      res.status(500).json({ error: "Failed to update expense" });
+    }
+  });
+
+  // Delete expense
+  app.delete("/api/owner/finances/expenses/:id", requireOwner, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteExpense(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      res.status(500).json({ error: "Failed to delete expense" });
+    }
+  });
+
+  // Get all revenue
+  app.get("/api/owner/finances/revenue", requireOwner, async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+      
+      const revenueList = await storage.getRevenue(start, end);
+      res.json(revenueList);
+    } catch (error) {
+      console.error("Error fetching revenue:", error);
+      res.status(500).json({ error: "Failed to fetch revenue" });
+    }
+  });
+
+  // Create revenue entry
+  app.post("/api/owner/finances/revenue", requireOwner, async (req, res) => {
+    try {
+      const { userId, userEmail, plan, amount, type, description, revenueDate } = req.body;
+      
+      if (!plan || amount === undefined) {
+        return res.status(400).json({ error: "Plan and amount are required" });
+      }
+      
+      const rev = await storage.createRevenue({
+        userId,
+        userEmail,
+        plan,
+        amount: Math.round(amount * 100), // Convert to cents
+        type: type || "subscription",
+        description,
+        revenueDate: revenueDate ? new Date(revenueDate) : new Date(),
+      });
+      
+      res.json(rev);
+    } catch (error) {
+      console.error("Error creating revenue:", error);
+      res.status(500).json({ error: "Failed to create revenue" });
+    }
+  });
+
+  // Get daily financials for charts
+  app.get("/api/owner/finances/daily", requireOwner, async (req, res) => {
+    try {
+      const { days = 30 } = req.query;
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - parseInt(days as string));
+      
+      const dailyData = await storage.getDailyFinancials(startDate, endDate);
+      res.json(dailyData);
+    } catch (error) {
+      console.error("Error fetching daily financials:", error);
+      res.status(500).json({ error: "Failed to fetch daily financials" });
+    }
+  });
+
   // ==================== STRIPE PAYMENT ROUTES ====================
   
   // Get Stripe publishable key for frontend

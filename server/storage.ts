@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, count, sql } from "drizzle-orm";
@@ -123,6 +123,17 @@ export interface IStorage {
   // AI usage tracking methods
   getAiUsageToday(userId: string): Promise<number>;
   incrementAiUsage(userId: string): Promise<void>;
+
+  // Financial tracking methods
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  getExpenses(startDate?: Date, endDate?: Date, category?: ExpenseCategory): Promise<Expense[]>;
+  updateExpense(id: number, updates: Partial<Expense>): Promise<Expense | undefined>;
+  deleteExpense(id: number): Promise<boolean>;
+  createRevenue(rev: InsertRevenue): Promise<Revenue>;
+  getRevenue(startDate?: Date, endDate?: Date): Promise<Revenue[]>;
+  getFinancialSummary(startDate: Date, endDate: Date): Promise<{ totalExpenses: number; totalRevenue: number; netProfit: number; expensesByCategory: Record<string, number>; revenueByPlan: Record<string, number> }>;
+  getDailyFinancials(startDate: Date, endDate: Date): Promise<DailyFinancials[]>;
+  updateDailyFinancials(date: string): Promise<void>;
 }
 
 const avatarColors = [
@@ -1265,6 +1276,127 @@ Business Development`,
         userId,
         usageDate: today,
         draftsGenerated: 1,
+      });
+    }
+  }
+
+  // Financial tracking methods
+  async createExpense(expense: InsertExpense): Promise<Expense> {
+    const [created] = await db.insert(expenses).values(expense).returning();
+    await this.updateDailyFinancials(expense.expenseDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]);
+    return created;
+  }
+
+  async getExpenses(startDate?: Date, endDate?: Date, category?: ExpenseCategory): Promise<Expense[]> {
+    let query = db.select().from(expenses).orderBy(desc(expenses.expenseDate));
+    
+    const conditions: any[] = [];
+    if (startDate) {
+      conditions.push(sql`${expenses.expenseDate} >= ${startDate}`);
+    }
+    if (endDate) {
+      conditions.push(sql`${expenses.expenseDate} <= ${endDate}`);
+    }
+    if (category) {
+      conditions.push(eq(expenses.category, category));
+    }
+    
+    if (conditions.length > 0) {
+      return db.select().from(expenses).where(and(...conditions)).orderBy(desc(expenses.expenseDate));
+    }
+    return query;
+  }
+
+  async updateExpense(id: number, updates: Partial<Expense>): Promise<Expense | undefined> {
+    const [updated] = await db.update(expenses).set(updates).where(eq(expenses.id, id)).returning();
+    return updated;
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    const result = await db.delete(expenses).where(eq(expenses.id, id));
+    return true;
+  }
+
+  async createRevenue(rev: InsertRevenue): Promise<Revenue> {
+    const [created] = await db.insert(revenue).values(rev).returning();
+    await this.updateDailyFinancials(rev.revenueDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]);
+    return created;
+  }
+
+  async getRevenue(startDate?: Date, endDate?: Date): Promise<Revenue[]> {
+    const conditions: any[] = [];
+    if (startDate) {
+      conditions.push(sql`${revenue.revenueDate} >= ${startDate}`);
+    }
+    if (endDate) {
+      conditions.push(sql`${revenue.revenueDate} <= ${endDate}`);
+    }
+    
+    if (conditions.length > 0) {
+      return db.select().from(revenue).where(and(...conditions)).orderBy(desc(revenue.revenueDate));
+    }
+    return db.select().from(revenue).orderBy(desc(revenue.revenueDate));
+  }
+
+  async getFinancialSummary(startDate: Date, endDate: Date): Promise<{ totalExpenses: number; totalRevenue: number; netProfit: number; expensesByCategory: Record<string, number>; revenueByPlan: Record<string, number> }> {
+    const expensesList = await this.getExpenses(startDate, endDate);
+    const revenueList = await this.getRevenue(startDate, endDate);
+    
+    const totalExpenses = expensesList.reduce((sum, e) => sum + Number(e.amount), 0);
+    const totalRevenue = revenueList.reduce((sum, r) => sum + Number(r.amount), 0);
+    const netProfit = totalRevenue - totalExpenses;
+    
+    const expensesByCategory: Record<string, number> = {};
+    for (const exp of expensesList) {
+      expensesByCategory[exp.category] = (expensesByCategory[exp.category] || 0) + Number(exp.amount);
+    }
+    
+    const revenueByPlan: Record<string, number> = {};
+    for (const rev of revenueList) {
+      revenueByPlan[rev.plan] = (revenueByPlan[rev.plan] || 0) + Number(rev.amount);
+    }
+    
+    return { totalExpenses, totalRevenue, netProfit, expensesByCategory, revenueByPlan };
+  }
+
+  async getDailyFinancials(startDate: Date, endDate: Date): Promise<DailyFinancials[]> {
+    return db.select().from(dailyFinancials)
+      .where(and(
+        sql`${dailyFinancials.date} >= ${startDate.toISOString().split('T')[0]}`,
+        sql`${dailyFinancials.date} <= ${endDate.toISOString().split('T')[0]}`
+      ))
+      .orderBy(desc(dailyFinancials.date));
+  }
+
+  async updateDailyFinancials(date: string): Promise<void> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const summary = await this.getFinancialSummary(startOfDay, endOfDay);
+    
+    const existing = await db.select().from(dailyFinancials).where(eq(dailyFinancials.date, date));
+    
+    if (existing.length > 0) {
+      await db.update(dailyFinancials)
+        .set({
+          totalExpenses: summary.totalExpenses,
+          totalRevenue: summary.totalRevenue,
+          netProfit: summary.netProfit,
+          expenseBreakdown: summary.expensesByCategory,
+          revenueBreakdown: summary.revenueByPlan,
+          updatedAt: new Date(),
+        })
+        .where(eq(dailyFinancials.date, date));
+    } else {
+      await db.insert(dailyFinancials).values({
+        date,
+        totalExpenses: summary.totalExpenses,
+        totalRevenue: summary.totalRevenue,
+        netProfit: summary.netProfit,
+        expenseBreakdown: summary.expensesByCategory,
+        revenueBreakdown: summary.revenueByPlan,
       });
     }
   }
