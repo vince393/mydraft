@@ -20,6 +20,13 @@ import ConnectEmailPage from "@/pages/connect-email";
 import SettingsPage from "@/pages/settings";
 import ProfilePage from "@/pages/profile";
 import OwnerPanel from "@/pages/owner-panel";
+import PrivacyPolicyPage from "@/pages/privacy-policy";
+import TermsOfServicePage from "@/pages/terms-of-service";
+import CookiePolicyPage from "@/pages/cookie-policy";
+import AcceptableUsePolicyPage from "@/pages/acceptable-use-policy";
+import DataProcessingAgreementPage from "@/pages/data-processing-agreement";
+import AIUsePolicyPage from "@/pages/ai-use-policy";
+import RefundPolicyPage from "@/pages/refund-policy";
 import type { Email, User } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 
@@ -176,6 +183,27 @@ function AppRoutes() {
       </Route>
       <Route path="/help">
         <HelpPage />
+      </Route>
+      <Route path="/privacy">
+        <PrivacyPolicyPage />
+      </Route>
+      <Route path="/terms">
+        <TermsOfServicePage />
+      </Route>
+      <Route path="/cookies">
+        <CookiePolicyPage />
+      </Route>
+      <Route path="/acceptable-use">
+        <AcceptableUsePolicyPage />
+      </Route>
+      <Route path="/dpa">
+        <DataProcessingAgreementPage />
+      </Route>
+      <Route path="/ai-policy">
+        <AIUsePolicyPage />
+      </Route>
+      <Route path="/refund-policy">
+        <RefundPolicyPage />
       </Route>
       <Route path="/select-plan">
         <ProtectedRoute>
