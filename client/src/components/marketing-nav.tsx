@@ -1,8 +1,9 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { Mail, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import draftLogo from "@assets/3dc453d8-506f-47f2-be78-60110ca045c3_1768604684762.png";
 
 interface AuthResponse {
   user: { id: string; plan?: string; onboardingCompleted?: boolean; emailConnected?: boolean } | null;
@@ -38,11 +39,8 @@ export function MarketingNav() {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06] bg-background/80 backdrop-blur-2xl">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-10">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
-              <Mail className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">MailFlow</span>
+          <Link href="/" className="flex items-center gap-2 group">
+            <img src={draftLogo} alt="Draft" className="h-8 w-auto" />
           </Link>
           
           <div className="hidden md:flex items-center gap-1">

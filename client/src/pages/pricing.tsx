@@ -41,7 +41,7 @@ const basePlans = [
     name: "Free",
     monthlyPrice: 0,
     annualPrice: 0,
-    description: "Perfect for trying out MailFlow",
+    description: "Perfect for trying out Draft",
     features: [
       "Connect 1 email account",
       "Basic inbox management",
@@ -55,7 +55,7 @@ const basePlans = [
     annualPrice: 199,
     annualSavings: 89, // $24 * 12 = $288 - $199 = $89
     description: "For professionals who need more",
-    stripeName: "MailFlow Pro",
+    stripeName: "Draft Pro",
     features: [
       "Connect 1 email account",
       "Unlimited AI replies",
@@ -72,7 +72,7 @@ const basePlans = [
     annualPrice: 399,
     annualSavings: 189, // $49 * 12 = $588 - $399 = $189
     description: "For teams and power users",
-    stripeName: "MailFlow Business",
+    stripeName: "Draft Business",
     features: [
       "Connect 1 email account",
       "Unlimited AI replies",

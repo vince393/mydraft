@@ -1,8 +1,12 @@
-# MailFlow - AI Email Inbox Management
+# Draft - AI Email Inbox Management
 
 ## Overview
 
-MailFlow is an AI-powered email inbox management application inspired by modern email clients like Hey.com and Superhuman. The application features a minimalist dark interface with AI-assisted reply drafting capabilities for business and service use. Users can view emails, read detailed content, and leverage AI to generate contextual reply drafts.
+Draft is an AI-powered email inbox management application inspired by modern email clients like Hey.com and Superhuman. The application features a minimalist dark interface with AI-assisted reply drafting capabilities for business and service use. Users can view emails, read detailed content, and leverage AI to generate contextual reply drafts.
+
+## Branding
+- **Business Name**: Draft
+- **Logo**: Located at `attached_assets/3dc453d8-506f-47f2-be78-60110ca045c3_1768604684762.png`
 
 ## User Preferences
 

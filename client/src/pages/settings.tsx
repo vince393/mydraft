@@ -796,7 +796,7 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Disconnect Email?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will disconnect your email account. You'll need to reconnect to access your emails through MailFlow.
+                      This will disconnect your email account. You'll need to reconnect to access your emails through Draft.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -815,7 +815,7 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                No email account connected. Connect your email to start using MailFlow.
+                No email account connected. Connect your email to start using Draft.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
@@ -956,7 +956,7 @@ function TeamTab() {
               <div className="space-y-2">
                 <Label htmlFor="inviteEmail">Invite by Email</Label>
                 <p className="text-sm text-muted-foreground">
-                  Enter the email of an existing MailFlow user to invite them to your team.
+                  Enter the email of an existing Draft user to invite them to your team.
                 </p>
               </div>
               <div className="flex gap-2">

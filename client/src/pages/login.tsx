@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Mail, Loader2, Eye, EyeOff, ArrowRight, LogOut } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, LogOut } from "lucide-react";
+import draftLogo from "@assets/3dc453d8-506f-47f2-be78-60110ca045c3_1768604684762.png";
 
 interface AuthResponse {
   user: { id: string; email: string; plan?: string } | null;
@@ -143,8 +144,8 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-              <Mail className="w-6 h-6 text-primary" />
+            <div className="mx-auto mb-4">
+              <img src={draftLogo} alt="Draft" className="h-12 w-auto mx-auto" />
             </div>
             <CardTitle className="text-2xl">Welcome back!</CardTitle>
             <CardDescription>
@@ -187,10 +188,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-            <Mail className="w-6 h-6 text-primary" />
+          <div className="mx-auto mb-4">
+            <img src={draftLogo} alt="Draft" className="h-12 w-auto mx-auto" />
           </div>
-          <CardTitle className="text-2xl">MailFlow</CardTitle>
+          <CardTitle className="text-2xl">Welcome</CardTitle>
           <CardDescription>
             {isRegister ? "Create your account to get started" : "Sign in to your account"}
           </CardDescription>

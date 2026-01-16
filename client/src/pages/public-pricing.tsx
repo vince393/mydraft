@@ -95,7 +95,7 @@ export default function PublicPricingPage() {
               name="Free"
               price="$0"
               period="forever"
-              description="Perfect for trying out MailFlow"
+              description="Perfect for trying out Draft"
               features={[
                 { text: "Connect 1 email account", included: true },
                 { text: "Basic inbox management", included: true },
@@ -378,7 +378,7 @@ function Footer() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-center">
           <p className="text-sm text-muted-foreground/50">
-            © 2024 MailFlow
+            © 2024 Draft
           </p>
         </div>
       </div>

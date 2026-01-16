@@ -102,7 +102,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                   <div className="w-3 h-3 rounded-full bg-white/10" />
                   <div className="w-3 h-3 rounded-full bg-white/10" />
                 </div>
-                <span className="text-xs text-muted-foreground/60">MailFlow</span>
+                <span className="text-xs text-muted-foreground/60">Draft</span>
                 <div className="w-16" />
               </div>
               
@@ -211,7 +211,7 @@ function DemoSection() {
             See it in action
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Experience how MailFlow transforms your email workflow
+            Experience how Draft transforms your email workflow
           </p>
         </div>
 
@@ -467,7 +467,7 @@ function BenefitsSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Why people love MailFlow
+            Why people love Draft
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Spend less time in your inbox, more time on what matters
@@ -496,7 +496,7 @@ function TestimonialsSection() {
   
   const testimonials = [
     {
-      quote: "I used to spend 3 hours on email every morning. Now it's under an hour. MailFlow's AI drafts are surprisingly good.",
+      quote: "I used to spend 3 hours on email every morning. Now it's under an hour. Draft's AI drafts are surprisingly good.",
       name: "Rachel Torres",
       role: "VP of Sales"
     },
@@ -615,7 +615,7 @@ function FAQSection() {
     },
     {
       q: "Which email providers do you support?",
-      a: "MailFlow works with Gmail, Google Workspace, Outlook, and Microsoft 365. We use secure OAuth authentication for all providers."
+      a: "Draft works with Gmail, Google Workspace, Outlook, and Microsoft 365. We use secure OAuth authentication for all providers."
     },
     {
       q: "Is there a free trial?",
@@ -626,8 +626,8 @@ function FAQSection() {
       a: "Yes, you can cancel your subscription at any time. No contracts, no cancellation fees. Your account will remain active until the end of your billing period."
     },
     {
-      q: "What makes MailFlow different from other email apps?",
-      a: "MailFlow is designed for anyone who wants to spend less time on email. Our AI understands context and tone, helping you reply faster while maintaining your voice."
+      q: "What makes Draft different from other email apps?",
+      a: "Draft is designed for anyone who wants to spend less time on email. Our AI understands context and tone, helping you reply faster while maintaining your voice."
     }
   ];
 
@@ -641,7 +641,7 @@ function FAQSection() {
             Frequently asked questions
           </h2>
           <p className="text-muted-foreground text-lg">
-            Everything you need to know about MailFlow
+            Everything you need to know about Draft
           </p>
         </div>
         <div className="space-y-3">
@@ -705,7 +705,7 @@ function Footer() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-center">
           <p className="text-sm text-muted-foreground/50">
-            © 2024 MailFlow
+            © 2024 Draft
           </p>
         </div>
       </div>

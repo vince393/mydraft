@@ -46,7 +46,7 @@ export default function ProductPage() {
             Email, reimagined with AI
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            MailFlow combines a clean, focused inbox with powerful AI features 
+            Draft combines a clean, focused inbox with powerful AI features 
             that help you communicate faster and stay organized effortlessly.
           </p>
           <Link href={getStartedHref()}>
@@ -218,7 +218,7 @@ export default function ProductPage() {
       <section className="py-20 px-6 border-t border-border/30">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-semibold mb-4">
-            Ready to try MailFlow?
+            Ready to try Draft?
           </h2>
           <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
             Start free and see how AI can transform your email workflow.
@@ -349,7 +349,7 @@ function Footer() {
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
               <Mail className="w-3 h-3 text-primary-foreground" />
             </div>
-            <span className="text-sm font-medium">MailFlow</span>
+            <span className="text-sm font-medium">Draft</span>
           </div>
           <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Home</Link>

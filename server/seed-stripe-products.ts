@@ -1,10 +1,10 @@
-// Stripe Products Seed Script for MailFlow Payment Plans
+// Stripe Products Seed Script for Draft Payment Plans
 // Run with: npx tsx server/seed-stripe-products.ts
 
 import { getUncachableStripeClient } from './stripeClient';
 
 async function seedProducts() {
-  console.log('Creating Stripe products for MailFlow...\n');
+  console.log('Creating Stripe products for Draft...\n');
   
   const stripe = await getUncachableStripeClient();
   
@@ -13,10 +13,10 @@ async function seedProducts() {
   const existingNames = existingProducts.data.map(p => p.name);
   
   // Pro Plan - $24/month
-  if (!existingNames.includes('MailFlow Pro')) {
+  if (!existingNames.includes('Draft Pro')) {
     console.log('Creating Pro Plan...');
     const proProduct = await stripe.products.create({
-      name: 'MailFlow Pro',
+      name: 'Draft Pro',
       description: 'Professional email management with AI-powered features',
       metadata: {
         plan: 'pro',
@@ -39,10 +39,10 @@ async function seedProducts() {
   }
   
   // Business Plan - $49/month
-  if (!existingNames.includes('MailFlow Business')) {
+  if (!existingNames.includes('Draft Business')) {
     console.log('Creating Business Plan...');
     const businessProduct = await stripe.products.create({
-      name: 'MailFlow Business',
+      name: 'Draft Business',
       description: 'Enterprise-grade email management for teams',
       metadata: {
         plan: 'premium',

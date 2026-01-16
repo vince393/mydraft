@@ -131,7 +131,7 @@ export default function OnboardingPage() {
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <CardTitle className="text-xl">
-              {step === "primary-use" && "How will you use MailFlow?"}
+              {step === "primary-use" && "How will you use Draft?"}
               {step === "email-volume" && "How many emails do you receive daily?"}
               {step === "ai-features" && "Which AI features interest you?"}
               {step === "automation" && "How much automation do you want?"}

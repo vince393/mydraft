@@ -2339,7 +2339,7 @@ Return only the improved text, nothing else.`;
         content: m.content
       }));
 
-      const systemPrompt = `You are ${assistantName}, a powerful and friendly AI email assistant for MailFlow. You have FULL ACCESS to the user's email inbox and can perform any email action they request.
+      const systemPrompt = `You are ${assistantName}, a powerful and friendly AI email assistant for Draft. You have FULL ACCESS to the user's email inbox and can perform any email action they request.
 
 PERSONALITY:
 - Warm, capable, and proactive - like having a trusted executive assistant
@@ -4136,7 +4136,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       
       const amount = pricing[plan][interval];
       const recurringInterval = interval === "annual" ? "year" : "month";
-      const productName = plan === "pro" ? "MailFlow Pro" : "MailFlow Business";
+      const productName = plan === "pro" ? "Draft Pro" : "Draft Business";
       
       // Create or get customer
       let customerId = user.stripeCustomerId;

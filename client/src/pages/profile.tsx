@@ -257,7 +257,7 @@ export default function Profile() {
                 <Mail className="w-5 h-5" />
                 Connected Accounts
               </CardTitle>
-              <CardDescription>Email accounts linked to MailFlow</CardDescription>
+              <CardDescription>Email accounts linked to Draft</CardDescription>
             </CardHeader>
             <CardContent>
               {user.connectedEmail ? (
