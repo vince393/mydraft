@@ -14,7 +14,9 @@ interface AuthResponse {
 }
 
 export default function LoginPage() {
-  const [isRegister, setIsRegister] = useState(false);
+  // Check URL for mode=register to start in register mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const [isRegister, setIsRegister] = useState(urlParams.get("mode") === "register");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

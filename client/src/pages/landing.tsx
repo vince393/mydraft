@@ -31,7 +31,7 @@ export default function LandingPage() {
   });
 
   const getStartedHref = () => {
-    if (!authData?.user) return "/login";
+    if (!authData?.user) return "/login?mode=register";
     if (!authData.user.plan) return "/select-plan";
     if (!authData.user.onboardingCompleted) return "/onboarding";
     if (!authData.user.emailConnected) return "/connect-email";
