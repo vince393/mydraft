@@ -23,7 +23,7 @@ export default function RefundPolicyPage() {
           </Link>
           
           <h1 className="text-3xl font-semibold mb-2">Refund and Billing Policy</h1>
-          <p className="text-muted-foreground mb-8">Last updated: January 2026</p>
+          <p className="text-muted-foreground mb-8">Last updated: January 16, 2026</p>
           
           <div className="prose prose-invert max-w-none space-y-6 text-muted-foreground">
             <section>
