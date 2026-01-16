@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import draftLogo from "@assets/image_1768606484385.png";
+import draftLogo from "@assets/image_1768606902429.png";
 
 interface AuthResponse {
   user: { id: string; plan?: string; onboardingCompleted?: boolean; emailConnected?: boolean } | null;
@@ -40,7 +40,7 @@ export function MarketingNav() {
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-10">
           <Link href="/" className="flex items-center gap-3 group">
-            <img src={draftLogo} alt="Draft logo" className="h-10 w-auto" style={{ mixBlendMode: 'lighten' }} />
+            <img src={draftLogo} alt="Draft logo" className="h-10 w-auto" />
             <span className="text-xl font-semibold text-foreground">Draft</span>
           </Link>
           
