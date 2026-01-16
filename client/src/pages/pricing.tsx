@@ -214,7 +214,7 @@ export default function PricingPage() {
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-3 mb-8">
+        <div className="flex justify-center mb-8">
           <div className="inline-flex items-center bg-muted rounded-full p-1" data-testid="billing-toggle">
             <button
               className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
@@ -239,9 +239,6 @@ export default function PricingPage() {
               Annual
             </button>
           </div>
-          {billingInterval === "annual" && (
-            <p className="text-sm text-green-500" data-testid="text-annual-discount">2 months free with annual billing</p>
-          )}
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
