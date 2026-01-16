@@ -25,7 +25,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format } from "date-fns";
 
 interface ComposeDialogProps {
@@ -48,6 +55,9 @@ interface ComposeDialogProps {
 interface UserData {
   user: {
     plan: string;
+    aiPreferences?: {
+      replyTone?: string;
+    };
   };
 }
 
@@ -70,6 +80,11 @@ export function ComposeDialog({
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
   const [scheduledTime, setScheduledTime] = useState("09:00");
+  
+  // AI Draft options
+  const [showAiOptions, setShowAiOptions] = useState(false);
+  const [aiTone, setAiTone] = useState<string>("professional");
+  const [aiInstructions, setAiInstructions] = useState("");
   
   // Get user plan for feature gating
   const { data: userData } = useQuery<UserData>({
@@ -96,6 +111,14 @@ export function ComposeDialog({
   
   const aiRemaining = aiUsageData?.remaining ?? 5;
   const aiLimitReached = userPlan === "free" && aiRemaining <= 0;
+  
+  // Initialize AI tone from user preferences
+  const userPreferredTone = userData?.user?.aiPreferences?.replyTone;
+  useEffect(() => {
+    if (userPreferredTone) {
+      setAiTone(userPreferredTone);
+    }
+  }, [userPreferredTone]);
   
   // Track if form has been initialized to prevent overwriting user edits
   const initializedRef = useRef(false);
@@ -330,6 +353,9 @@ export function ComposeDialog({
     setScheduledDate(undefined);
     setScheduledTime("09:00");
     setShowSchedulePicker(false);
+    setShowAiOptions(false);
+    setAiTone("professional");
+    setAiInstructions("");
     initializedRef.current = false;
     lastEmailIdRef.current = undefined;
   };
@@ -363,12 +389,24 @@ export function ComposeDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [previousBody, setPreviousBody] = useState("");
 
-  // AI Reply mutation - for reply/replyAll modes (5/day limit for free)
+  // Extract user content (exclude original quote)
+  const getUserContent = () => {
+    if (body.includes("---------- Original message ----------")) {
+      return body.substring(0, body.indexOf("---------- Original message ----------") - 2).trim();
+    }
+    if (body.includes("---------- Forwarded message ----------")) {
+      return body.substring(0, body.indexOf("---------- Forwarded message ----------") - 2).trim();
+    }
+    return body.trim();
+  };
+
+  // AI Reply mutation - for all modes (5/day limit for free)
   const aiReplyMutation = useMutation({
     mutationFn: async () => {
+      const userContent = getUserContent();
       setPreviousBody(body);
       setIsGenerating(true);
-      setBody("Generating reply...");
+      setBody(userContent ? "Improving draft..." : "Generating draft...");
       
       const response = await apiRequest("POST", "/api/drafts/quick-generate", {
         mode,
@@ -378,11 +416,16 @@ export function ComposeDialog({
           subject: originalEmail.subject,
           body: originalEmail.body,
         } : undefined,
+        instructions: aiInstructions.trim() || undefined,
+        tone: aiTone,
+        existingBody: userContent || undefined,
       });
       return response.json();
     },
     onSuccess: (data: { subject?: string; body?: string; usage?: { used: number; limit: number; remaining: number } }) => {
       setIsGenerating(false);
+      setShowAiOptions(false);
+      setAiInstructions("");
       
       if (userPlan === "free") {
         refetchAiUsage();
@@ -391,6 +434,8 @@ export function ComposeDialog({
       if (data.body) {
         const originalQuote = previousBody.includes("---------- Original message ----------") 
           ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
+          : previousBody.includes("---------- Forwarded message ----------")
+          ? previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2)
           : "";
         setBody(data.body + originalQuote);
         
@@ -399,10 +444,16 @@ export function ComposeDialog({
           setSubject(data.subject);
         }
         
+        const hasUserContent = getUserContent();
         if (data.usage && data.usage.remaining >= 0) {
           toast({
-            title: "Reply generated",
-            description: `${data.usage.remaining} AI replies remaining today`,
+            title: hasUserContent ? "Draft improved" : "Draft generated",
+            description: `${data.usage.remaining} AI uses remaining today`,
+          });
+        } else {
+          toast({
+            title: hasUserContent ? "Draft improved" : "Draft generated",
+            description: "Your AI-powered draft is ready",
           });
         }
       } else {
@@ -414,7 +465,7 @@ export function ComposeDialog({
       setBody(previousBody);
       refetchAiUsage();
       toast({
-        title: "Failed to generate reply",
+        title: "Failed to generate",
         description: error.message,
         variant: "destructive",
       });
@@ -619,13 +670,13 @@ export function ComposeDialog({
                 Discard
               </Button>
               
-              {/* AI Draft Button - for all modes (5/day limit for free users) */}
+              {/* AI Draft Button - quick click for instant generation */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => aiReplyMutation.mutate()}
                 disabled={isGenerating || sendMutation.isPending || aiLimitReached}
-                className="h-9 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-primary transition-all duration-200"
+                className="h-9 gap-2 border-primary/30 bg-primary/5 text-primary"
                 data-testid="button-ai-draft"
                 title={aiLimitReached ? "Daily limit reached. Upgrade to Pro for unlimited AI drafts." : "Generate an AI-powered draft"}
               >
@@ -638,6 +689,86 @@ export function ComposeDialog({
                   {isGenerating ? "Writing..." : userPlan === "free" ? `AI Draft (${aiRemaining}/5)` : "AI Draft"}
                 </span>
               </Button>
+              
+              {/* AI Options Popover for tone/instructions */}
+              <Popover open={showAiOptions} onOpenChange={setShowAiOptions}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={isGenerating || sendMutation.isPending || aiLimitReached}
+                    className="text-muted-foreground"
+                    data-testid="button-ai-options"
+                    title="AI Draft Options"
+                  >
+                    <Settings2 className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-80 p-4" data-testid="popover-ai-options">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      AI Draft Options
+                    </div>
+                    
+                    {/* Tone Selector */}
+                    <div className="space-y-2">
+                      <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        Tone
+                      </label>
+                      <Select value={aiTone} onValueChange={setAiTone}>
+                        <SelectTrigger className="w-full" data-testid="select-ai-tone">
+                          <SelectValue placeholder="Select tone" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="professional">Professional</SelectItem>
+                          <SelectItem value="friendly">Friendly</SelectItem>
+                          <SelectItem value="formal">Formal</SelectItem>
+                          <SelectItem value="casual">Casual</SelectItem>
+                          <SelectItem value="concise">Concise</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Custom Instructions */}
+                    <div className="space-y-2">
+                      <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <Settings2 className="w-3.5 h-3.5" />
+                        Instructions (optional)
+                      </label>
+                      <Textarea
+                        value={aiInstructions}
+                        onChange={(e) => setAiInstructions(e.target.value)}
+                        placeholder="e.g., Make it more enthusiastic, add a call to action, mention the deadline..."
+                        className="min-h-[80px] text-sm resize-none"
+                        data-testid="textarea-ai-instructions"
+                      />
+                    </div>
+                    
+                    {/* Generate Button */}
+                    <Button
+                      className="w-full gap-2"
+                      onClick={() => aiReplyMutation.mutate()}
+                      disabled={isGenerating}
+                      data-testid="button-generate-draft"
+                    >
+                      {isGenerating ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                      {getUserContent() ? "Improve Draft" : "Generate Draft"}
+                    </Button>
+                    
+                    {getUserContent() && (
+                      <p className="text-xs text-muted-foreground">
+                        AI will read your existing text and improve it based on your instructions and tone selection.
+                      </p>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
               
               {/* AI Polish Dropdown */}
               <DropdownMenu>

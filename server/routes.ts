@@ -1576,16 +1576,18 @@ Please modify the response according to the instruction.`
         }
       }
       
-      const { mode, originalEmail } = req.body;
+      const { mode, originalEmail, instructions, tone: requestedTone, existingBody } = req.body;
       
-      // Get user's AI preferences for tone
+      // Use requested tone or fall back to user's AI preferences
       const aiPrefs = user?.aiPreferences as { replyTone?: string } | undefined;
-      const tone = aiPrefs?.replyTone || "professional";
+      const tone = requestedTone || aiPrefs?.replyTone || "professional";
       
       const toneDescriptions: Record<string, string> = {
         professional: "professional, courteous, and business-appropriate",
         friendly: "warm, friendly, and approachable while remaining respectful",
         concise: "brief, direct, and to-the-point with minimal pleasantries",
+        casual: "casual, relaxed, and conversational",
+        formal: "formal, respectful, and traditional business style",
         custom: "professional and thoughtful",
       };
       const toneDesc = toneDescriptions[tone] || toneDescriptions.professional;
@@ -1595,13 +1597,40 @@ Please modify the response according to the instruction.`
 
       if (mode === "reply" || mode === "replyAll") {
         systemMessage = `You are an email assistant that writes clear, concise email replies. Always respond in JSON format with "subject" and "body" fields.`;
-        prompt = `Generate a reply to this email with a ${toneDesc} tone.
+        
+        // If there's existing body content, user wants to refine/tweak it
+        const existingContent = existingBody?.trim() || "";
+        
+        if (existingContent) {
+          prompt = `Improve and refine this draft reply with a ${toneDesc} tone.
+
+Original email being replied to:
+From: ${originalEmail?.from || "Unknown"} <${originalEmail?.fromEmail || ""}>
+Subject: ${originalEmail?.subject || "No subject"}
+
+${originalEmail?.body?.replace(/<[^>]*>/g, '').substring(0, 1500) || ""}
+
+Current draft reply:
+${existingContent}
+
+${instructions ? `User instructions for changes: ${instructions}` : "Improve the clarity, tone, and professionalism of this draft."}
+
+Provide an improved version that:
+1. Maintains the user's intended message
+2. Uses a ${tone} tone throughout
+3. Is clear and well-structured
+
+Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ''}", "body": "Your improved reply text here..."}`;
+        } else {
+          prompt = `Generate a reply to this email with a ${toneDesc} tone.
 
 Original email:
 From: ${originalEmail?.from || "Unknown"} <${originalEmail?.fromEmail || ""}>
 Subject: ${originalEmail?.subject || "No subject"}
 
-${originalEmail?.body?.replace(/<[^>]*>/g, '') || ""}
+${originalEmail?.body?.replace(/<[^>]*>/g, '').substring(0, 2000) || ""}
+
+${instructions ? `Additional instructions: ${instructions}` : ""}
 
 Write a reply that:
 1. Acknowledges the sender's message
@@ -1609,22 +1638,70 @@ Write a reply that:
 3. Uses a ${tone} tone throughout
 4. Is concise (2-3 paragraphs max)
 
-Respond with JSON only: {"subject": "Re: ...", "body": "Your reply text here..."}`;
+Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ''}", "body": "Your reply text here..."}`;
+        }
       } else if (mode === "forward") {
         systemMessage = `You are an email assistant. Always respond in JSON format with "subject" and "body" fields.`;
-        prompt = `Generate a brief forwarding message for this email with a ${toneDesc} tone.
+        
+        const existingContent = existingBody?.trim() || "";
+        
+        if (existingContent) {
+          prompt = `Improve this forwarding message with a ${toneDesc} tone.
 
 Original email being forwarded:
 From: ${originalEmail?.from || "Unknown"}
 Subject: ${originalEmail?.subject || "No subject"}
 
-Write a brief message to introduce why you're forwarding this email. Keep it to 1-2 sentences.
+Current forwarding message:
+${existingContent}
+
+${instructions ? `User instructions for changes: ${instructions}` : "Improve the clarity and tone of this forwarding message."}
+
+Respond with JSON only: {"subject": "Fwd: ${originalEmail?.subject || ''}", "body": "Your improved forwarding message here..."}`;
+        } else {
+          prompt = `Generate a brief forwarding message for this email with a ${toneDesc} tone.
+
+Original email being forwarded:
+From: ${originalEmail?.from || "Unknown"}
+Subject: ${originalEmail?.subject || "No subject"}
+
+${instructions ? `Additional instructions: ${instructions}` : "Write a brief message to introduce why you're forwarding this email. Keep it to 1-2 sentences."}
 
 Respond with JSON only: {"subject": "Fwd: ${originalEmail?.subject || ''}", "body": "Your forwarding message here..."}`;
+        }
       } else {
         // New email
         systemMessage = `You are an email assistant that helps compose professional emails. Always respond in JSON format with "subject" and "body" fields.`;
-        prompt = `Generate a new email with a ${toneDesc} tone. Since no context is provided, create a professional template email that the user can customize.
+        
+        const existingContent = existingBody?.trim() || "";
+        
+        if (existingContent) {
+          prompt = `Improve and refine this email draft with a ${toneDesc} tone.
+
+Current draft:
+${existingContent}
+
+${instructions ? `User instructions for changes: ${instructions}` : "Improve the clarity, tone, and professionalism of this draft."}
+
+Provide an improved version that:
+1. Maintains the user's intended message
+2. Uses a ${tone} tone throughout
+3. Is clear and well-structured
+
+Respond with JSON only: {"subject": "Appropriate subject for this email", "body": "Your improved email text here..."}`;
+        } else if (instructions) {
+          prompt = `Write a new email with a ${toneDesc} tone.
+
+Instructions: ${instructions}
+
+Write a clear, well-structured email that:
+1. Has a clear subject line based on the instructions
+2. Uses a ${tone} tone throughout
+3. Is appropriately detailed
+
+Respond with JSON only: {"subject": "Your subject here", "body": "Your email body here..."}`;
+        } else {
+          prompt = `Generate a new email with a ${toneDesc} tone. Since no specific context is provided, create a professional template email that the user can customize.
 
 Write a brief, customizable email template that:
 1. Has a clear, professional subject line
@@ -1632,6 +1709,7 @@ Write a brief, customizable email template that:
 3. Is concise and easy to customize
 
 Respond with JSON only: {"subject": "Your subject here", "body": "Your email body here..."}`;
+        }
       }
 
       const response = await openai.chat.completions.create({
