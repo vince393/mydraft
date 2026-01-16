@@ -1304,19 +1304,31 @@ Rules:
       } else if (emailId) {
         // Try to find email by numeric ID first
         const numericId = parseInt(emailId);
-        if (!isNaN(numericId)) {
+        if (!isNaN(numericId) && numericId > 0) {
           const email = await storage.getEmail(numericId);
           if (email) {
             emailData = email;
           }
         }
         
-        // If not found, try to find by nylasId
-        if (!emailData) {
-          const allEmails = await storage.getEmailsByUserId(req.session.userId!);
-          const emailByNylasId = allEmails.find(e => (e as Email & { nylasId?: string }).nylasId === emailId);
-          if (emailByNylasId) {
-            emailData = emailByNylasId;
+        // If not found and looks like a Nylas ID (longer string), fetch from Nylas
+        if (!emailData && emailId.length > 10) {
+          const grant = await storage.getNylasGrant(req.session.userId!);
+          if (grant) {
+            try {
+              const message = await nylas.getMessage(grant.grantId, emailId);
+              if (message) {
+                emailData = {
+                  sender: message.from,
+                  senderEmail: message.fromEmail,
+                  subject: message.subject,
+                  body: message.body,
+                  preview: "",
+                };
+              }
+            } catch (nylasError) {
+              console.error("Error fetching email from Nylas:", nylasError);
+            }
           }
         }
       }

@@ -86,6 +86,10 @@ export function ComposeDialog({
   const [aiTone, setAiTone] = useState<string>("professional");
   const [aiInstructions, setAiInstructions] = useState("");
   
+  // AI Refine bar state
+  const [refineInput, setRefineInput] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
+  
   // Get user plan for feature gating
   const { data: userData } = useQuery<UserData>({
     queryKey: ["/api/auth/me"],
@@ -527,6 +531,74 @@ export function ComposeDialog({
     },
   });
 
+  // AI Refine mutation - for modifying draft based on user instructions
+  const aiRefineMutation = useMutation({
+    mutationFn: async (instruction: string) => {
+      // Extract user's written content (before the original message quote)
+      const userContent = body.includes("---------- Original message ----------")
+        ? body.substring(0, body.indexOf("---------- Original message ----------") - 2).trim()
+        : body.includes("---------- Forwarded message ----------")
+        ? body.substring(0, body.indexOf("---------- Forwarded message ----------") - 2).trim()
+        : body.trim();
+      
+      if (!userContent) {
+        throw new Error("Please write or generate some content first");
+      }
+      
+      setIsRefining(true);
+      setPreviousBody(body);
+      
+      const response = await apiRequest("POST", "/api/ai/refine", {
+        text: userContent,
+        instruction,
+        originalEmail: originalEmail ? {
+          sender: originalEmail.from,
+          senderEmail: originalEmail.fromEmail,
+          subject: originalEmail.subject,
+          body: originalEmail.body,
+        } : undefined,
+      });
+      return response.json();
+    },
+    onSuccess: (data: { refined?: string }) => {
+      setIsRefining(false);
+      setRefineInput("");
+      
+      if (data.refined) {
+        // Preserve original quote if present
+        const originalQuote = previousBody.includes("---------- Original message ----------") 
+          ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
+          : previousBody.includes("---------- Forwarded message ----------")
+          ? previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2)
+          : "";
+        setBody(data.refined + originalQuote);
+        
+        toast({
+          title: "Draft updated",
+          description: "Your message has been modified as requested",
+        });
+      } else {
+        setBody(previousBody);
+      }
+    },
+    onError: (error: Error) => {
+      setIsRefining(false);
+      setBody(previousBody);
+      toast({
+        title: "Failed to refine",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRefineSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (refineInput.trim() && !isRefining && hasUserContent()) {
+      aiRefineMutation.mutate(refineInput.trim());
+    }
+  };
+
   const handleClose = () => {
     onOpenChange(false);
     resetForm();
@@ -643,14 +715,47 @@ export function ComposeDialog({
           </div>
           
           {/* Message Body */}
-          <div className="flex-1 min-h-0 px-6 py-4">
+          <div className="flex-1 min-h-0 px-6 py-4 flex flex-col">
             <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write your message..."
-              className="h-full min-h-[220px] resize-none border-0 bg-transparent px-0 text-base leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="flex-1 min-h-[180px] resize-none border-0 bg-transparent px-0 text-base leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
               data-testid="textarea-compose-body"
             />
+            
+            {/* AI Refine Bar - only show when there's content */}
+            {hasUserContent() && (
+              <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-border/30">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1 bg-muted/30 rounded-lg px-3 py-2 border border-border/40">
+                    <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                    <Input
+                      value={refineInput}
+                      onChange={(e) => setRefineInput(e.target.value)}
+                      placeholder="Ask AI to change something... (e.g., make it shorter, add a thank you)"
+                      className="flex-1 border-0 bg-transparent px-0 h-7 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      disabled={isRefining || isGenerating}
+                      data-testid="input-ai-refine"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="outline"
+                    disabled={!refineInput.trim() || isRefining || isGenerating}
+                    className="h-9 px-3 border-primary/30 bg-primary/5 text-primary"
+                    data-testid="button-ai-refine"
+                  >
+                    {isRefining ? (
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
         
