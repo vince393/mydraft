@@ -63,26 +63,34 @@ export default function PublicPricingPage() {
 
       <section className="pb-24 px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="flex justify-center mb-10">
-            <div className="inline-flex items-center bg-white/[0.04] rounded-lg p-1 border border-white/[0.08]" data-testid="billing-toggle">
-              <Button
-                variant={billingInterval === "annual" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setBillingInterval("annual")}
-                data-testid="button-billing-annual"
-              >
-                Annual
-                <Badge variant="secondary" className="ml-2 text-xs" data-testid="badge-annual-savings">Save up to $189</Badge>
-              </Button>
-              <Button
-                variant={billingInterval === "monthly" ? "default" : "ghost"}
-                size="sm"
+          <div className="flex flex-col items-center gap-3 mb-10">
+            <div className="inline-flex items-center bg-white/[0.04] rounded-full p-1 border border-white/[0.08]" data-testid="billing-toggle">
+              <button
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  billingInterval === "monthly" 
+                    ? "bg-primary text-primary-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
                 onClick={() => setBillingInterval("monthly")}
                 data-testid="button-billing-monthly"
               >
                 Monthly
-              </Button>
+              </button>
+              <button
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  billingInterval === "annual" 
+                    ? "bg-primary text-primary-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setBillingInterval("annual")}
+                data-testid="button-billing-annual"
+              >
+                Annual
+              </button>
             </div>
+            {billingInterval === "annual" && (
+              <p className="text-sm text-green-500" data-testid="text-annual-discount">2 months free with annual billing</p>
+            )}
           </div>
           
           <div className="grid md:grid-cols-3 gap-6 mb-20">
@@ -106,7 +114,7 @@ export default function PublicPricingPage() {
               name="Pro"
               price={billingInterval === "annual" ? "$199" : "$24"}
               period={billingInterval === "annual" ? "year" : "month"}
-              savings={billingInterval === "annual" ? 89 : undefined}
+              monthlyEquivalent={billingInterval === "annual" ? "$16.58" : undefined}
               description="For professionals who need more"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -124,7 +132,7 @@ export default function PublicPricingPage() {
               name="Business"
               price={billingInterval === "annual" ? "$399" : "$49"}
               period={billingInterval === "annual" ? "year" : "month"}
-              savings={billingInterval === "annual" ? 189 : undefined}
+              monthlyEquivalent={billingInterval === "annual" ? "$33.25" : undefined}
               description="For teams and power users"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -173,7 +181,7 @@ function PricingCard({
   name, 
   price, 
   period = "month",
-  savings,
+  monthlyEquivalent,
   description, 
   features, 
   href,
@@ -183,7 +191,7 @@ function PricingCard({
   name: string;
   price: string;
   period?: string;
-  savings?: number;
+  monthlyEquivalent?: string;
   description: string;
   features: { text: string; included: boolean }[];
   href: string;
@@ -211,10 +219,8 @@ function PricingCard({
             <span className="text-5xl font-semibold tracking-tight">{price}</span>
             {price !== "$0" && <span className="text-muted-foreground/60">/{period}</span>}
           </div>
-          {savings && (
-            <Badge variant="outline" className="mt-3 text-green-500 border-green-500/50" data-testid={`badge-savings-${name.toLowerCase()}`}>
-              Save ${savings}/year
-            </Badge>
+          {monthlyEquivalent && (
+            <p className="mt-2 text-sm text-muted-foreground">{monthlyEquivalent}/mo billed annually</p>
           )}
         </div>
       </CardHeader>

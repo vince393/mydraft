@@ -214,26 +214,34 @@ export default function PricingPage() {
           </p>
         </div>
 
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex items-center bg-muted rounded-lg p-1" data-testid="billing-toggle">
-            <Button
-              variant={billingInterval === "annual" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setBillingInterval("annual")}
-              data-testid="button-billing-annual"
-            >
-              Annual
-              <Badge variant="secondary" className="ml-2 text-xs" data-testid="badge-annual-savings">Save up to $189</Badge>
-            </Button>
-            <Button
-              variant={billingInterval === "monthly" ? "default" : "ghost"}
-              size="sm"
+        <div className="flex flex-col items-center gap-3 mb-8">
+          <div className="inline-flex items-center bg-muted rounded-full p-1" data-testid="billing-toggle">
+            <button
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                billingInterval === "monthly" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => setBillingInterval("monthly")}
               data-testid="button-billing-monthly"
             >
               Monthly
-            </Button>
+            </button>
+            <button
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                billingInterval === "annual" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => setBillingInterval("annual")}
+              data-testid="button-billing-annual"
+            >
+              Annual
+            </button>
           </div>
+          {billingInterval === "annual" && (
+            <p className="text-sm text-green-500" data-testid="text-annual-discount">2 months free with annual billing</p>
+          )}
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
@@ -281,10 +289,10 @@ export default function PricingPage() {
                     <span className="text-4xl font-bold">{displayPrice}</span>
                     <span className="text-muted-foreground">/{displayPeriod}</span>
                   </div>
-                  {billingInterval === "annual" && plan.annualSavings && (
-                    <Badge variant="outline" className="mt-2 text-green-600 border-green-600" data-testid={`badge-savings-${plan.id}`}>
-                      Save ${plan.annualSavings}/year
-                    </Badge>
+                  {billingInterval === "annual" && plan.annualPrice > 0 && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      ${(plan.annualPrice / 12).toFixed(2)}/mo billed annually
+                    </p>
                   )}
                 </CardHeader>
                 <CardContent>
