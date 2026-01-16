@@ -53,7 +53,7 @@ export default function PublicPricingPage() {
             </span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            14-day free trial on Pro & Business. No credit card required.
+            14-day free trial on Pro & Business. Cancel anytime.
           </p>
         </div>
       </section>
@@ -123,7 +123,7 @@ export default function PublicPricingPage() {
             Ready to get started?
           </h2>
           <p className="text-muted-foreground text-lg mb-8">
-            14-day free trial on Pro & Business. No credit card required.
+            14-day free trial on Pro & Business. Cancel anytime.
           </p>
           <Link href={getStartedHref()}>
             <Button size="lg" className="gap-2 h-12 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all">
@@ -282,7 +282,7 @@ function PricingFAQ() {
     },
     {
       q: "Is there a free trial for Pro?",
-      a: "Yes! Both Pro and Business plans include a 14-day free trial. No credit card required until your trial ends."
+      a: "Yes! Both Pro and Business plans include a 14-day free trial. Just add a card to start - you won't be charged until day 15. Cancel anytime."
     },
     {
       q: "What payment methods do you accept?",

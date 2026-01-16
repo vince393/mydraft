@@ -3793,13 +3793,16 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         customerId = customer.id;
       }
       
-      // Create checkout session
+      // Create checkout session with 14-day free trial
       const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
         line_items: [{ price: priceId, quantity: 1 }],
         mode: 'subscription',
+        subscription_data: {
+          trial_period_days: 14,
+        },
         success_url: `${baseUrl}/pricing?success=true`,
         cancel_url: `${baseUrl}/pricing?canceled=true`,
         metadata: { userId: user.id },

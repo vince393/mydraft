@@ -89,7 +89,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               </Link>
             </div>
             <p className="text-sm text-muted-foreground/70 mt-5">
-              14 day free trial. No credit card required.
+              14-day free trial. Cancel anytime.
             </p>
           </div>
           
@@ -619,7 +619,7 @@ function FAQSection() {
     },
     {
       q: "Is there a free trial?",
-      a: "Yes! Start with a 14 day free trial - no credit card required. Experience all features before choosing a plan."
+      a: "Yes! Every paid plan includes a 14-day free trial. Add a card to start, and you won't be charged until day 15. Cancel anytime during the trial."
     },
     {
       q: "Can I cancel anytime?",
@@ -679,7 +679,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
           Ready to reclaim your inbox?
         </h2>
         <p className="text-lg text-muted-foreground mb-10">
-          14 day free trial. No credit card required.
+          14-day free trial on Pro & Business. Cancel anytime.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href={getStartedHref}>

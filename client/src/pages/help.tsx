@@ -56,7 +56,7 @@ const faqSections: FAQSection[] = [
       },
       {
         question: "Is there a free trial?",
-        answer: "Yes! All plans include a 14-day free trial. No credit card is required to start. You can explore all features and decide which plan works best for you."
+        answer: "Yes! Pro and Business plans include a 14-day free trial. Add a card to start your trial - you won't be charged until day 15. Cancel anytime."
       },
       {
         question: "What email providers do you support?",
