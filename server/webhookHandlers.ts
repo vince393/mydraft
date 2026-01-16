@@ -117,6 +117,79 @@ export class WebhookHandlers {
         }
         break;
       }
+
+      case 'invoice.paid': {
+        // Automatically track revenue when an invoice is paid
+        const invoice = data.object;
+        const customerId = invoice.customer;
+        const amountPaid = invoice.amount_paid || 0; // Already in cents
+        const invoiceId = invoice.id;
+        
+        if (amountPaid <= 0) break;
+        
+        // Find user by stripe customer ID
+        const user = await storage.getUserByStripeCustomerId(customerId);
+        
+        // Determine plan from subscription items
+        let plan: 'free' | 'pro' | 'premium' = 'free';
+        const lines = invoice.lines?.data || [];
+        for (const line of lines) {
+          const price = line.price;
+          if (price) {
+            const planFromMetadata = price.metadata?.plan;
+            if (planFromMetadata === 'pro') {
+              plan = 'pro';
+            } else if (planFromMetadata === 'premium' || planFromMetadata === 'business') {
+              plan = 'premium';
+            } else if (price.unit_amount) {
+              if (price.unit_amount >= 4900) {
+                plan = 'premium';
+              } else if (price.unit_amount >= 2400) {
+                plan = 'pro';
+              }
+            }
+          }
+        }
+        
+        // Record revenue
+        await storage.createRevenue({
+          userId: user?.id,
+          userEmail: user?.email || invoice.customer_email,
+          plan,
+          amount: amountPaid,
+          type: 'subscription',
+          stripePaymentId: invoice.payment_intent as string,
+          stripeInvoiceId: invoiceId,
+          description: `Invoice ${invoice.number || invoiceId}`,
+        });
+        
+        console.log(`Recorded revenue: $${(amountPaid / 100).toFixed(2)} from ${user?.email || 'unknown'} (${plan} plan)`);
+        break;
+      }
+
+      case 'charge.refunded': {
+        // Track refunds as negative revenue
+        const charge = data.object;
+        const amountRefunded = charge.amount_refunded || 0;
+        const customerId = charge.customer;
+        
+        if (amountRefunded <= 0) break;
+        
+        const user = customerId ? await storage.getUserByStripeCustomerId(customerId as string) : null;
+        
+        await storage.createRevenue({
+          userId: user?.id,
+          userEmail: user?.email || charge.billing_details?.email,
+          plan: user?.plan || 'free',
+          amount: -amountRefunded, // Negative for refunds
+          type: 'refund',
+          stripePaymentId: charge.id,
+          description: `Refund for charge ${charge.id}`,
+        });
+        
+        console.log(`Recorded refund: $${(amountRefunded / 100).toFixed(2)}`);
+        break;
+      }
     }
   }
 }

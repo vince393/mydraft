@@ -1283,7 +1283,8 @@ Business Development`,
   // Financial tracking methods
   async createExpense(expense: InsertExpense): Promise<Expense> {
     const [created] = await db.insert(expenses).values(expense).returning();
-    await this.updateDailyFinancials(expense.expenseDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]);
+    const dateStr = new Date().toISOString().split('T')[0];
+    await this.updateDailyFinancials(dateStr);
     return created;
   }
 
@@ -1319,7 +1320,8 @@ Business Development`,
 
   async createRevenue(rev: InsertRevenue): Promise<Revenue> {
     const [created] = await db.insert(revenue).values(rev).returning();
-    await this.updateDailyFinancials(rev.revenueDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]);
+    const dateStr = new Date().toISOString().split('T')[0];
+    await this.updateDailyFinancials(dateStr);
     return created;
   }
 

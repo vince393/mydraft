@@ -3907,7 +3907,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   // Create expense
   app.post("/api/owner/finances/expenses", requireOwner, async (req, res) => {
     try {
-      const { category, serviceName, amount, description, billingPeriod, expenseDate, isRecurring, metadata } = req.body;
+      const { category, serviceName, amount, description, billingPeriod, isRecurring, metadata } = req.body;
       
       if (!category || !serviceName || amount === undefined) {
         return res.status(400).json({ error: "Category, service name, and amount are required" });
@@ -3919,7 +3919,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         amount: Math.round(amount * 100), // Convert to cents
         description,
         billingPeriod,
-        expenseDate: expenseDate ? new Date(expenseDate) : new Date(),
         isRecurring: isRecurring || false,
         metadata,
       });
