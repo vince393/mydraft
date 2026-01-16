@@ -81,6 +81,8 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
   const [translatedContent, setTranslatedContent] = useState<{ subject: string; body: string } | null>(null);
   const [showTranslated, setShowTranslated] = useState(false);
   const [expandedThreadEmails, setExpandedThreadEmails] = useState<Set<string | number>>(new Set());
+  const [refineInput, setRefineInput] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
   const { toast } = useToast();
   
   // Get the selected email's ID and date for comparison
@@ -288,7 +290,34 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
   const handleCloseDraft = () => {
     setDraftContent("");
     setShowSchedulePicker(false);
+    setRefineInput("");
     onClearDraft?.();
+  };
+
+  const handleRefine = async () => {
+    if (!refineInput.trim() || !draftContent.trim()) return;
+    setIsRefining(true);
+    try {
+      const response = await apiRequest("POST", "/api/ai/refine", {
+        text: draftContent,
+        instructions: refineInput,
+      });
+      const data = await response.json();
+      setDraftContent(data.refinedText);
+      setRefineInput("");
+      toast({
+        title: "Draft refined",
+        description: "Your draft has been updated based on your instructions.",
+      });
+    } catch {
+      toast({
+        title: "Refinement failed",
+        description: "Could not refine the draft. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefining(false);
+    }
   };
 
   if (!email && !isLoading) {
@@ -692,6 +721,38 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                 disabled={generatedDraft.status === "scheduled"}
                 data-testid="textarea-draft"
               />
+              {generatedDraft.status !== "scheduled" && draftContent.trim() && (
+                <div className="flex items-center gap-2 mt-3 p-2 bg-background/30 rounded-lg border border-border/20" data-testid="refine-bar">
+                  <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                  <Input
+                    value={refineInput}
+                    onChange={(e) => setRefineInput(e.target.value)}
+                    placeholder="Tell AI how to modify this draft..."
+                    className="flex-1 h-8 border-0 bg-transparent focus-visible:ring-0 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleRefine();
+                      }
+                    }}
+                    disabled={isRefining}
+                    data-testid="input-refine"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleRefine}
+                    disabled={!refineInput.trim() || isRefining}
+                    className="h-7 px-3 text-xs"
+                    data-testid="button-refine"
+                  >
+                    {isRefining ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      "Refine"
+                    )}
+                  </Button>
+                </div>
+              )}
               <div className="flex items-center gap-2 mt-4">
                 {generatedDraft.status === "scheduled" ? (
                   <Button 
