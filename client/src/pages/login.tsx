@@ -258,15 +258,15 @@ export default function LoginPage() {
 
   if (isLoggedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Welcome back!</CardTitle>
-            <CardDescription>
+      <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 sm:py-12">
+        <Card className="w-full max-w-md overflow-hidden">
+          <CardHeader className="text-center p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl">Welcome back!</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               You're signed in as {authData?.user?.email}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
             <Link href="/inbox">
               <Button className="w-full gap-2" data-testid="button-go-to-inbox">
                 Go to Inbox
@@ -300,21 +300,21 @@ export default function LoginPage() {
 
   if (authStep === "verify-registration" || authStep === "verify-2fa") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Mail className="w-6 h-6 text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 sm:py-12">
+        <Card className="w-full max-w-md overflow-hidden">
+          <CardHeader className="text-center p-4 sm:p-6">
+            <div className="mx-auto mb-3 sm:mb-4 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <CardTitle className="text-2xl">
+            <CardTitle className="text-xl sm:text-2xl">
               {authStep === "verify-registration" ? "Verify Your Email" : "Two-Factor Authentication"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               We've sent a 6-digit verification code to<br />
               <span className="font-medium text-foreground">{pendingEmail}</span>
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
             <form onSubmit={handleVerifyCode} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="code">Verification Code</Label>
@@ -381,15 +381,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Welcome</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 sm:py-12">
+      <Card className="w-full max-w-md overflow-hidden">
+        <CardHeader className="text-center p-4 sm:p-6">
+          <CardTitle className="text-xl sm:text-2xl">Welcome</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             {isRegister ? "Create your account to get started" : "Sign in to your account"}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

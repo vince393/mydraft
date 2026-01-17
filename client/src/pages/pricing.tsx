@@ -202,11 +202,11 @@ export default function PricingPage() {
   const isLoading = selectFreePlanMutation.isPending || checkoutMutation.isPending || portalMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-screen bg-background py-8 sm:py-12 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-semibold mb-3">Choose your plan</h1>
-          <p className="text-muted-foreground">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-semibold mb-2 sm:mb-3">Choose your plan</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {currentPlan !== "free" 
               ? `You're currently on the ${currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} plan.`
               : "Based on your preferences, we've highlighted the best plan for you."
@@ -214,10 +214,10 @@ export default function PricingPage() {
           </p>
         </div>
 
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-6 sm:mb-8">
           <div className="inline-flex items-center bg-muted rounded-full p-1" data-testid="billing-toggle">
             <button
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`px-4 sm:px-5 py-2 rounded-full text-sm font-medium transition-all touch-target ${
                 billingInterval === "monthly" 
                   ? "bg-primary text-primary-foreground" 
                   : "text-muted-foreground hover:text-foreground"
@@ -228,7 +228,7 @@ export default function PricingPage() {
               Monthly
             </button>
             <button
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`px-4 sm:px-5 py-2 rounded-full text-sm font-medium transition-all touch-target ${
                 billingInterval === "annual" 
                   ? "bg-primary text-primary-foreground" 
                   : "text-muted-foreground hover:text-foreground"
@@ -241,7 +241,7 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {basePlans.map((plan) => {
             const isRecommended = plan.id === recommendedPlan;
             const isCurrentPlan = plan.id === currentPlan || (plan.id === "business" && currentPlan === "premium");

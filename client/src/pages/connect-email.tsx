@@ -53,27 +53,27 @@ export default function ConnectEmailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-lg">
-        <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+        <Card className="overflow-hidden">
+          <CardHeader className="text-center p-4 sm:p-6">
+            <div className="mx-auto mb-3 sm:mb-4 w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-xl flex items-center justify-center">
               {isConnected ? (
-                <CheckCircle className="w-6 h-6 text-green-500" />
+                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
               ) : (
-                <Mail className="w-6 h-6 text-primary" />
+                <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               )}
             </div>
-            <CardTitle className="text-xl">
+            <CardTitle className="text-lg sm:text-xl">
               {isConnected ? "Email Connected!" : "Connect Your Email"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {isConnected
                 ? `Your email account is connected and ready to use.`
                 : "Connect your email to start managing your inbox with AI-powered features."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
             {isConnected ? (
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-muted/50 text-center">

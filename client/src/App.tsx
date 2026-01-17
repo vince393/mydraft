@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { useScreenSize } from "@/hooks/use-screen-size";
 import Inbox from "@/pages/inbox";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
@@ -47,6 +49,7 @@ function AuthenticatedApp() {
   const [activeFolder, setActiveFolder] = useState("inbox");
   const [showComposeDialog, setShowComposeDialog] = useState(false);
   const [composeMode, setComposeMode] = useState<"new" | "reply" | "replyAll" | "forward">("new");
+  const screen = useScreenSize();
 
   const { data: emails = [] } = useQuery<Email[]>({
     queryKey: ["/api/emails"],
@@ -70,18 +73,20 @@ function AuthenticatedApp() {
   return (
     <SidebarProvider
       style={{
-        "--sidebar-width": "12%",
+        "--sidebar-width": screen.isMobile ? "0rem" : "12%",
         "--sidebar-width-icon": "0rem",
       } as React.CSSProperties}
     >
       <div className="flex h-screen w-full bg-background overflow-hidden">
-        <AppSidebar
-          activeFolder={activeFolder}
-          onFolderChange={setActiveFolder}
-          unreadCount={unreadCount}
-          unreadCounts={unreadCounts}
-          onCompose={handleCompose}
-        />
+        {!screen.isMobile && (
+          <AppSidebar
+            activeFolder={activeFolder}
+            onFolderChange={setActiveFolder}
+            unreadCount={unreadCount}
+            unreadCounts={unreadCounts}
+            onCompose={handleCompose}
+          />
+        )}
         <SidebarInset className="flex flex-1 min-w-0">
           <Inbox 
             activeFolder={activeFolder} 
@@ -91,6 +96,14 @@ function AuthenticatedApp() {
             setComposeMode={setComposeMode}
           />
         </SidebarInset>
+        {screen.isMobile && (
+          <MobileBottomNav
+            activeFolder={activeFolder}
+            onFolderChange={setActiveFolder}
+            unreadCounts={unreadCounts}
+            onCompose={handleCompose}
+          />
+        )}
       </div>
     </SidebarProvider>
   );

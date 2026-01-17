@@ -184,40 +184,40 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
         <Button
           variant="ghost"
-          className="mb-6 gap-2"
+          className="mb-4 sm:mb-6 gap-2 touch-target"
           onClick={() => setLocation("/inbox")}
           data-testid="button-back-inbox"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Inbox
+          <span className="hidden sm:inline">Back to </span>Inbox
         </Button>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <User className="w-5 h-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl">
+                <User className="w-4 h-4 sm:w-5 sm:h-5" />
                 Profile
               </CardTitle>
-              <CardDescription>Your personal information</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Your personal information</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="w-20 h-20 ring-4 ring-border/30">
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
+              <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                <Avatar className="w-16 h-16 sm:w-20 sm:h-20 ring-4 ring-border/30">
                   <AvatarImage 
                     src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.email)}&backgroundColor=3b82f6,8b5cf6,ec4899`}
                     alt={userName}
                   />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xl font-semibold">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-lg sm:text-xl font-semibold">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold">{userName}</h2>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl font-semibold truncate">{userName}</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{user.email}</p>
                   <div className="mt-2">{getPlanBadge()}</div>
                 </div>
               </div>

@@ -90,52 +90,55 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="flex items-center gap-4 mb-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => setLocation("/inbox")}
             data-testid="button-back"
+            className="touch-target"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Settings</h1>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full h-auto p-1 ${settings.plan === "premium" ? "grid-cols-7" : "grid-cols-6"}`}>
-            <TabsTrigger value="account" className="flex items-center gap-2 py-2" data-testid="tab-account">
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Account</span>
-            </TabsTrigger>
-            <TabsTrigger value="security" className="flex items-center gap-2 py-2" data-testid="tab-security">
-              <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Security</span>
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="flex items-center gap-2 py-2" data-testid="tab-billing">
-              <CreditCard className="w-4 h-4" />
-              <span className="hidden sm:inline">Billing</span>
-            </TabsTrigger>
-            <TabsTrigger value="ai" className="flex items-center gap-2 py-2" data-testid="tab-ai">
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">AI</span>
-            </TabsTrigger>
-            <TabsTrigger value="email" className="flex items-center gap-2 py-2" data-testid="tab-email">
-              <Mail className="w-4 h-4" />
-              <span className="hidden sm:inline">Email</span>
-            </TabsTrigger>
-            <TabsTrigger value="connections" className="flex items-center gap-2 py-2" data-testid="tab-connections">
-              <Link2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Connections</span>
-            </TabsTrigger>
-            {settings.plan === "premium" && (
-              <TabsTrigger value="team" className="flex items-center gap-2 py-2" data-testid="tab-team">
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Team</span>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-7" : "sm:grid-cols-6"}`}>
+              <TabsTrigger value="account" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-account">
+                <User className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">Account</span>
               </TabsTrigger>
-            )}
-          </TabsList>
+              <TabsTrigger value="security" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-security">
+                <Shield className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">Security</span>
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-billing">
+                <CreditCard className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">Billing</span>
+              </TabsTrigger>
+              <TabsTrigger value="ai" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-ai">
+                <Sparkles className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">AI</span>
+              </TabsTrigger>
+              <TabsTrigger value="email" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-email">
+                <Mail className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">Email</span>
+              </TabsTrigger>
+              <TabsTrigger value="connections" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-connections">
+                <Link2 className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">Connect</span>
+              </TabsTrigger>
+              {settings.plan === "premium" && (
+                <TabsTrigger value="team" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-team">
+                  <Users className="w-4 h-4" />
+                  <span className="text-xs sm:text-sm">Team</span>
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
 
           <TabsContent value="account">
             <AccountTab settings={settings!} />

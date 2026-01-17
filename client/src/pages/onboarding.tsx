@@ -241,25 +241,25 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8 sm:py-12">
       <div className={`w-full transition-all ${step === "select-plan" ? "max-w-2xl" : "max-w-lg"}`}>
-        <div className="flex justify-center gap-1.5 mb-8">
+        <div className="flex justify-center gap-1 sm:gap-1.5 mb-6 sm:mb-8">
           {steps.map((s, i) => (
             <div
               key={s}
-              className={`h-1.5 w-8 sm:w-10 rounded-full transition-colors ${
+              className={`h-1 sm:h-1.5 w-6 sm:w-10 rounded-full transition-colors ${
                 i <= currentStepIndex ? "bg-primary" : "bg-muted"
               }`}
             />
           ))}
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-              <Sparkles className="w-5 h-5 text-primary" />
+        <Card className="overflow-hidden">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </div>
-            <CardTitle className="text-xl">
+            <CardTitle className="text-lg sm:text-xl">
               {step === "primary-use" && "How will you use Draft?"}
               {step === "email-volume" && "How many emails do you receive daily?"}
               {step === "ai-features" && "Which AI features interest you?"}
@@ -512,7 +512,7 @@ export default function OnboardingPage() {
                 <div className="flex justify-center mb-4">
                   <div className="inline-flex items-center bg-muted rounded-full p-1" data-testid="billing-toggle">
                     <button
-                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all touch-target ${
                         billingInterval === "monthly" 
                           ? "bg-primary text-primary-foreground" 
                           : "text-muted-foreground hover:text-foreground"
@@ -523,7 +523,7 @@ export default function OnboardingPage() {
                       Monthly
                     </button>
                     <button
-                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all touch-target ${
                         billingInterval === "annual" 
                           ? "bg-primary text-primary-foreground" 
                           : "text-muted-foreground hover:text-foreground"
@@ -556,7 +556,7 @@ export default function OnboardingPage() {
                         type="button"
                         onClick={() => handlePlanSelect(plan.id)}
                         disabled={isPlanLoading}
-                        className={`w-full p-4 rounded-lg border text-left transition-all relative ${
+                        className={`w-full p-3 sm:p-4 rounded-lg border text-left transition-all relative touch-target ${
                           isRecommended
                             ? "border-primary bg-primary/5 ring-1 ring-primary"
                             : "border-border hover:border-muted-foreground"
@@ -564,27 +564,27 @@ export default function OnboardingPage() {
                         data-testid={`button-plan-${plan.id}`}
                       >
                         {isRecommended && (
-                          <Badge className="absolute -top-2.5 left-4 bg-primary text-primary-foreground text-xs">
-                            <Star className="w-3 h-3 mr-1" />
+                          <Badge className="absolute -top-2.5 left-3 sm:left-4 bg-primary text-primary-foreground text-[10px] sm:text-xs">
+                            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
                             Recommended
                           </Badge>
                         )}
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="font-semibold text-base">{plan.name}</div>
-                            <div className="text-xs text-muted-foreground mt-0.5">{plan.description}</div>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-                              {plan.features.slice(0, 3).map((feature) => (
-                                <span key={feature} className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Check className="w-3 h-3 text-primary" />
-                                  {feature}
+                        <div className="flex items-center justify-between gap-3 sm:gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm sm:text-base">{plan.name}</div>
+                            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</div>
+                            <div className="flex flex-wrap gap-x-2 sm:gap-x-3 gap-y-1 mt-2">
+                              {plan.features.slice(0, 2).map((feature) => (
+                                <span key={feature} className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-0.5 sm:gap-1">
+                                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary flex-shrink-0" />
+                                  <span className="line-clamp-1">{feature}</span>
                                 </span>
                               ))}
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <div className="text-xl font-bold">{displayPrice}</div>
-                            <div className="text-xs text-muted-foreground">{displayPeriod}</div>
+                            <div className="text-lg sm:text-xl font-bold">{displayPrice}</div>
+                            <div className="text-[10px] sm:text-xs text-muted-foreground">{displayPeriod}</div>
                           </div>
                         </div>
                       </button>
