@@ -489,15 +489,15 @@ export default function LoginPage() {
 
           <p className="mt-4 text-xs text-center text-muted-foreground leading-relaxed">
             By {isRegister ? "creating an account" : "signing in"}, you agree to our{" "}
-            <Link href="/legal/terms" className="underline hover:text-foreground transition-colors">
+            <Link href="/terms" className="underline hover:text-foreground transition-colors">
               Terms of Service
             </Link>
             ,{" "}
-            <Link href="/legal/privacy" className="underline hover:text-foreground transition-colors">
+            <Link href="/privacy" className="underline hover:text-foreground transition-colors">
               Privacy Policy
             </Link>
             , and{" "}
-            <Link href="/legal/acceptable-use" className="underline hover:text-foreground transition-colors">
+            <Link href="/acceptable-use" className="underline hover:text-foreground transition-colors">
               Acceptable Use Policy
             </Link>
             .
