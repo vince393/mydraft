@@ -1198,8 +1198,8 @@ export async function registerRoutes(
         return res.json(emails);
       }
       
-      const emails = await storage.getEmails(folder || "inbox");
-      res.json(emails);
+      // No email account connected - return empty array
+      res.json([]);
     } catch (error) {
       console.error("Error fetching emails:", error);
       res.status(500).json({ error: "Failed to fetch emails" });
