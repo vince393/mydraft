@@ -43,10 +43,10 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
   const speechStartTimeRef = useRef<number | null>(null);
   const conversationStateRef = useRef<ConversationState>("idle");
 
-  const SILENCE_THRESHOLD = 0.02;
-  const SPEECH_THRESHOLD = 0.03;
-  const SILENCE_DURATION = 1500;
-  const MIN_SPEECH_DURATION = 100;
+  const SILENCE_THRESHOLD = 0.025;
+  const SPEECH_THRESHOLD = 0.04;
+  const SILENCE_DURATION = 1000;
+  const MIN_SPEECH_DURATION = 150;
 
   useEffect(() => {
     openRef.current = open;
@@ -242,6 +242,11 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
     const normalizedLevel = average / 255;
     setAudioLevel(normalizedLevel);
+    
+    // Debug logging every ~1 second (60 frames)
+    if (Math.random() < 0.016) {
+      console.log('Audio level:', normalizedLevel.toFixed(3), 'hasSpoken:', hasSpokenRef.current, 'state:', conversationStateRef.current);
+    }
     
     if (normalizedLevel > SPEECH_THRESHOLD) {
       if (conversationStateRef.current === "speaking") {
