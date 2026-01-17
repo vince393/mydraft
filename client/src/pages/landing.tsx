@@ -54,46 +54,46 @@ export default function LandingPage() {
 
 function HeroSection({ getStartedHref }: { getStartedHref: string }) {
   return (
-    <section className="min-h-[85vh] sm:min-h-0 pt-24 sm:pt-28 md:pt-32 pb-12 sm:pb-20 md:pb-24 px-5 sm:px-6 relative overflow-hidden flex items-center sm:block">
+    <section className="min-h-[90svh] sm:min-h-0 pt-20 sm:pt-28 md:pt-32 pb-8 sm:pb-20 md:pb-24 px-5 sm:px-6 relative overflow-hidden flex items-center justify-center sm:block">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-transparent to-transparent pointer-events-none" />
       <div className="absolute top-32 left-1/2 -translate-x-1/2 w-[600px] sm:w-[800px] h-[400px] sm:h-[600px] bg-primary/[0.08] rounded-full blur-[100px] sm:blur-[120px] pointer-events-none" />
       
       <div className="max-w-6xl mx-auto relative w-full">
         <div className="grid lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-16 items-center">
           <div className="max-w-xl text-center lg:text-left mx-auto lg:mx-0">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
+            <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm sm:text-sm font-medium mb-8 sm:mb-8">
               <Sparkles className="w-4 h-4" />
               AI-Powered Email Management
             </div>
-            <h1 className="text-[2.5rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.1] mb-5 sm:mb-6">
+            <h1 className="text-[2.75rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.05] mb-6 sm:mb-6">
               Reply faster.
               <br />
               <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
                 Stress less.
               </span>
             </h1>
-            <p className="text-lg sm:text-lg text-muted-foreground leading-relaxed mb-10 max-w-md mx-auto lg:mx-0">
+            <p className="text-lg text-muted-foreground leading-relaxed mb-10 sm:mb-10 max-w-md mx-auto lg:mx-0">
               AI drafts replies in your voice and organizes your inbox. Save 2+ hours daily.
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center lg:justify-start">
+            <div className="flex flex-col gap-4 sm:flex-row sm:gap-4 justify-center lg:justify-start">
               <Link href={getStartedHref}>
-                <Button size="lg" className="gap-2 w-full sm:w-auto h-14 sm:h-11 text-base shadow-lg shadow-primary/25" data-testid="hero-getstarted">
+                <Button size="lg" className="gap-2 w-full sm:w-auto h-14 sm:h-11 text-base font-medium shadow-lg shadow-primary/25" data-testid="hero-getstarted">
                   Start free
                   <ArrowRight className="w-5 h-5 sm:w-4 sm:h-4" />
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto h-14 sm:h-11 text-base border-white/10" data-testid="hero-signin">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto h-14 sm:h-11 text-base font-medium border-white/10" data-testid="hero-signin">
                   Sign in
                 </Button>
               </Link>
             </div>
-            <p className="text-sm text-muted-foreground/70 mt-6 sm:mt-5">
+            <p className="text-base sm:text-sm text-muted-foreground/70 mt-8 sm:mt-5">
               14-day free trial. Cancel anytime.
             </p>
           </div>
           
-          <div className="relative lg:ml-8">
+          <div className="relative lg:ml-8 hidden sm:block">
             <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent rounded-2xl blur-2xl opacity-60" />
             <div className="relative rounded-2xl border border-white/[0.08] bg-card/40 backdrop-blur-sm overflow-hidden shadow-2xl shadow-black/40">
               <div className="bg-white/[0.02] px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
