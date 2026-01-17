@@ -6,7 +6,12 @@ Draft is an AI-powered email inbox management application inspired by modern ema
 
 ## Branding
 - **Business Name**: Draft
-- **Logo**: Located at `attached_assets/3dc453d8-506f-47f2-be78-60110ca045c3_1768604684762.png`
+- **Logo**: Located at `attached_assets/image_1768606902429.png`
+
+## Pricing
+- **Free**: $0 - Basic inbox management
+- **Pro**: $19/month or $199/year - Advanced AI features, 14-day trial
+- **Business**: $49/month or $299/year - Enterprise features, 14-day trial
 
 ## User Preferences
 

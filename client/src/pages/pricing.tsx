@@ -51,9 +51,9 @@ const basePlans = [
   {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 24,
+    monthlyPrice: 19,
     annualPrice: 199,
-    annualSavings: 89, // $24 * 12 = $288 - $199 = $89
+    annualSavings: 29, // $19 * 12 = $228 - $199 = $29
     description: "For professionals who need more",
     stripeName: "Draft Pro",
     features: [
@@ -69,8 +69,8 @@ const basePlans = [
     id: "business",
     name: "Business",
     monthlyPrice: 49,
-    annualPrice: 399,
-    annualSavings: 189, // $49 * 12 = $588 - $399 = $189
+    annualPrice: 299,
+    annualSavings: 289, // $49 * 12 = $588 - $299 = $289
     description: "For teams and power users",
     stripeName: "Draft Business",
     features: [

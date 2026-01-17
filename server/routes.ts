@@ -4125,12 +4125,12 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       // Define pricing
       const pricing: Record<string, Record<string, number>> = {
         pro: {
-          monthly: 2400,  // $24.00 in cents
+          monthly: 1900,  // $19.00 in cents
           annual: 19900,  // $199.00 in cents
         },
         business: {
           monthly: 4900,  // $49.00 in cents
-          annual: 39900,  // $399.00 in cents
+          annual: 29900,  // $299.00 in cents
         },
       };
       

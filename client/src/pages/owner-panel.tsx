@@ -1222,7 +1222,7 @@ export default function OwnerPanel() {
                     ) : (
                       <div className="space-y-3">
                         {[
-                          { value: "pro", label: "Pro ($24/mo)", color: "#8B5CF6" },
+                          { value: "pro", label: "Pro ($19/mo)", color: "#8B5CF6" },
                           { value: "premium", label: "Business ($49/mo)", color: "#F59E0B" },
                           { value: "free", label: "Free", color: "#6B7280" },
                         ].map((plan) => {

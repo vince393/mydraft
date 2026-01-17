@@ -12,7 +12,7 @@ async function seedProducts() {
   const existingProducts = await stripe.products.search({ query: "active:'true'" });
   const existingNames = existingProducts.data.map(p => p.name);
   
-  // Pro Plan - $24/month
+  // Pro Plan - $19/month or $199/year
   if (!existingNames.includes('Draft Pro')) {
     console.log('Creating Pro Plan...');
     const proProduct = await stripe.products.create({
@@ -26,14 +26,14 @@ async function seedProducts() {
     
     const proPrice = await stripe.prices.create({
       product: proProduct.id,
-      unit_amount: 2400, // $24.00
+      unit_amount: 1900, // $19.00
       currency: 'usd',
       recurring: { interval: 'month' },
       metadata: { plan: 'pro' }
     });
     
     console.log(`  Created: ${proProduct.name} (${proProduct.id})`);
-    console.log(`  Price: $24/month (${proPrice.id})\n`);
+    console.log(`  Price: $19/month (${proPrice.id})\n`);
   } else {
     console.log('Pro Plan already exists, skipping...\n');
   }

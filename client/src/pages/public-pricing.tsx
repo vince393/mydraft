@@ -109,7 +109,7 @@ export default function PublicPricingPage() {
             />
             <PricingCard
               name="Pro"
-              price={billingInterval === "annual" ? "$199" : "$24"}
+              price={billingInterval === "annual" ? "$199" : "$19"}
               period={billingInterval === "annual" ? "year" : "month"}
               description="For professionals who need more"
               features={[
@@ -126,7 +126,7 @@ export default function PublicPricingPage() {
             />
             <PricingCard
               name="Business"
-              price={billingInterval === "annual" ? "$399" : "$49"}
+              price={billingInterval === "annual" ? "$299" : "$49"}
               period={billingInterval === "annual" ? "year" : "month"}
               description="For teams and power users"
               features={[
