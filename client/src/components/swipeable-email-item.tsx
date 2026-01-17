@@ -381,11 +381,11 @@ export function SwipeableEmailItem({
                 </span>
               )}
               <span className="flex-1" />
-              <div className="flex-shrink-0 relative">
-                <span className="text-xs text-muted-foreground whitespace-nowrap group-hover:invisible">
+              <div className="flex-shrink-0">
+                <span className="text-xs text-muted-foreground whitespace-nowrap group-hover:hidden">
                   {formatTime(new Date(receivedAt))}
                 </span>
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-0.5 invisible group-hover:visible">
+                <div className="hidden group-hover:flex items-center gap-0.5">
                   {isArchiveFolder ? (
                     <button 
                       className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-green-500 hover:bg-muted"
@@ -427,7 +427,7 @@ export function SwipeableEmailItem({
               </div>
             </div>
             
-            <h4 className={`text-sm mb-1.5 truncate ${!isRead ? "font-medium" : "text-foreground/80"}`}>
+            <h4 className={`text-sm mb-1.5 truncate group-hover:max-w-[calc(100%-80px)] ${!isRead ? "font-medium" : "text-foreground/80"}`}>
               {subject}
             </h4>
             
