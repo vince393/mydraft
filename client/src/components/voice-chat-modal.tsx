@@ -277,7 +277,8 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
   }, [stopListening, stopAudioPlayback]);
 
   const startListening = useCallback(async () => {
-    if (conversationState !== "idle") return;
+    // Use ref to check latest state, not stale closure value
+    if (conversationStateRef.current !== "idle") return;
     
     setError(null);
     setTranscript("");
@@ -327,7 +328,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
       console.error("Microphone access error:", err);
       setError("Could not access microphone");
     }
-  }, [conversationState, transcribeAndRespond, checkAudioLevel, resumeListening]);
+  }, [transcribeAndRespond, checkAudioLevel, resumeListening]);
 
   useEffect(() => {
     startListeningRef.current = startListening;
