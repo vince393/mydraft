@@ -96,13 +96,39 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   };
 
   const getPlanBadge = () => {
+    const badgeClass = "cursor-pointer hover:opacity-80 transition-opacity";
     switch (userPlan) {
       case "business":
-        return <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 text-[10px] px-1.5 py-0">Business</Badge>;
+        return (
+          <Badge 
+            className={`bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 text-[10px] px-1.5 py-0 ${badgeClass}`}
+            onClick={() => setLocation("/select-plan")}
+            data-testid="badge-plan-business"
+          >
+            Business
+          </Badge>
+        );
       case "pro":
-        return <Badge className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-0 text-[10px] px-1.5 py-0">Pro</Badge>;
+        return (
+          <Badge 
+            className={`bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-0 text-[10px] px-1.5 py-0 ${badgeClass}`}
+            onClick={() => setLocation("/select-plan")}
+            data-testid="badge-plan-pro"
+          >
+            Pro
+          </Badge>
+        );
       default:
-        return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Free</Badge>;
+        return (
+          <Badge 
+            variant="secondary" 
+            className={`text-[10px] px-1.5 py-0 ${badgeClass}`}
+            onClick={() => setLocation("/select-plan")}
+            data-testid="badge-plan-free"
+          >
+            Free
+          </Badge>
+        );
     }
   };
 

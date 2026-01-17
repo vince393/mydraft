@@ -423,11 +423,11 @@ export default function Profile() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setLocation("/pricing")}
+                  onClick={() => setLocation("/select-plan")}
                   data-testid="button-manage-subscription"
                 >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Manage
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Change Plan
                 </Button>
               </div>
             </CardContent>
@@ -450,11 +450,11 @@ export default function Profile() {
               <Button 
                 variant="ghost" 
                 className="w-full justify-start gap-3"
-                onClick={() => setLocation("/pricing")}
+                onClick={() => setLocation("/select-plan")}
                 data-testid="button-pricing"
               >
                 <CreditCard className="w-4 h-4" />
-                Manage Subscription
+                Change Plan
               </Button>
               <Button 
                 variant="ghost" 
