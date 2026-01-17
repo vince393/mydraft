@@ -476,7 +476,23 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <p className="mt-4 text-xs text-center text-muted-foreground leading-relaxed">
+            By {isRegister ? "creating an account" : "signing in"}, you agree to our{" "}
+            <Link href="/legal/terms" className="underline hover:text-foreground transition-colors">
+              Terms of Service
+            </Link>
+            ,{" "}
+            <Link href="/legal/privacy" className="underline hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
+            , and{" "}
+            <Link href="/legal/acceptable-use" className="underline hover:text-foreground transition-colors">
+              Acceptable Use Policy
+            </Link>
+            .
+          </p>
+
+          <div className="mt-4 text-center">
             <button
               type="button"
               onClick={handleToggleMode}
