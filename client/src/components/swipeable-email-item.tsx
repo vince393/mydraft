@@ -386,61 +386,30 @@ export function SwipeableEmailItem({
               )}
               <span className="flex-1" />
               <div className="flex-shrink-0 flex items-center gap-1">
-                <span className="text-xs text-muted-foreground whitespace-nowrap group-hover:hidden">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {formatTime(new Date(receivedAt))}
                 </span>
-                {isStarred && (
+                {isStarred ? (
                   <button 
                     type="button"
-                    className="group-hover:hidden p-1.5 text-yellow-400"
-                    onClick={handleStarClick}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    data-testid={`star-visible-${emailId}`}
-                  >
-                    <Star className="w-4 h-4 fill-current" />
-                  </button>
-                )}
-                <div className="hidden group-hover:flex items-center gap-1">
-                  {isArchiveFolder ? (
-                    <button 
-                      type="button"
-                      className="p-1.5 rounded-lg transition-colors text-muted-foreground hover:text-green-500 hover:bg-muted/80"
-                      onClick={handleRestoreClick}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      data-testid={`restore-email-${emailId}`}
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button 
-                      type="button"
-                      className="p-1.5 rounded-lg transition-colors text-muted-foreground hover:text-blue-500 hover:bg-muted/80"
-                      onClick={handleArchiveClick}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      data-testid={`archive-email-${emailId}`}
-                    >
-                      <Archive className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button 
-                    type="button"
-                    className="p-1.5 rounded-lg transition-colors text-muted-foreground hover:text-red-500 hover:bg-muted/80"
-                    onClick={handleDeleteClick}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    data-testid={`delete-email-${emailId}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <button 
-                    type="button"
-                    className="p-1.5 rounded-lg transition-colors text-muted-foreground hover:text-yellow-400 hover:bg-muted/80"
+                    className="p-1 text-yellow-400"
                     onClick={handleStarClick}
                     onMouseDown={(e) => e.stopPropagation()}
                     data-testid={`star-email-${emailId}`}
                   >
-                    <Star className={`w-4 h-4 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
+                    <Star className="w-4 h-4 fill-current" />
                   </button>
-                </div>
+                ) : (
+                  <button 
+                    type="button"
+                    className="p-1 text-transparent group-hover:text-muted-foreground hover:text-yellow-400 transition-colors"
+                    onClick={handleStarClick}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    data-testid={`star-email-${emailId}`}
+                  >
+                    <Star className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
             
