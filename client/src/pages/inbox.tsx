@@ -439,6 +439,53 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     <div className="email-layout">
       {/* Email List Panel - hidden on mobile when viewing detail */}
       <div className={`email-list-panel overflow-x-hidden ${screen.isMobile && showMobileDetail ? 'hidden' : ''}`}>
+        {/* Mobile header - only show on mobile in list view */}
+        {screen.isMobile && !showMobileDetail && (
+          <header className="flex items-center justify-between gap-2 h-12 px-3 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
+            <h1 className="text-lg font-semibold capitalize">{activeFolder}</h1>
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile-mobile">
+                    <Avatar className="w-8 h-8 ring-2 ring-border/30">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-3 py-2 border-b border-border/30">
+                    <p className="text-sm font-medium truncate">{userName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                    <div className="mt-2">{getPlanBadge()}</div>
+                  </div>
+                  <DropdownMenuItem className="gap-2" onClick={() => setLocation("/profile")}>
+                    <User className="w-4 h-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="gap-2" onClick={() => setLocation("/settings")}>
+                    <Settings className="w-4 h-4" />
+                    Settings
+                  </DropdownMenuItem>
+                  {!userData?.user?.connectedEmail && (
+                    <DropdownMenuItem className="gap-2" onClick={() => setLocation("/connect-email")}>
+                      <Link className="w-4 h-4" />
+                      Connect Email
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
+                    <LogOut className="w-4 h-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+        )}
+        
         {activeFolder.toLowerCase() === "drafts" ? (
           <DraftsList />
         ) : (
@@ -466,97 +513,100 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
         )}
       </div>
       
-      {/* Email Detail Panel - full screen on mobile */}
-      <div className={`email-detail-panel ${screen.isMobile && showMobileDetail ? 'show-mobile' : ''}`}>
-        <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
-          {/* Mobile back button */}
-          {screen.isMobile && showMobileDetail && (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleBackToList}
-              className="mr-auto"
-              data-testid="button-back-to-list"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          )}
-          <div className={`flex items-center gap-2 ${screen.isMobile && showMobileDetail ? '' : 'ml-auto'}`}>
-            {!userData?.user?.connectedEmail && !screen.isMobile && (
+      {/* Email Detail Panel - full screen overlay on mobile, side panel on desktop */}
+      {(!screen.isMobile || showMobileDetail) && (
+        <div className={`email-detail-panel ${screen.isMobile && showMobileDetail ? 'show-mobile' : ''}`}>
+          <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
+            {/* Mobile back button */}
+            {screen.isMobile && showMobileDetail && (
               <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setLocation("/connect-email")}
-                data-testid="button-connect-account"
+                size="icon"
+                variant="ghost"
+                onClick={handleBackToList}
+                className="mr-auto"
+                data-testid="button-back-to-list"
               >
-                <Link className="w-4 h-4" />
-                Connect Account
+                <ArrowLeft className="w-5 h-5" />
               </Button>
             )}
-            <NotificationBell />
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
-                <Avatar className="w-9 h-9 ring-2 ring-border/30">
-                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-medium">
-                    {userInitials}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <div className="px-3 py-3 border-b border-border/30">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10 ring-2 ring-border/30">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-medium">
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{userName}</p>
-                    <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
-                  </div>
-                </div>
-                {currentUserEmail && (
-                  <div className="flex items-center gap-2 mt-3 px-2 py-1.5 rounded-md bg-muted/50">
-                    {getProviderIcon()}
-                    <span className="text-xs text-muted-foreground truncate flex-1">{currentUserEmail}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 mt-2">
-                  {getPlanBadge()}
-                </div>
-              </div>
-              <DropdownMenuItem 
-                className="gap-2 mt-1" 
-                data-testid="menu-profile"
-                onClick={() => setLocation("/profile")}
-              >
-                <User className="w-4 h-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className="gap-2" 
-                data-testid="menu-settings"
-                onClick={() => setLocation("/settings")}
-              >
-                <Settings className="w-4 h-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="gap-2 text-destructive" 
-                data-testid="menu-logout"
-                onClick={() => logoutMutation.mutate()}
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
+            <div className={`flex items-center gap-2 ${screen.isMobile && showMobileDetail ? '' : 'ml-auto'}`}>
+              {!userData?.user?.connectedEmail && !screen.isMobile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setLocation("/connect-email")}
+                  data-testid="button-connect-account"
+                >
+                  <Link className="w-4 h-4" />
+                  Connect Account
+                </Button>
+              )}
+              {!screen.isMobile && <NotificationBell />}
+              {!screen.isMobile && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile">
+                      <Avatar className="w-9 h-9 ring-2 ring-border/30">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-medium">
+                          {userInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <div className="px-3 py-3 border-b border-border/30">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-10 h-10 ring-2 ring-border/30">
+                          <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-medium">
+                            {userInitials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{userName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                        </div>
+                      </div>
+                      {currentUserEmail && (
+                        <div className="flex items-center gap-2 mt-3 px-2 py-1.5 rounded-md bg-muted/50">
+                          {getProviderIcon()}
+                          <span className="text-xs text-muted-foreground truncate flex-1">{currentUserEmail}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        {getPlanBadge()}
+                      </div>
+                    </div>
+                    <DropdownMenuItem 
+                      className="gap-2 mt-1" 
+                      data-testid="menu-profile"
+                      onClick={() => setLocation("/profile")}
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="gap-2" 
+                      data-testid="menu-settings"
+                      onClick={() => setLocation("/settings")}
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="gap-2 text-destructive" 
+                      data-testid="menu-logout"
+                      onClick={() => logoutMutation.mutate()}
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          </header>
         <div className="flex-1 overflow-auto">
           <EmailDetail 
             email={selectedEmail ?? null}
@@ -573,7 +623,8 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             onForward={handleForward}
           />
         </div>
-      </div>
+        </div>
+      )}
 
       <AIDraftDialog
         email={selectedEmail ?? null}
