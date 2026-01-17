@@ -381,47 +381,49 @@ export function SwipeableEmailItem({
                 </span>
               )}
               <span className="flex-1" />
-              <span className={`flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap ${!isStarred ? "mr-0" : ""}`}>
-                {formatTime(new Date(receivedAt))}
-              </span>
-              <div className="flex-shrink-0 flex items-center gap-0.5">
-                {isArchiveFolder ? (
+              <div className="flex-shrink-0 relative">
+                <span className="text-xs text-muted-foreground whitespace-nowrap group-hover:invisible">
+                  {formatTime(new Date(receivedAt))}
+                </span>
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-0.5 invisible group-hover:visible">
+                  {isArchiveFolder ? (
+                    <button 
+                      className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-green-500 hover:bg-muted"
+                      onClick={handleRestoreClick}
+                      data-testid={`restore-email-${emailId}`}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button 
+                      className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-blue-500 hover:bg-muted"
+                      onClick={handleArchiveClick}
+                      data-testid={`archive-email-${emailId}`}
+                    >
+                      <Archive className="w-4 h-4" />
+                    </button>
+                  )}
                   <button 
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-green-500"
-                    onClick={handleRestoreClick}
-                    data-testid={`restore-email-${emailId}`}
+                    className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-red-500 hover:bg-muted"
+                    onClick={handleDeleteClick}
+                    data-testid={`delete-email-${emailId}`}
                   >
-                    <RotateCcw className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
-                ) : (
                   <button 
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-blue-500"
-                    onClick={handleArchiveClick}
-                    data-testid={`archive-email-${emailId}`}
+                    className={`
+                      p-1 rounded-lg transition-all duration-200
+                      ${isStarred 
+                        ? "text-yellow-400" 
+                        : "text-muted-foreground hover:text-yellow-400"
+                      }
+                    `}
+                    onClick={handleStarClick}
+                    data-testid={`star-email-${emailId}`}
                   >
-                    <Archive className="w-4 h-4" />
+                    <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
                   </button>
-                )}
-                <button 
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-red-500"
-                  onClick={handleDeleteClick}
-                  data-testid={`delete-email-${emailId}`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <button 
-                  className={`
-                    flex-shrink-0 p-1 rounded-lg transition-all duration-200
-                    ${isStarred 
-                      ? "opacity-100 text-yellow-400" 
-                      : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
-                    }
-                  `}
-                  onClick={handleStarClick}
-                  data-testid={`star-email-${emailId}`}
-                >
-                  <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
-                </button>
+                </div>
               </div>
             </div>
             
