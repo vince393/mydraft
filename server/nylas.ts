@@ -383,10 +383,12 @@ export async function deleteMessage(grantId: string, messageId: string): Promise
 }
 
 export async function trashMessage(grantId: string, messageId: string): Promise<void> {
+  // Use the Nylas message update with add_labels for TRASH
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
     method: 'PUT',
     body: JSON.stringify({
-      folders: ['TRASH'],
+      add_labels: ['TRASH'],
+      remove_labels: ['INBOX', 'UNREAD'],
     }),
   });
 
@@ -401,7 +403,7 @@ export async function archiveMessage(grantId: string, messageId: string): Promis
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
     method: 'PUT',
     body: JSON.stringify({
-      folders: [],
+      remove_labels: ['INBOX'],
     }),
   });
 

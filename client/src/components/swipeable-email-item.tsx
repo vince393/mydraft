@@ -391,7 +391,8 @@ export function SwipeableEmailItem({
                 </span>
                 {isStarred && (
                   <button 
-                    className="group-hover:hidden p-1 text-yellow-400"
+                    type="button"
+                    className="group-hover:hidden p-1.5 text-yellow-400"
                     onClick={handleStarClick}
                     onMouseDown={(e) => e.stopPropagation()}
                     data-testid={`star-visible-${emailId}`}
@@ -399,10 +400,11 @@ export function SwipeableEmailItem({
                     <Star className="w-4 h-4 fill-current" />
                   </button>
                 )}
-                <div className="hidden group-hover:flex items-center gap-0.5">
+                <div className="hidden group-hover:flex items-center gap-1">
                   {isArchiveFolder ? (
                     <button 
-                      className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-green-500 hover:bg-muted"
+                      type="button"
+                      className="p-1.5 rounded-lg transition-colors text-muted-foreground hover:text-green-500 hover:bg-muted/80"
                       onClick={handleRestoreClick}
                       onMouseDown={(e) => e.stopPropagation()}
                       data-testid={`restore-email-${emailId}`}
@@ -411,7 +413,8 @@ export function SwipeableEmailItem({
                     </button>
                   ) : (
                     <button 
-                      className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-blue-500 hover:bg-muted"
+                      type="button"
+                      className="p-1.5 rounded-lg transition-colors text-muted-foreground hover:text-blue-500 hover:bg-muted/80"
                       onClick={handleArchiveClick}
                       onMouseDown={(e) => e.stopPropagation()}
                       data-testid={`archive-email-${emailId}`}
@@ -420,7 +423,8 @@ export function SwipeableEmailItem({
                     </button>
                   )}
                   <button 
-                    className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-red-500 hover:bg-muted"
+                    type="button"
+                    className="p-1.5 rounded-lg transition-colors text-muted-foreground hover:text-red-500 hover:bg-muted/80"
                     onClick={handleDeleteClick}
                     onMouseDown={(e) => e.stopPropagation()}
                     data-testid={`delete-email-${emailId}`}
@@ -428,7 +432,8 @@ export function SwipeableEmailItem({
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button 
-                    className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-yellow-400"
+                    type="button"
+                    className="p-1.5 rounded-lg transition-colors text-muted-foreground hover:text-yellow-400 hover:bg-muted/80"
                     onClick={handleStarClick}
                     onMouseDown={(e) => e.stopPropagation()}
                     data-testid={`star-email-${emailId}`}
