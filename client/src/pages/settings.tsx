@@ -38,7 +38,11 @@ import {
   Check,
   Users,
   UserPlus,
-  X
+  X,
+  Shield,
+  Smartphone,
+  MapPin,
+  Globe
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
@@ -100,10 +104,14 @@ export default function SettingsPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full h-auto p-1 ${settings.plan === "premium" ? "grid-cols-6" : "grid-cols-5"}`}>
+          <TabsList className={`grid w-full h-auto p-1 ${settings.plan === "premium" ? "grid-cols-7" : "grid-cols-6"}`}>
             <TabsTrigger value="account" className="flex items-center gap-2 py-2" data-testid="tab-account">
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">Account</span>
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2 py-2" data-testid="tab-security">
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">Security</span>
             </TabsTrigger>
             <TabsTrigger value="billing" className="flex items-center gap-2 py-2" data-testid="tab-billing">
               <CreditCard className="w-4 h-4" />
@@ -131,6 +139,9 @@ export default function SettingsPage() {
 
           <TabsContent value="account">
             <AccountTab settings={settings!} />
+          </TabsContent>
+          <TabsContent value="security">
+            <SecurityTab settings={settings!} />
           </TabsContent>
           <TabsContent value="billing">
             <BillingTab settings={settings!} />
@@ -354,6 +365,332 @@ function AccountTab({ settings }: { settings: Settings }) {
           </AlertDialog>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+interface UserSession {
+  id: number;
+  ipAddress: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  userAgent: string | null;
+  lastActiveAt: string;
+  createdAt: string;
+  isCurrent: boolean;
+}
+
+interface SecuritySettings {
+  twoFactorEnabled: boolean;
+  sessions: UserSession[];
+}
+
+function SecurityTab({ settings }: { settings: Settings }) {
+  const { toast } = useToast();
+  const [showLogoutAllDialog, setShowLogoutAllDialog] = useState(false);
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationAction, setVerificationAction] = useState<"disable2fa" | "logoutAll" | null>(null);
+
+  const { data: securitySettings, isLoading: isLoadingSecurity, error: securityError } = useQuery<SecuritySettings>({
+    queryKey: ["/api/settings/security"],
+  });
+
+  const twoFactorEnabled = securitySettings?.twoFactorEnabled ?? false;
+
+  const toggle2FAMutation = useMutation({
+    mutationFn: async ({ enable, code }: { enable: boolean; code?: string }) => {
+      const response = await apiRequest("POST", "/api/settings/2fa/toggle", { enable, code });
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      if (data.requiresVerification) {
+        setVerificationAction("disable2fa");
+        setShowVerificationDialog(true);
+        toast({ title: "Verification required", description: "A code has been sent to your email" });
+        return;
+      }
+      toast({ 
+        title: variables.enable ? "Two-factor authentication enabled" : "Two-factor authentication disabled",
+        description: variables.enable 
+          ? "You'll now receive a verification code when signing in" 
+          : "You can enable 2FA again anytime"
+      });
+      setShowVerificationDialog(false);
+      setVerificationCode("");
+      setVerificationAction(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/security"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update 2FA", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const logoutAllDevicesMutation = useMutation({
+    mutationFn: async (code?: string) => {
+      const response = await apiRequest("POST", "/api/settings/sessions/logout-all", code ? { code } : {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.requiresVerification) {
+        setVerificationAction("logoutAll");
+        setShowVerificationDialog(true);
+        setShowLogoutAllDialog(false);
+        toast({ title: "Verification required", description: "A code has been sent to your email" });
+        return;
+      }
+      toast({ title: "All other devices logged out" });
+      setShowLogoutAllDialog(false);
+      setShowVerificationDialog(false);
+      setVerificationCode("");
+      setVerificationAction(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/security"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to log out devices", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleVerificationSubmit = () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      toast({ title: "Please enter a 6-digit code", variant: "destructive" });
+      return;
+    }
+    if (verificationAction === "disable2fa") {
+      toggle2FAMutation.mutate({ enable: false, code: verificationCode });
+    } else if (verificationAction === "logoutAll") {
+      logoutAllDevicesMutation.mutate(verificationCode);
+    }
+  };
+
+  const handleToggle2FA = (checked: boolean) => {
+    if (!checked && twoFactorEnabled) {
+      toggle2FAMutation.mutate({ enable: false });
+    } else if (checked) {
+      toggle2FAMutation.mutate({ enable: true });
+    }
+  };
+
+  const formatDeviceInfo = (userAgent: string | null) => {
+    if (!userAgent) return "Unknown device";
+    if (userAgent.includes("Chrome")) return "Chrome Browser";
+    if (userAgent.includes("Firefox")) return "Firefox Browser";
+    if (userAgent.includes("Safari")) return "Safari Browser";
+    if (userAgent.includes("Edge")) return "Microsoft Edge";
+    return "Web Browser";
+  };
+
+  const formatLocation = (session: UserSession) => {
+    const parts = [];
+    if (session.city) parts.push(session.city);
+    if (session.region) parts.push(session.region);
+    if (session.country) parts.push(session.country);
+    return parts.length > 0 ? parts.join(", ") : "Unknown location";
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
+  if (isLoadingSecurity) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (securityError) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Failed to load security settings</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Two-Factor Authentication
+          </CardTitle>
+          <CardDescription>
+            Add an extra layer of security to your account by requiring a verification code when signing in
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="font-medium">Email verification codes</p>
+              <p className="text-sm text-muted-foreground">
+                {twoFactorEnabled 
+                  ? "You'll receive a 6-digit code via email when signing in" 
+                  : "Enable to receive verification codes when signing in"}
+              </p>
+            </div>
+            <Switch
+              checked={twoFactorEnabled}
+              onCheckedChange={handleToggle2FA}
+              disabled={toggle2FAMutation.isPending}
+              data-testid="switch-2fa-toggle"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5" />
+                Active Sessions
+              </CardTitle>
+              <CardDescription>
+                Devices where your account is currently logged in
+              </CardDescription>
+            </div>
+            {securitySettings && securitySettings.sessions.length > 1 && (
+              <AlertDialog open={showLogoutAllDialog} onOpenChange={setShowLogoutAllDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" data-testid="button-logout-all-devices">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Log out all devices
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Log out all other devices?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will sign you out from all other devices except this one. 
+                      You'll stay signed in on this device.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="button-cancel-logout-all">Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => logoutAllDevicesMutation.mutate(undefined)}
+                      data-testid="button-confirm-logout-all"
+                    >
+                      {logoutAllDevicesMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Log out all
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {securitySettings?.sessions && securitySettings.sessions.length > 0 ? (
+              securitySettings.sessions.map((session) => (
+                <div 
+                  key={session.id} 
+                  className={`flex items-center justify-between p-4 rounded-lg border ${
+                    session.isCurrent ? "border-primary bg-primary/5" : ""
+                  }`}
+                  data-testid={`session-item-${session.id}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      <Globe className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{formatDeviceInfo(session.userAgent)}</p>
+                        {session.isCurrent && (
+                          <Badge variant="secondary" className="text-xs">
+                            Current
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {formatLocation(session)}
+                        </span>
+                        {session.ipAddress && (
+                          <span className="text-xs">IP: {session.ipAddress}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right text-sm text-muted-foreground">
+                    <p>Active {formatTime(session.lastActiveAt)}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No active sessions found
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={showVerificationDialog} onOpenChange={(open) => {
+        setShowVerificationDialog(open);
+        if (!open) {
+          setVerificationCode("");
+          setVerificationAction(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enter verification code</AlertDialogTitle>
+            <AlertDialogDescription>
+              We've sent a 6-digit verification code to your email. Enter it below to confirm this action.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              type="text"
+              placeholder="000000"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="text-center text-2xl tracking-widest"
+              maxLength={6}
+              data-testid="input-verification-code"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setVerificationCode("");
+                setVerificationAction(null);
+              }}
+              data-testid="button-cancel-verification"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleVerificationSubmit}
+              disabled={verificationCode.length !== 6 || toggle2FAMutation.isPending || logoutAllDevicesMutation.isPending}
+              data-testid="button-confirm-verification"
+            >
+              {(toggle2FAMutation.isPending || logoutAllDevicesMutation.isPending) && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Verify
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

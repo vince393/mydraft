@@ -9,6 +9,40 @@ import { promisify } from "util";
 import { aiPreferencesSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
+import { sendVerificationEmail } from "./email";
+
+// Pending registrations waiting for email verification
+const pendingRegistrations: Map<string, { email: string; hashedPassword: string; expiresAt: number }> = new Map();
+
+// Pending login sessions waiting for 2FA verification  
+const pending2FALogins: Map<string, { userId: string; expiresAt: number }> = new Map();
+
+// Cleanup expired pending items
+function cleanupPendingItems(): void {
+  const now = Date.now();
+  for (const [key, data] of pendingRegistrations.entries()) {
+    if (data.expiresAt < now) {
+      pendingRegistrations.delete(key);
+    }
+  }
+  for (const [key, data] of pending2FALogins.entries()) {
+    if (data.expiresAt < now) {
+      pending2FALogins.delete(key);
+    }
+  }
+}
+
+// Helper to get client IP
+function getClientIp(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    return forwarded.split(',')[0].trim();
+  }
+  if (Array.isArray(forwarded)) {
+    return forwarded[0];
+  }
+  return req.socket?.remoteAddress || req.ip || 'unknown';
+}
 
 const assistantPermissionsUpdateSchema = z.object({
   canReadEmails: z.boolean().optional(),
@@ -203,6 +237,7 @@ export async function registerRoutes(
 
   registerAudioRoutes(app);
 
+  // Step 1: Initiate registration - sends verification email
   app.post("/api/auth/register", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -219,30 +254,143 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Email already registered" });
       }
 
+      // Hash password and store pending registration
       const hashedPassword = await hashPassword(password);
-      const user = await storage.createUser({ email: normalizedEmail, password: hashedPassword });
+      
+      // Create verification code
+      const verificationCode = await storage.createVerificationCode(normalizedEmail, "signup");
+      
+      // Store pending registration
+      pendingRegistrations.set(normalizedEmail, {
+        email: normalizedEmail,
+        hashedPassword,
+        expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+      });
+      
+      // Send verification email
+      const emailSent = await sendVerificationEmail(normalizedEmail, verificationCode.code, "signup");
+      
+      if (!emailSent) {
+        pendingRegistrations.delete(normalizedEmail);
+        return res.status(500).json({ error: "Failed to send verification email. Please try again." });
+      }
+      
+      res.json({ 
+        requiresVerification: true,
+        email: normalizedEmail,
+        message: "Verification code sent to your email" 
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  // Step 2: Verify email and complete registration
+  app.post("/api/auth/verify-registration", async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      
+      if (!email || !code) {
+        return res.status(400).json({ error: "Email and verification code are required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      // Check pending registration exists
+      const pending = pendingRegistrations.get(normalizedEmail);
+      if (!pending || pending.expiresAt < Date.now()) {
+        pendingRegistrations.delete(normalizedEmail);
+        return res.status(400).json({ error: "Registration expired. Please start again." });
+      }
+      
+      // Verify code
+      const verificationCode = await storage.getVerificationCode(normalizedEmail, code, "signup");
+      if (!verificationCode) {
+        return res.status(400).json({ error: "Invalid or expired verification code" });
+      }
+      
+      // Mark code as used
+      await storage.markVerificationCodeUsed(verificationCode.id);
+      
+      // Create the user
+      const user = await storage.createUser({ 
+        email: normalizedEmail, 
+        password: pending.hashedPassword 
+      });
+      
+      // Mark email as verified
+      await storage.updateUser(user.id, { emailVerified: true });
+      
+      // Clean up pending registration
+      pendingRegistrations.delete(normalizedEmail);
       
       // Log signup activity
-      await storage.createActivityLog(user.id, normalizedEmail, "signup", "New user registered");
-      
+      await storage.createActivityLog(user.id, normalizedEmail, "signup", "New user registered with email verification");
+
+      // Create session
       req.session.regenerate((err) => {
         if (err) {
           console.error("Session regeneration error:", err);
           return res.status(500).json({ error: "Session error" });
         }
         req.session.userId = user.id;
+        
+        // Create login session record
+        const clientIp = getClientIp(req);
+        storage.createLoginSession({
+          userId: user.id,
+          sessionId: req.sessionID,
+          ipAddress: clientIp,
+          userAgent: req.headers['user-agent'] || null,
+          city: null,
+          region: null,
+          country: null,
+        }).catch(err => console.error("Failed to create login session:", err));
+        
         res.json({ 
           user: { 
             id: user.id, 
             email: user.email, 
             plan: user.plan,
-            onboardingCompleted: user.onboardingCompleted 
+            onboardingCompleted: user.onboardingCompleted,
+            emailVerified: true,
+            twoFactorEnabled: false
           } 
         });
       });
     } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ error: "Registration failed" });
+      console.error("Verification error:", error);
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
+  // Resend verification code
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      const { email, type } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const codeType = type || "signup";
+      
+      // Create new verification code
+      const verificationCode = await storage.createVerificationCode(normalizedEmail, codeType);
+      
+      // Send verification email
+      const emailSent = await sendVerificationEmail(normalizedEmail, verificationCode.code, codeType as any);
+      
+      if (!emailSent) {
+        return res.status(500).json({ error: "Failed to send verification email" });
+      }
+      
+      res.json({ success: true, message: "Verification code sent" });
+    } catch (error) {
+      console.error("Resend verification error:", error);
+      res.status(500).json({ error: "Failed to resend verification code" });
     }
   });
 
@@ -267,18 +415,55 @@ export async function registerRoutes(
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
+      // Check if 2FA is enabled
+      if (user.twoFactorEnabled) {
+        // Create verification code and send
+        const verificationCode = await storage.createVerificationCode(normalizedEmail, "login");
+        
+        // Store pending 2FA login
+        pending2FALogins.set(normalizedEmail, {
+          userId: user.id,
+          expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+        });
+        
+        // Send verification email
+        await sendVerificationEmail(normalizedEmail, verificationCode.code, "login");
+        
+        return res.json({
+          requires2FA: true,
+          email: normalizedEmail,
+          message: "2FA code sent to your email"
+        });
+      }
+
+      // No 2FA - proceed with login
       req.session.regenerate((err) => {
         if (err) {
           console.error("Session regeneration error:", err);
           return res.status(500).json({ error: "Session error" });
         }
         req.session.userId = user.id;
+        
+        // Create login session record
+        const clientIp = getClientIp(req);
+        storage.createLoginSession({
+          userId: user.id,
+          sessionId: req.sessionID,
+          ipAddress: clientIp,
+          userAgent: req.headers['user-agent'] || null,
+          city: null,
+          region: null,
+          country: null,
+        }).catch(err => console.error("Failed to create login session:", err));
+        
         res.json({ 
           user: { 
             id: user.id, 
             email: user.email, 
             plan: user.plan,
-            onboardingCompleted: user.onboardingCompleted 
+            onboardingCompleted: user.onboardingCompleted,
+            emailVerified: user.emailVerified,
+            twoFactorEnabled: user.twoFactorEnabled
           } 
         });
       });
@@ -288,7 +473,90 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
+  // Verify 2FA code and complete login
+  app.post("/api/auth/verify-2fa", async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      
+      if (!email || !code) {
+        return res.status(400).json({ error: "Email and verification code are required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      // Check pending 2FA login exists
+      const pending = pending2FALogins.get(normalizedEmail);
+      if (!pending || pending.expiresAt < Date.now()) {
+        pending2FALogins.delete(normalizedEmail);
+        return res.status(400).json({ error: "Login session expired. Please try again." });
+      }
+      
+      // Verify code
+      const verificationCode = await storage.getVerificationCode(normalizedEmail, code, "login");
+      if (!verificationCode) {
+        return res.status(400).json({ error: "Invalid or expired verification code" });
+      }
+      
+      // Mark code as used
+      await storage.markVerificationCodeUsed(verificationCode.id);
+      
+      // Get user
+      const user = await storage.getUser(pending.userId);
+      if (!user) {
+        return res.status(400).json({ error: "User not found" });
+      }
+      
+      // Clean up pending 2FA
+      pending2FALogins.delete(normalizedEmail);
+
+      // Create session
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ error: "Session error" });
+        }
+        req.session.userId = user.id;
+        
+        // Create login session record
+        const clientIp = getClientIp(req);
+        storage.createLoginSession({
+          userId: user.id,
+          sessionId: req.sessionID,
+          ipAddress: clientIp,
+          userAgent: req.headers['user-agent'] || null,
+          city: null,
+          region: null,
+          country: null,
+        }).catch(err => console.error("Failed to create login session:", err));
+        
+        res.json({ 
+          user: { 
+            id: user.id, 
+            email: user.email, 
+            plan: user.plan,
+            onboardingCompleted: user.onboardingCompleted,
+            emailVerified: user.emailVerified,
+            twoFactorEnabled: user.twoFactorEnabled
+          } 
+        });
+      });
+    } catch (error) {
+      console.error("2FA verification error:", error);
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    const sessionId = req.sessionID;
+    const userId = req.session.userId;
+    
+    // Delete login session record
+    if (userId && sessionId) {
+      await storage.deleteLoginSession(sessionId).catch(err => 
+        console.error("Failed to delete login session:", err)
+      );
+    }
+    
     req.session.destroy((err) => {
       if (err) {
         console.error("Logout error:", err);
@@ -483,10 +751,166 @@ export async function registerRoutes(
         emailSignature: user.emailSignature,
         signatureEnabled: user.signatureEnabled,
         connectedEmail: grant ? { email: grant.email, provider: grant.provider } : null,
+        emailVerified: user.emailVerified,
+        twoFactorEnabled: user.twoFactorEnabled,
       });
     } catch (error) {
       console.error("Settings fetch error:", error);
       res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  // Get security settings (2FA status + sessions)
+  app.get("/api/settings/security", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const sessions = await storage.getLoginSessions(req.session.userId!);
+      const currentSessionId = req.sessionID;
+      
+      res.json({
+        twoFactorEnabled: user.twoFactorEnabled,
+        sessions: sessions.map(s => ({
+          id: s.id,
+          ipAddress: s.ipAddress,
+          city: s.city,
+          region: s.region,
+          country: s.country,
+          userAgent: s.userAgent,
+          lastActiveAt: s.lastActiveAt,
+          createdAt: s.createdAt,
+          isCurrent: s.sessionId === currentSessionId,
+        })),
+      });
+    } catch (error) {
+      console.error("Security settings fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch security settings" });
+    }
+  });
+
+  // Toggle 2FA on/off
+  app.post("/api/settings/2fa/toggle", requireAuth, async (req, res) => {
+    try {
+      const { enable, code } = req.body;
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // If disabling 2FA, require verification code
+      if (!enable && user.twoFactorEnabled) {
+        if (!code) {
+          // Send verification code
+          const verificationCode = await storage.createVerificationCode(user.email, "action");
+          await sendVerificationEmail(user.email, verificationCode.code, "action");
+          return res.json({ requiresVerification: true, message: "Verification code sent" });
+        }
+        
+        // Verify code
+        const verificationCode = await storage.getVerificationCode(user.email, code, "action");
+        if (!verificationCode) {
+          return res.status(400).json({ error: "Invalid or expired verification code" });
+        }
+        await storage.markVerificationCodeUsed(verificationCode.id);
+      }
+
+      // Update 2FA setting
+      await storage.updateUser(user.id, { twoFactorEnabled: enable });
+      
+      res.json({ 
+        success: true, 
+        twoFactorEnabled: enable,
+        message: enable ? "Two-factor authentication enabled" : "Two-factor authentication disabled"
+      });
+    } catch (error) {
+      console.error("2FA toggle error:", error);
+      res.status(500).json({ error: "Failed to update 2FA settings" });
+    }
+  });
+
+  // Get active login sessions
+  app.get("/api/settings/sessions", requireAuth, async (req, res) => {
+    try {
+      const sessions = await storage.getLoginSessions(req.session.userId!);
+      const currentSessionId = req.sessionID;
+      
+      res.json({
+        sessions: sessions.map(s => ({
+          id: s.id,
+          ipAddress: s.ipAddress,
+          city: s.city,
+          region: s.region,
+          country: s.country,
+          userAgent: s.userAgent,
+          lastActiveAt: s.lastActiveAt,
+          createdAt: s.createdAt,
+          isCurrent: s.sessionId === currentSessionId,
+        })),
+      });
+    } catch (error) {
+      console.error("Sessions fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch sessions" });
+    }
+  });
+
+  // Logout all other devices (requires 2FA if enabled)
+  app.post("/api/settings/sessions/logout-all", requireAuth, async (req, res) => {
+    try {
+      const { code } = req.body;
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // If 2FA is enabled, require verification
+      if (user.twoFactorEnabled) {
+        if (!code) {
+          // Send verification code
+          const verificationCode = await storage.createVerificationCode(user.email, "action");
+          await sendVerificationEmail(user.email, verificationCode.code, "action");
+          return res.json({ requiresVerification: true, message: "Verification code sent" });
+        }
+        
+        // Verify code
+        const verificationCode = await storage.getVerificationCode(user.email, code, "action");
+        if (!verificationCode) {
+          return res.status(400).json({ error: "Invalid or expired verification code" });
+        }
+        await storage.markVerificationCodeUsed(verificationCode.id);
+      }
+
+      // Delete all sessions except current
+      await storage.deleteAllUserSessions(user.id, req.sessionID);
+      
+      res.json({ success: true, message: "Logged out of all other devices" });
+    } catch (error) {
+      console.error("Logout all error:", error);
+      res.status(500).json({ error: "Failed to logout other devices" });
+    }
+  });
+
+  // Send 2FA code for sensitive actions
+  app.post("/api/auth/send-action-code", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.twoFactorEnabled) {
+        return res.json({ required: false });
+      }
+
+      const verificationCode = await storage.createVerificationCode(user.email, "action");
+      await sendVerificationEmail(user.email, verificationCode.code, "action");
+      
+      res.json({ success: true, message: "Verification code sent" });
+    } catch (error) {
+      console.error("Send action code error:", error);
+      res.status(500).json({ error: "Failed to send verification code" });
     }
   });
 

@@ -7,22 +7,26 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Eye, EyeOff, ArrowRight, LogOut } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft } from "lucide-react";
 
 interface AuthResponse {
-  user: { id: string; email: string; plan?: string } | null;
+  user: { id: string; email: string; plan?: string; onboardingCompleted?: boolean; emailVerified?: boolean; twoFactorEnabled?: boolean } | null;
 }
 
+type AuthStep = "credentials" | "verify-registration" | "verify-2fa";
+
 export default function LoginPage() {
-  // Check URL for mode=register to start in register mode
   const urlParams = new URLSearchParams(window.location.search);
   const [isRegister, setIsRegister] = useState(urlParams.get("mode") === "register");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<{email?: string; password?: string; confirmPassword?: string}>({});
+  const [errors, setErrors] = useState<{email?: string; password?: string; confirmPassword?: string; code?: string}>({});
+  const [authStep, setAuthStep] = useState<AuthStep>("credentials");
+  const [pendingEmail, setPendingEmail] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -53,16 +57,18 @@ export default function LoginPage() {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      if (!data.user.plan) {
-        setLocation("/select-plan");
-      } else if (!data.user.onboardingCompleted) {
-        setLocation("/onboarding");
-      } else if (!data.user.emailConnected) {
-        setLocation("/connect-email");
-      } else {
-        setLocation("/inbox");
+      if (data.requires2FA) {
+        setPendingEmail(data.email);
+        setAuthStep("verify-2fa");
+        toast({
+          title: "Verification Required",
+          description: "A verification code has been sent to your email.",
+        });
+        return;
       }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      navigateAfterAuth(data.user);
     },
     onError: (error: Error) => {
       toast({
@@ -78,7 +84,16 @@ export default function LoginPage() {
       const response = await apiRequest("POST", "/api/auth/register", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data.requiresVerification) {
+        setPendingEmail(data.email);
+        setAuthStep("verify-registration");
+        toast({
+          title: "Check your email",
+          description: "We've sent a verification code to your email address.",
+        });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       setLocation("/select-plan");
     },
@@ -90,6 +105,80 @@ export default function LoginPage() {
       });
     },
   });
+
+  const verifyRegistrationMutation = useMutation({
+    mutationFn: async (data: { email: string; code: string }) => {
+      const response = await apiRequest("POST", "/api/auth/verify-registration", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Email verified!",
+        description: "Your account has been created successfully.",
+      });
+      navigateAfterAuth(data.user);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Verification failed",
+        description: error.message || "Invalid verification code",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const verify2FAMutation = useMutation({
+    mutationFn: async (data: { email: string; code: string }) => {
+      const response = await apiRequest("POST", "/api/auth/verify-2fa", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Verified!",
+        description: "You have been signed in successfully.",
+      });
+      navigateAfterAuth(data.user);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Verification failed",
+        description: error.message || "Invalid verification code",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resendCodeMutation = useMutation({
+    mutationFn: async (data: { email: string; type: string }) => {
+      const response = await apiRequest("POST", "/api/auth/resend-verification", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Code sent",
+        description: "A new verification code has been sent to your email.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to resend code",
+        description: error.message || "Could not send verification code",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const navigateAfterAuth = (user: AuthResponse["user"]) => {
+    if (!user?.plan || user.plan === "free") {
+      setLocation("/select-plan");
+    } else if (!user?.onboardingCompleted) {
+      setLocation("/onboarding");
+    } else {
+      setLocation("/inbox");
+    }
+  };
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -125,19 +214,48 @@ export default function LoginPage() {
     }
   };
 
+  const handleVerifyCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verificationCode || verificationCode.length !== 6) {
+      setErrors({ code: "Please enter a valid 6-digit code" });
+      return;
+    }
+    
+    if (authStep === "verify-registration") {
+      verifyRegistrationMutation.mutate({ email: pendingEmail, code: verificationCode });
+    } else if (authStep === "verify-2fa") {
+      verify2FAMutation.mutate({ email: pendingEmail, code: verificationCode });
+    }
+  };
+
+  const handleResendCode = () => {
+    const type = authStep === "verify-registration" ? "signup" : "login";
+    resendCodeMutation.mutate({ email: pendingEmail, type });
+  };
+
+  const handleBack = () => {
+    setAuthStep("credentials");
+    setVerificationCode("");
+    setPendingEmail("");
+    setErrors({});
+  };
+
   const handleToggleMode = () => {
     setIsRegister(!isRegister);
     setEmail("");
     setPassword("");
     setConfirmPassword("");
+    setVerificationCode("");
     setShowPassword(false);
     setShowConfirmPassword(false);
     setErrors({});
+    setAuthStep("credentials");
+    setPendingEmail("");
   };
 
   const isPending = loginMutation.isPending || registerMutation.isPending;
+  const isVerifying = verifyRegistrationMutation.isPending || verify2FAMutation.isPending;
 
-  // Show a different view if user is already logged in
   if (isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -173,6 +291,88 @@ export default function LoginPage() {
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Back to home
               </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (authStep === "verify-registration" || authStep === "verify-2fa") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Mail className="w-6 h-6 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">
+              {authStep === "verify-registration" ? "Verify Your Email" : "Two-Factor Authentication"}
+            </CardTitle>
+            <CardDescription>
+              We've sent a 6-digit verification code to<br />
+              <span className="font-medium text-foreground">{pendingEmail}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">Verification Code</Label>
+                <Input
+                  id="code"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  placeholder="Enter 6-digit code"
+                  value={verificationCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    setVerificationCode(value);
+                    if (errors.code) setErrors({});
+                  }}
+                  className="text-center text-2xl tracking-widest"
+                  autoFocus
+                  data-testid="input-verification-code"
+                />
+                {errors.code && <p className="text-sm text-destructive text-center">{errors.code}</p>}
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isVerifying || verificationCode.length !== 6}
+                data-testid="button-verify-code"
+              >
+                {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verify
+              </Button>
+            </form>
+
+            <div className="mt-6 space-y-4">
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendCodeMutation.isPending}
+                  className="text-sm text-primary hover:underline disabled:opacity-50"
+                  data-testid="button-resend-code"
+                >
+                  {resendCodeMutation.isPending ? "Sending..." : "Didn't receive a code? Resend"}
+                </button>
+              </div>
+              
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                  data-testid="button-back-to-login"
+                >
+                  <ArrowLeft className="w-3 h-3" />
+                  Back to {authStep === "verify-registration" ? "sign up" : "sign in"}
+                </button>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -1,7 +1,7 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc, and, lte, count, sql } from "drizzle-orm";
+import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -134,6 +134,19 @@ export interface IStorage {
   getFinancialSummary(startDate: Date, endDate: Date): Promise<{ totalExpenses: number; totalRevenue: number; netProfit: number; expensesByCategory: Record<string, number>; revenueByPlan: Record<string, number> }>;
   getDailyFinancials(startDate: Date, endDate: Date): Promise<DailyFinancials[]>;
   updateDailyFinancials(date: string): Promise<void>;
+
+  // 2FA Verification codes methods
+  createVerificationCode(email: string, type: string): Promise<VerificationCode>;
+  getVerificationCode(email: string, code: string, type: string): Promise<VerificationCode | undefined>;
+  markVerificationCodeUsed(id: number): Promise<void>;
+  cleanupExpiredCodes(): Promise<void>;
+
+  // Login sessions methods
+  createLoginSession(session: InsertUserLoginSession): Promise<UserLoginSession>;
+  getLoginSessions(userId: string): Promise<UserLoginSession[]>;
+  updateLoginSessionActivity(sessionId: string): Promise<void>;
+  deleteLoginSession(sessionId: string): Promise<boolean>;
+  deleteAllUserSessions(userId: string, exceptSessionId?: string): Promise<void>;
 }
 
 const avatarColors = [
@@ -1400,6 +1413,83 @@ Business Development`,
         expenseBreakdown: summary.expensesByCategory,
         revenueBreakdown: summary.revenueByPlan,
       });
+    }
+  }
+
+  // 2FA Verification codes methods
+  async createVerificationCode(email: string, type: string): Promise<VerificationCode> {
+    // Generate a 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Code expires in 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    
+    const [result] = await db.insert(verificationCodes).values({
+      email: email.toLowerCase().trim(),
+      code,
+      type,
+      expiresAt,
+    }).returning();
+    
+    return result;
+  }
+
+  async getVerificationCode(email: string, code: string, type: string): Promise<VerificationCode | undefined> {
+    const [result] = await db.select().from(verificationCodes)
+      .where(and(
+        eq(verificationCodes.email, email.toLowerCase().trim()),
+        eq(verificationCodes.code, code),
+        eq(verificationCodes.type, type),
+        eq(verificationCodes.used, false),
+        gte(verificationCodes.expiresAt, new Date())
+      ));
+    return result;
+  }
+
+  async markVerificationCodeUsed(id: number): Promise<void> {
+    await db.update(verificationCodes)
+      .set({ used: true })
+      .where(eq(verificationCodes.id, id));
+  }
+
+  async cleanupExpiredCodes(): Promise<void> {
+    await db.delete(verificationCodes)
+      .where(lte(verificationCodes.expiresAt, new Date()));
+  }
+
+  // Login sessions methods
+  async createLoginSession(session: InsertUserLoginSession): Promise<UserLoginSession> {
+    const [result] = await db.insert(userLoginSessions).values(session).returning();
+    return result;
+  }
+
+  async getLoginSessions(userId: string): Promise<UserLoginSession[]> {
+    return db.select().from(userLoginSessions)
+      .where(eq(userLoginSessions.userId, userId))
+      .orderBy(desc(userLoginSessions.lastActiveAt));
+  }
+
+  async updateLoginSessionActivity(sessionId: string): Promise<void> {
+    await db.update(userLoginSessions)
+      .set({ lastActiveAt: new Date() })
+      .where(eq(userLoginSessions.sessionId, sessionId));
+  }
+
+  async deleteLoginSession(sessionId: string): Promise<boolean> {
+    const result = await db.delete(userLoginSessions)
+      .where(eq(userLoginSessions.sessionId, sessionId));
+    return true;
+  }
+
+  async deleteAllUserSessions(userId: string, exceptSessionId?: string): Promise<void> {
+    if (exceptSessionId) {
+      await db.delete(userLoginSessions)
+        .where(and(
+          eq(userLoginSessions.userId, userId),
+          ne(userLoginSessions.sessionId, exceptSessionId)
+        ));
+    } else {
+      await db.delete(userLoginSessions)
+        .where(eq(userLoginSessions.userId, userId));
     }
   }
 }

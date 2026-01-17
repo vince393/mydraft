@@ -39,6 +39,8 @@ export const users = pgTable("users", {
   signatureEnabled: boolean("signature_enabled").default(false).notNull(),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
@@ -536,3 +538,46 @@ export const dailyFinancials = pgTable("daily_financials", {
 });
 
 export type DailyFinancials = typeof dailyFinancials.$inferSelect;
+
+// Verification codes for 2FA and email verification
+export const verificationCodes = pgTable("verification_codes", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull(),
+  code: text("code").notNull(),
+  type: text("type").notNull(), // "signup", "login", "action"
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertVerificationCodeSchema = createInsertSchema(verificationCodes).omit({
+  id: true,
+  used: true,
+  createdAt: true,
+});
+
+export type VerificationCode = typeof verificationCodes.$inferSelect;
+export type InsertVerificationCode = z.infer<typeof insertVerificationCodeSchema>;
+
+// User login sessions for session management
+export const userLoginSessions = pgTable("user_login_sessions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  sessionId: varchar("session_id").notNull(), // Links to express-session sid
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  city: text("city"),
+  region: text("region"), // State/Province
+  country: text("country"),
+  lastActiveAt: timestamp("last_active_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertUserLoginSessionSchema = createInsertSchema(userLoginSessions).omit({
+  id: true,
+  lastActiveAt: true,
+  createdAt: true,
+});
+
+export type UserLoginSession = typeof userLoginSessions.$inferSelect;
+export type InsertUserLoginSession = z.infer<typeof insertUserLoginSessionSchema>;

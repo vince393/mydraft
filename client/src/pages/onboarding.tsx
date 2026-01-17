@@ -6,16 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare, Inbox, Users } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare, Inbox, Users, Shield } from "lucide-react";
 import type { User } from "@shared/schema";
 
 interface AuthResponse {
   user: (User & { emailConnected?: boolean }) | null;
 }
 
-type Step = "primary-use" | "email-volume" | "ai-features" | "automation" | "tone" | "referral";
+type Step = "primary-use" | "email-volume" | "ai-features" | "automation" | "tone" | "security" | "referral";
 
 interface AIPreferences {
   primaryUse: string;
@@ -26,6 +27,7 @@ interface AIPreferences {
   customTone?: string;
   referralSource: string;
   referralOther?: string;
+  enableTwoFactor?: boolean;
 }
 
 export default function OnboardingPage() {
@@ -60,7 +62,7 @@ export default function OnboardingPage() {
     }
   }, [authData, setLocation]);
 
-  const steps: Step[] = ["primary-use", "email-volume", "ai-features", "automation", "tone", "referral"];
+  const steps: Step[] = ["primary-use", "email-volume", "ai-features", "automation", "tone", "security", "referral"];
   const currentStepIndex = steps.indexOf(step);
 
   const completeOnboardingMutation = useMutation({
@@ -69,6 +71,15 @@ export default function OnboardingPage() {
       return response.json();
     },
     onSuccess: async () => {
+      // If 2FA was enabled during onboarding, enable it
+      if (preferences.enableTwoFactor) {
+        try {
+          await apiRequest("POST", "/api/settings/2fa/toggle", { enable: true });
+        } catch (err) {
+          console.error("Failed to enable 2FA:", err);
+        }
+      }
+      
       // Wait for the query to refetch with updated data before redirecting
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
@@ -136,6 +147,7 @@ export default function OnboardingPage() {
               {step === "ai-features" && "Which AI features interest you?"}
               {step === "automation" && "How much automation do you want?"}
               {step === "tone" && "What's your preferred reply tone?"}
+              {step === "security" && "Secure your account"}
               {step === "referral" && "How did you hear about us?"}
             </CardTitle>
             <CardDescription>
@@ -144,6 +156,7 @@ export default function OnboardingPage() {
               {step === "ai-features" && "Select all that apply"}
               {step === "automation" && "We'll set up your inbox accordingly"}
               {step === "tone" && "This will be your default for AI replies"}
+              {step === "security" && "Add extra protection with two-factor authentication"}
               {step === "referral" && "We'd love to know how you found us"}
             </CardDescription>
           </CardHeader>
@@ -297,6 +310,41 @@ export default function OnboardingPage() {
                     data-testid="input-custom-tone"
                   />
                 )}
+              </div>
+            )}
+
+            {step === "security" && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+                  <div className="flex-shrink-0">
+                    <Shield className="w-10 h-10 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium mb-1">Two-Factor Authentication</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Add an extra layer of security to your account. When enabled, you'll need to enter a code sent to your email when signing in.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <Label htmlFor="enable-2fa" className="font-medium">Enable 2FA</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Require email verification for sign in
+                    </p>
+                  </div>
+                  <Switch
+                    id="enable-2fa"
+                    checked={preferences.enableTwoFactor || false}
+                    onCheckedChange={(checked) => setPreferences({ ...preferences, enableTwoFactor: checked })}
+                    data-testid="switch-enable-2fa"
+                  />
+                </div>
+
+                <p className="text-sm text-muted-foreground text-center">
+                  You can change this setting anytime in your account settings.
+                </p>
               </div>
             )}
 
