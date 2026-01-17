@@ -245,6 +245,7 @@ export function SwipeableEmailItem({
 
   const handleArchiveClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onArchive();
     setSwipeX(0);
     setIsRevealed(false);
@@ -252,6 +253,7 @@ export function SwipeableEmailItem({
 
   const handleRestoreClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (onRestore) onRestore();
     setSwipeX(0);
     setIsRevealed(false);
@@ -259,6 +261,7 @@ export function SwipeableEmailItem({
 
   const handleDeleteClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onDelete();
     setSwipeX(0);
     setIsRevealed(false);
@@ -266,6 +269,7 @@ export function SwipeableEmailItem({
 
   const handleStarClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onToggleStar();
   }, [onToggleStar]);
 
@@ -390,6 +394,7 @@ export function SwipeableEmailItem({
                     <button 
                       className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-green-500 hover:bg-muted"
                       onClick={handleRestoreClick}
+                      onMouseDown={(e) => e.stopPropagation()}
                       data-testid={`restore-email-${emailId}`}
                     >
                       <RotateCcw className="w-4 h-4" />
@@ -398,6 +403,7 @@ export function SwipeableEmailItem({
                     <button 
                       className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-blue-500 hover:bg-muted"
                       onClick={handleArchiveClick}
+                      onMouseDown={(e) => e.stopPropagation()}
                       data-testid={`archive-email-${emailId}`}
                     >
                       <Archive className="w-4 h-4" />
@@ -406,6 +412,7 @@ export function SwipeableEmailItem({
                   <button 
                     className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-red-500 hover:bg-muted"
                     onClick={handleDeleteClick}
+                    onMouseDown={(e) => e.stopPropagation()}
                     data-testid={`delete-email-${emailId}`}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -419,6 +426,7 @@ export function SwipeableEmailItem({
                       }
                     `}
                     onClick={handleStarClick}
+                    onMouseDown={(e) => e.stopPropagation()}
                     data-testid={`star-email-${emailId}`}
                   >
                     <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
