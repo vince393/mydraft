@@ -269,7 +269,8 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
       }
-    } else if (normalizedLevel <= SILENCE_THRESHOLD) {
+    } else {
+      // If audio drops below speech threshold and user has spoken, start silence timer
       if (hasSpokenRef.current && !silenceTimerRef.current) {
         silenceTimerRef.current = setTimeout(() => {
           stopListening();
