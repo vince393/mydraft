@@ -137,8 +137,12 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       return response.json();
     },
     enabled: !!userData?.user,
-    staleTime: 30000,
+    staleTime: 10000,
+    gcTime: 300000,
     refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    retry: 2,
+    retryDelay: 500,
   });
 
   // Group emails by threadId and filter by active folder
