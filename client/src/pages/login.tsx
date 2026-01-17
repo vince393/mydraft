@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Eye, EyeOff, ArrowRight, LogOut } from "lucide-react";
-import draftLogo from "@assets/3dc453d8-506f-47f2-be78-60110ca045c3_1768604684762.png";
+import draftLogo from "@assets/image_1768606902429.png";
 
 interface AuthResponse {
   user: { id: string; email: string; plan?: string } | null;
@@ -144,8 +144,9 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4">
-              <img src={draftLogo} alt="Draft" className="h-12 w-auto mx-auto" />
+            <div className="mx-auto mb-4 flex items-center justify-center gap-3">
+              <img src={draftLogo} alt="Draft" className="h-10 w-auto" />
+              <span className="text-2xl font-semibold text-foreground">Draft</span>
             </div>
             <CardTitle className="text-2xl">Welcome back!</CardTitle>
             <CardDescription>
@@ -188,8 +189,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <img src={draftLogo} alt="Draft" className="h-12 w-auto mx-auto" />
+          <div className="mx-auto mb-4 flex items-center justify-center gap-3">
+            <img src={draftLogo} alt="Draft" className="h-10 w-auto" />
+            <span className="text-2xl font-semibold text-foreground">Draft</span>
           </div>
           <CardTitle className="text-2xl">Welcome</CardTitle>
           <CardDescription>
