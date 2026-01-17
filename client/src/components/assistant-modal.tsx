@@ -4,7 +4,6 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -531,8 +530,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
           </div>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="p-4 space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="p-4 space-y-3 h-full">
             {isLoadingMessages ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -752,7 +751,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
             )}
             <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="p-4 border-t border-border/50 shrink-0">
           <div className="flex items-center gap-2">
