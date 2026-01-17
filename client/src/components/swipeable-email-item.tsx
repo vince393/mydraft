@@ -385,10 +385,20 @@ export function SwipeableEmailItem({
                 </span>
               )}
               <span className="flex-1" />
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 flex items-center gap-1">
                 <span className="text-xs text-muted-foreground whitespace-nowrap group-hover:hidden">
                   {formatTime(new Date(receivedAt))}
                 </span>
+                {isStarred && (
+                  <button 
+                    className="group-hover:hidden p-1 text-yellow-400"
+                    onClick={handleStarClick}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    data-testid={`star-visible-${emailId}`}
+                  >
+                    <Star className="w-4 h-4 fill-current" />
+                  </button>
+                )}
                 <div className="hidden group-hover:flex items-center gap-0.5">
                   {isArchiveFolder ? (
                     <button 
@@ -418,18 +428,12 @@ export function SwipeableEmailItem({
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button 
-                    className={`
-                      p-1 rounded-lg transition-all duration-200
-                      ${isStarred 
-                        ? "text-yellow-400" 
-                        : "text-muted-foreground hover:text-yellow-400"
-                      }
-                    `}
+                    className="p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-yellow-400"
                     onClick={handleStarClick}
                     onMouseDown={(e) => e.stopPropagation()}
                     data-testid={`star-email-${emailId}`}
                   >
-                    <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
+                    <Star className={`w-4 h-4 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
                   </button>
                 </div>
               </div>

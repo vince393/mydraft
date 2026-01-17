@@ -386,7 +386,7 @@ export async function trashMessage(grantId: string, messageId: string): Promise<
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
     method: 'PUT',
     body: JSON.stringify({
-      folders: ['trash'],
+      folders: ['TRASH'],
     }),
   });
 
@@ -397,10 +397,11 @@ export async function trashMessage(grantId: string, messageId: string): Promise<
 }
 
 export async function archiveMessage(grantId: string, messageId: string): Promise<void> {
+  // For Gmail, archiving means removing INBOX label (moving to "All Mail")
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
     method: 'PUT',
     body: JSON.stringify({
-      folders: ['archive'],
+      folders: [],
     }),
   });
 
