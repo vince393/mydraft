@@ -476,6 +476,17 @@ export default function LoginPage() {
             </Button>
           </form>
 
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={handleToggleMode}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="button-toggle-auth-mode"
+            >
+              {isRegister ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+            </button>
+          </div>
+
           <p className="mt-4 text-xs text-center text-muted-foreground leading-relaxed">
             By {isRegister ? "creating an account" : "signing in"}, you agree to our{" "}
             <Link href="/legal/terms" className="underline hover:text-foreground transition-colors">
@@ -491,17 +502,6 @@ export default function LoginPage() {
             </Link>
             .
           </p>
-
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={handleToggleMode}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="button-toggle-auth-mode"
-            >
-              {isRegister ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>
