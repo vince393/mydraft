@@ -1,30 +1,40 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MarketingNav } from "@/components/marketing-nav";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { 
   CheckCircle,
   X,
   ChevronDown,
   ArrowRight,
   Mail,
-  Sparkles
+  Sparkles,
+  Loader2
 } from "lucide-react";
 
 interface AuthResponse {
-  user: { id: string; plan?: string; onboardingCompleted?: boolean; emailConnected?: boolean } | null;
+  user: { id: string; email?: string; plan?: string; onboardingCompleted?: boolean; emailConnected?: boolean } | null;
 }
 
 export default function PublicPricingPage() {
   const [billingInterval, setBillingInterval] = useState<"annual" | "monthly">("annual");
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [selectingPlan, setSelectingPlan] = useState<string | null>(null);
   
   const { data: authData } = useQuery<AuthResponse>({
     queryKey: ["/api/auth/me"],
     retry: false,
   });
+
+  const isLoggedIn = !!authData?.user;
+  const currentPlan = authData?.user?.plan || null;
+  const userEmail = authData?.user?.email;
 
   const getStartedHref = () => {
     if (!authData?.user) return "/login";
@@ -34,6 +44,67 @@ export default function PublicPricingPage() {
     if (!authData.user.emailConnected) return "/connect-email";
     return "/inbox";
   };
+
+  // Free plan selection
+  const selectFreePlanMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/user/plan", { plan: "free" });
+      return response.json();
+    },
+    onSuccess: () => {
+      setLocation("/connect-email");
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to select plan", description: error.message, variant: "destructive" });
+      setSelectingPlan(null);
+    },
+  });
+
+  // Stripe checkout for paid plans
+  const checkoutMutation = useMutation({
+    mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
+      const response = await apiRequest("POST", "/api/stripe/checkout", { plan, interval });
+      return response.json();
+    },
+    onSuccess: (data: { url: string }) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to start checkout", description: error.message, variant: "destructive" });
+      setSelectingPlan(null);
+    },
+  });
+
+  const handlePlanSelect = (planId: string) => {
+    // If not logged in, go to signup
+    if (!isLoggedIn) {
+      setLocation("/login?mode=register");
+      return;
+    }
+
+    // If user hasn't completed onboarding, send them there
+    if (!authData?.user?.onboardingCompleted) {
+      setLocation("/onboarding");
+      return;
+    }
+
+    // If this is their current plan, do nothing
+    if (planId === currentPlan || (planId === "business" && currentPlan === "premium")) {
+      return;
+    }
+
+    setSelectingPlan(planId);
+
+    if (planId === "free") {
+      selectFreePlanMutation.mutate();
+    } else {
+      checkoutMutation.mutate({ plan: planId, interval: billingInterval });
+    }
+  };
+
+  const isLoading = selectFreePlanMutation.isPending || checkoutMutation.isPending;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -90,9 +161,18 @@ export default function PublicPricingPage() {
             </div>
           </div>
           
+          {isLoggedIn && userEmail && (
+            <div className="text-center mb-6 p-3 rounded-lg bg-primary/10 border border-primary/20">
+              <p className="text-sm text-muted-foreground">
+                Signed in as <span className="text-foreground font-medium">{userEmail}</span>
+              </p>
+            </div>
+          )}
+
           <div className="grid md:grid-cols-3 gap-6 mb-20">
             <PricingCard
               name="Free"
+              planId="free"
               price="$0"
               period="forever"
               description="Perfect for trying out Draft"
@@ -104,13 +184,17 @@ export default function PublicPricingPage() {
                 { text: "Email scheduling", included: false },
                 { text: "Voice assistant", included: false },
               ]}
-              href={getStartedHref()}
-              buttonText="Start free"
+              onSelect={() => handlePlanSelect("free")}
+              buttonText={currentPlan === "free" ? "Current Plan" : "Start free"}
+              isCurrentPlan={currentPlan === "free"}
+              isLoading={selectingPlan === "free" && isLoading}
             />
             <PricingCard
               name="Pro"
+              planId="pro"
               price={billingInterval === "annual" ? "$199" : "$19"}
               period={billingInterval === "annual" ? "year" : "month"}
+              annualSavings={billingInterval === "annual" ? 29 : undefined}
               description="For professionals who need more"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -120,14 +204,18 @@ export default function PublicPricingPage() {
                 { text: "Priority support", included: true },
                 { text: "14-day free trial", included: true },
               ]}
-              href={getStartedHref()}
-              buttonText="Start free trial"
+              onSelect={() => handlePlanSelect("pro")}
+              buttonText={currentPlan === "pro" ? "Current Plan" : "Start free trial"}
+              isCurrentPlan={currentPlan === "pro"}
+              isLoading={selectingPlan === "pro" && isLoading}
               highlighted
             />
             <PricingCard
               name="Business"
+              planId="business"
               price={billingInterval === "annual" ? "$299" : "$49"}
               period={billingInterval === "annual" ? "year" : "month"}
+              annualSavings={billingInterval === "annual" ? 289 : undefined}
               description="For teams and power users"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -138,8 +226,10 @@ export default function PublicPricingPage() {
                 { text: "Dedicated support", included: true },
                 { text: "14-day free trial", included: true },
               ]}
-              href={getStartedHref()}
-              buttonText="Start free trial"
+              onSelect={() => handlePlanSelect("business")}
+              buttonText={(currentPlan === "business" || currentPlan === "premium") ? "Current Plan" : "Start free trial"}
+              isCurrentPlan={currentPlan === "business" || currentPlan === "premium"}
+              isLoading={selectingPlan === "business" && isLoading}
             />
           </div>
 
@@ -174,30 +264,46 @@ export default function PublicPricingPage() {
 
 function PricingCard({ 
   name, 
+  planId,
   price, 
   period = "month",
+  annualSavings,
   description, 
   features, 
-  href,
+  onSelect,
   buttonText,
+  isCurrentPlan = false,
+  isLoading = false,
   highlighted = false 
 }: { 
   name: string;
+  planId: string;
   price: string;
   period?: string;
+  annualSavings?: number;
   description: string;
   features: { text: string; included: boolean }[];
-  href: string;
+  onSelect: () => void;
   buttonText: string;
+  isCurrentPlan?: boolean;
+  isLoading?: boolean;
   highlighted?: boolean;
 }) {
   return (
     <Card className={`relative transition-all duration-300 ${
-      highlighted 
-        ? 'border-primary/50 bg-gradient-to-b from-primary/[0.08] to-transparent shadow-2xl shadow-primary/10 scale-[1.02]' 
-        : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]'
+      isCurrentPlan
+        ? 'border-green-500/50 bg-green-500/5'
+        : highlighted 
+          ? 'border-primary/50 bg-gradient-to-b from-primary/[0.08] to-transparent shadow-2xl shadow-primary/10 scale-[1.02]' 
+          : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]'
     }`}>
-      {highlighted && (
+      {isCurrentPlan ? (
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+          <span className="px-4 py-1.5 rounded-full bg-green-600 text-white text-xs font-semibold shadow-lg">
+            Current Plan
+          </span>
+        </div>
+      ) : highlighted && (
         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
           <span className="px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold shadow-lg shadow-primary/30">
             Most Popular
@@ -212,6 +318,11 @@ function PricingCard({
             <span className="text-5xl font-semibold tracking-tight">{price}</span>
             {price !== "$0" && <span className="text-muted-foreground/60">/{period}</span>}
           </div>
+          {annualSavings && (
+            <p className="text-xs text-green-500 mt-2 font-medium">
+              Save ${annualSavings}/year
+            </p>
+          )}
         </div>
       </CardHeader>
       <CardContent className="pt-6">
@@ -229,19 +340,22 @@ function PricingCard({
             </li>
           ))}
         </ul>
-        <Link href={href}>
-          <Button 
-            variant={highlighted ? "default" : "outline"} 
-            className={`w-full h-11 ${
-              highlighted 
+        <Button 
+          variant={isCurrentPlan ? "secondary" : highlighted ? "default" : "outline"} 
+          className={`w-full h-11 ${
+            isCurrentPlan
+              ? 'cursor-not-allowed opacity-70'
+              : highlighted 
                 ? 'shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30' 
                 : 'border-white/10 hover:bg-white/[0.03]'
-            }`}
-            data-testid={`pricing-${name.toLowerCase()}-cta`}
-          >
-            {buttonText}
-          </Button>
-        </Link>
+          }`}
+          onClick={onSelect}
+          disabled={isCurrentPlan || isLoading}
+          data-testid={`pricing-${name.toLowerCase()}-cta`}
+        >
+          {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          {buttonText}
+        </Button>
       </CardContent>
     </Card>
   );
