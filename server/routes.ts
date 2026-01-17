@@ -2584,7 +2584,7 @@ Return only the improved text, nothing else.`;
     try {
       const settings = await storage.getAssistantSettings(req.session.userId!);
       if (!settings) {
-        return res.json({ selectedVoice: "vince", voiceOutputEnabled: true });
+        return res.json({ selectedVoice: "vince", voiceOutputEnabled: false });
       }
       res.json(settings);
     } catch (error) {

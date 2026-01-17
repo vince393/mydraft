@@ -47,7 +47,7 @@ export async function* voiceChatStream(
     model: "gpt-audio-mini",
     modalities: ["text", "audio"],
     audio: {
-      voice: "alloy",
+      voice: "nova",
       format: "wav",
     },
     messages: chatMessages,
@@ -89,7 +89,7 @@ export async function voiceChat(
     model: "gpt-audio-mini",
     modalities: ["text", "audio"],
     audio: {
-      voice: "alloy",
+      voice: "nova",
       format: "wav",
     },
     messages: chatMessages,
@@ -107,7 +107,7 @@ export async function textToSpeech(text: string): Promise<string> {
     model: "gpt-audio-mini",
     modalities: ["text", "audio"],
     audio: {
-      voice: "alloy",
+      voice: "nova",
       format: "wav",
     },
     messages: [

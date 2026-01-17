@@ -65,7 +65,7 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
       const response = await fetch("/api/assistant/settings");
       if (!response.ok) {
         if (response.status === 404) {
-          return { selectedVoice: "vince", voiceOutputEnabled: true } as AssistantSettings;
+          return { selectedVoice: "vince", voiceOutputEnabled: false } as AssistantSettings;
         }
         throw new Error("Failed to fetch settings");
       }
@@ -74,7 +74,7 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
   });
 
   const selectedVoice = settings?.selectedVoice || "vince";
-  const voiceOutputEnabled = settings?.voiceOutputEnabled ?? true;
+  const voiceOutputEnabled = settings?.voiceOutputEnabled ?? false;
 
   // Fetch conversation history
   const { data: messages = [], isLoading: isLoadingMessages } = useQuery<AssistantMessage[]>({
