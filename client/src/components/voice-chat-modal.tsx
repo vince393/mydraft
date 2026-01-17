@@ -243,11 +243,6 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     const normalizedLevel = average / 255;
     setAudioLevel(normalizedLevel);
     
-    // Debug logging every ~1 second (60 frames)
-    if (Math.random() < 0.016) {
-      console.log('Audio level:', normalizedLevel.toFixed(3), 'hasSpoken:', hasSpokenRef.current, 'state:', conversationStateRef.current);
-    }
-    
     if (normalizedLevel > SPEECH_THRESHOLD) {
       if (conversationStateRef.current === "speaking") {
         stopAudioPlayback();

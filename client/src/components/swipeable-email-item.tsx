@@ -381,22 +381,48 @@ export function SwipeableEmailItem({
                 </span>
               )}
               <span className="flex-1" />
-              <span className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+              <span className={`flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap ${!isStarred ? "mr-0" : ""}`}>
                 {formatTime(new Date(receivedAt))}
               </span>
-              <button 
-                className={`
-                  flex-shrink-0 p-1 rounded-lg transition-all duration-200
-                  ${isStarred 
-                    ? "opacity-100 text-yellow-400" 
-                    : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
-                  }
-                `}
-                onClick={handleStarClick}
-                data-testid={`star-email-${emailId}`}
-              >
-                <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
-              </button>
+              <div className="flex-shrink-0 flex items-center gap-0.5">
+                {isArchiveFolder ? (
+                  <button 
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-green-500"
+                    onClick={handleRestoreClick}
+                    data-testid={`restore-email-${emailId}`}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button 
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-blue-500"
+                    onClick={handleArchiveClick}
+                    data-testid={`archive-email-${emailId}`}
+                  >
+                    <Archive className="w-4 h-4" />
+                  </button>
+                )}
+                <button 
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all duration-200 text-muted-foreground hover:text-red-500"
+                  onClick={handleDeleteClick}
+                  data-testid={`delete-email-${emailId}`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button 
+                  className={`
+                    flex-shrink-0 p-1 rounded-lg transition-all duration-200
+                    ${isStarred 
+                      ? "opacity-100 text-yellow-400" 
+                      : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
+                    }
+                  `}
+                  onClick={handleStarClick}
+                  data-testid={`star-email-${emailId}`}
+                >
+                  <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
+                </button>
+              </div>
             </div>
             
             <h4 className={`text-sm mb-1.5 truncate ${!isRead ? "font-medium" : "text-foreground/80"}`}>
