@@ -611,7 +611,11 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               ) : responseTime?.message ? (
                 responseTime.message
               ) : responseTime?.estimatedMinutes ? (
-                `Est. response time: ${responseTime.estimatedMinutes} min`
+                `Est. response time: ${
+                  responseTime.estimatedMinutes >= 60
+                    ? `${Math.floor(responseTime.estimatedMinutes / 60)}h ${responseTime.estimatedMinutes % 60}m`
+                    : `${responseTime.estimatedMinutes} min`
+                }`
               ) : (
                 "Est. response time: --"
               )}
