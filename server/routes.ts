@@ -2935,8 +2935,9 @@ RESPONSE STYLE:
 
       const transcription = await openai.audio.transcriptions.create({
         file: audioFile,
-        model: "gpt-4o-mini-transcribe",
+        model: "whisper-1",
         response_format: "json",
+        language: "en",
       });
 
       const transcript = (transcription as any).text?.trim() || "";

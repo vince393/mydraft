@@ -43,10 +43,10 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
   const speechStartTimeRef = useRef<number | null>(null);
   const conversationStateRef = useRef<ConversationState>("idle");
 
-  const SILENCE_THRESHOLD = 0.03;
-  const SPEECH_THRESHOLD = 0.05;
-  const SILENCE_DURATION = 800;
-  const MIN_SPEECH_DURATION = 200;
+  const SILENCE_THRESHOLD = 0.02;
+  const SPEECH_THRESHOLD = 0.03;
+  const SILENCE_DURATION = 1500;
+  const MIN_SPEECH_DURATION = 100;
 
   useEffect(() => {
     openRef.current = open;
@@ -209,7 +209,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
             setTranscript(transcribedText);
             sendVoiceMessage(transcribedText);
           } else {
-            setError("I didn't catch that, please try again");
+            // Silently restart listening - no error message
             setConversationState("idle");
             resumeListening();
           }
@@ -218,10 +218,10 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
           if (errorData.requiredPlan) {
             setError("Voice features require a Premium plan");
           } else {
-            setError("I couldn't hear you clearly, please try again");
+            // Silently restart listening instead of showing error
+            setConversationState("idle");
+            resumeListening();
           }
-          setConversationState("idle");
-          resumeListening();
         }
       };
       reader.readAsDataURL(audioBlob);
@@ -286,7 +286,14 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     speechStartTimeRef.current = null;
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000,
+        }
+      });
       streamRef.current = stream;
       audioChunksRef.current = [];
       

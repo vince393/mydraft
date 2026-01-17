@@ -11,8 +11,9 @@ export async function speechToText(audioBuffer: Buffer, mimeType: string = "audi
   
   const transcription = await openai.audio.transcriptions.create({
     file: audioFile,
-    model: "gpt-4o-mini-transcribe",
+    model: "whisper-1",
     response_format: "json",
+    language: "en",
   });
 
   return (transcription as any).text?.trim() || "";
