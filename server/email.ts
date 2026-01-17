@@ -69,7 +69,7 @@ export async function sendVerificationEmail(to: string, code: string, type: 'sig
   </div>
   
   <p style="color: #475569; font-size: 12px; text-align: center; margin-top: 24px;">
-    © ${new Date().getFullYear()} Draft. All rights reserved.
+    © ${new Date().getFullYear()} Draft
   </p>
 </body>
 </html>
