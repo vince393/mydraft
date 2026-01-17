@@ -263,6 +263,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     setSelectedEmailId(null);
     setSelectedThreadEmails([]);
     setGeneratedDraft(null);
+    setShowMobileDetail(false);
   }, [activeFolder]);
 
   const markAsReadMutation = useMutation({
