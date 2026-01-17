@@ -385,31 +385,10 @@ export function SwipeableEmailItem({
                 </span>
               )}
               <span className="flex-1" />
-              <div className="flex-shrink-0 flex items-center gap-1">
+              <div className="flex-shrink-0">
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {formatTime(new Date(receivedAt))}
                 </span>
-                {isStarred ? (
-                  <button 
-                    type="button"
-                    className="p-1 text-yellow-400"
-                    onClick={handleStarClick}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    data-testid={`star-email-${emailId}`}
-                  >
-                    <Star className="w-4 h-4 fill-current" />
-                  </button>
-                ) : (
-                  <button 
-                    type="button"
-                    className="p-1 text-transparent group-hover:text-muted-foreground hover:text-yellow-400 transition-colors"
-                    onClick={handleStarClick}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    data-testid={`star-email-${emailId}`}
-                  >
-                    <Star className="w-4 h-4" />
-                  </button>
-                )}
               </div>
             </div>
             
