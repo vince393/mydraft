@@ -2,21 +2,22 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare, Inbox, Users, Shield } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare, Inbox, Users, Shield, Check, Star } from "lucide-react";
 import type { User } from "@shared/schema";
 
 interface AuthResponse {
   user: (User & { emailConnected?: boolean }) | null;
 }
 
-type Step = "primary-use" | "email-volume" | "ai-features" | "automation" | "tone" | "security" | "referral";
+type Step = "primary-use" | "email-volume" | "ai-features" | "automation" | "tone" | "security" | "referral" | "select-plan";
 
 interface AIPreferences {
   primaryUse: string;
@@ -28,6 +29,63 @@ interface AIPreferences {
   referralSource: string;
   referralOther?: string;
   enableTwoFactor?: boolean;
+  selectedPlan?: string;
+}
+
+const basePlans = [
+  {
+    id: "free",
+    name: "Free",
+    monthlyPrice: 0,
+    annualPrice: 0,
+    description: "Perfect for trying out Draft",
+    features: [
+      "Connect 1 email account",
+      "Basic inbox management",
+      "Standard support",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    monthlyPrice: 19,
+    annualPrice: 199,
+    annualSavings: 29,
+    description: "For professionals who need more",
+    features: [
+      "Unlimited AI replies",
+      "Advanced tone customization",
+      "Email scheduling",
+      "Priority support",
+      "14-day free trial",
+    ],
+  },
+  {
+    id: "business",
+    name: "Business",
+    monthlyPrice: 49,
+    annualPrice: 299,
+    annualSavings: 289,
+    description: "For teams and power users",
+    features: [
+      "Voice assistant",
+      "Custom AI training",
+      "Team collaboration",
+      "Dedicated support",
+      "14-day free trial",
+    ],
+  },
+];
+
+function getRecommendedPlan(preferences: AIPreferences): string {
+  const { emailVolume, automationLevel, primaryUse } = preferences;
+  
+  if (emailVolume === "very-high") return "business";
+  if (automationLevel === "high" && primaryUse === "work") return "business";
+  if (emailVolume === "high" && automationLevel === "high") return "business";
+  if (emailVolume === "low" && automationLevel === "low") return "free";
+  
+  return "pro";
 }
 
 export default function OnboardingPage() {
@@ -40,6 +98,7 @@ export default function OnboardingPage() {
     replyTone: "",
     referralSource: "",
   });
+  const [billingInterval, setBillingInterval] = useState<"annual" | "monthly">("annual");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -52,9 +111,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (authData?.user?.onboardingCompleted) {
       // Redirect based on their current state
-      if (!authData.user.plan) {
-        setLocation("/select-plan");
-      } else if (!authData.user.emailConnected) {
+      if (!authData.user.emailConnected) {
         setLocation("/connect-email");
       } else {
         setLocation("/inbox");
@@ -62,8 +119,9 @@ export default function OnboardingPage() {
     }
   }, [authData, setLocation]);
 
-  const steps: Step[] = ["primary-use", "email-volume", "ai-features", "automation", "tone", "security", "referral"];
+  const steps: Step[] = ["primary-use", "email-volume", "ai-features", "automation", "tone", "security", "referral", "select-plan"];
   const currentStepIndex = steps.indexOf(step);
+  const recommendedPlan = getRecommendedPlan(preferences);
 
   const completeOnboardingMutation = useMutation({
     mutationFn: async () => {
@@ -83,8 +141,8 @@ export default function OnboardingPage() {
       // Wait for the query to refetch with updated data before redirecting
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
-      // Go to pricing after onboarding (new flow)
-      setLocation("/select-plan");
+      // Redirect to email connection
+      setLocation("/connect-email");
     },
     onError: (error: Error) => {
       toast({
@@ -95,13 +153,73 @@ export default function OnboardingPage() {
     },
   });
 
+  // Free plan selection
+  const selectFreePlanMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/user/plan", { plan: "free" });
+      return response.json();
+    },
+    onSuccess: () => {
+      completeOnboardingMutation.mutate();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to select plan",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Stripe checkout for paid plans
+  const checkoutMutation = useMutation({
+    mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
+      // First save the AI preferences
+      await apiRequest("POST", "/api/user/onboarding", { aiPreferences: preferences });
+      // If 2FA was enabled, enable it
+      if (preferences.enableTwoFactor) {
+        try {
+          await apiRequest("POST", "/api/settings/2fa/toggle", { enable: true });
+        } catch (err) {
+          console.error("Failed to enable 2FA:", err);
+        }
+      }
+      // Then start checkout
+      const response = await apiRequest("POST", "/api/stripe/checkout", { plan, interval });
+      return response.json();
+    },
+    onSuccess: (data: { url: string }) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to start checkout",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePlanSelect = (planId: string) => {
+    setPreferences({ ...preferences, selectedPlan: planId });
+    
+    if (planId === "free") {
+      selectFreePlanMutation.mutate();
+    } else {
+      checkoutMutation.mutate({ plan: planId, interval: billingInterval });
+    }
+  };
+
+  const isPlanLoading = selectFreePlanMutation.isPending || checkoutMutation.isPending || completeOnboardingMutation.isPending;
+
   const goNext = () => {
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
       setStep(steps[nextIndex]);
-    } else {
-      completeOnboardingMutation.mutate();
     }
+    // For select-plan step, plan selection handles completion
   };
 
   const goBack = () => {
@@ -124,12 +242,12 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg">
-        <div className="flex justify-center gap-2 mb-8">
+      <div className={`w-full transition-all ${step === "select-plan" ? "max-w-2xl" : "max-w-lg"}`}>
+        <div className="flex justify-center gap-1.5 mb-8">
           {steps.map((s, i) => (
             <div
               key={s}
-              className={`h-1.5 w-16 rounded-full transition-colors ${
+              className={`h-1.5 w-8 sm:w-10 rounded-full transition-colors ${
                 i <= currentStepIndex ? "bg-primary" : "bg-muted"
               }`}
             />
@@ -149,6 +267,7 @@ export default function OnboardingPage() {
               {step === "tone" && "What's your preferred reply tone?"}
               {step === "security" && "Secure your account"}
               {step === "referral" && "How did you hear about us?"}
+              {step === "select-plan" && "Choose your plan"}
             </CardTitle>
             <CardDescription>
               {step === "primary-use" && "Help us personalize your experience"}
@@ -158,6 +277,7 @@ export default function OnboardingPage() {
               {step === "tone" && "This will be your default for AI replies"}
               {step === "security" && "Add extra protection with two-factor authentication"}
               {step === "referral" && "We'd love to know how you found us"}
+              {step === "select-plan" && "Select a plan to complete setup"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -386,6 +506,104 @@ export default function OnboardingPage() {
                 )}
               </div>
             )}
+
+            {step === "select-plan" && (
+              <div className="space-y-4">
+                <div className="flex justify-center mb-4">
+                  <div className="inline-flex items-center bg-muted rounded-full p-1" data-testid="billing-toggle">
+                    <button
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        billingInterval === "monthly" 
+                          ? "bg-primary text-primary-foreground" 
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => setBillingInterval("monthly")}
+                      data-testid="button-billing-monthly"
+                    >
+                      Monthly
+                    </button>
+                    <button
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        billingInterval === "annual" 
+                          ? "bg-primary text-primary-foreground" 
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => setBillingInterval("annual")}
+                      data-testid="button-billing-annual"
+                    >
+                      Annual
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {basePlans.map((plan) => {
+                    const isRecommended = plan.id === recommendedPlan;
+                    const displayPrice = plan.id === "free" 
+                      ? "$0" 
+                      : billingInterval === "annual" 
+                        ? `$${plan.annualPrice}` 
+                        : `$${plan.monthlyPrice}`;
+                    const displayPeriod = plan.id === "free" 
+                      ? "forever" 
+                      : billingInterval === "annual" 
+                        ? "/year" 
+                        : "/month";
+
+                    return (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => handlePlanSelect(plan.id)}
+                        disabled={isPlanLoading}
+                        className={`w-full p-4 rounded-lg border text-left transition-all relative ${
+                          isRecommended
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-border hover:border-muted-foreground"
+                        } ${isPlanLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                        data-testid={`button-plan-${plan.id}`}
+                      >
+                        {isRecommended && (
+                          <Badge className="absolute -top-2.5 left-4 bg-primary text-primary-foreground text-xs">
+                            <Star className="w-3 h-3 mr-1" />
+                            Recommended
+                          </Badge>
+                        )}
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="font-semibold text-base">{plan.name}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{plan.description}</div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                              {plan.features.slice(0, 3).map((feature) => (
+                                <span key={feature} className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Check className="w-3 h-3 text-primary" />
+                                  {feature}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="text-xl font-bold">{displayPrice}</div>
+                            <div className="text-xs text-muted-foreground">{displayPeriod}</div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {isPlanLoading && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Setting up your account...</span>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground text-center">
+                  Pro and Business plans include a 14-day free trial. Cancel anytime.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -393,28 +611,29 @@ export default function OnboardingPage() {
           <Button
             variant="ghost"
             onClick={goBack}
+            disabled={isPlanLoading}
             data-testid="button-onboarding-back"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <Button
-            onClick={goNext}
-            disabled={
-              (step === "primary-use" && !preferences.primaryUse) ||
-              (step === "email-volume" && !preferences.emailVolume) ||
-              (step === "ai-features" && preferences.aiFeatures.length === 0) ||
-              (step === "automation" && !preferences.automationLevel) ||
-              (step === "tone" && !preferences.replyTone) ||
-              (step === "referral" && !preferences.referralSource) ||
-              completeOnboardingMutation.isPending
-            }
-            data-testid="button-onboarding-next"
-          >
-            {completeOnboardingMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {currentStepIndex === steps.length - 1 ? "Complete Setup" : "Continue"}
-            {currentStepIndex < steps.length - 1 && <ArrowRight className="w-4 h-4 ml-2" />}
-          </Button>
+          {step !== "select-plan" && (
+            <Button
+              onClick={goNext}
+              disabled={
+                (step === "primary-use" && !preferences.primaryUse) ||
+                (step === "email-volume" && !preferences.emailVolume) ||
+                (step === "ai-features" && preferences.aiFeatures.length === 0) ||
+                (step === "automation" && !preferences.automationLevel) ||
+                (step === "tone" && !preferences.replyTone) ||
+                (step === "referral" && !preferences.referralSource)
+              }
+              data-testid="button-onboarding-next"
+            >
+              Continue
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
