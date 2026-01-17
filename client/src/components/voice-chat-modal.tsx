@@ -45,8 +45,8 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
 
   const SILENCE_THRESHOLD = 0.03;
   const SPEECH_THRESHOLD = 0.05;
-  const SILENCE_DURATION = 1200;
-  const MIN_SPEECH_DURATION = 300;
+  const SILENCE_DURATION = 800;
+  const MIN_SPEECH_DURATION = 200;
 
   useEffect(() => {
     openRef.current = open;
@@ -66,7 +66,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     if (openRef.current) {
       setTimeout(() => {
         startListeningRef.current();
-      }, 500);
+      }, 200);
     }
   }, []);
 
@@ -354,7 +354,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     if (open) {
       const timer = setTimeout(() => {
         startListening();
-      }, 500);
+      }, 300);
       return () => clearTimeout(timer);
     } else {
       stopListening();
@@ -375,7 +375,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
       case "listening":
         return "Listening...";
       case "processing":
-        return "Thinking...";
+        return "Vince is thinking...";
       case "speaking":
         return "Vince is speaking...";
       default:
