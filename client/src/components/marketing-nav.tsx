@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import draftLogo from "@assets/image_1768612031318.png";
+import draftLogo from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
 
 interface AuthResponse {
   user: { id: string; plan?: string; onboardingCompleted?: boolean; emailConnected?: boolean } | null;
