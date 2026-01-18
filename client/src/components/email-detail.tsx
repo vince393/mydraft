@@ -16,8 +16,10 @@ import {
   Calendar,
   ChevronDown,
   Languages,
-  Loader2
+  Loader2,
+  StickyNote
 } from "lucide-react";
+import { EmailNotePanel } from "./email-note";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -686,6 +688,11 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                 )}
               </>
             )}
+          </div>
+
+          {/* Sticky Note for this email */}
+          <div className="mb-6">
+            <EmailNotePanel messageId={String((email as any).nylasId || email.id)} />
           </div>
 
           {/* Show indicator for newer messages in thread */}
