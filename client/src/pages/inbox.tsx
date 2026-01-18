@@ -371,12 +371,17 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
 
   const moveEmailMutation = useMutation({
     mutationFn: async ({ emailId, folder, previousFolder, showUndo = true }: { emailId: string | number; folder: string; previousFolder?: string; showUndo?: boolean }) => {
+      console.log("[DEBUG moveEmailMutation] Starting mutation with emailId:", emailId, "folder:", folder);
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
+      console.log("[DEBUG moveEmailMutation] Response status:", response.status);
       if (!response.ok) {
         const error = await response.json();
+        console.log("[DEBUG moveEmailMutation] Error:", error);
         throw new Error(error.error || "Failed to move email");
       }
-      return { ...(await response.json()), emailId, folder, previousFolder, showUndo };
+      const result = await response.json();
+      console.log("[DEBUG moveEmailMutation] Success result:", result);
+      return { ...result, emailId, folder, previousFolder, showUndo };
     },
     onSuccess: (data) => {
       setSelectedEmailId(null);
@@ -463,14 +468,20 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   };
 
   const handleTrashEmail = () => {
+    console.log("[DEBUG handleTrashEmail] selectedEmail:", selectedEmail);
     if (selectedEmail) {
-      moveEmailMutation.mutate({ emailId: getEmailId(selectedEmail), folder: "trash", previousFolder: activeFolder });
+      const emailId = getEmailId(selectedEmail);
+      console.log("[DEBUG handleTrashEmail] calling mutation with emailId:", emailId);
+      moveEmailMutation.mutate({ emailId, folder: "trash", previousFolder: activeFolder });
     }
   };
 
   const handleArchiveEmail = () => {
+    console.log("[DEBUG handleArchiveEmail] selectedEmail:", selectedEmail);
     if (selectedEmail) {
-      moveEmailMutation.mutate({ emailId: getEmailId(selectedEmail), folder: "archived", previousFolder: activeFolder });
+      const emailId = getEmailId(selectedEmail);
+      console.log("[DEBUG handleArchiveEmail] calling mutation with emailId:", emailId);
+      moveEmailMutation.mutate({ emailId, folder: "archived", previousFolder: activeFolder });
     }
   };
 
