@@ -1976,7 +1976,7 @@ Reply:`;
         max_completion_tokens: 1024,
       });
 
-      const generatedContent = response.choices[0]?.message?.content;
+      let generatedContent = response.choices[0]?.message?.content;
       
       if (!generatedContent || generatedContent.trim().length === 0) {
         return res.status(422).json({ 
@@ -1984,6 +1984,11 @@ Reply:`;
           reason: "The email format or content could not be processed. This may be due to unusual formatting, empty content, or unsupported characters.",
           canRetry: true
         });
+      }
+
+      // Append email signature if enabled
+      if (user?.signatureEnabled && user?.emailSignature) {
+        generatedContent = `${generatedContent}\n\n${user.emailSignature}`;
       }
 
       // If emailId was numeric, save the draft
@@ -2360,17 +2365,28 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
       try {
         const parsed = JSON.parse(content);
         
+        // Append email signature if enabled
+        let body = parsed.body || "";
+        if (user?.signatureEnabled && user?.emailSignature) {
+          body = `${body}\n\n${user.emailSignature}`;
+        }
+        
         // Get remaining count for free users
         const todayUsage = userPlan === "free" ? await storage.getAiUsageToday(req.session.userId!) : 0;
         const remaining = userPlan === "free" ? Math.max(0, 5 - todayUsage) : null;
         
         res.json({
           subject: parsed.subject || "",
-          body: parsed.body || "",
+          body,
           usage: userPlan === "free" ? { used: todayUsage, limit: 5, remaining } : null,
         });
       } catch {
-        res.json({ subject: "", body: content });
+        // Append signature even in fallback case
+        let fallbackBody = content;
+        if (user?.signatureEnabled && user?.emailSignature) {
+          fallbackBody = `${fallbackBody}\n\n${user.emailSignature}`;
+        }
+        res.json({ subject: "", body: fallbackBody });
       }
     } catch (error: any) {
       console.error("Error generating quick draft:", error);
@@ -3451,7 +3467,12 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         temperature: 0.7,
       });
 
-      const draftBody = completion.choices[0]?.message?.content || "";
+      let draftBody = completion.choices[0]?.message?.content || "";
+
+      // Append email signature if enabled
+      if (user?.signatureEnabled && user?.emailSignature) {
+        draftBody = `${draftBody}\n\n${user.emailSignature}`;
+      }
 
       // Create a pending action for this draft
       const action = await storage.createAssistantAction({
