@@ -969,6 +969,96 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/writing-style", requireAuth, async (req, res) => {
+    try {
+      const style = await storage.getLearnedWritingStyle(req.session.userId!);
+      const sampleCount = await storage.getWritingSampleCount(req.session.userId!);
+      res.json({ 
+        style: style || null, 
+        sampleCount,
+        hasLearnedStyle: !!(style && style.samplesAnalyzed > 0)
+      });
+    } catch (error) {
+      console.error("Error fetching writing style:", error);
+      res.status(500).json({ error: "Failed to fetch writing style" });
+    }
+  });
+
+  app.post("/api/writing-style/analyze", requireAuth, async (req, res) => {
+    try {
+      const samples = await storage.getWritingSamples(req.session.userId!, 20);
+      
+      if (samples.length < 3) {
+        return res.status(400).json({ 
+          error: "Not enough writing samples",
+          message: "Send at least 3 emails to enable personalized AI drafts",
+          sampleCount: samples.length,
+          required: 3
+        });
+      }
+
+      const sampleTexts = samples.map(s => s.originalContent).join("\n\n---\n\n");
+      
+      const prompt = `Analyze these email samples and extract the user's unique writing style. Return a JSON object with:
+1. "styleAnalysis": A 2-3 sentence description of their overall writing style
+2. "commonPhrases": Array of 5-10 phrases or expressions they commonly use
+3. "greetingPatterns": Array of greetings they typically use (e.g., "Hi", "Hey", "Hello")
+4. "signOffPatterns": Array of sign-offs they typically use (e.g., "Best", "Thanks", "Cheers")
+5. "toneDescription": One word describing their typical tone (professional, casual, friendly, formal, etc.)
+6. "avgSentenceLength": Estimated average sentence length (short/medium/long)
+
+Email samples:
+${sampleTexts}
+
+Return ONLY valid JSON, no other text.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert at analyzing writing styles. Extract patterns from email samples to help personalize future AI-generated drafts."
+          },
+          { role: "user", content: prompt }
+        ],
+        max_tokens: 1000,
+        temperature: 0.3,
+      });
+
+      const responseText = response.choices[0]?.message?.content || "{}";
+      
+      let parsed;
+      try {
+        parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
+      } catch (parseError) {
+        console.error("Failed to parse style analysis JSON:", parseError);
+        return res.status(422).json({ 
+          error: "Failed to analyze writing style",
+          message: "AI returned invalid format. Please try again."
+        });
+      }
+
+      const learnedStyle = await storage.upsertLearnedWritingStyle(req.session.userId!, {
+        styleAnalysis: parsed.styleAnalysis || "",
+        commonPhrases: parsed.commonPhrases || [],
+        greetingPatterns: parsed.greetingPatterns || [],
+        signOffPatterns: parsed.signOffPatterns || [],
+        toneDescription: parsed.toneDescription,
+        avgSentenceLength: parsed.avgSentenceLength,
+        samplesAnalyzed: samples.length,
+      });
+
+      res.json({ 
+        success: true, 
+        style: learnedStyle,
+        message: `Analyzed ${samples.length} emails to learn your writing style`
+      });
+    } catch (error) {
+      console.error("Error analyzing writing style:", error);
+      res.status(500).json({ error: "Failed to analyze writing style" });
+    }
+  });
+
   app.delete("/api/user", requireAuth, async (req, res) => {
     try {
       await storage.deleteNylasGrant(req.session.userId!);
@@ -1790,8 +1880,23 @@ Rules:
 
       const toneDesc = toneDescriptions[tone] || toneDescriptions.professional;
 
-      const prompt = `You are an email assistant. Generate a reply to the following email. The reply should be ${toneDesc}.
+      // Fetch user's learned writing style for personalization
+      const learnedStyle = await storage.getLearnedWritingStyle(req.session.userId!);
+      let styleContext = "";
+      
+      if (learnedStyle && learnedStyle.samplesAnalyzed > 0) {
+        styleContext = `
+IMPORTANT - Match the user's personal writing style:
+- Style: ${learnedStyle.styleAnalysis || "Direct and clear"}
+- Tone: ${learnedStyle.toneDescription || tone}
+- Common phrases they use: ${learnedStyle.commonPhrases?.slice(0, 5).join(", ") || "None learned"}
+- Sentence length: ${learnedStyle.avgSentenceLength || "medium"}
+Try to naturally incorporate their writing patterns while maintaining the requested ${tone} tone.
+`;
+      }
 
+      const prompt = `You are an email assistant. Generate a reply to the following email. The reply should be ${toneDesc}.
+${styleContext}
 From: ${emailData.sender} <${emailData.senderEmail}>
 Subject: ${emailData.subject}
 
@@ -1806,12 +1911,16 @@ Please write a reply that:
 
 Reply:`;
 
+      const systemPrompt = learnedStyle && learnedStyle.samplesAnalyzed > 0
+        ? `You are an email assistant that writes replies matching the user's personal writing style. The user tends to write in a ${learnedStyle.toneDescription || tone} manner with ${learnedStyle.avgSentenceLength || "medium"} sentences. Mimic their natural voice while maintaining the requested ${tone} tone. Write only the email body without greetings or sign-offs.`
+        : `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings or sign-offs.`;
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings or sign-offs.`
+            content: systemPrompt
           },
           {
             role: "user",
@@ -1996,6 +2105,19 @@ Please modify the response according to the instruction.`
       
       if (!refinedText || refinedText.trim().length === 0) {
         return res.status(422).json({ error: "Unable to refine text" });
+      }
+
+      // Capture draft edit as writing sample for personalization
+      const wordCount = refinedText.split(/\s+/).filter((w: string) => w.length > 0).length;
+      if (wordCount >= 10) {
+        storage.createWritingSample({
+          userId: req.session.userId!,
+          sampleType: "draft_edit",
+          originalContent: text,
+          finalContent: refinedText.trim(),
+          context: instruction,
+          wordCount,
+        }).catch(err => console.error("Failed to capture draft edit:", err));
       }
 
       res.json({ refined: refinedText.trim() });

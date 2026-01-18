@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, RefreshCw, Loader2, AlertCircle, Send, Wand2, Save } from "lucide-react";
+import { Sparkles, RefreshCw, Loader2, AlertCircle, Send, Wand2, Save, GraduationCap } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,10 +9,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Email, Draft } from "@shared/schema";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface GenerateError {
   error: string;
@@ -37,6 +38,16 @@ interface AIDraftDialogProps {
   onDraftAccepted: (draft: Draft) => void;
 }
 
+interface WritingStyleResponse {
+  style: {
+    styleAnalysis: string;
+    toneDescription: string;
+    samplesAnalyzed: number;
+  } | null;
+  sampleCount: number;
+  hasLearnedStyle: boolean;
+}
+
 export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AIDraftDialogProps) {
   const [selectedTone, setSelectedTone] = useState<ToneType>("professional");
   const [draftContent, setDraftContent] = useState("");
@@ -49,6 +60,11 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const { data: writingStyle } = useQuery<WritingStyleResponse>({
+    queryKey: ["/api/writing-style"],
+    enabled: open,
+  });
 
   const generateMutation = useMutation({
     mutationFn: async ({ emailId, tone, instructions }: { emailId: number; tone: string; instructions?: string }) => {
@@ -192,9 +208,48 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-5 py-4 border-b border-border/50 flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2.5 text-base font-medium">
-            <Sparkles className="w-4 h-4 text-primary" />
-            AI Draft
+          <DialogTitle className="flex items-center justify-between text-base font-medium">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-4 h-4 text-primary" />
+              AI Draft
+            </div>
+            {writingStyle?.hasLearnedStyle && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                    data-testid="badge-ai-personalized"
+                  >
+                    <GraduationCap className="w-3 h-3" />
+                    Personalized
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[250px]">
+                  <p className="text-xs" data-testid="text-personalization-info">
+                    AI has learned your writing style from {writingStyle.style?.samplesAnalyzed || 0} emails.
+                    Drafts are personalized to match how you write.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {!writingStyle?.hasLearnedStyle && writingStyle?.sampleCount !== undefined && writingStyle.sampleCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs"
+                    data-testid="badge-ai-learning-progress"
+                  >
+                    <GraduationCap className="w-3 h-3" />
+                    {writingStyle.sampleCount}/3 samples
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[250px]">
+                  <p className="text-xs" data-testid="text-learning-progress">
+                    Send {3 - writingStyle.sampleCount} more emails for AI to learn your writing style.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </DialogTitle>
         </DialogHeader>
 
