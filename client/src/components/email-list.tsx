@@ -490,9 +490,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               </button>
             )}
           </div>
-          {hasConnectedAccount && activeFolder === "inbox" && (
-            <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
-          )}
           <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
             <PopoverTrigger asChild>
               <Button 
@@ -785,6 +782,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               )}
               Draft with AI
             </Button>
+            {hasConnectedAccount && activeFolder === "inbox" && (
+              <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
+            )}
           </div>
         )}
       </div>

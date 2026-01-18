@@ -173,14 +173,14 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
   return (
     <>
       <Button
-        variant="outline"
-        size="sm"
+        variant="ghost"
+        size="icon"
         onClick={() => setIsOpen(true)}
-        className="gap-2"
+        className="text-purple-500"
+        title="AI Inbox Refresh"
         data-testid="button-ai-inbox-refresh"
       >
         <Wand2 className="w-4 h-4" />
-        <span className="hidden sm:inline">AI Refresh</span>
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

@@ -42,7 +42,11 @@ import {
   Shield,
   Smartphone,
   MapPin,
-  Globe
+  Globe,
+  Palette,
+  Sun,
+  Moon,
+  Monitor
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
@@ -106,10 +110,14 @@ export default function SettingsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-7" : "sm:grid-cols-6"}`}>
+            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-8" : "sm:grid-cols-7"}`}>
               <TabsTrigger value="account" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-account">
                 <User className="w-4 h-4" />
                 <span className="text-xs sm:text-sm">Account</span>
+              </TabsTrigger>
+              <TabsTrigger value="appearance" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-appearance">
+                <Palette className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">Theme</span>
               </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-security">
                 <Shield className="w-4 h-4" />
@@ -142,6 +150,9 @@ export default function SettingsPage() {
 
           <TabsContent value="account">
             <AccountTab settings={settings!} />
+          </TabsContent>
+          <TabsContent value="appearance">
+            <AppearanceTab />
           </TabsContent>
           <TabsContent value="security">
             <SecurityTab settings={settings!} />
@@ -1494,6 +1505,145 @@ function TeamTab() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AppearanceTab() {
+  const { toast } = useToast();
+  const [theme, setTheme] = useState<"light" | "dark" | "system">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("theme") as "light" | "dark" | "system") || "dark";
+    }
+    return "dark";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    
+    if (theme === "system") {
+      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.classList.toggle("dark", systemPrefersDark);
+      localStorage.setItem("theme", "system");
+    } else {
+      root.classList.toggle("dark", theme === "dark");
+      localStorage.setItem("theme", theme);
+    }
+  }, [theme]);
+
+  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme);
+    toast({
+      title: "Theme updated",
+      description: `Switched to ${newTheme === "system" ? "system" : newTheme} mode`,
+    });
+  };
+
+  const themeOptions = [
+    { value: "light", label: "Light", icon: Sun, description: "Clean, bright interface" },
+    { value: "dark", label: "Dark", icon: Moon, description: "Easy on the eyes" },
+    { value: "system", label: "System", icon: Monitor, description: "Match your device" },
+  ] as const;
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="w-5 h-5" />
+            Appearance
+          </CardTitle>
+          <CardDescription>
+            Customize how Draft looks on your device
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <Label className="text-base font-medium">Theme</Label>
+            <RadioGroup
+              value={theme}
+              onValueChange={(value) => handleThemeChange(value as "light" | "dark" | "system")}
+              className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+            >
+              {themeOptions.map((option) => {
+                const Icon = option.icon;
+                const isSelected = theme === option.value;
+                return (
+                  <Label
+                    key={option.value}
+                    htmlFor={`theme-${option.value}`}
+                    className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border"
+                    }`}
+                  >
+                    <RadioGroupItem
+                      value={option.value}
+                      id={`theme-${option.value}`}
+                      className="sr-only"
+                      data-testid={`radio-theme-${option.value}`}
+                    />
+                    {isSelected && (
+                      <div className="absolute top-2 right-2">
+                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="w-3 h-3 text-primary-foreground" />
+                        </div>
+                      </div>
+                    )}
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      isSelected 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-medium text-sm">{option.label}</p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                  </Label>
+                );
+              })}
+            </RadioGroup>
+          </div>
+
+          <div className="border-t pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-medium">Preview</Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  See how your inbox looks with the current theme
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 p-4 rounded-xl border bg-muted/20">
+              <div className="flex items-center gap-3 p-3 bg-background rounded-lg border mb-2">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500" />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">John Doe</span>
+                    <span className="text-xs text-muted-foreground">2:30 PM</span>
+                  </div>
+                  <p className="text-sm font-medium">Project Update</p>
+                  <p className="text-xs text-muted-foreground truncate">Here's the latest on our project...</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500" />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">Jane Smith</span>
+                    <span className="text-xs text-muted-foreground">1:45 PM</span>
+                  </div>
+                  <p className="text-sm font-medium">Meeting Reminder</p>
+                  <p className="text-xs text-muted-foreground truncate">Don't forget about tomorrow's meeting...</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

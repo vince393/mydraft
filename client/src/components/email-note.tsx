@@ -87,16 +87,16 @@ export function EmailNotePanel({ messageId }: EmailNoteProps) {
 
   if (!hasNote && !isEditing) {
     return (
-      <div className="p-4">
+      <div className="px-4 py-2">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="w-full gap-2 border-dashed border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 hover:border-amber-500/50"
+          className="gap-1.5 text-xs text-muted-foreground"
           onClick={() => setIsEditing(true)}
           data-testid="button-add-note"
         >
-          <StickyNote className="w-4 h-4" />
-          Add Note
+          <StickyNote className="w-3.5 h-3.5" />
+          Add note
         </Button>
       </div>
     );

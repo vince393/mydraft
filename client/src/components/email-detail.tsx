@@ -430,6 +430,14 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
         <div className="px-3 sm:pl-6 sm:pr-8 pt-3 sm:pt-4 pb-6 sm:pb-8">
           {/* Thread indicator - Gmail-style with first message preview and expandable rest */}
           {hasThread && olderEmails.length > 0 && (() => {
+            // Separator between thread and current email
+            const ThreadSeparator = () => (
+              <div className="flex items-center gap-3 py-3">
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">Latest Reply</span>
+                <div className="flex-1 h-px bg-gradient-to-r from-border via-border to-transparent" />
+              </div>
+            );
             const firstOlderEmail = olderEmails[0];
             const remainingEmails = olderEmails.slice(1);
             const firstInitials = firstOlderEmail.sender
@@ -560,6 +568,7 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                     )}
                   </>
                 )}
+                <ThreadSeparator />
               </div>
             );
           })()}
