@@ -330,7 +330,9 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   </div>
                 </SidebarMenuItem>
                 {folders.map((item) => {
-                  const isActive = activeFolder.toLowerCase() === item.title.toLowerCase();
+                  // For custom folders, use a special identifier like "custom-{id}"
+                  const folderId = item.isCustom && item.id ? `custom-${item.id}` : item.title.toLowerCase();
+                  const isActive = activeFolder === folderId || activeFolder.toLowerCase() === item.title.toLowerCase();
                   const folderKey = item.title.toLowerCase() as keyof UnreadCounts;
                   const folderCount = unreadCounts?.[folderKey] || (item.title === "Inbox" ? unreadCount : 0);
                   const showCount = folderCount > 0;
@@ -343,7 +345,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                             <SidebarMenuButton 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onFolderChange(item.title.toLowerCase());
+                                onFolderChange(folderId);
                               }}
                               className={`
                                 w-full justify-center h-11 rounded-xl transition-all duration-200
@@ -374,7 +376,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     <SidebarMenuButton 
                       onClick={(e) => {
                         e.stopPropagation();
-                        onFolderChange(item.title.toLowerCase());
+                        onFolderChange(folderId);
                       }}
                       className={`
                         w-full justify-between h-11 rounded-xl transition-all duration-200
@@ -414,7 +416,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                                 e.stopPropagation();
                                 // Only navigate if menu is not open
                                 if (folderActionMenuOpen !== item.title) {
-                                  onFolderChange(item.title.toLowerCase());
+                                  onFolderChange(folderId);
                                 }
                               }}
                               onTouchStart={(e) => {

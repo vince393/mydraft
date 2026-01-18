@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -179,6 +179,12 @@ export interface IStorage {
   createCustomFolder(userId: string, name: string, aiDescription?: string): Promise<CustomFolder>;
   updateCustomFolder(id: number, userId: string, updates: { name?: string; aiDescription?: string }): Promise<CustomFolder | undefined>;
   deleteCustomFolder(id: number, userId: string): Promise<boolean>;
+
+  // Email folder assignment methods
+  assignEmailToFolder(userId: string, messageId: string, folderId: number): Promise<EmailFolderAssignment>;
+  getEmailFolderAssignment(userId: string, messageId: string): Promise<EmailFolderAssignment | undefined>;
+  getEmailsInFolder(userId: string, folderId: number): Promise<string[]>; // Returns messageIds
+  removeEmailFromFolder(userId: string, messageId: string): Promise<boolean>;
 }
 
 const avatarColors = [
@@ -1706,6 +1712,39 @@ Business Development`,
   async deleteCustomFolder(id: number, userId: string): Promise<boolean> {
     const result = await db.delete(customFolders)
       .where(and(eq(customFolders.id, id), eq(customFolders.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Email folder assignment methods
+  async assignEmailToFolder(userId: string, messageId: string, folderId: number): Promise<EmailFolderAssignment> {
+    // First remove any existing assignment for this email
+    await db.delete(emailFolderAssignments)
+      .where(and(eq(emailFolderAssignments.userId, userId), eq(emailFolderAssignments.messageId, messageId)));
+    
+    // Then create the new assignment
+    const [created] = await db.insert(emailFolderAssignments).values({
+      userId,
+      messageId,
+      folderId,
+    }).returning();
+    return created;
+  }
+
+  async getEmailFolderAssignment(userId: string, messageId: string): Promise<EmailFolderAssignment | undefined> {
+    const [assignment] = await db.select().from(emailFolderAssignments)
+      .where(and(eq(emailFolderAssignments.userId, userId), eq(emailFolderAssignments.messageId, messageId)));
+    return assignment;
+  }
+
+  async getEmailsInFolder(userId: string, folderId: number): Promise<string[]> {
+    const assignments = await db.select().from(emailFolderAssignments)
+      .where(and(eq(emailFolderAssignments.userId, userId), eq(emailFolderAssignments.folderId, folderId)));
+    return assignments.map(a => a.messageId);
+  }
+
+  async removeEmailFromFolder(userId: string, messageId: string): Promise<boolean> {
+    const result = await db.delete(emailFolderAssignments)
+      .where(and(eq(emailFolderAssignments.userId, userId), eq(emailFolderAssignments.messageId, messageId)));
     return (result.rowCount ?? 0) > 0;
   }
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Wand2, Loader2, Check, X, Archive, Trash2, Star, Mail, AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Wand2, Loader2, Check, X, Archive, Trash2, Star, Mail, AlertTriangle, ChevronDown, ChevronUp, Sparkles, FolderInput } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ interface AiSuggestion {
   messageSubject: string | null;
   messageSender: string | null;
   actionType: string;
-  actionData: { reason?: string } | null;
+  actionData: { reason?: string; folderId?: number; folderName?: string } | null;
   confidence: number;
   status: string;
   createdAt: string;
@@ -27,6 +27,7 @@ const actionIcons: Record<string, any> = {
   delete: Trash2,
   star: Star,
   mark_read: Mail,
+  move_to_folder: FolderInput,
 };
 
 const actionLabels: Record<string, string> = {
@@ -35,6 +36,7 @@ const actionLabels: Record<string, string> = {
   delete: "Delete",
   star: "Star",
   mark_read: "Mark as Read",
+  move_to_folder: "Move to Folder",
 };
 
 const actionColors: Record<string, string> = {
@@ -43,6 +45,7 @@ const actionColors: Record<string, string> = {
   delete: "bg-orange-500/10 text-orange-500 border-orange-500/20",
   star: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   mark_read: "bg-green-500/10 text-green-500 border-green-500/20",
+  move_to_folder: "bg-purple-500/10 text-purple-500 border-purple-500/20",
 };
 
 export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?: () => void }) {
@@ -290,7 +293,9 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
                                   className={`${actionColors[suggestion.actionType]} gap-1 text-xs`}
                                 >
                                   <Icon className="w-3 h-3" />
-                                  {actionLabels[suggestion.actionType]}
+                                  {suggestion.actionType === "move_to_folder" && suggestion.actionData?.folderName
+                                    ? `Move to "${suggestion.actionData.folderName}"`
+                                    : actionLabels[suggestion.actionType]}
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">
                                   {suggestion.confidence}% confident
@@ -370,7 +375,9 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
                                 <Icon className="w-3 h-3 text-green-500" />
                                 <span className="truncate flex-1">{suggestion.messageSubject}</span>
                                 <Badge variant="outline" className="text-xs">
-                                  {actionLabels[suggestion.actionType]}
+                                  {suggestion.actionType === "move_to_folder" && suggestion.actionData?.folderName
+                                    ? `Move to "${suggestion.actionData.folderName}"`
+                                    : actionLabels[suggestion.actionType]}
                                 </Badge>
                               </div>
                             );

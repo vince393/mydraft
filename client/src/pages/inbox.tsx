@@ -154,6 +154,10 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     },
   });
 
+  // Check if we're viewing a custom folder
+  const isCustomFolder = activeFolder.startsWith("custom-");
+  const customFolderId = isCustomFolder ? parseInt(activeFolder.replace("custom-", "")) : null;
+
   // Fetch all emails from all folders for proper threading
   const { data: allEmails = [], isLoading: isLoadingEmails, isFetching } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", "all"],
@@ -162,7 +166,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       if (!response.ok) throw new Error("Failed to fetch emails");
       return response.json();
     },
-    enabled: !!userData?.user,
+    enabled: !!userData?.user && !isCustomFolder,
     staleTime: 10000,
     gcTime: 300000,
     refetchOnWindowFocus: true,
@@ -171,13 +175,44 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     retryDelay: 500,
   });
 
+  // Fetch emails from custom folder when viewing a custom folder
+  const { data: customFolderData, isLoading: isLoadingCustomFolder } = useQuery<{ emails: EmailWithNylasId[] }>({
+    queryKey: ["/api/folders", customFolderId, "emails"],
+    queryFn: async () => {
+      const response = await fetch(`/api/folders/${customFolderId}/emails`);
+      if (!response.ok) throw new Error("Failed to fetch folder emails");
+      return response.json();
+    },
+    enabled: !!userData?.user && isCustomFolder && !!customFolderId,
+    staleTime: 10000,
+    gcTime: 300000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Use custom folder emails when viewing a custom folder, otherwise use all emails
+  const emailsSource = isCustomFolder ? (customFolderData?.emails || []) : allEmails;
+
   // Group emails by threadId and filter by active folder
   const { threads, emails } = useMemo(() => {
+    // For custom folders, we don't need to filter - just display all emails from the folder
+    if (isCustomFolder) {
+      const customEmails = emailsSource.map(email => ({
+        ...email,
+        threadCount: 1,
+        threadEmails: [email],
+      }));
+      // Sort by date (newest first)
+      customEmails.sort((a, b) => 
+        new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+      );
+      return { threads: customEmails.map(e => [e]), emails: customEmails };
+    }
+    
     // Group all emails by threadId
     const threadMap = new Map<string, EmailWithNylasId[]>();
     const noThreadEmails: EmailWithNylasId[] = [];
     
-    for (const email of allEmails) {
+    for (const email of emailsSource) {
       if (email.threadId) {
         const existing = threadMap.get(email.threadId) || [];
         existing.push(email);
@@ -257,7 +292,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     });
     
     return { threads: filteredThreads, emails: flatEmails };
-  }, [allEmails, activeFolder]);
+  }, [emailsSource, activeFolder, isCustomFolder]);
 
   useEffect(() => {
     setSelectedEmailId(null);
@@ -566,7 +601,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             onRestoreSingleEmail={handleRestoreSingleEmail}
             isAiLoading={false}
             isMoving={moveEmailMutation.isPending}
-            isLoading={isLoadingEmails}
+            isLoading={isLoadingEmails || isLoadingCustomFolder}
             activeFolder={activeFolder}
             hasConnectedAccount={!!userData?.user?.connectedEmail}
             onConnectAccount={() => setLocation("/connect-email")}

@@ -1656,6 +1656,52 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  // Get emails in a custom folder
+  app.get("/api/folders/:id/emails", requireAuth, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      if (isNaN(folderId)) {
+        return res.status(400).json({ error: "Invalid folder ID" });
+      }
+      
+      const userId = req.session.userId!;
+      const grant = await storage.getNylasGrant(userId);
+      
+      // Get message IDs assigned to this folder
+      const messageIds = await storage.getEmailsInFolder(userId, folderId);
+      
+      if (!messageIds.length) {
+        return res.json({ emails: [] });
+      }
+      
+      if (!grant) {
+        return res.json({ emails: [] });
+      }
+      
+      // Fetch each email individually by ID to ensure we get all assigned emails
+      const folderEmails: any[] = [];
+      for (const messageId of messageIds) {
+        try {
+          const email = await nylas.getMessage(grant.grantId, messageId);
+          if (email) {
+            folderEmails.push(email);
+          }
+        } catch (err) {
+          // Email may have been deleted, skip it
+          console.log(`Could not fetch message ${messageId}, may have been deleted`);
+        }
+      }
+      
+      // Sort by date (newest first)
+      folderEmails.sort((a, b) => (b.date || 0) - (a.date || 0));
+      
+      res.json({ emails: folderEmails });
+    } catch (error) {
+      console.error("Error getting folder emails:", error);
+      res.status(500).json({ error: "Failed to get folder emails" });
+    }
+  });
+
   // AI Inbox Refresh - analyze emails and suggest actions
   app.post("/api/ai/inbox-refresh", requireAuth, async (req, res) => {
     try {
@@ -1677,6 +1723,13 @@ Return ONLY valid JSON, no other text.`;
       const learnedStyle = await storage.getLearnedWritingStyle(userId);
       const user = await storage.getUser(userId);
       
+      // Get user's custom folders with AI descriptions for auto-sorting (Pro+ feature only)
+      const customFolders = await storage.getCustomFolders(userId);
+      const userPlan = user?.plan || "free";
+      const hasPro = userPlan === "pro" || userPlan === "premium";
+      // Only include folder descriptions for Pro+ users
+      const foldersWithAiDesc = hasPro ? customFolders.filter(f => f.aiDescription) : [];
+      
       // Clear old non-pending suggestions
       await storage.clearOldAiInboxSuggestions(userId);
       
@@ -1695,19 +1748,31 @@ Return ONLY valid JSON, no other text.`;
         unread: msg.unread,
       }));
       
+      // Build folder sorting section if user has custom folders with AI descriptions
+      const folderSortingSection = foldersWithAiDesc.length > 0 ? `
+CUSTOM FOLDER AUTO-SORTING (Pro Feature):
+The user has created custom folders with AI sorting rules. If an email matches a folder's description, suggest moving it there.
+
+Available folders:
+${foldersWithAiDesc.map(f => `- Folder ID ${f.id}: "${f.name}" - ${f.aiDescription}`).join("\n")}
+
+To suggest moving to a folder, use action "move_to_folder" with folderId and folderName in the suggestion.
+` : "";
+      
       // Call AI to analyze emails
       const systemPrompt = `You are an email inbox assistant. Analyze the user's emails and suggest actions based on patterns.
       
 User preferences context:
 ${learnedStyle?.writingStyle ? `- Writing style: ${learnedStyle.writingStyle}` : ""}
 ${learnedStyle?.preferredTone ? `- Preferred tone: ${learnedStyle.preferredTone}` : ""}
-
+${folderSortingSection}
 Analyze each email and suggest one of these actions if appropriate:
 - "spam": Likely spam or unwanted promotional emails
 - "archive": Read emails that can be archived
 - "delete": Obvious junk or expired notifications  
 - "star": Important emails that deserve attention
 - "mark_read": Unread emails that don't need action
+${foldersWithAiDesc.length > 0 ? '- "move_to_folder": Move to a custom folder based on the folder descriptions above' : ""}
 
 Rules:
 - Be conservative - only suggest actions you're confident about
@@ -1715,15 +1780,16 @@ Rules:
 - Consider the sender's domain and email patterns
 - Provide a brief reason for each suggestion
 - Return confidence score 0-100 for each suggestion
+${foldersWithAiDesc.length > 0 ? '- For move_to_folder actions, include folderId and folderName in the response' : ""}
 
 Respond with valid JSON only:
 {
   "suggestions": [
     {
       "messageId": "email_id",
-      "action": "spam|archive|delete|star|mark_read",
+      "action": "spam|archive|delete|star|mark_read${foldersWithAiDesc.length > 0 ? '|move_to_folder' : ""}",
       "confidence": 0-100,
-      "reason": "Brief explanation"
+      "reason": "Brief explanation"${foldersWithAiDesc.length > 0 ? ',\n      "folderId": 123,\n      "folderName": "Folder Name"' : ""}
     }
   ]
 }`;
@@ -1759,6 +1825,13 @@ Respond with valid JSON only:
         const emailInfo = emailSummaries.find((e: any) => e.id === suggestion.messageId);
         if (!emailInfo) continue;
         
+        // Build action data with reason and folder info if applicable
+        const actionData: Record<string, any> = { reason: suggestion.reason };
+        if (suggestion.action === "move_to_folder" && suggestion.folderId && suggestion.folderName) {
+          actionData.folderId = suggestion.folderId;
+          actionData.folderName = suggestion.folderName;
+        }
+        
         const created = await storage.createAiInboxSuggestion({
           userId,
           batchId,
@@ -1766,7 +1839,7 @@ Respond with valid JSON only:
           messageSubject: emailInfo.subject,
           messageSender: emailInfo.from,
           actionType: suggestion.action,
-          actionData: { reason: suggestion.reason },
+          actionData,
           confidence: Math.min(100, Math.max(0, suggestion.confidence || 50)),
           status: "pending",
         });
@@ -1863,6 +1936,13 @@ Respond with valid JSON only:
               await nylas.updateMessage(grant.grantId, suggestion.messageId, {
                 unread: false,
               });
+              break;
+            case "move_to_folder":
+              // Move email to custom folder by assigning it in our database
+              const actionData = suggestion.actionData as { folderId?: number; folderName?: string } | null;
+              if (actionData?.folderId) {
+                await storage.assignEmailToFolder(userId, suggestion.messageId, actionData.folderId);
+              }
               break;
           }
           

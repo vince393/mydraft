@@ -137,6 +137,23 @@ export const insertCustomFolderSchema = createInsertSchema(customFolders).omit({
 export type CustomFolder = typeof customFolders.$inferSelect;
 export type InsertCustomFolder = z.infer<typeof insertCustomFolderSchema>;
 
+// Email assignments to custom folders
+export const emailFolderAssignments = pgTable("email_folder_assignments", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  messageId: varchar("message_id").notNull(), // Nylas message ID
+  folderId: integer("folder_id").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertEmailFolderAssignmentSchema = createInsertSchema(emailFolderAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type EmailFolderAssignment = typeof emailFolderAssignments.$inferSelect;
+export type InsertEmailFolderAssignment = z.infer<typeof insertEmailFolderAssignmentSchema>;
+
 export const supportMessages = pgTable("support_messages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
