@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -163,6 +163,14 @@ export interface IStorage {
   createEmailNote(note: InsertEmailNote): Promise<EmailNote>;
   updateEmailNote(userId: string, messageId: string, content: string): Promise<EmailNote | undefined>;
   deleteEmailNote(userId: string, messageId: string): Promise<boolean>;
+
+  // AI inbox suggestions methods
+  createAiInboxSuggestion(suggestion: InsertAiInboxSuggestion): Promise<AiInboxSuggestion>;
+  getPendingAiInboxSuggestions(userId: string): Promise<AiInboxSuggestion[]>;
+  getAiInboxSuggestionsByBatch(userId: string, batchId: string): Promise<AiInboxSuggestion[]>;
+  updateAiInboxSuggestionStatus(id: number, status: string, executedAt?: Date): Promise<AiInboxSuggestion | undefined>;
+  deleteAiInboxSuggestionsByBatch(userId: string, batchId: string): Promise<boolean>;
+  clearOldAiInboxSuggestions(userId: string): Promise<void>;
 }
 
 const avatarColors = [
@@ -1603,6 +1611,46 @@ Business Development`,
     const result = await db.delete(emailNotes)
       .where(and(eq(emailNotes.userId, userId), eq(emailNotes.messageId, messageId)));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // AI inbox suggestions methods
+  async createAiInboxSuggestion(suggestion: InsertAiInboxSuggestion): Promise<AiInboxSuggestion> {
+    const [created] = await db.insert(aiInboxSuggestions).values(suggestion).returning();
+    return created;
+  }
+
+  async getPendingAiInboxSuggestions(userId: string): Promise<AiInboxSuggestion[]> {
+    return db.select().from(aiInboxSuggestions)
+      .where(and(eq(aiInboxSuggestions.userId, userId), eq(aiInboxSuggestions.status, "pending")))
+      .orderBy(desc(aiInboxSuggestions.createdAt));
+  }
+
+  async getAiInboxSuggestionsByBatch(userId: string, batchId: string): Promise<AiInboxSuggestion[]> {
+    return db.select().from(aiInboxSuggestions)
+      .where(and(eq(aiInboxSuggestions.userId, userId), eq(aiInboxSuggestions.batchId, batchId)))
+      .orderBy(desc(aiInboxSuggestions.confidence));
+  }
+
+  async updateAiInboxSuggestionStatus(id: number, status: string, executedAt?: Date): Promise<AiInboxSuggestion | undefined> {
+    const [updated] = await db.update(aiInboxSuggestions)
+      .set({ status, executedAt: executedAt || undefined })
+      .where(eq(aiInboxSuggestions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteAiInboxSuggestionsByBatch(userId: string, batchId: string): Promise<boolean> {
+    const result = await db.delete(aiInboxSuggestions)
+      .where(and(eq(aiInboxSuggestions.userId, userId), eq(aiInboxSuggestions.batchId, batchId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async clearOldAiInboxSuggestions(userId: string): Promise<void> {
+    await db.delete(aiInboxSuggestions)
+      .where(and(
+        eq(aiInboxSuggestions.userId, userId),
+        ne(aiInboxSuggestions.status, "pending")
+      ));
   }
 }
 

@@ -647,3 +647,28 @@ export const insertEmailNoteSchema = createInsertSchema(emailNotes).omit({
 
 export type EmailNote = typeof emailNotes.$inferSelect;
 export type InsertEmailNote = z.infer<typeof insertEmailNoteSchema>;
+
+// AI inbox suggestions - pending actions that need user approval
+export const aiInboxSuggestions = pgTable("ai_inbox_suggestions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  batchId: varchar("batch_id").notNull(), // Groups suggestions from same refresh
+  messageId: varchar("message_id").notNull(), // Nylas message ID
+  messageSubject: text("message_subject"),
+  messageSender: text("message_sender"),
+  actionType: text("action_type").notNull(), // "spam", "archive", "delete", "star", "move_folder", "mark_read"
+  actionData: jsonb("action_data").$type<{ folder?: string; reason?: string }>(),
+  confidence: integer("confidence").default(0).notNull(), // 0-100
+  status: text("status").default("pending").notNull(), // "pending", "approved", "rejected", "executed"
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  executedAt: timestamp("executed_at"),
+});
+
+export const insertAiInboxSuggestionSchema = createInsertSchema(aiInboxSuggestions).omit({
+  id: true,
+  createdAt: true,
+  executedAt: true,
+});
+
+export type AiInboxSuggestion = typeof aiInboxSuggestions.$inferSelect;
+export type InsertAiInboxSuggestion = z.infer<typeof insertAiInboxSuggestionSchema>;
