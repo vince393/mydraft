@@ -429,6 +429,24 @@ export function SwipeableEmailItem({
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </>
+                  ) : isArchiveFolder ? (
+                    <>
+                      <button
+                        onClick={handleRestoreClick}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-green-500 transition-colors"
+                        data-testid={`hover-restore-${emailId}`}
+                        title="Restore to inbox"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={handleDeleteClick}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
+                        data-testid={`hover-delete-${emailId}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
                   ) : (
                     <>
                       <button
