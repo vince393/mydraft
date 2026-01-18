@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SwipeableEmailItem } from "@/components/swipeable-email-item";
+import { getAvatarUrl } from "@/lib/avatar";
 import type { Email } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -20,11 +21,6 @@ interface EmailWithNylasId extends Email {
 
 function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
-}
-
-function getAvatarUrl(email: string, name: string): string {
-  const seed = encodeURIComponent(email || name);
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=3b82f6,8b5cf6,ec4899,f97316,84cc16,06b6d4,10b981`;
 }
 
 function formatEmailTime(date: Date): string {

@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getAvatarUrl } from "@/lib/avatar";
 import type { Email, Draft } from "@shared/schema";
 
 interface ExtendedEmail extends Email {
@@ -346,10 +347,6 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
     .toUpperCase()
     .slice(0, 2);
 
-  const getAvatarUrl = (emailAddr: string, name: string): string => {
-    const seed = encodeURIComponent(emailAddr || name);
-    return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=3b82f6,8b5cf6,ec4899,f97316,84cc16,06b6d4,10b981`;
-  };
 
   const formatSmartDate = (date: Date) => {
     if (isToday(date)) {
