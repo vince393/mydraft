@@ -98,12 +98,12 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const justCollapsedRef = useRef(false);
   const { hasPro } = usePlan();
 
-  // Long press handlers for folder actions
+  // Long press handlers for folder actions (1.5 seconds)
   const handleFolderTouchStart = useCallback((folder: FolderItem) => {
     if (!folder.isCustom) return;
     longPressTimeoutRef.current = setTimeout(() => {
       setFolderActionMenuOpen(folder.title);
-    }, 500); // 500ms long press
+    }, 1500); // 1.5 second long press
   }, []);
 
   const handleFolderTouchEnd = useCallback(() => {
