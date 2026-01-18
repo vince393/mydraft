@@ -289,17 +289,77 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     },
   });
 
-  const moveEmailMutation = useMutation({
+  const restoreEmailMutation = useMutation({
     mutationFn: async ({ emailId, folder }: { emailId: string | number; folder: string }) => {
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to restore email");
+      }
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
+      toast({
+        title: "Email restored",
+        duration: 3000,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to restore email",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const moveEmailMutation = useMutation({
+    mutationFn: async ({ emailId, folder, previousFolder, showUndo = true }: { emailId: string | number; folder: string; previousFolder?: string; showUndo?: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to move email");
+      }
+      return { ...(await response.json()), emailId, folder, previousFolder, showUndo };
+    },
+    onSuccess: (data) => {
       setSelectedEmailId(null);
       setGeneratedDraft(null);
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
+      
+      if (data.showUndo && (data.folder === "trash" || data.folder === "archived")) {
+        const actionLabel = data.folder === "trash" ? "deleted" : "archived";
+        const undoFolder = data.previousFolder || "inbox";
+        
+        toast({
+          title: `Email ${actionLabel}`,
+          description: "Click undo to restore the email",
+          action: (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                restoreEmailMutation.mutate({ emailId: data.emailId, folder: undoFolder });
+              }}
+              data-testid="undo-email-action"
+            >
+              Undo
+            </Button>
+          ),
+          duration: 5000,
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to move email",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -350,38 +410,38 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
 
   const handleTrashEmail = () => {
     if (selectedEmail) {
-      moveEmailMutation.mutate({ emailId: getEmailId(selectedEmail), folder: "trash" });
+      moveEmailMutation.mutate({ emailId: getEmailId(selectedEmail), folder: "trash", previousFolder: activeFolder });
     }
   };
 
   const handleArchiveEmail = () => {
     if (selectedEmail) {
-      moveEmailMutation.mutate({ emailId: getEmailId(selectedEmail), folder: "archived" });
+      moveEmailMutation.mutate({ emailId: getEmailId(selectedEmail), folder: "archived", previousFolder: activeFolder });
     }
   };
 
   const handleTrashMultipleEmails = async (emailIds: (string | number)[]) => {
     for (const id of emailIds) {
-      await moveEmailMutation.mutateAsync({ emailId: id, folder: "trash" });
+      await moveEmailMutation.mutateAsync({ emailId: id, folder: "trash", previousFolder: activeFolder });
     }
   };
 
   const handleArchiveMultipleEmails = async (emailIds: (string | number)[]) => {
     for (const id of emailIds) {
-      await moveEmailMutation.mutateAsync({ emailId: id, folder: "archived" });
+      await moveEmailMutation.mutateAsync({ emailId: id, folder: "archived", previousFolder: activeFolder });
     }
   };
 
   const handleTrashSingleEmail = (emailId: string | number) => {
-    moveEmailMutation.mutate({ emailId, folder: "trash" });
+    moveEmailMutation.mutate({ emailId, folder: "trash", previousFolder: activeFolder });
   };
 
   const handleArchiveSingleEmail = (emailId: string | number) => {
-    moveEmailMutation.mutate({ emailId, folder: "archived" });
+    moveEmailMutation.mutate({ emailId, folder: "archived", previousFolder: activeFolder });
   };
 
   const handleRestoreSingleEmail = (emailId: string | number) => {
-    moveEmailMutation.mutate({ emailId, folder: "inbox" });
+    restoreEmailMutation.mutate({ emailId, folder: "inbox" });
   };
 
   const handleStarEmail = () => {
