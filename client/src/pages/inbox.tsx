@@ -315,33 +315,15 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   });
 
 
-  const toggleStarMutation = useMutation({
-    mutationFn: async (emailId: string | number) => {
-      const response = await apiRequest("PATCH", `/api/emails/${emailId}/star`, {});
-      return response.json();
-    },
-    onMutate: async (emailId: string | number) => {
-      // Optimistically toggle the star state
-      setOptimisticStars(prev => {
-        const newMap = new Map(prev);
-        const email = emails.find(e => getEmailId(e) === emailId);
-        const currentStarred = newMap.has(emailId) ? newMap.get(emailId)! : email?.isStarred || false;
-        newMap.set(emailId, !currentStarred);
-        return newMap;
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
-    },
-    onSettled: (_, __, emailId) => {
-      // Clear the optimistic state after the mutation settles
-      setOptimisticStars(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(emailId);
-        return newMap;
-      });
-    },
-  });
+  const handleToggleStar = (emailId: string | number) => {
+    setOptimisticStars(prev => {
+      const newMap = new Map(prev);
+      const email = emails.find(e => getEmailId(e) === emailId);
+      const currentStarred = newMap.has(emailId) ? newMap.get(emailId)! : email?.isStarred || false;
+      newMap.set(emailId, !currentStarred);
+      return newMap;
+    });
+  };
 
   const restoreEmailMutation = useMutation({
     mutationFn: async ({ emailId, folder }: { emailId: string | number; folder: string }) => {
@@ -511,7 +493,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
 
   const handleStarEmail = () => {
     if (selectedEmail) {
-      toggleStarMutation.mutate(getEmailId(selectedEmail));
+      handleToggleStar(getEmailId(selectedEmail));
     }
   };
 
@@ -631,7 +613,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             onArchiveEmail={handleArchiveEmail}
             onTrashMultipleEmails={handleTrashMultipleEmails}
             onArchiveMultipleEmails={handleArchiveMultipleEmails}
-            onToggleStar={(emailId) => toggleStarMutation.mutate(emailId)}
+            onToggleStar={handleToggleStar}
             onTrashSingleEmail={handleTrashSingleEmail}
             onArchiveSingleEmail={handleArchiveSingleEmail}
             onRestoreSingleEmail={handleRestoreSingleEmail}
