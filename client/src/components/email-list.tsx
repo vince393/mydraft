@@ -753,7 +753,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 variant="ghost"
                 disabled={!selectedEmailId || isMoving}
                 onClick={onArchiveEmail}
-                className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground"
                 data-testid="button-archive"
               >
                 {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
@@ -763,16 +763,19 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 variant="ghost"
                 disabled={!selectedEmailId || isMoving}
                 onClick={onTrashEmail}
-                className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                className="text-red-500"
                 data-testid="button-trash"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
+              {hasConnectedAccount && activeFolder === "inbox" && (
+                <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
+              )}
             </div>
             <Button 
               onClick={onAiReply}
               disabled={!selectedEmailId || isAiLoading}
-              className="flex-1 gap-2 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0 transition-all"
+              className="flex-1 gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0 transition-all"
               data-testid="button-ai-reply"
             >
               {isAiLoading ? (
@@ -782,9 +785,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               )}
               Draft with AI
             </Button>
-            {hasConnectedAccount && activeFolder === "inbox" && (
-              <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
-            )}
           </div>
         )}
       </div>
