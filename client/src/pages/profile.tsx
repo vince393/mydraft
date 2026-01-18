@@ -39,7 +39,13 @@ import {
   Send,
   Archive,
   Search,
-  Eye
+  Eye,
+  Clock,
+  DollarSign,
+  Sparkles,
+  TrendingUp,
+  FileText,
+  Zap
 } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { FeedbackModal } from "@/components/feedback-modal";
@@ -52,6 +58,16 @@ interface AssistantPermissions {
   canSearch: boolean;
   requireConfirmation: boolean;
   maxEmailsPerDay: number;
+}
+
+interface AiSavingsStats {
+  minutesSaved: number;
+  hoursSaved: number;
+  moneySaved: number;
+  draftCount: number;
+  summaryCount: number;
+  actionCount: number;
+  totalActions: number;
 }
 
 interface UserData {
@@ -75,6 +91,10 @@ export default function Profile() {
 
   const { data: permissions } = useQuery<AssistantPermissions>({
     queryKey: ["/api/ai/permissions"],
+  });
+
+  const { data: savingsStats } = useQuery<AiSavingsStats>({
+    queryKey: ["/api/ai/savings"],
   });
 
   const updatePermissionsMutation = useMutation({
@@ -249,6 +269,87 @@ export default function Profile() {
                 </div>
               </div>
             </CardContent>
+          </Card>
+
+          {/* AI Savings Stats Card */}
+          <Card className="overflow-hidden">
+            <div className="bg-gradient-to-br from-emerald-500/10 via-blue-500/10 to-purple-500/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  Your AI Savings
+                </CardTitle>
+                <CardDescription>See how much time and money you've saved with Draft AI</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-background/80 backdrop-blur-sm rounded-xl p-4 border border-border/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs text-muted-foreground font-medium">Time Saved</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {savingsStats?.hoursSaved || 0}
+                      </span>
+                      <span className="text-sm text-muted-foreground">hours</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {savingsStats?.minutesSaved || 0} minutes total
+                    </p>
+                  </div>
+
+                  <div className="bg-background/80 backdrop-blur-sm rounded-xl p-4 border border-border/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs text-muted-foreground font-medium">Money Saved</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
+                        ${savingsStats?.moneySaved?.toFixed(0) || 0}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      vs hiring an email assistant
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-background/60 rounded-lg p-3 text-center border border-border/30">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <FileText className="w-3 h-3 text-purple-500" />
+                    </div>
+                    <span className="text-lg font-semibold">{savingsStats?.draftCount || 0}</span>
+                    <p className="text-[10px] text-muted-foreground">AI Drafts</p>
+                  </div>
+                  <div className="bg-background/60 rounded-lg p-3 text-center border border-border/30">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Zap className="w-3 h-3 text-amber-500" />
+                    </div>
+                    <span className="text-lg font-semibold">{savingsStats?.summaryCount || 0}</span>
+                    <p className="text-[10px] text-muted-foreground">Summaries</p>
+                  </div>
+                  <div className="bg-background/60 rounded-lg p-3 text-center border border-border/30">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <TrendingUp className="w-3 h-3 text-cyan-500" />
+                    </div>
+                    <span className="text-lg font-semibold">{savingsStats?.totalActions || 0}</span>
+                    <p className="text-[10px] text-muted-foreground">AI Actions</p>
+                  </div>
+                </div>
+
+                {(savingsStats?.totalActions || 0) === 0 && (
+                  <div className="mt-4 p-3 rounded-lg bg-muted/30 border border-border/50 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Start using AI features to see your savings grow!
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </div>
           </Card>
 
           <Card>

@@ -3691,6 +3691,67 @@ RESPONSE STYLE:
     }
   });
 
+  // Get AI savings stats
+  app.get("/api/ai/savings", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const logs = await storage.getRecentAuditLogs(userId, 1000);
+      
+      // Calculate time saved based on action types
+      // Assumptions:
+      // - Draft generation: saves 5 minutes per draft
+      // - Email summary: saves 2 minutes per summary  
+      // - Inbox refresh/suggestion: saves 3 minutes per action
+      // - Read context: saves 1 minute per read
+      // - Send/archive/trash: saves 1 minute per action
+      
+      let minutesSaved = 0;
+      let draftCount = 0;
+      let summaryCount = 0;
+      let actionCount = 0;
+      
+      for (const log of logs) {
+        const actionType = log.actionType?.toLowerCase() || "";
+        
+        if (actionType.includes("draft") || actionType.includes("compose") || actionType.includes("reply")) {
+          minutesSaved += 5;
+          draftCount++;
+        } else if (actionType.includes("summary") || actionType.includes("summarize")) {
+          minutesSaved += 2;
+          summaryCount++;
+        } else if (actionType.includes("refresh") || actionType.includes("suggest")) {
+          minutesSaved += 3;
+          actionCount++;
+        } else if (actionType.includes("send") || actionType.includes("archive") || actionType.includes("trash")) {
+          minutesSaved += 1;
+          actionCount++;
+        } else if (actionType.includes("read")) {
+          minutesSaved += 1;
+          actionCount++;
+        }
+      }
+      
+      // Calculate money saved
+      // Average email assistant/VA costs ~$25/hour
+      const hourlyRate = 25;
+      const hoursSaved = minutesSaved / 60;
+      const moneySaved = hoursSaved * hourlyRate;
+      
+      res.json({
+        minutesSaved,
+        hoursSaved: Math.round(hoursSaved * 10) / 10,
+        moneySaved: Math.round(moneySaved * 100) / 100,
+        draftCount,
+        summaryCount,
+        actionCount,
+        totalActions: logs.length
+      });
+    } catch (error) {
+      console.error("Error calculating savings:", error);
+      res.status(500).json({ error: "Failed to calculate savings" });
+    }
+  });
+
   // Generate AI draft (compose/reply/reply-all/forward) (requires Pro+)
   app.post("/api/ai/draft", requireAuth, async (req, res) => {
     try {
