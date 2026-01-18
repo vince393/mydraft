@@ -3237,9 +3237,18 @@ Return only the improved text, nothing else.`;
       // Gather context for the assistant
       const user = await storage.getUser(userId);
       const grant = await storage.getNylasGrant(userId);
-      const permissions = await storage.getAssistantPermissions(userId);
-      const defaultPerms = { canReadEmails: true, canSendEmails: false, canArchive: false, canTrash: false, canSearch: true, requireConfirmation: true };
-      const perms = permissions?.permissions || defaultPerms;
+      const settings = await storage.getAssistantSettings(userId);
+      
+      // Use the new unified settings permissions (canReadEmails, canDraftEmails, canSendEmails)
+      const perms = {
+        canReadEmails: settings?.canReadEmails ?? false,
+        canDraftEmails: settings?.canDraftEmails ?? false,
+        canSendEmails: settings?.canSendEmails ?? false,
+        canArchive: true, // Archive doesn't require special permission
+        canTrash: true, // Trash doesn't require special permission
+        canSearch: true,
+        requireConfirmation: true
+      };
       
       // Fetch real emails from Nylas if connected
       let nylasMessages: any[] = [];
@@ -3294,11 +3303,12 @@ PERSONALITY:
 - Encouraging and supportive about email management
 
 YOUR CAPABILITIES (what you CAN do):
-${perms.canReadEmails ? "- READ emails: You can see and read all their emails in detail" : "- READ: Disabled by user"}
-${perms.canSendEmails ? "- SEND emails: You can compose and send new emails (with confirmation)" : "- SEND: Disabled - user must enable in settings"}
-${perms.canArchive ? "- ARCHIVE emails: You can archive emails (with confirmation)" : "- ARCHIVE: Disabled - user must enable in settings"}  
-${perms.canTrash ? "- TRASH emails: You can delete emails (with confirmation)" : "- TRASH: Disabled - user must enable in settings"}
-${perms.canSearch ? "- SEARCH emails: You can search and find specific emails" : "- SEARCH: Disabled by user"}
+${perms.canReadEmails ? "- READ emails: You can see and read all their emails in detail" : "- READ: Disabled - user must enable 'Read emails' in permissions"}
+${perms.canDraftEmails ? "- DRAFT emails: You can compose reply drafts and help write emails" : "- DRAFT: Disabled - user must enable 'Draft emails' in permissions"}
+${perms.canSendEmails ? "- SEND emails: You can compose and send new emails (with confirmation)" : "- SEND: Disabled - user must enable 'Send emails' in permissions"}
+${perms.canArchive ? "- ARCHIVE emails: You can archive emails (with confirmation)" : ""}  
+${perms.canTrash ? "- TRASH emails: You can delete emails (with confirmation)" : ""}
+${perms.canSearch ? "- SEARCH emails: You can search and find specific emails" : ""}
 
 ACTION COMMANDS - When the user asks you to perform an action, respond with a special format:
 - To send/reply/forward: Include [ACTION:SEND] and the draft content
@@ -3492,6 +3502,7 @@ RESPONSE STYLE:
       const grant = await storage.getNylasGrant(userId);
       const styleProfile = await storage.getUserStyleProfile(userId);
       const pendingActions = await storage.getPendingAssistantActions(userId);
+      const settings = await storage.getAssistantSettings(userId);
       
       const defaultProfile = {
         tone: "professional",
@@ -3520,11 +3531,17 @@ RESPONSE STYLE:
           createdAt: a.createdAt
         })),
         capabilities: {
-          canDraft: true,
-          canSend: !!grant,
+          canRead: settings?.canReadEmails ?? false,
+          canDraft: settings?.canDraftEmails ?? false,
+          canSend: settings?.canSendEmails ?? false && !!grant,
           canArchive: !!grant,
           canTrash: !!grant,
           canSearch: !!grant
+        },
+        permissions: {
+          canReadEmails: settings?.canReadEmails ?? false,
+          canDraftEmails: settings?.canDraftEmails ?? false,
+          canSendEmails: settings?.canSendEmails ?? false
         }
       });
     } catch (error) {
