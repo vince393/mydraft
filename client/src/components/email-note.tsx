@@ -105,14 +105,9 @@ export function EmailNotePanel({ messageId }: EmailNoteProps) {
   return (
     <div className="p-3">
       <div 
-        className="rounded-lg border shadow-sm transition-all duration-200"
-        style={{
-          backgroundColor: "hsl(var(--amber-50, 48 96% 89%))",
-          borderColor: "hsl(var(--amber-200, 48 96% 78%))",
-        }}
+        className="rounded-lg border shadow-sm transition-all duration-200 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50"
         data-testid="sticky-note-container"
       >
-        <div className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 rounded-lg">
           <div className="flex items-center justify-between px-3 py-2 border-b border-amber-200/50 dark:border-amber-800/30">
             <div className="flex items-center gap-2">
               <StickyNote className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -196,7 +191,6 @@ export function EmailNotePanel({ messageId }: EmailNoteProps) {
               </p>
             )}
           </div>
-        </div>
       </div>
     </div>
   );
