@@ -1268,6 +1268,7 @@ Return ONLY valid JSON, no other text.`;
       
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant) {
+        nylas.prefetchFolderIds(grant.grantId);
         let allMessages: any[] = [];
         
         if (allFolders) {

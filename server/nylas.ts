@@ -391,6 +391,12 @@ interface NylasFolder {
 
 const folderIdCache = new Map<string, Map<string, string>>();
 
+export async function prefetchFolderIds(grantId: string): Promise<void> {
+  if (!folderIdCache.has(grantId)) {
+    getFolderIds(grantId).catch(() => {});
+  }
+}
+
 async function getFolderIds(grantId: string): Promise<Map<string, string>> {
   if (folderIdCache.has(grantId)) {
     return folderIdCache.get(grantId)!;
