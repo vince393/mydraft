@@ -385,21 +385,21 @@ export function SwipeableEmailItem({
                 </span>
               )}
               <span className="flex-1" />
-              <div className="flex-shrink-0 flex items-center">
-                {/* Star icon - always visible when starred */}
+              <div className="flex-shrink-0 flex items-center gap-1">
+                {/* Date/time - visible by default, hidden on hover */}
+                <span className="text-xs text-muted-foreground whitespace-nowrap group-hover:hidden">
+                  {formatTime(new Date(receivedAt))}
+                </span>
+                {/* Star icon - always visible when starred, placed after date */}
                 {isStarred && (
                   <button
                     onClick={handleStarClick}
-                    className="p-1.5 rounded-md text-yellow-500 group-hover:hidden"
+                    className="p-1 rounded-md text-yellow-500 group-hover:hidden"
                     data-testid={`starred-icon-${emailId}`}
                   >
                     <Star className="w-4 h-4 fill-current" />
                   </button>
                 )}
-                {/* Date/time - visible by default (when not starred), hidden on hover */}
-                <span className={`text-xs text-muted-foreground whitespace-nowrap group-hover:hidden ${isStarred ? "hidden" : ""}`}>
-                  {formatTime(new Date(receivedAt))}
-                </span>
                 {/* Action buttons - hidden by default, visible on hover */}
                 <div className="hidden group-hover:flex items-center gap-0.5">
                   <button
