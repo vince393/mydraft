@@ -193,6 +193,7 @@ const responseTimeCache: Map<string, ResponseTimeCache> = new Map();
 
 const formattedBodyCache: Map<string, { body: string; timestamp: number }> = new Map();
 const translationCache: Map<string, { detectedLanguage: string; translatedSubject: string; translatedBody: string; timestamp: number }> = new Map();
+const summaryCache: Map<string, { summary: string; keyPoints: string[]; actionItems: string[]; timestamp: number }> = new Map();
 const CACHE_MAX_SIZE = 100;
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -1770,6 +1771,91 @@ Respond with valid JSON only:
     } catch (error) {
       console.error("Error dismissing suggestions:", error);
       res.status(500).json({ error: "Failed to dismiss suggestions" });
+    }
+  });
+
+  // AI email summary - summarize email content with key points and action items
+  function cleanupSummaryCache() {
+    const now = Date.now();
+    const entries = Array.from(summaryCache.entries());
+    for (const [key, value] of entries) {
+      if (now - value.timestamp > CACHE_TTL_MS) {
+        summaryCache.delete(key);
+      }
+    }
+    if (summaryCache.size > CACHE_MAX_SIZE) {
+      const sortedEntries = entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = sortedEntries.slice(0, summaryCache.size - CACHE_MAX_SIZE);
+      for (const [key] of toDelete) {
+        summaryCache.delete(key);
+      }
+    }
+  }
+  
+  app.post("/api/emails/:id/summary", requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const { subject, body } = req.body;
+
+      if (!body) {
+        return res.status(400).json({ error: "Email body is required" });
+      }
+
+      const cacheKey = `${req.session.userId}-${id}`;
+      cleanupSummaryCache();
+      const cached = summaryCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        return res.json({ summary: cached.summary, keyPoints: cached.keyPoints, actionItems: cached.actionItems });
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an email summarization assistant. Analyze the email and provide:
+1. A brief 1-2 sentence summary of what the email is about
+2. Up to 3 key points from the email
+3. Any action items or things that require a response
+
+Respond with valid JSON only:
+{
+  "summary": "Brief summary of the email",
+  "keyPoints": ["Key point 1", "Key point 2"],
+  "actionItems": ["Action item if any"]
+}
+
+Rules:
+- Be concise and clear
+- Focus on the most important information
+- If there are no action items, return an empty array
+- If there are no notable key points, return fewer or none
+- Strip HTML tags when analyzing content`
+          },
+          {
+            role: "user",
+            content: `Subject: ${subject || "(No subject)"}\n\nBody:\n${body.replace(/<[^>]*>/g, " ").substring(0, 4000)}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
+      });
+
+      const responseText = completion.choices[0]?.message?.content || "{}";
+      let parsed = { summary: "", keyPoints: [], actionItems: [] };
+      
+      try {
+        parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
+      } catch {
+        parsed = { summary: "Unable to summarize this email.", keyPoints: [], actionItems: [] };
+      }
+
+      summaryCache.set(cacheKey, { ...parsed, timestamp: Date.now() });
+      
+      res.json(parsed);
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      res.status(500).json({ error: "Failed to generate summary" });
     }
   });
 

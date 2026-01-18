@@ -17,7 +17,10 @@ import {
   ChevronDown,
   Languages,
   Loader2,
-  StickyNote
+  StickyNote,
+  FileText,
+  Circle,
+  ArrowRight
 } from "lucide-react";
 import { EmailNotePanel } from "./email-note";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,7 +33,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getAvatarUrl } from "@/lib/avatar";
@@ -86,7 +89,28 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
   const [expandedThreadEmails, setExpandedThreadEmails] = useState<Set<string | number>>(new Set());
   const [refineInput, setRefineInput] = useState("");
   const [isRefining, setIsRefining] = useState(false);
+  const [showSummary, setShowSummary] = useState(true);
   const { toast } = useToast();
+
+  const emailId = email ? ((email as any).nylasId || email.id) : null;
+  
+  const summaryMutation = useMutation({
+    mutationFn: async ({ id, subject, body }: { id: string | number; subject: string; body: string }) => {
+      const res = await apiRequest("POST", `/api/emails/${id}/summary`, { subject, body });
+      return res.json();
+    },
+  });
+
+  useEffect(() => {
+    summaryMutation.reset();
+    setShowSummary(true);
+    if (emailId && email?.body) {
+      summaryMutation.mutate({ id: emailId, subject: email.subject, body: email.body });
+    }
+  }, [emailId]);
+
+  const summaryData = summaryMutation.data as { summary: string; keyPoints: string[]; actionItems: string[] } | undefined;
+  const isSummaryLoading = summaryMutation.isPending;
   
   // Get the selected email's ID and date for comparison
   const selectedEmailId = email ? ((email as any).nylasId || email.id) : null;
@@ -689,6 +713,64 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
               </>
             )}
           </div>
+
+          {/* AI Summary Section */}
+          {showSummary && (summaryData?.summary || isSummaryLoading) && (
+            <div className="mb-6 p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20" data-testid="ai-summary-section">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">AI Summary</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSummary(false)}
+                  data-testid="button-hide-summary"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+              {isSummaryLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Generating summary...</span>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-foreground/90 leading-relaxed" data-testid="summary-text">
+                    {summaryData?.summary}
+                  </p>
+                  {summaryData?.keyPoints && summaryData.keyPoints.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Key Points</p>
+                      <ul className="space-y-1">
+                        {summaryData.keyPoints.map((point, i) => (
+                          <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
+                            <Circle className="w-2 h-2 text-primary mt-1.5 fill-primary" />
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {summaryData?.actionItems && summaryData.actionItems.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Action Items</p>
+                      <ul className="space-y-1">
+                        {summaryData.actionItems.map((item, i) => (
+                          <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
+                            <ArrowRight className="w-3 h-3 text-orange-500 mt-1" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Sticky Note for this email */}
           <div className="mb-6">
