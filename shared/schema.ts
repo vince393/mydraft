@@ -118,6 +118,25 @@ export const insertNylasGrantSchema = createInsertSchema(nylasGrants).omit({
 export type NylasGrant = typeof nylasGrants.$inferSelect;
 export type InsertNylasGrant = z.infer<typeof insertNylasGrantSchema>;
 
+// Custom folders for organizing emails
+export const customFolders = pgTable("custom_folders", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  name: text("name").notNull(),
+  aiDescription: text("ai_description"), // AI sorting prompt for Pro+ users
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertCustomFolderSchema = createInsertSchema(customFolders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type CustomFolder = typeof customFolders.$inferSelect;
+export type InsertCustomFolder = z.infer<typeof insertCustomFolderSchema>;
+
 export const supportMessages = pgTable("support_messages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),

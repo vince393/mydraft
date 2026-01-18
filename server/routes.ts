@@ -6,7 +6,7 @@ import { GoogleGenAI } from "@google/genai";
 import * as nylas from "./nylas";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { aiPreferencesSchema } from "@shared/schema";
+import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { sendVerificationEmail } from "./email";
@@ -1570,6 +1570,89 @@ Return ONLY valid JSON, no other text.`;
     } catch (error) {
       console.error("Error deleting email note:", error);
       res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+
+  // Custom folders CRUD
+  app.get("/api/folders", requireAuth, async (req, res) => {
+    try {
+      const folders = await storage.getCustomFolders(req.session.userId!);
+      res.json({ folders });
+    } catch (error) {
+      console.error("Error getting custom folders:", error);
+      res.status(500).json({ error: "Failed to get folders" });
+    }
+  });
+
+  const createFolderSchema = insertCustomFolderSchema.pick({ name: true, aiDescription: true }).extend({
+    name: z.string().min(1, "Folder name is required").max(50, "Folder name too long"),
+    aiDescription: z.string().max(200, "AI description too long").optional(),
+  });
+
+  const updateFolderSchema = z.object({
+    name: z.string().min(1).max(50).optional(),
+    aiDescription: z.string().max(200).optional().nullable(),
+  });
+
+  app.post("/api/folders", requireAuth, async (req, res) => {
+    try {
+      const result = createFolderSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.errors[0].message });
+      }
+      const { name, aiDescription } = result.data;
+      const folder = await storage.createCustomFolder(
+        req.session.userId!,
+        name.trim(),
+        aiDescription?.trim() || undefined
+      );
+      res.json({ folder });
+    } catch (error) {
+      console.error("Error creating custom folder:", error);
+      res.status(500).json({ error: "Failed to create folder" });
+    }
+  });
+
+  app.patch("/api/folders/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid folder ID" });
+      }
+      const result = updateFolderSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.errors[0].message });
+      }
+      const { name, aiDescription } = result.data;
+      const updates: { name?: string; aiDescription?: string } = {};
+      if (name) updates.name = name.trim();
+      if (aiDescription !== undefined) updates.aiDescription = aiDescription?.trim() || undefined;
+      
+      const folder = await storage.updateCustomFolder(id, req.session.userId!, updates);
+      if (!folder) {
+        return res.status(404).json({ error: "Folder not found" });
+      }
+      res.json({ folder });
+    } catch (error) {
+      console.error("Error updating custom folder:", error);
+      res.status(500).json({ error: "Failed to update folder" });
+    }
+  });
+
+  app.delete("/api/folders/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid folder ID" });
+      }
+      const deleted = await storage.deleteCustomFolder(id, req.session.userId!);
+      if (!deleted) {
+        return res.status(404).json({ error: "Folder not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting custom folder:", error);
+      res.status(500).json({ error: "Failed to delete folder" });
     }
   });
 

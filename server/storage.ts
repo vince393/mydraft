@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -173,6 +173,12 @@ export interface IStorage {
   updateAiInboxSuggestionStatus(id: number, status: string, executedAt?: Date): Promise<AiInboxSuggestion | undefined>;
   deleteAiInboxSuggestionsByBatch(userId: string, batchId: string): Promise<boolean>;
   clearOldAiInboxSuggestions(userId: string): Promise<void>;
+
+  // Custom folders methods
+  getCustomFolders(userId: string): Promise<CustomFolder[]>;
+  createCustomFolder(userId: string, name: string, aiDescription?: string): Promise<CustomFolder>;
+  updateCustomFolder(id: number, userId: string, updates: { name?: string; aiDescription?: string }): Promise<CustomFolder | undefined>;
+  deleteCustomFolder(id: number, userId: string): Promise<boolean>;
 }
 
 const avatarColors = [
@@ -1671,6 +1677,36 @@ Business Development`,
         eq(aiInboxSuggestions.userId, userId),
         ne(aiInboxSuggestions.status, "pending")
       ));
+  }
+
+  // Custom folders methods
+  async getCustomFolders(userId: string): Promise<CustomFolder[]> {
+    return db.select().from(customFolders)
+      .where(eq(customFolders.userId, userId))
+      .orderBy(customFolders.createdAt);
+  }
+
+  async createCustomFolder(userId: string, name: string, aiDescription?: string): Promise<CustomFolder> {
+    const [created] = await db.insert(customFolders).values({
+      userId,
+      name,
+      aiDescription: aiDescription || null,
+    }).returning();
+    return created;
+  }
+
+  async updateCustomFolder(id: number, userId: string, updates: { name?: string; aiDescription?: string }): Promise<CustomFolder | undefined> {
+    const [updated] = await db.update(customFolders)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(customFolders.id, id), eq(customFolders.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteCustomFolder(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(customFolders)
+      .where(and(eq(customFolders.id, id), eq(customFolders.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

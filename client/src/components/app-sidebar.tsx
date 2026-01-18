@@ -1,7 +1,10 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { CustomFolder } from "@shared/schema";
 import {
   Sidebar,
   SidebarContent,
@@ -44,6 +47,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AssistantModal } from "./assistant-modal";
 
 interface FolderItem {
+  id?: number;
   title: string;
   icon: typeof Inbox;
   isCustom?: boolean;
@@ -77,7 +81,6 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCounts, onCompose }: AppSidebarProps) {
-  const [folders, setFolders] = useState<FolderItem[]>(defaultItems);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderAiDescription, setNewFolderAiDescription] = useState("");
@@ -97,6 +100,55 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const justCollapsedRef = useRef(false);
   const { hasPro } = usePlan();
+
+  // Fetch custom folders from API
+  const { data: customFoldersData } = useQuery<{ folders: CustomFolder[] }>({
+    queryKey: ["/api/folders"],
+  });
+
+  // Combine default folders with custom folders from API
+  const folders: FolderItem[] = [
+    ...defaultItems,
+    ...(customFoldersData?.folders || []).map(f => ({
+      id: f.id,
+      title: f.name,
+      icon: FileText,
+      isCustom: true,
+      aiDescription: f.aiDescription || undefined,
+    })),
+  ];
+
+  // Mutation to create folder
+  const createFolderMutation = useMutation({
+    mutationFn: async ({ name, aiDescription }: { name: string; aiDescription?: string }) => {
+      const response = await apiRequest("POST", "/api/folders", { name, aiDescription });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+    },
+  });
+
+  // Mutation to rename folder
+  const renameFolderMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: number; name: string }) => {
+      const response = await apiRequest("PATCH", `/api/folders/${id}`, { name });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+    },
+  });
+
+  // Mutation to delete folder
+  const deleteFolderMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/folders/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+    },
+  });
 
   // Long press handlers for folder actions (1.5 seconds)
   const handleFolderTouchStart = useCallback((folder: FolderItem) => {
@@ -124,13 +176,10 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
-      const newFolder: FolderItem = {
-        title: newFolderName.trim(),
-        icon: FileText,
-        isCustom: true,
+      createFolderMutation.mutate({
+        name: newFolderName.trim(),
         aiDescription: hasPro && newFolderAiDescription.trim() ? newFolderAiDescription.trim() : undefined,
-      };
-      setFolders([...folders, newFolder]);
+      });
       setNewFolderName("");
       setNewFolderAiDescription("");
       setIsCreateOpen(false);
@@ -144,17 +193,13 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   }, []);
 
   const handleRenameFolder = useCallback(() => {
-    if (selectedFolder && renameFolderName.trim()) {
-      setFolders(folders.map(f => 
-        f.title === selectedFolder.title 
-          ? { ...f, title: renameFolderName.trim() }
-          : f
-      ));
+    if (selectedFolder && renameFolderName.trim() && selectedFolder.id) {
+      renameFolderMutation.mutate({ id: selectedFolder.id, name: renameFolderName.trim() });
       setIsRenameOpen(false);
       setSelectedFolder(null);
       setRenameFolderName("");
     }
-  }, [selectedFolder, renameFolderName, folders]);
+  }, [selectedFolder, renameFolderName, renameFolderMutation]);
 
   const handleOpenDelete = useCallback((folder: FolderItem) => {
     setSelectedFolder(folder);
@@ -162,15 +207,15 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   }, []);
 
   const handleDeleteFolder = useCallback(() => {
-    if (selectedFolder) {
-      setFolders(folders.filter(f => f.title !== selectedFolder.title));
+    if (selectedFolder && selectedFolder.id) {
+      deleteFolderMutation.mutate(selectedFolder.id);
       if (activeFolder.toLowerCase() === selectedFolder.title.toLowerCase()) {
         onFolderChange("inbox");
       }
       setIsDeleteOpen(false);
       setSelectedFolder(null);
     }
-  }, [selectedFolder, folders, activeFolder, onFolderChange]);
+  }, [selectedFolder, activeFolder, onFolderChange, deleteFolderMutation]);
 
   const handleMouseEnter = () => {
     if (isCollapsed && !justCollapsedRef.current) {
