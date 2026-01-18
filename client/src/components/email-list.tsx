@@ -603,9 +603,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </div>
         )}
         {activeFolder.toLowerCase() !== "sent" && activeFolder.toLowerCase() !== "trash" && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-900/40 backdrop-blur-sm rounded-md border border-blue-800/30">
-            <Clock className="w-3.5 h-3.5 text-blue-400/80" />
-            <span className="text-sm text-blue-100/80">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 backdrop-blur-sm rounded-md border border-blue-200 dark:border-blue-800/30">
+            <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400/80" />
+            <span className="text-sm text-blue-700 dark:text-blue-100/80">
               {isLoadingTime ? (
                 "Calculating..."
               ) : responseTime?.message ? (
