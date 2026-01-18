@@ -1530,6 +1530,249 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  // AI Inbox Refresh - analyze emails and suggest actions
+  app.post("/api/ai/inbox-refresh", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const grant = await storage.getNylasGrant(userId);
+      
+      if (!grant) {
+        return res.status(400).json({ error: "No email account connected" });
+      }
+      
+      // Get recent emails for analysis
+      const messages = await nylas.getMessages(grant.grantId, "inbox", 50);
+      
+      if (!messages || messages.length === 0) {
+        return res.json({ suggestions: [], batchId: null, message: "No emails to analyze" });
+      }
+      
+      // Get user's learned writing style and preferences for context
+      const learnedStyle = await storage.getLearnedWritingStyle(userId);
+      const user = await storage.getUser(userId);
+      
+      // Clear old non-pending suggestions
+      await storage.clearOldAiInboxSuggestions(userId);
+      
+      // Generate unique batch ID
+      const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      // Prepare email summaries for AI analysis
+      const emailSummaries = messages.slice(0, 30).map((msg: any) => ({
+        id: msg.id,
+        subject: msg.subject || "(No subject)",
+        from: msg.from?.[0]?.email || "unknown",
+        fromName: msg.from?.[0]?.name || "",
+        snippet: msg.snippet || "",
+        date: msg.date,
+        starred: msg.starred,
+        unread: msg.unread,
+      }));
+      
+      // Call AI to analyze emails
+      const systemPrompt = `You are an email inbox assistant. Analyze the user's emails and suggest actions based on patterns.
+      
+User preferences context:
+${learnedStyle?.writingStyle ? `- Writing style: ${learnedStyle.writingStyle}` : ""}
+${learnedStyle?.preferredTone ? `- Preferred tone: ${learnedStyle.preferredTone}` : ""}
+
+Analyze each email and suggest one of these actions if appropriate:
+- "spam": Likely spam or unwanted promotional emails
+- "archive": Read emails that can be archived
+- "delete": Obvious junk or expired notifications  
+- "star": Important emails that deserve attention
+- "mark_read": Unread emails that don't need action
+
+Rules:
+- Be conservative - only suggest actions you're confident about
+- Don't suggest actions for personal or important-looking emails
+- Consider the sender's domain and email patterns
+- Provide a brief reason for each suggestion
+- Return confidence score 0-100 for each suggestion
+
+Respond with valid JSON only:
+{
+  "suggestions": [
+    {
+      "messageId": "email_id",
+      "action": "spam|archive|delete|star|mark_read",
+      "confidence": 0-100,
+      "reason": "Brief explanation"
+    }
+  ]
+}`;
+
+      const userPrompt = `Analyze these emails and suggest inbox actions:\n\n${JSON.stringify(emailSummaries, null, 2)}`;
+      
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 2000,
+      });
+      
+      const responseText = completion.choices[0]?.message?.content || "{}";
+      let aiSuggestions: any[] = [];
+      
+      try {
+        const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
+        aiSuggestions = parsed.suggestions || [];
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", parseError);
+        return res.json({ suggestions: [], batchId: null, message: "Failed to analyze emails" });
+      }
+      
+      // Create suggestions in database
+      const createdSuggestions = [];
+      for (const suggestion of aiSuggestions) {
+        if (!suggestion.messageId || !suggestion.action) continue;
+        
+        const emailInfo = emailSummaries.find((e: any) => e.id === suggestion.messageId);
+        if (!emailInfo) continue;
+        
+        const created = await storage.createAiInboxSuggestion({
+          userId,
+          batchId,
+          messageId: suggestion.messageId,
+          messageSubject: emailInfo.subject,
+          messageSender: emailInfo.from,
+          actionType: suggestion.action,
+          actionData: { reason: suggestion.reason },
+          confidence: Math.min(100, Math.max(0, suggestion.confidence || 50)),
+          status: "pending",
+        });
+        createdSuggestions.push(created);
+      }
+      
+      res.json({
+        batchId,
+        suggestions: createdSuggestions,
+        totalAnalyzed: emailSummaries.length,
+      });
+    } catch (error) {
+      console.error("AI inbox refresh error:", error);
+      res.status(500).json({ error: "Failed to analyze inbox" });
+    }
+  });
+  
+  // Get all active AI suggestions (pending + approved)
+  app.get("/api/ai/inbox-suggestions", requireAuth, async (req, res) => {
+    try {
+      const suggestions = await storage.getAllActiveAiInboxSuggestions(req.session.userId!);
+      res.json({ suggestions });
+    } catch (error) {
+      console.error("Error getting AI suggestions:", error);
+      res.status(500).json({ error: "Failed to get suggestions" });
+    }
+  });
+  
+  // Approve/reject a single suggestion
+  app.patch("/api/ai/inbox-suggestions/:id", requireAuth, async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!["approved", "rejected"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      
+      const updated = await storage.updateAiInboxSuggestionStatus(
+        parseInt(req.params.id),
+        status
+      );
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Suggestion not found" });
+      }
+      
+      res.json({ suggestion: updated });
+    } catch (error) {
+      console.error("Error updating suggestion:", error);
+      res.status(500).json({ error: "Failed to update suggestion" });
+    }
+  });
+  
+  // Execute approved suggestions only
+  app.post("/api/ai/inbox-suggestions/execute", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const grant = await storage.getNylasGrant(userId);
+      
+      if (!grant) {
+        return res.status(400).json({ error: "No email account connected" });
+      }
+      
+      // Only get approved suggestions - this is the critical safety check
+      const approvedSuggestions = await storage.getApprovedAiInboxSuggestions(userId);
+      
+      if (approvedSuggestions.length === 0) {
+        return res.json({ executed: 0, failed: 0, errors: [], message: "No approved suggestions to execute" });
+      }
+      
+      const results = { executed: 0, failed: 0, errors: [] as string[] };
+      
+      for (const suggestion of approvedSuggestions) {
+        try {
+          switch (suggestion.actionType) {
+            case "spam":
+              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
+                folders: ["spam"],
+              });
+              break;
+            case "archive":
+              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
+                folders: ["archive"],
+              });
+              break;
+            case "delete":
+              await nylas.deleteMessage(grant.grantId, suggestion.messageId);
+              break;
+            case "star":
+              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
+                starred: true,
+              });
+              break;
+            case "mark_read":
+              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
+                unread: false,
+              });
+              break;
+          }
+          
+          await storage.updateAiInboxSuggestionStatus(suggestion.id, "executed", new Date());
+          results.executed++;
+        } catch (err: any) {
+          results.failed++;
+          results.errors.push(`Failed to ${suggestion.actionType} email: ${err.message}`);
+          await storage.updateAiInboxSuggestionStatus(suggestion.id, "rejected");
+        }
+      }
+      
+      // Invalidate messages cache
+      nylas.invalidateMessagesCache(grant.grantId);
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Error executing suggestions:", error);
+      res.status(500).json({ error: "Failed to execute suggestions" });
+    }
+  });
+  
+  // Dismiss all pending suggestions
+  app.delete("/api/ai/inbox-suggestions", requireAuth, async (req, res) => {
+    try {
+      const suggestions = await storage.getPendingAiInboxSuggestions(req.session.userId!);
+      for (const suggestion of suggestions) {
+        await storage.updateAiInboxSuggestionStatus(suggestion.id, "rejected");
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error dismissing suggestions:", error);
+      res.status(500).json({ error: "Failed to dismiss suggestions" });
+    }
+  });
+
   app.post("/api/emails/:id/format", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;

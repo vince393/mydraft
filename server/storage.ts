@@ -167,6 +167,8 @@ export interface IStorage {
   // AI inbox suggestions methods
   createAiInboxSuggestion(suggestion: InsertAiInboxSuggestion): Promise<AiInboxSuggestion>;
   getPendingAiInboxSuggestions(userId: string): Promise<AiInboxSuggestion[]>;
+  getApprovedAiInboxSuggestions(userId: string): Promise<AiInboxSuggestion[]>;
+  getAllActiveAiInboxSuggestions(userId: string): Promise<AiInboxSuggestion[]>;
   getAiInboxSuggestionsByBatch(userId: string, batchId: string): Promise<AiInboxSuggestion[]>;
   updateAiInboxSuggestionStatus(id: number, status: string, executedAt?: Date): Promise<AiInboxSuggestion | undefined>;
   deleteAiInboxSuggestionsByBatch(userId: string, batchId: string): Promise<boolean>;
@@ -1622,6 +1624,21 @@ Business Development`,
   async getPendingAiInboxSuggestions(userId: string): Promise<AiInboxSuggestion[]> {
     return db.select().from(aiInboxSuggestions)
       .where(and(eq(aiInboxSuggestions.userId, userId), eq(aiInboxSuggestions.status, "pending")))
+      .orderBy(desc(aiInboxSuggestions.createdAt));
+  }
+
+  async getApprovedAiInboxSuggestions(userId: string): Promise<AiInboxSuggestion[]> {
+    return db.select().from(aiInboxSuggestions)
+      .where(and(eq(aiInboxSuggestions.userId, userId), eq(aiInboxSuggestions.status, "approved")))
+      .orderBy(desc(aiInboxSuggestions.createdAt));
+  }
+
+  async getAllActiveAiInboxSuggestions(userId: string): Promise<AiInboxSuggestion[]> {
+    return db.select().from(aiInboxSuggestions)
+      .where(and(
+        eq(aiInboxSuggestions.userId, userId),
+        sql`${aiInboxSuggestions.status} IN ('pending', 'approved')`
+      ))
       .orderBy(desc(aiInboxSuggestions.createdAt));
   }
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SwipeableEmailItem } from "@/components/swipeable-email-item";
+import { AiInboxRefreshButton } from "@/components/ai-inbox-refresh";
 import { getAvatarUrl } from "@/lib/avatar";
 import type { Email } from "@shared/schema";
 
@@ -53,6 +54,7 @@ interface EmailListProps {
   activeFolder?: string;
   hasConnectedAccount?: boolean;
   onConnectAccount?: () => void;
+  onInboxRefresh?: () => void;
 }
 
 interface ResponseTimeEstimate {
@@ -128,7 +130,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh }: EmailListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Filters>({
@@ -488,6 +490,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               </button>
             )}
           </div>
+          {hasConnectedAccount && activeFolder === "inbox" && (
+            <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
+          )}
           <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
             <PopoverTrigger asChild>
               <Button 
