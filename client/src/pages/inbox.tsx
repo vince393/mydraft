@@ -57,6 +57,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
   const [optimisticStars, setOptimisticStars] = useState<Map<string | number, boolean>>(new Map());
+  const [optimisticRemovals, setOptimisticRemovals] = useState<Set<string | number>>(new Set());
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { hasPro } = usePlan();
@@ -334,12 +335,18 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
 
   const restoreEmailMutation = useMutation({
     mutationFn: async ({ emailId, folder }: { emailId: string | number; folder: string }) => {
+      // Remove from optimistic removals immediately
+      setOptimisticRemovals(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(emailId);
+        return newSet;
+      });
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to restore email");
       }
-      return response.json();
+      return { emailId, folder };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
@@ -349,7 +356,9 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
         duration: 3000,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      // Re-add to optimistic removals on error
+      setOptimisticRemovals(prev => new Set(prev).add(variables.emailId));
       toast({
         title: "Failed to restore email",
         description: error.message,
@@ -360,38 +369,34 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
 
   const moveEmailMutation = useMutation({
     mutationFn: async ({ emailId, folder, previousFolder, showUndo = true }: { emailId: string | number; folder: string; previousFolder?: string; showUndo?: boolean }) => {
-      console.log("[DEBUG moveEmailMutation] Starting mutation with emailId:", emailId, "folder:", folder);
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
-      console.log("[DEBUG moveEmailMutation] Response status:", response.status);
       if (!response.ok) {
         const error = await response.json();
-        console.log("[DEBUG moveEmailMutation] Error:", error);
         throw new Error(error.error || "Failed to move email");
       }
       const result = await response.json();
-      console.log("[DEBUG moveEmailMutation] Success result:", result);
       return { ...result, emailId, folder, previousFolder, showUndo };
     },
-    onSuccess: (data) => {
+    onMutate: async ({ emailId, folder, previousFolder, showUndo = true }) => {
+      // Optimistically remove email from list immediately
+      setOptimisticRemovals(prev => new Set(prev).add(emailId));
       setSelectedEmailId(null);
       setGeneratedDraft(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
       
-      if (data.showUndo && (data.folder === "trash" || data.folder === "archived")) {
-        const actionLabel = data.folder === "trash" ? "deleted" : "archived";
-        const undoFolder = data.previousFolder || "inbox";
+      // Show undo toast immediately
+      if (showUndo && (folder === "trash" || folder === "archived")) {
+        const actionLabel = folder === "trash" ? "deleted" : "archived";
+        const undoFolder = previousFolder || "inbox";
         
         toast({
           title: `Email ${actionLabel}`,
-          description: "Click undo to restore the email",
+          description: "Click undo to restore",
           action: (
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                restoreEmailMutation.mutate({ emailId: data.emailId, folder: undoFolder });
+                restoreEmailMutation.mutate({ emailId, folder: undoFolder });
               }}
               data-testid="undo-email-action"
             >
@@ -401,13 +406,36 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           duration: 5000,
         });
       }
+      
+      return { emailId };
     },
-    onError: (error: Error) => {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
+    },
+    onError: (error: Error, variables) => {
+      // Remove from optimistic removals on error (show it again)
+      setOptimisticRemovals(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(variables.emailId);
+        return newSet;
+      });
       toast({
         title: "Failed to move email",
         description: error.message,
         variant: "destructive",
       });
+    },
+    onSettled: (_, __, variables) => {
+      // Clear from optimistic removals after cache invalidation
+      setTimeout(() => {
+        setOptimisticRemovals(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(variables.emailId);
+          return newSet;
+        });
+      }, 1000);
     },
   });
 
@@ -605,13 +633,15 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           <DraftsList />
         ) : (
           <EmailList
-            emails={emails.map(email => {
-              const emailId = getEmailId(email);
-              if (optimisticStars.has(emailId)) {
-                return { ...email, isStarred: optimisticStars.get(emailId)! };
-              }
-              return email;
-            })}
+            emails={emails
+              .filter(email => !optimisticRemovals.has(getEmailId(email)))
+              .map(email => {
+                const emailId = getEmailId(email);
+                if (optimisticStars.has(emailId)) {
+                  return { ...email, isStarred: optimisticStars.get(emailId)! };
+                }
+                return email;
+              })}
             selectedEmailId={selectedEmail?.id ?? null}
             onSelectEmail={handleSelectEmail}
             onAiReply={handleAiReply}
