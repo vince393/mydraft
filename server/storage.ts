@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -157,6 +157,12 @@ export interface IStorage {
   // Learned writing style methods
   getLearnedWritingStyle(userId: string): Promise<LearnedWritingStyle | undefined>;
   upsertLearnedWritingStyle(userId: string, style: Partial<InsertLearnedWritingStyle>): Promise<LearnedWritingStyle>;
+
+  // Email notes methods
+  getEmailNote(userId: string, messageId: string): Promise<EmailNote | undefined>;
+  createEmailNote(note: InsertEmailNote): Promise<EmailNote>;
+  updateEmailNote(userId: string, messageId: string, content: string): Promise<EmailNote | undefined>;
+  deleteEmailNote(userId: string, messageId: string): Promise<boolean>;
 }
 
 const avatarColors = [
@@ -1570,6 +1576,33 @@ Business Development`,
         .returning();
       return created;
     }
+  }
+
+  // Email notes methods
+  async getEmailNote(userId: string, messageId: string): Promise<EmailNote | undefined> {
+    const [result] = await db.select().from(emailNotes)
+      .where(and(eq(emailNotes.userId, userId), eq(emailNotes.messageId, messageId)))
+      .limit(1);
+    return result;
+  }
+
+  async createEmailNote(note: InsertEmailNote): Promise<EmailNote> {
+    const [created] = await db.insert(emailNotes).values(note).returning();
+    return created;
+  }
+
+  async updateEmailNote(userId: string, messageId: string, content: string): Promise<EmailNote | undefined> {
+    const [updated] = await db.update(emailNotes)
+      .set({ content, updatedAt: new Date() })
+      .where(and(eq(emailNotes.userId, userId), eq(emailNotes.messageId, messageId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteEmailNote(userId: string, messageId: string): Promise<boolean> {
+    const result = await db.delete(emailNotes)
+      .where(and(eq(emailNotes.userId, userId), eq(emailNotes.messageId, messageId)));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

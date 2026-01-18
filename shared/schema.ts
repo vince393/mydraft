@@ -627,3 +627,23 @@ export const insertLearnedWritingStyleSchema = createInsertSchema(learnedWriting
 
 export type LearnedWritingStyle = typeof learnedWritingStyles.$inferSelect;
 export type InsertLearnedWritingStyle = z.infer<typeof insertLearnedWritingStyleSchema>;
+
+// Email notes - sticky notes for individual emails
+export const emailNotes = pgTable("email_notes", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  messageId: varchar("message_id").notNull(), // Nylas message ID
+  content: text("content").notNull(),
+  color: text("color").default("#FEF3C7").notNull(), // Default warm yellow
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertEmailNoteSchema = createInsertSchema(emailNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type EmailNote = typeof emailNotes.$inferSelect;
+export type InsertEmailNote = z.infer<typeof insertEmailNoteSchema>;
