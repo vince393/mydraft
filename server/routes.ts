@@ -1447,13 +1447,24 @@ Return ONLY valid JSON, no other text.`;
       
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
-        if (folder === "trash") {
-          await nylas.trashMessage(grant.grantId, id);
-        } else if (folder === "archived") {
-          await nylas.archiveMessage(grant.grantId, id);
+        console.log(`Moving email ${id} to folder: ${folder}`);
+        try {
+          if (folder === "trash") {
+            await nylas.trashMessage(grant.grantId, id);
+            console.log(`Successfully trashed email ${id}`);
+          } else if (folder === "archived") {
+            await nylas.archiveMessage(grant.grantId, id);
+            console.log(`Successfully archived email ${id}`);
+          } else if (folder === "inbox") {
+            await nylas.moveToInbox(grant.grantId, id);
+            console.log(`Successfully moved email ${id} to inbox`);
+          }
+          nylas.invalidateMessagesCache(grant.grantId);
+          return res.json({ success: true, folder });
+        } catch (nylasError: any) {
+          console.error(`Nylas error moving email ${id}:`, nylasError.message);
+          throw nylasError;
         }
-        nylas.invalidateMessagesCache(grant.grantId);
-        return res.json({ success: true });
       }
       
       const numericId = parseInt(id);

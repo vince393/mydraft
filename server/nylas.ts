@@ -413,6 +413,22 @@ export async function archiveMessage(grantId: string, messageId: string): Promis
   }
 }
 
+export async function moveToInbox(grantId: string, messageId: string): Promise<void> {
+  // Move message back to inbox by adding INBOX label and removing TRASH
+  const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      add_labels: ['INBOX'],
+      remove_labels: ['TRASH'],
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to move message to inbox: ${error}`);
+  }
+}
+
 export async function markAsRead(grantId: string, messageId: string): Promise<void> {
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
     method: 'PUT',
