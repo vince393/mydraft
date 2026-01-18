@@ -403,17 +403,6 @@ export function SwipeableEmailItem({
                 {/* Action buttons - hidden by default, visible on hover */}
                 <div className="hidden group-hover:flex items-center gap-0.5">
                   <button
-                    onClick={handleStarClick}
-                    className={`p-1.5 rounded-md transition-colors ${
-                      isStarred 
-                        ? "text-yellow-500" 
-                        : "text-muted-foreground hover:text-yellow-500"
-                    }`}
-                    data-testid={`hover-star-${emailId}`}
-                  >
-                    <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
-                  </button>
-                  <button
                     onClick={handleArchiveClick}
                     className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
                     data-testid={`hover-archive-${emailId}`}
@@ -426,6 +415,17 @@ export function SwipeableEmailItem({
                     data-testid={`hover-delete-${emailId}`}
                   >
                     <Trash2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleStarClick}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      isStarred 
+                        ? "text-yellow-500" 
+                        : "text-muted-foreground hover:text-yellow-500"
+                    }`}
+                    data-testid={`hover-star-${emailId}`}
+                  >
+                    <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
                   </button>
                 </div>
               </div>
