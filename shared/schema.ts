@@ -581,3 +581,49 @@ export const insertUserLoginSessionSchema = createInsertSchema(userLoginSessions
 
 export type UserLoginSession = typeof userLoginSessions.$inferSelect;
 export type InsertUserLoginSession = z.infer<typeof insertUserLoginSessionSchema>;
+
+// Writing samples for AI personalization learning
+export const writingSamples = pgTable("writing_samples", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  sampleType: text("sample_type").notNull(), // "sent_email", "draft_edit", "manual_compose"
+  originalContent: text("original_content"), // For draft_edit: the AI-generated content before editing
+  finalContent: text("final_content").notNull(), // The user's actual written/edited content
+  context: text("context"), // Subject line or email context
+  recipientType: text("recipient_type"), // "work", "personal", "unknown"
+  sentiment: text("sentiment"), // "formal", "casual", "friendly", "professional"
+  wordCount: integer("word_count").default(0).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertWritingSampleSchema = createInsertSchema(writingSamples).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type WritingSample = typeof writingSamples.$inferSelect;
+export type InsertWritingSample = z.infer<typeof insertWritingSampleSchema>;
+
+// Learned writing style analysis (AI-generated summary of user's style)
+export const learnedWritingStyles = pgTable("learned_writing_styles", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(),
+  styleAnalysis: text("style_analysis").notNull(), // AI-generated analysis of writing patterns
+  commonPhrases: jsonb("common_phrases").$type<string[]>().default([]),
+  greetingPatterns: jsonb("greeting_patterns").$type<string[]>().default([]),
+  signOffPatterns: jsonb("sign_off_patterns").$type<string[]>().default([]),
+  toneDescription: text("tone_description"), // Brief description of user's tone
+  avgSentenceLength: integer("avg_sentence_length"),
+  samplesAnalyzed: integer("samples_analyzed").default(0).notNull(),
+  lastAnalyzedAt: timestamp("last_analyzed_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertLearnedWritingStyleSchema = createInsertSchema(learnedWritingStyles).omit({
+  id: true,
+  lastAnalyzedAt: true,
+  updatedAt: true,
+});
+
+export type LearnedWritingStyle = typeof learnedWritingStyles.$inferSelect;
+export type InsertLearnedWritingStyle = z.infer<typeof insertLearnedWritingStyleSchema>;

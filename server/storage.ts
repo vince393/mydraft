@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -147,6 +147,16 @@ export interface IStorage {
   updateLoginSessionActivity(sessionId: string): Promise<void>;
   deleteLoginSession(sessionId: string): Promise<boolean>;
   deleteAllUserSessions(userId: string, exceptSessionId?: string): Promise<void>;
+
+  // Writing samples methods (AI learning)
+  createWritingSample(sample: InsertWritingSample): Promise<WritingSample>;
+  getWritingSamples(userId: string, limit?: number): Promise<WritingSample[]>;
+  getWritingSampleCount(userId: string): Promise<number>;
+  deleteOldWritingSamples(userId: string, keepCount: number): Promise<void>;
+
+  // Learned writing style methods
+  getLearnedWritingStyle(userId: string): Promise<LearnedWritingStyle | undefined>;
+  upsertLearnedWritingStyle(userId: string, style: Partial<InsertLearnedWritingStyle>): Promise<LearnedWritingStyle>;
 }
 
 const avatarColors = [
@@ -1490,6 +1500,75 @@ Business Development`,
     } else {
       await db.delete(userLoginSessions)
         .where(eq(userLoginSessions.userId, userId));
+    }
+  }
+
+  // Writing samples methods (AI learning)
+  async createWritingSample(sample: InsertWritingSample): Promise<WritingSample> {
+    const [result] = await db.insert(writingSamples).values(sample).returning();
+    return result;
+  }
+
+  async getWritingSamples(userId: string, limit: number = 20): Promise<WritingSample[]> {
+    return db.select().from(writingSamples)
+      .where(eq(writingSamples.userId, userId))
+      .orderBy(desc(writingSamples.createdAt))
+      .limit(limit);
+  }
+
+  async getWritingSampleCount(userId: string): Promise<number> {
+    const result = await db.select({ count: count() }).from(writingSamples)
+      .where(eq(writingSamples.userId, userId));
+    return result[0]?.count ?? 0;
+  }
+
+  async deleteOldWritingSamples(userId: string, keepCount: number): Promise<void> {
+    const samples = await db.select({ id: writingSamples.id }).from(writingSamples)
+      .where(eq(writingSamples.userId, userId))
+      .orderBy(desc(writingSamples.createdAt));
+    
+    if (samples.length > keepCount) {
+      const idsToDelete = samples.slice(keepCount).map(s => s.id);
+      for (const id of idsToDelete) {
+        await db.delete(writingSamples).where(eq(writingSamples.id, id));
+      }
+    }
+  }
+
+  // Learned writing style methods
+  async getLearnedWritingStyle(userId: string): Promise<LearnedWritingStyle | undefined> {
+    const [result] = await db.select().from(learnedWritingStyles)
+      .where(eq(learnedWritingStyles.userId, userId))
+      .limit(1);
+    return result;
+  }
+
+  async upsertLearnedWritingStyle(userId: string, style: Partial<InsertLearnedWritingStyle>): Promise<LearnedWritingStyle> {
+    const existing = await this.getLearnedWritingStyle(userId);
+    
+    if (existing) {
+      const [updated] = await db.update(learnedWritingStyles)
+        .set({
+          ...style,
+          updatedAt: new Date(),
+        })
+        .where(eq(learnedWritingStyles.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(learnedWritingStyles)
+        .values({
+          userId,
+          styleAnalysis: style.styleAnalysis || "",
+          commonPhrases: style.commonPhrases || [],
+          greetingPatterns: style.greetingPatterns || [],
+          signOffPatterns: style.signOffPatterns || [],
+          toneDescription: style.toneDescription,
+          avgSentenceLength: style.avgSentenceLength,
+          samplesAnalyzed: style.samplesAnalyzed || 0,
+        })
+        .returning();
+      return created;
     }
   }
 }
