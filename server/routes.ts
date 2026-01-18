@@ -1437,17 +1437,20 @@ Return ONLY valid JSON, no other text.`;
   });
 
   app.patch("/api/emails/:id/folder", requireAuth, async (req, res) => {
+    console.log("[Move Email] Request received:", req.params.id, req.body);
     try {
       const id = req.params.id;
       const { folder } = req.body;
       
       if (!folder || !["inbox", "archived", "trash", "sent", "drafts", "junk"].includes(folder)) {
+        console.log("[Move Email] Invalid folder:", folder);
         return res.status(400).json({ error: "Invalid folder" });
       }
       
       const grant = await storage.getNylasGrant(req.session.userId!);
+      console.log("[Move Email] Grant found:", !!grant, "ID length:", id.length);
       if (grant && id.length > 10) {
-        console.log(`Moving email ${id} to folder: ${folder}`);
+        console.log(`[Move Email] Moving email ${id} to folder: ${folder}`);
         try {
           if (folder === "trash") {
             await nylas.trashMessage(grant.grantId, id);
