@@ -384,17 +384,22 @@ export async function deleteMessage(grantId: string, messageId: string): Promise
 
 export async function trashMessage(grantId: string, messageId: string): Promise<void> {
   // Use the Nylas message update with add_labels for TRASH
+  const payload = {
+    add_labels: ['TRASH'],
+    remove_labels: ['INBOX', 'UNREAD'],
+  };
+  console.log(`[Nylas trashMessage] Sending PUT to /v3/grants/${grantId}/messages/${messageId} with payload:`, JSON.stringify(payload));
+  
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
     method: 'PUT',
-    body: JSON.stringify({
-      add_labels: ['TRASH'],
-      remove_labels: ['INBOX', 'UNREAD'],
-    }),
+    body: JSON.stringify(payload),
   });
 
+  const responseText = await response.text();
+  console.log(`[Nylas trashMessage] Response status: ${response.status}, body:`, responseText);
+
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to trash message: ${error}`);
+    throw new Error(`Failed to trash message: ${responseText}`);
   }
 }
 
