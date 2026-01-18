@@ -526,6 +526,35 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     restoreEmailMutation.mutate({ emailId, folder: "inbox" });
   };
 
+  const handlePermanentDeleteSingleEmail = async (emailId: string | number) => {
+    // Optimistically remove from list
+    setOptimisticRemovals(prev => new Set(prev).add(emailId));
+    setSelectedEmailId(null);
+    
+    try {
+      const response = await apiRequest("DELETE", `/api/emails/${emailId}`);
+      if (!response.ok) {
+        throw new Error("Failed to delete email permanently");
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      toast({
+        title: "Email permanently deleted",
+        duration: 3000,
+      });
+    } catch (error) {
+      // Remove from optimistic removals on error
+      setOptimisticRemovals(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(emailId);
+        return newSet;
+      });
+      toast({
+        title: "Failed to delete email",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleStarEmail = () => {
     if (selectedEmail) {
       handleToggleStar(getEmailId(selectedEmail));
@@ -654,6 +683,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             onTrashSingleEmail={handleTrashSingleEmail}
             onArchiveSingleEmail={handleArchiveSingleEmail}
             onRestoreSingleEmail={handleRestoreSingleEmail}
+            onPermanentDeleteSingleEmail={handlePermanentDeleteSingleEmail}
             isAiLoading={false}
             isMoving={moveEmailMutation.isPending}
             isLoading={isLoadingEmails || isLoadingCustomFolder}

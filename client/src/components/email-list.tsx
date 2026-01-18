@@ -48,6 +48,7 @@ interface EmailListProps {
   onTrashSingleEmail: (emailId: string | number) => void;
   onArchiveSingleEmail: (emailId: string | number) => void;
   onRestoreSingleEmail?: (emailId: string | number) => void;
+  onPermanentDeleteSingleEmail?: (emailId: string | number) => void;
   isAiLoading?: boolean;
   isMoving?: boolean;
   isLoading?: boolean;
@@ -130,7 +131,8 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh }: EmailListProps) {
+  const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Filters>({
@@ -669,9 +671,11 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 avatarColor={email.avatarColor || undefined}
                 folder={activeFolder}
                 threadCount={email.threadCount || 1}
+                isTrashFolder={isTrashFolder}
                 onSelect={() => handleEmailClick(email)}
                 onArchive={() => onArchiveSingleEmail(emailId)}
                 onDelete={() => onTrashSingleEmail(emailId)}
+                onPermanentDelete={onPermanentDeleteSingleEmail ? () => onPermanentDeleteSingleEmail(emailId) : undefined}
                 onRestore={onRestoreSingleEmail ? () => onRestoreSingleEmail(emailId) : undefined}
                 onToggleStar={() => onToggleStar(emailId)}
                 onLongPressStart={() => handleLongPressStart(emailId)}

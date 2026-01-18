@@ -17,9 +17,11 @@ interface SwipeableEmailItemProps {
   avatarColor?: string;
   folder?: string;
   threadCount?: number;
+  isTrashFolder?: boolean;
   onSelect: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onPermanentDelete?: () => void;
   onRestore?: () => void;
   onToggleStar: () => void;
   onLongPressStart: () => void;
@@ -49,9 +51,11 @@ export function SwipeableEmailItem({
   avatarColor,
   folder = "inbox",
   threadCount = 1,
+  isTrashFolder = false,
   onSelect,
   onArchive,
   onDelete,
+  onPermanentDelete,
   onRestore,
   onToggleStar,
   onLongPressStart,
@@ -402,20 +406,47 @@ export function SwipeableEmailItem({
                 )}
                 {/* Action buttons - hidden by default, visible on hover */}
                 <div className="hidden group-hover:flex items-center gap-0.5">
-                  <button
-                    onClick={handleArchiveClick}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                    data-testid={`hover-archive-${emailId}`}
-                  >
-                    <Archive className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={handleDeleteClick}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
-                    data-testid={`hover-delete-${emailId}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {isTrashFolder ? (
+                    <>
+                      <button
+                        onClick={handleRestoreClick}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-green-500 transition-colors"
+                        data-testid={`hover-restore-${emailId}`}
+                        title="Restore to inbox"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          if (onPermanentDelete) onPermanentDelete();
+                        }}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
+                        data-testid={`hover-permanent-delete-${emailId}`}
+                        title="Delete permanently"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleArchiveClick}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                        data-testid={`hover-archive-${emailId}`}
+                      >
+                        <Archive className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={handleDeleteClick}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
+                        data-testid={`hover-delete-${emailId}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={handleStarClick}
                     className={`p-1.5 rounded-md transition-colors ${
