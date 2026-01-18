@@ -1765,27 +1765,34 @@ To suggest moving to a folder, use action "move_to_folder" with folderId and fol
 ` : "";
       
       // Call AI to analyze emails
-      const systemPrompt = `You are an email inbox assistant. Analyze the user's emails and suggest actions based on patterns.
-      
-User preferences context:
-${learnedStyle?.writingStyle ? `- Writing style: ${learnedStyle.writingStyle}` : ""}
-${learnedStyle?.preferredTone ? `- Preferred tone: ${learnedStyle.preferredTone}` : ""}
-${folderSortingSection}
-Analyze each email and suggest one of these actions if appropriate:
-- "spam": Likely spam or unwanted promotional emails
-- "archive": Read emails that can be archived
-- "delete": Obvious junk or expired notifications  
-- "star": Important emails that deserve attention
-- "mark_read": Unread emails that don't need action
-${foldersWithAiDesc.length > 0 ? '- "move_to_folder": Move to a custom folder based on the folder descriptions above' : ""}
+      const systemPrompt = `You are a VERY CONSERVATIVE email inbox assistant. Your job is to help organize emails, but you should RARELY suggest actions.
 
-Rules:
-- Be conservative - only suggest actions you're confident about
-- Don't suggest actions for personal or important-looking emails
-- Consider the sender's domain and email patterns
-- Provide a brief reason for each suggestion
-- Return confidence score 0-100 for each suggestion
-${foldersWithAiDesc.length > 0 ? '- For move_to_folder actions, include folderId and folderName in the response' : ""}
+IMPORTANT: Most emails should NOT have any suggested action. Only suggest actions for emails you are EXTREMELY confident about.
+
+User preferences context:
+${learnedStyle?.styleAnalysis ? `- Writing style: ${learnedStyle.styleAnalysis}` : ""}
+${learnedStyle?.toneDescription ? `- Preferred tone: ${learnedStyle.toneDescription}` : ""}
+${folderSortingSection}
+
+Available actions (use sparingly):
+- "spam": ONLY for obvious spam like "You've won $1M", fake lottery, phishing attempts, or clearly unwanted mass marketing from unknown senders. Do NOT mark newsletters the user subscribed to as spam.
+- "archive": ONLY for already-read emails that are clearly no longer needed (old receipts, confirmations from months ago, automated notifications that have been addressed)
+- "delete": ONLY for very obvious junk like bounce-back notifications, system errors from weeks ago, or clearly expired content
+- "star": ONLY for clearly important emails like meeting requests from bosses, urgent deadlines, or family emergencies
+- "mark_read": ONLY for informational emails that clearly don't need a response (like read receipts, automated system updates)
+${foldersWithAiDesc.length > 0 ? '- "move_to_folder": Move to a custom folder ONLY if email very clearly matches folder description' : ""}
+
+STRICT RULES:
+1. BE EXTREMELY CONSERVATIVE - when in doubt, DON'T suggest any action
+2. NEVER mark emails from real people as spam - those are just regular emails
+3. NEVER mark emails from known companies (Google, Apple, Amazon, banks, etc.) as spam unless they're clearly phishing
+4. NEVER suggest actions for unread emails from real people
+5. Personal emails, work emails, and newsletters should almost never have suggested actions
+6. Only suggest spam for emails that are CLEARLY unsolicited junk with deceptive content
+7. If an email looks even slightly legitimate, DO NOT suggest marking it as spam
+8. Return an EMPTY suggestions array if no emails clearly need action
+9. Maximum of 3-5 suggestions per analysis - quality over quantity
+${foldersWithAiDesc.length > 0 ? '10. For move_to_folder actions, include folderId and folderName in the response' : ""}
 
 Respond with valid JSON only:
 {
@@ -1807,7 +1814,7 @@ Respond with valid JSON only:
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
-        temperature: 0.3,
+        temperature: 0.1,
         max_tokens: 2000,
       });
       

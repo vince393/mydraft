@@ -56,6 +56,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const [multiEmailSelection, setMultiEmailSelection] = useState<EmailWithNylasId[]>([]);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
+  const [optimisticStars, setOptimisticStars] = useState<Map<string | number, boolean>>(new Map());
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { hasPro } = usePlan();
@@ -319,8 +320,26 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/star`, {});
       return response.json();
     },
+    onMutate: async (emailId: string | number) => {
+      // Optimistically toggle the star state
+      setOptimisticStars(prev => {
+        const newMap = new Map(prev);
+        const email = emails.find(e => getEmailId(e) === emailId);
+        const currentStarred = newMap.has(emailId) ? newMap.get(emailId)! : email?.isStarred || false;
+        newMap.set(emailId, !currentStarred);
+        return newMap;
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+    },
+    onSettled: (_, __, emailId) => {
+      // Clear the optimistic state after the mutation settles
+      setOptimisticStars(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(emailId);
+        return newMap;
+      });
     },
   });
 
@@ -586,7 +605,13 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           <DraftsList />
         ) : (
           <EmailList
-            emails={emails}
+            emails={emails.map(email => {
+              const emailId = getEmailId(email);
+              if (optimisticStars.has(emailId)) {
+                return { ...email, isStarred: optimisticStars.get(emailId)! };
+              }
+              return email;
+            })}
             selectedEmailId={selectedEmail?.id ?? null}
             onSelectEmail={handleSelectEmail}
             onAiReply={handleAiReply}
