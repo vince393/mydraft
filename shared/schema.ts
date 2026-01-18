@@ -154,6 +154,16 @@ export const insertEmailFolderAssignmentSchema = createInsertSchema(emailFolderA
 export type EmailFolderAssignment = typeof emailFolderAssignments.$inferSelect;
 export type InsertEmailFolderAssignment = z.infer<typeof insertEmailFolderAssignmentSchema>;
 
+// Starred emails (UI-only, not synced with Nylas)
+export const starredEmails = pgTable("starred_emails", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  messageId: varchar("message_id").notNull(), // Nylas message ID
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type StarredEmail = typeof starredEmails.$inferSelect;
+
 export const supportMessages = pgTable("support_messages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),

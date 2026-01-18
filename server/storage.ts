@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -185,6 +185,11 @@ export interface IStorage {
   getEmailFolderAssignment(userId: string, messageId: string): Promise<EmailFolderAssignment | undefined>;
   getEmailsInFolder(userId: string, folderId: number): Promise<string[]>; // Returns messageIds
   removeEmailFromFolder(userId: string, messageId: string): Promise<boolean>;
+
+  // Starred emails methods (UI-only, not synced with Nylas)
+  isEmailStarred(userId: string, messageId: string): Promise<boolean>;
+  getStarredEmailIds(userId: string): Promise<string[]>;
+  toggleStarEmail(userId: string, messageId: string): Promise<boolean>; // Returns new starred state
 }
 
 const avatarColors = [
@@ -1746,6 +1751,31 @@ Business Development`,
     const result = await db.delete(emailFolderAssignments)
       .where(and(eq(emailFolderAssignments.userId, userId), eq(emailFolderAssignments.messageId, messageId)));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async isEmailStarred(userId: string, messageId: string): Promise<boolean> {
+    const result = await db.select().from(starredEmails)
+      .where(and(eq(starredEmails.userId, userId), eq(starredEmails.messageId, messageId)))
+      .limit(1);
+    return result.length > 0;
+  }
+
+  async getStarredEmailIds(userId: string): Promise<string[]> {
+    const result = await db.select({ messageId: starredEmails.messageId }).from(starredEmails)
+      .where(eq(starredEmails.userId, userId));
+    return result.map(r => r.messageId);
+  }
+
+  async toggleStarEmail(userId: string, messageId: string): Promise<boolean> {
+    const isStarred = await this.isEmailStarred(userId, messageId);
+    if (isStarred) {
+      await db.delete(starredEmails)
+        .where(and(eq(starredEmails.userId, userId), eq(starredEmails.messageId, messageId)));
+      return false;
+    } else {
+      await db.insert(starredEmails).values({ userId, messageId });
+      return true;
+    }
   }
 }
 

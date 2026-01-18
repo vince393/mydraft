@@ -315,7 +315,8 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   });
 
 
-  const handleToggleStar = (emailId: string | number) => {
+  const handleToggleStar = async (emailId: string | number) => {
+    // Optimistically update UI
     setOptimisticStars(prev => {
       const newMap = new Map(prev);
       const email = emails.find(e => getEmailId(e) === emailId);
@@ -323,6 +324,12 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       newMap.set(emailId, !currentStarred);
       return newMap;
     });
+    // Persist to database
+    try {
+      await apiRequest("PATCH", `/api/emails/${emailId}/star`, {});
+    } catch (error) {
+      console.error("Failed to persist star:", error);
+    }
   };
 
   const restoreEmailMutation = useMutation({

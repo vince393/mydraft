@@ -1303,6 +1303,10 @@ Return ONLY valid JSON, no other text.`;
           allMessages = messages.map(m => ({ ...m, folder: folder || "inbox" }));
         }
         
+        // Get starred emails from database (UI-only, not Nylas)
+        const starredIds = await storage.getStarredEmailIds(req.session.userId!);
+        const starredSet = new Set(starredIds);
+        
         const emails = allMessages.map((msg, index) => ({
           id: index + 1,
           nylasId: msg.id,
@@ -1313,7 +1317,7 @@ Return ONLY valid JSON, no other text.`;
           body: "",
           receivedAt: msg.date,
           isRead: msg.isRead,
-          isStarred: msg.isStarred,
+          isStarred: starredSet.has(msg.id),
           folder: msg.folder || folder || "inbox",
           threadId: msg.threadId,
           avatarColor: msg.avatarColor,
@@ -1493,23 +1497,10 @@ Return ONLY valid JSON, no other text.`;
 
   app.patch("/api/emails/:id/star", requireAuth, async (req, res) => {
     try {
-      const id = req.params.id;
-      const { starred } = req.body;
-      
-      const grant = await storage.getNylasGrant(req.session.userId!);
-      if (grant && id.length > 10) {
-        await nylas.toggleStar(grant.grantId, id, starred ?? true);
-        nylas.invalidateMessagesCache(grant.grantId);
-        return res.json({ success: true });
-      }
-      
-      const numericId = parseInt(id);
-      const email = await storage.getEmail(numericId);
-      if (!email) {
-        return res.status(404).json({ error: "Email not found" });
-      }
-      const updated = await storage.updateEmail(numericId, { isStarred: !email.isStarred });
-      res.json(updated);
+      const messageId = req.params.id;
+      // Toggle star in database only (UI-only, not synced with Nylas)
+      const isStarred = await storage.toggleStarEmail(req.session.userId!, messageId);
+      res.json({ success: true, isStarred });
     } catch (error) {
       console.error("Error toggling star:", error);
       res.status(500).json({ error: "Failed to toggle star" });
