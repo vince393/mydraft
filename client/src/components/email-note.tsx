@@ -105,13 +105,13 @@ export function EmailNotePanel({ messageId }: EmailNoteProps) {
   return (
     <div className="p-3">
       <div 
-        className="rounded-lg border shadow-sm transition-all duration-200 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50"
+        className="rounded-lg border shadow-sm transition-all duration-200 bg-muted/50 border-border"
         data-testid="sticky-note-container"
       >
-          <div className="flex items-center justify-between px-3 py-2 border-b border-amber-200/50 dark:border-amber-800/30">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
             <div className="flex items-center gap-2">
-              <StickyNote className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <span className="text-xs font-medium text-amber-700 dark:text-amber-300">Note</span>
+              <StickyNote className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Note</span>
             </div>
             <div className="flex items-center gap-1">
               {!isEditing && hasNote && (
@@ -119,7 +119,7 @@ export function EmailNotePanel({ messageId }: EmailNoteProps) {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="w-6 h-6 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                    className="w-6 h-6 text-muted-foreground hover:text-foreground"
                     onClick={() => setIsEditing(true)}
                     disabled={isPending}
                     data-testid="button-edit-note"
@@ -129,7 +129,7 @@ export function EmailNotePanel({ messageId }: EmailNoteProps) {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="w-6 h-6 text-red-500/70 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+                    className="w-6 h-6 text-muted-foreground hover:text-destructive"
                     onClick={() => deleteMutation.mutate()}
                     disabled={isPending}
                     data-testid="button-delete-note"
@@ -147,7 +147,7 @@ export function EmailNotePanel({ messageId }: EmailNoteProps) {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="w-6 h-6 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
+                    className="w-6 h-6 text-primary hover:text-primary"
                     onClick={handleSave}
                     disabled={isPending || !noteContent.trim()}
                     data-testid="button-save-note"
@@ -161,7 +161,7 @@ export function EmailNotePanel({ messageId }: EmailNoteProps) {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="w-6 h-6 text-muted-foreground hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                    className="w-6 h-6 text-muted-foreground hover:text-foreground"
                     onClick={handleCancel}
                     disabled={isPending}
                     data-testid="button-cancel-note"
@@ -178,13 +178,13 @@ export function EmailNotePanel({ messageId }: EmailNoteProps) {
                 value={noteContent}
                 onChange={(e) => setNoteContent(e.target.value)}
                 placeholder="Write your note here..."
-                className="min-h-[80px] resize-none bg-transparent border-0 focus-visible:ring-0 text-sm text-amber-900 dark:text-amber-100 placeholder:text-amber-400 dark:placeholder:text-amber-500"
+                className="min-h-[80px] resize-none bg-transparent border-0 focus-visible:ring-0 text-sm text-foreground placeholder:text-muted-foreground"
                 autoFocus
                 data-testid="textarea-note-content"
               />
             ) : (
               <p 
-                className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap"
+                className="text-sm text-foreground whitespace-pre-wrap"
                 data-testid="text-note-content"
               >
                 {noteContent}
