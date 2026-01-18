@@ -1704,18 +1704,23 @@ Return ONLY valid JSON, no other text.`;
 
   // AI Inbox Refresh - analyze emails and suggest actions
   app.post("/api/ai/inbox-refresh", requireAuth, async (req, res) => {
+    console.log("[AI Inbox Refresh] Starting analysis...");
     try {
       const userId = req.session.userId!;
       const grant = await storage.getNylasGrant(userId);
+      console.log("[AI Inbox Refresh] Grant found:", !!grant);
       
       if (!grant) {
         return res.status(400).json({ error: "No email account connected" });
       }
       
       // Get recent emails for analysis
+      console.log("[AI Inbox Refresh] Fetching messages...");
       const messages = await nylas.getMessages(grant.grantId, "inbox", 50);
+      console.log("[AI Inbox Refresh] Messages fetched:", messages?.length || 0);
       
       if (!messages || messages.length === 0) {
+        console.log("[AI Inbox Refresh] No messages found");
         return res.json({ suggestions: [], batchId: null, message: "No emails to analyze" });
       }
       
@@ -1807,13 +1812,17 @@ Respond with valid JSON only:
       });
       
       const responseText = completion.choices[0]?.message?.content || "{}";
+      console.log("[AI Inbox Refresh] AI response length:", responseText.length);
+      console.log("[AI Inbox Refresh] AI response preview:", responseText.substring(0, 500));
       let aiSuggestions: any[] = [];
       
       try {
         const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
         aiSuggestions = parsed.suggestions || [];
+        console.log("[AI Inbox Refresh] Parsed suggestions count:", aiSuggestions.length);
       } catch (parseError) {
-        console.error("Failed to parse AI response:", parseError);
+        console.error("[AI Inbox Refresh] Failed to parse AI response:", parseError);
+        console.log("[AI Inbox Refresh] Raw response:", responseText);
         return res.json({ suggestions: [], batchId: null, message: "Failed to analyze emails" });
       }
       
