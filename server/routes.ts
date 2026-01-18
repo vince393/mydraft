@@ -664,6 +664,8 @@ export async function registerRoutes(
       user: { 
         id: user.id, 
         email: user.email, 
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
         plan: user.plan,
         onboardingCompleted: user.onboardingCompleted,
         aiPreferences: user.aiPreferences,
@@ -673,6 +675,35 @@ export async function registerRoutes(
         createdAt: user.createdAt
       } 
     });
+  });
+
+  // Update user profile (display name and avatar)
+  app.patch("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { displayName, avatarUrl } = req.body;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const updatedUser = await storage.updateUser(userId, {
+        displayName: displayName !== undefined ? displayName : user.displayName,
+        avatarUrl: avatarUrl !== undefined ? avatarUrl : user.avatarUrl
+      });
+
+      res.json({ 
+        success: true,
+        user: {
+          displayName: updatedUser?.displayName,
+          avatarUrl: updatedUser?.avatarUrl
+        }
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
   });
 
   // Plan selection endpoint - ONLY allows selecting free plan or requesting upgrade

@@ -45,7 +45,11 @@ import {
   Sparkles,
   TrendingUp,
   FileText,
-  Zap
+  Zap,
+  Camera,
+  Pencil,
+  Check,
+  X
 } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { FeedbackModal } from "@/components/feedback-modal";
@@ -73,17 +77,37 @@ interface AiSavingsStats {
 interface UserData {
   id: string;
   email: string;
+  displayName: string | null;
+  avatarUrl: string | null;
   plan: string | null;
   connectedEmail: string | null;
   connectedProvider: string | null;
   createdAt: string;
 }
 
+const AVATAR_OPTIONS = [
+  "https://api.dicebear.com/7.x/avataaars/svg?seed=happy&backgroundColor=b6e3f4",
+  "https://api.dicebear.com/7.x/avataaars/svg?seed=confident&backgroundColor=d1d4f9",
+  "https://api.dicebear.com/7.x/avataaars/svg?seed=creative&backgroundColor=c0aede",
+  "https://api.dicebear.com/7.x/avataaars/svg?seed=friendly&backgroundColor=ffd5dc",
+  "https://api.dicebear.com/7.x/avataaars/svg?seed=professional&backgroundColor=ffdfbf",
+  "https://api.dicebear.com/7.x/lorelei/svg?seed=serene&backgroundColor=b6e3f4",
+  "https://api.dicebear.com/7.x/lorelei/svg?seed=calm&backgroundColor=d1d4f9",
+  "https://api.dicebear.com/7.x/lorelei/svg?seed=warm&backgroundColor=ffd5dc",
+  "https://api.dicebear.com/7.x/bottts/svg?seed=tech&backgroundColor=b6e3f4",
+  "https://api.dicebear.com/7.x/bottts/svg?seed=modern&backgroundColor=c0aede",
+  "https://api.dicebear.com/7.x/fun-emoji/svg?seed=smile",
+  "https://api.dicebear.com/7.x/fun-emoji/svg?seed=wink",
+];
+
 export default function Profile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   const { data: userData, isLoading } = useQuery<{ user: UserData | null }>({
     queryKey: ["/api/auth/me"],
@@ -158,6 +182,28 @@ export default function Profile() {
     },
   });
 
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { displayName?: string; avatarUrl?: string }) => {
+      const response = await apiRequest("PATCH", "/api/user/profile", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      setIsEditingProfile(false);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been saved.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update profile.",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -177,7 +223,7 @@ export default function Profile() {
     .slice(0, 2)
     .toUpperCase();
 
-  const userName = user.email.split("@")[0];
+  const userName = user.displayName || user.email.split("@")[0];
 
   const getPlanBadge = () => {
     switch (user.plan) {
@@ -226,37 +272,133 @@ export default function Profile() {
             </CardHeader>
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
               <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-                <Avatar className="w-16 h-16 sm:w-20 sm:h-20 ring-4 ring-border/30">
-                  <AvatarImage 
-                    src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.email)}&backgroundColor=3b82f6,8b5cf6,ec4899`}
-                    alt={userName}
-                  />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-lg sm:text-xl font-semibold">
-                    {userInitials}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative group">
+                  <Avatar className="w-16 h-16 sm:w-20 sm:h-20 ring-4 ring-border/30">
+                    <AvatarImage 
+                      src={user.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.email)}&backgroundColor=3b82f6,8b5cf6,ec4899`}
+                      alt={userName}
+                    />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-lg sm:text-xl font-semibold">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    onClick={() => setShowAvatarPicker(true)}
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    data-testid="button-change-avatar"
+                  >
+                    <Camera className="w-5 h-5 text-white" />
+                  </button>
+                </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-lg sm:text-xl font-semibold truncate">{userName}</h2>
+                  {isEditingProfile ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editDisplayName}
+                        onChange={(e) => setEditDisplayName(e.target.value)}
+                        placeholder="Your display name"
+                        className="h-9"
+                        autoFocus
+                        data-testid="input-edit-display-name"
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          updateProfileMutation.mutate({ displayName: editDisplayName });
+                        }}
+                        disabled={updateProfileMutation.isPending}
+                        data-testid="button-save-name"
+                      >
+                        <Check className="w-4 h-4 text-green-500" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setIsEditingProfile(false)}
+                        data-testid="button-cancel-edit"
+                      >
+                        <X className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-semibold truncate">{userName}</h2>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => {
+                          setEditDisplayName(user.displayName || userName);
+                          setIsEditingProfile(true);
+                        }}
+                        data-testid="button-edit-name"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">{user.email}</p>
                   <div className="mt-2">{getPlanBadge()}</div>
                 </div>
               </div>
 
+              {/* Avatar Picker Modal */}
+              {showAvatarPicker && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <Card className="w-full max-w-md">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Choose Your Avatar</CardTitle>
+                      <CardDescription>Select a profile picture</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-4 gap-3">
+                        {AVATAR_OPTIONS.map((avatarUrl, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              updateProfileMutation.mutate({ avatarUrl });
+                              setShowAvatarPicker(false);
+                            }}
+                            className={`relative rounded-full overflow-hidden ring-2 ring-transparent hover:ring-primary transition-all ${
+                              user.avatarUrl === avatarUrl ? "ring-primary ring-offset-2" : ""
+                            }`}
+                            data-testid={`button-avatar-option-${index}`}
+                          >
+                            <Avatar className="w-14 h-14">
+                              <AvatarImage src={avatarUrl} alt={`Avatar option ${index + 1}`} />
+                            </Avatar>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            updateProfileMutation.mutate({ avatarUrl: null });
+                            setShowAvatarPicker(false);
+                          }}
+                          data-testid="button-reset-avatar"
+                        >
+                          Use Default
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setShowAvatarPicker(false)}
+                          data-testid="button-close-avatar-picker"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
               <Separator />
 
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Display Name</Label>
-                  <Input 
-                    id="name" 
-                    value={userName} 
-                    disabled
-                    className="bg-muted/50"
-                    data-testid="input-name"
-                  />
-                  <p className="text-xs text-muted-foreground">Display name is derived from your email</p>
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <Input 

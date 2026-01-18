@@ -32,6 +32,8 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
   plan: text("plan").$type<Plan>().default("free").notNull(),
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   aiPreferences: jsonb("ai_preferences").$type<AiPreferences>(),
