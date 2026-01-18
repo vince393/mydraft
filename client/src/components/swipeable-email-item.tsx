@@ -385,18 +385,47 @@ export function SwipeableEmailItem({
                 </span>
               )}
               <span className="flex-1" />
-              <div className="flex-shrink-0">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
+              <div className="flex-shrink-0 flex items-center">
+                {/* Date/time - visible by default, hidden on hover */}
+                <span className="text-xs text-muted-foreground whitespace-nowrap group-hover:hidden">
                   {formatTime(new Date(receivedAt))}
                 </span>
+                {/* Action buttons - hidden by default, visible on hover */}
+                <div className="hidden group-hover:flex items-center gap-0.5">
+                  <button
+                    onClick={handleStarClick}
+                    className={`p-1.5 rounded-md transition-colors ${
+                      isStarred 
+                        ? "text-yellow-500" 
+                        : "text-muted-foreground hover:text-yellow-500"
+                    }`}
+                    data-testid={`hover-star-${emailId}`}
+                  >
+                    <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
+                  </button>
+                  <button
+                    onClick={handleArchiveClick}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                    data-testid={`hover-archive-${emailId}`}
+                  >
+                    <Archive className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleDeleteClick}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
+                    data-testid={`hover-delete-${emailId}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
             
-            <h4 className={`text-sm mb-1.5 truncate group-hover:max-w-[calc(100%-80px)] ${!isRead ? "font-medium" : "text-foreground/80"}`}>
+            <h4 className={`text-sm mb-1.5 truncate pr-1 ${!isRead ? "font-medium" : "text-foreground/80"}`}>
               {subject}
             </h4>
             
-            <p className="text-xs text-muted-foreground/80 overflow-hidden whitespace-nowrap text-ellipsis">
+            <p className="text-xs text-muted-foreground/80 truncate pr-1">
               {preview.replace(/[\u200B-\u200D\uFEFF\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180E\u2000-\u200F\u2028-\u202F\u205F-\u206F\u3000\u3164\uFFA0]/g, '').trim()}
             </p>
           </div>
