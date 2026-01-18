@@ -3097,7 +3097,13 @@ Return only the improved text, nothing else.`;
     try {
       const settings = await storage.getAssistantSettings(req.session.userId!);
       if (!settings) {
-        return res.json({ selectedVoice: "vince", voiceOutputEnabled: false });
+        return res.json({ 
+          selectedVoice: "vince", 
+          voiceOutputEnabled: false,
+          canReadEmails: false,
+          canDraftEmails: false,
+          canSendEmails: false
+        });
       }
       res.json(settings);
     } catch (error) {
@@ -3109,10 +3115,13 @@ Return only the improved text, nothing else.`;
   // Update assistant settings
   app.post("/api/assistant/settings", requireAuth, async (req, res) => {
     try {
-      const { selectedVoice, voiceOutputEnabled } = req.body;
+      const { selectedVoice, voiceOutputEnabled, canReadEmails, canDraftEmails, canSendEmails } = req.body;
       const settings = await storage.upsertAssistantSettings(req.session.userId!, {
         selectedVoice,
-        voiceOutputEnabled
+        voiceOutputEnabled,
+        canReadEmails,
+        canDraftEmails,
+        canSendEmails
       });
       res.json(settings);
     } catch (error) {

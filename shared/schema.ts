@@ -138,6 +138,9 @@ export const assistantSettings = pgTable("assistant_settings", {
   userId: varchar("user_id").notNull(),
   selectedVoice: text("selected_voice").default("vince").notNull(),
   voiceOutputEnabled: boolean("voice_output_enabled").default(true).notNull(),
+  canReadEmails: boolean("can_read_emails").default(false).notNull(),
+  canDraftEmails: boolean("can_draft_emails").default(false).notNull(),
+  canSendEmails: boolean("can_send_emails").default(false).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 

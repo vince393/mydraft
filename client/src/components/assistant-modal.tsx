@@ -46,8 +46,15 @@ import {
   ChevronDown,
   Plus,
   History,
-  MessageSquare
+  MessageSquare,
+  Settings,
+  Eye,
+  FileEdit,
+  SendHorizonal,
+  Shield
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { AssistantMessage, AssistantSettings, ChatSession } from "@shared/schema";
 import { VoiceChatModal } from "./voice-chat-modal";
@@ -135,6 +142,9 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
 
   const selectedVoice = settings?.selectedVoice || "vince";
   const voiceOutputEnabled = settings?.voiceOutputEnabled ?? true;
+  const canReadEmails = settings?.canReadEmails ?? false;
+  const canDraftEmails = settings?.canDraftEmails ?? false;
+  const canSendEmails = settings?.canSendEmails ?? false;
 
   const { data: sessions = [] } = useQuery<ChatSession[]>({
     queryKey: ["/api/assistant/sessions"],
@@ -223,7 +233,13 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   const pendingActions = aiContext?.pendingActions?.filter(a => a.status === "pending") || [];
 
   const updateSettingsMutation = useMutation({
-    mutationFn: async (data: { selectedVoice?: string; voiceOutputEnabled?: boolean }) => {
+    mutationFn: async (data: { 
+      selectedVoice?: string; 
+      voiceOutputEnabled?: boolean;
+      canReadEmails?: boolean;
+      canDraftEmails?: boolean;
+      canSendEmails?: boolean;
+    }) => {
       const response = await apiRequest("POST", "/api/assistant/settings", data);
       return response.json();
     },
@@ -516,6 +532,72 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                   <VolumeX className="w-4 h-4 text-muted-foreground" />
                 )}
               </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={cn(
+                      "h-8 w-8 relative",
+                      (canReadEmails || canDraftEmails || canSendEmails) && "text-primary"
+                    )}
+                    data-testid="button-assistant-permissions"
+                  >
+                    <Shield className="w-4 h-4" />
+                    {(canReadEmails || canDraftEmails || canSendEmails) && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 p-3">
+                  <div className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                    <Shield className="w-3 h-3" />
+                    Email Permissions
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Eye className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <Label htmlFor="perm-read" className="text-sm cursor-pointer">Read emails</Label>
+                      </div>
+                      <Switch
+                        id="perm-read"
+                        checked={canReadEmails}
+                        onCheckedChange={(checked) => updateSettingsMutation.mutate({ canReadEmails: checked })}
+                        data-testid="switch-permission-read"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileEdit className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <Label htmlFor="perm-draft" className="text-sm cursor-pointer">Draft emails</Label>
+                      </div>
+                      <Switch
+                        id="perm-draft"
+                        checked={canDraftEmails}
+                        onCheckedChange={(checked) => updateSettingsMutation.mutate({ canDraftEmails: checked })}
+                        data-testid="switch-permission-draft"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <SendHorizonal className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <Label htmlFor="perm-send" className="text-sm cursor-pointer">Send emails</Label>
+                      </div>
+                      <Switch
+                        id="perm-send"
+                        checked={canSendEmails}
+                        onCheckedChange={(checked) => updateSettingsMutation.mutate({ canSendEmails: checked })}
+                        data-testid="switch-permission-send"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-3 pt-2 border-t border-border/50">
+                    Enable permissions for Vince to help manage your inbox
+                  </p>
+                </DropdownMenuContent>
+              </DropdownMenu>
               
               <Button
                 size="icon"

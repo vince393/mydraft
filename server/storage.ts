@@ -778,6 +778,9 @@ Business Development`,
           userId,
           selectedVoice: updates.selectedVoice || "vince",
           voiceOutputEnabled: updates.voiceOutputEnabled ?? true,
+          canReadEmails: updates.canReadEmails ?? false,
+          canDraftEmails: updates.canDraftEmails ?? false,
+          canSendEmails: updates.canSendEmails ?? false,
         })
         .returning();
       return created;
