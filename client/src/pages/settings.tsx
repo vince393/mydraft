@@ -1513,38 +1513,31 @@ function TeamTab() {
 
 function AppearanceTab() {
   const { toast } = useToast();
-  const [theme, setTheme] = useState<"light" | "dark" | "system">(() => {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("theme") as "light" | "dark" | "system") || "dark";
+      const saved = localStorage.getItem("theme");
+      return (saved === "light" || saved === "dark") ? saved : "dark";
     }
     return "dark";
   });
 
   useEffect(() => {
     const root = document.documentElement;
-    
-    if (theme === "system") {
-      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      root.classList.toggle("dark", systemPrefersDark);
-      localStorage.setItem("theme", "system");
-    } else {
-      root.classList.toggle("dark", theme === "dark");
-      localStorage.setItem("theme", theme);
-    }
+    root.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+  const handleThemeChange = (newTheme: "light" | "dark") => {
     setTheme(newTheme);
     toast({
       title: "Theme updated",
-      description: `Switched to ${newTheme === "system" ? "system" : newTheme} mode`,
+      description: `Switched to ${newTheme} mode`,
     });
   };
 
   const themeOptions = [
     { value: "light", label: "Light", icon: Sun, description: "Clean, bright interface" },
     { value: "dark", label: "Dark", icon: Moon, description: "Easy on the eyes" },
-    { value: "system", label: "System", icon: Monitor, description: "Match your device" },
   ] as const;
 
   return (
@@ -1564,8 +1557,8 @@ function AppearanceTab() {
             <Label className="text-base font-medium">Theme</Label>
             <RadioGroup
               value={theme}
-              onValueChange={(value) => handleThemeChange(value as "light" | "dark" | "system")}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+              onValueChange={(value) => handleThemeChange(value as "light" | "dark")}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
             >
               {themeOptions.map((option) => {
                 const Icon = option.icon;
