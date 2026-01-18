@@ -1450,24 +1450,32 @@ Return ONLY valid JSON, no other text.`;
       const grant = await storage.getNylasGrant(req.session.userId!);
       console.log("[Move Email] Grant found:", !!grant, "ID length:", id.length);
       if (grant && id.length > 10) {
-        console.log(`[Move Email] Moving email ${id} to folder: ${folder}`);
+        console.log(`[Move Email] Moving Nylas email ${id} to folder: ${folder}, grantId: ${grant.grantId}`);
         try {
           if (folder === "trash") {
+            console.log(`[Move Email] Calling nylas.trashMessage...`);
             await nylas.trashMessage(grant.grantId, id);
-            console.log(`Successfully trashed email ${id}`);
+            console.log(`[Move Email] Successfully trashed email ${id}`);
           } else if (folder === "archived") {
+            console.log(`[Move Email] Calling nylas.archiveMessage...`);
             await nylas.archiveMessage(grant.grantId, id);
-            console.log(`Successfully archived email ${id}`);
+            console.log(`[Move Email] Successfully archived email ${id}`);
           } else if (folder === "inbox") {
+            console.log(`[Move Email] Calling nylas.moveToInbox...`);
             await nylas.moveToInbox(grant.grantId, id);
-            console.log(`Successfully moved email ${id} to inbox`);
+            console.log(`[Move Email] Successfully moved email ${id} to inbox`);
+          } else {
+            console.log(`[Move Email] Folder ${folder} not handled by Nylas`);
           }
           nylas.invalidateMessagesCache(grant.grantId);
+          console.log(`[Move Email] Returning success for ${id}`);
           return res.json({ success: true, folder });
         } catch (nylasError: any) {
-          console.error(`Nylas error moving email ${id}:`, nylasError.message);
+          console.error(`[Move Email] Nylas error moving email ${id}:`, nylasError.message);
           throw nylasError;
         }
+      } else {
+        console.log(`[Move Email] No grant or short ID, using local storage for ${id}`);
       }
       
       const numericId = parseInt(id);
