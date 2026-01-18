@@ -1484,6 +1484,52 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  // Email notes (sticky notes for individual emails)
+  app.get("/api/emails/:id/note", requireAuth, async (req, res) => {
+    try {
+      const note = await storage.getEmailNote(req.session.userId!, req.params.id);
+      res.json({ note: note || null });
+    } catch (error) {
+      console.error("Error getting email note:", error);
+      res.status(500).json({ error: "Failed to get note" });
+    }
+  });
+
+  app.post("/api/emails/:id/note", requireAuth, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content || typeof content !== "string") {
+        return res.status(400).json({ error: "Content is required" });
+      }
+
+      const existing = await storage.getEmailNote(req.session.userId!, req.params.id);
+      if (existing) {
+        const updated = await storage.updateEmailNote(req.session.userId!, req.params.id, content);
+        return res.json({ note: updated });
+      }
+
+      const note = await storage.createEmailNote({
+        userId: req.session.userId!,
+        messageId: req.params.id,
+        content,
+      });
+      res.json({ note });
+    } catch (error) {
+      console.error("Error saving email note:", error);
+      res.status(500).json({ error: "Failed to save note" });
+    }
+  });
+
+  app.delete("/api/emails/:id/note", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteEmailNote(req.session.userId!, req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting email note:", error);
+      res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+
   app.post("/api/emails/:id/format", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
