@@ -382,11 +382,61 @@ export async function deleteMessage(grantId: string, messageId: string): Promise
   }
 }
 
+interface NylasFolder {
+  id: string;
+  name: string;
+  system_folder?: string;
+  attributes?: string[];
+}
+
+const folderIdCache = new Map<string, Map<string, string>>();
+
+async function getFolderIds(grantId: string): Promise<Map<string, string>> {
+  if (folderIdCache.has(grantId)) {
+    return folderIdCache.get(grantId)!;
+  }
+
+  const response = await nylasRequest(`/v3/grants/${grantId}/folders`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch folders: ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  const folders: NylasFolder[] = data.data || [];
+  
+  const folderMap = new Map<string, string>();
+  
+  for (const folder of folders) {
+    const attrs = folder.attributes || [];
+    if (attrs.includes('\\Trash') || folder.name?.toLowerCase() === 'trash') {
+      folderMap.set('TRASH', folder.id);
+    }
+    if (attrs.includes('\\Inbox') || folder.name?.toLowerCase() === 'inbox') {
+      folderMap.set('INBOX', folder.id);
+    }
+    if (attrs.includes('\\All') || folder.name?.toLowerCase() === 'all mail') {
+      folderMap.set('ARCHIVE', folder.id);
+    }
+    if (attrs.includes('\\Spam') || attrs.includes('\\Junk') || folder.name?.toLowerCase() === 'spam') {
+      folderMap.set('SPAM', folder.id);
+    }
+  }
+  
+  console.log('[Nylas getFolderIds] Folder mapping:', Object.fromEntries(folderMap));
+  folderIdCache.set(grantId, folderMap);
+  return folderMap;
+}
+
 export async function trashMessage(grantId: string, messageId: string): Promise<void> {
-  // Use the Nylas message update with add_labels for TRASH
+  const folderMap = await getFolderIds(grantId);
+  const trashFolderId = folderMap.get('TRASH');
+  
+  if (!trashFolderId) {
+    throw new Error('Could not find TRASH folder ID');
+  }
+
   const payload = {
-    add_labels: ['TRASH'],
-    remove_labels: ['INBOX', 'UNREAD'],
+    folders: [trashFolderId],
   };
   console.log(`[Nylas trashMessage] Sending PUT to /v3/grants/${grantId}/messages/${messageId} with payload:`, JSON.stringify(payload));
   
@@ -404,12 +454,32 @@ export async function trashMessage(grantId: string, messageId: string): Promise<
 }
 
 export async function archiveMessage(grantId: string, messageId: string): Promise<void> {
-  // For Gmail, archiving means removing INBOX label (moving to "All Mail")
+  // For Gmail, archiving means moving to "All Mail" folder (removing from inbox)
+  const folderMap = await getFolderIds(grantId);
+  const archiveFolderId = folderMap.get('ARCHIVE');
+  
+  if (!archiveFolderId) {
+    // If no archive folder found, try with empty folders array (removes from inbox)
+    console.log('[Nylas archiveMessage] No ARCHIVE folder found, using empty folders array');
+    const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ folders: [] }),
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to archive message: ${error}`);
+    }
+    return;
+  }
+
+  const payload = {
+    folders: [archiveFolderId],
+  };
+  console.log(`[Nylas archiveMessage] Sending PUT with payload:`, JSON.stringify(payload));
+  
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
     method: 'PUT',
-    body: JSON.stringify({
-      remove_labels: ['INBOX'],
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -419,13 +489,21 @@ export async function archiveMessage(grantId: string, messageId: string): Promis
 }
 
 export async function moveToInbox(grantId: string, messageId: string): Promise<void> {
-  // Move message back to inbox by adding INBOX label and removing TRASH
+  const folderMap = await getFolderIds(grantId);
+  const inboxFolderId = folderMap.get('INBOX');
+  
+  if (!inboxFolderId) {
+    throw new Error('Could not find INBOX folder ID');
+  }
+
+  const payload = {
+    folders: [inboxFolderId],
+  };
+  console.log(`[Nylas moveToInbox] Sending PUT with payload:`, JSON.stringify(payload));
+  
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
     method: 'PUT',
-    body: JSON.stringify({
-      add_labels: ['INBOX'],
-      remove_labels: ['TRASH'],
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
