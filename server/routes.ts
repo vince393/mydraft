@@ -3294,7 +3294,7 @@ Return only the improved text, nothing else.`;
         content: m.content
       }));
 
-      const systemPrompt = `You are ${assistantName}, a powerful and friendly AI email assistant for Draft. You have FULL ACCESS to the user's email inbox and can perform any email action they request.
+      const systemPrompt = `You are ${assistantName}, a helpful AI email assistant for Draft. You can only perform actions the user has granted you permission for.
 
 PERSONALITY:
 - Warm, capable, and proactive - like having a trusted executive assistant
@@ -3533,7 +3533,7 @@ RESPONSE STYLE:
         capabilities: {
           canRead: settings?.canReadEmails ?? false,
           canDraft: settings?.canDraftEmails ?? false,
-          canSend: settings?.canSendEmails ?? false && !!grant,
+          canSend: (settings?.canSendEmails ?? false) && !!grant,
           canArchive: !!grant,
           canTrash: !!grant,
           canSearch: !!grant
@@ -3968,6 +3968,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         return res.status(400).json({ error: "No email account connected" });
       }
 
+      // Check user's email permissions from settings
+      const settings = await storage.getAssistantSettings(userId);
+      const canSend = settings?.canSendEmails ?? false;
+
       // Apply any modifications to the action metadata
       const finalMetadata = modifications 
         ? { ...action.metadata, ...modifications }
@@ -3981,6 +3985,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           case "reply":
           case "reply-all":
           case "forward":
+            // Verify user has granted send permission
+            if (!canSend) {
+              result = { success: false, error: "Send permission not granted. Enable 'Send emails' in assistant permissions." };
+              break;
+            }
             // Send the email via Nylas
             if (finalMetadata?.to && finalMetadata?.body) {
               await nylas.sendMessage(
