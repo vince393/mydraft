@@ -343,9 +343,9 @@ export function SwipeableEmailItem({
           transition-all select-none rounded-lg
           ${!isSwiping ? "duration-200 ease-out" : "duration-0"}
           ${isSelectionMode && isChecked
-            ? "bg-primary/10 ring-2 ring-primary/30"
+            ? "bg-primary/10 ring-2 ring-inset ring-primary/30"
             : isSelected 
-              ? "bg-primary/10 ring-2 ring-primary/40 shadow-sm" 
+              ? "bg-primary/15 ring-2 ring-inset ring-primary shadow-sm" 
               : "hover:bg-muted/30"
           }
         `}
