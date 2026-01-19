@@ -7,7 +7,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { AssistantModal } from "@/components/assistant-modal";
+import { UpgradeModal } from "@/components/upgrade-modal";
 import { useScreenSize } from "@/hooks/use-screen-size";
+import { usePlan } from "@/hooks/use-plan";
 import Inbox from "@/pages/inbox";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
@@ -30,7 +33,7 @@ import DataProcessingAgreementPage from "@/pages/data-processing-agreement";
 import AIUsePolicyPage from "@/pages/ai-use-policy";
 import RefundPolicyPage from "@/pages/refund-policy";
 import type { Email, User } from "@shared/schema";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 
 interface AuthResponse {
   user: (User & { emailConnected?: boolean }) | null;
@@ -49,7 +52,10 @@ function AuthenticatedApp() {
   const [activeFolder, setActiveFolder] = useState("inbox");
   const [showComposeDialog, setShowComposeDialog] = useState(false);
   const [composeMode, setComposeMode] = useState<"new" | "reply" | "replyAll" | "forward">("new");
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const screen = useScreenSize();
+  const { hasPro } = usePlan();
 
   const { data: emails = [] } = useQuery<Email[]>({
     queryKey: ["/api/emails"],
@@ -68,6 +74,14 @@ function AuthenticatedApp() {
   const handleCompose = () => {
     setComposeMode("new");
     setShowComposeDialog(true);
+  };
+
+  const handleOpenAssistant = () => {
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+    } else {
+      setIsAssistantOpen(true);
+    }
   };
 
   return (
@@ -97,14 +111,32 @@ function AuthenticatedApp() {
           />
         </SidebarInset>
         {screen.isMobile && (
-          <MobileBottomNav
-            activeFolder={activeFolder}
-            onFolderChange={setActiveFolder}
-            unreadCounts={unreadCounts}
-            onCompose={handleCompose}
-          />
+          <>
+            <MobileBottomNav
+              activeFolder={activeFolder}
+              onFolderChange={setActiveFolder}
+              unreadCounts={unreadCounts}
+              onCompose={handleCompose}
+            />
+            <button
+              onClick={handleOpenAssistant}
+              className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-600/30 active:scale-95 transition-transform"
+              data-testid="mobile-ai-assistant-button"
+            >
+              <Sparkles className="w-6 h-6 text-white" />
+            </button>
+          </>
         )}
       </div>
+      
+      <AssistantModal open={isAssistantOpen} onOpenChange={setIsAssistantOpen} />
+      
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        feature="AI Assistant"
+        requiredPlan="pro"
+      />
     </SidebarProvider>
   );
 }
