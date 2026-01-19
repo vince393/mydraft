@@ -764,7 +764,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 onClick={onTrashEmail}
                 data-testid="button-trash"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4 text-destructive" />
               </Button>
               {hasConnectedAccount && activeFolder === "inbox" && (
                 <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
