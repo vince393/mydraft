@@ -37,7 +37,7 @@ function formatEmailTime(date: Date): string {
 
 interface EmailListProps {
   emails: EmailWithNylasId[];
-  selectedEmailId: number | null;
+  selectedEmailId: string | number | null;
   onSelectEmail: (email: EmailWithNylasId) => void;
   onAiReply: () => void;
   onAiReplyMultiple?: (emails: EmailWithNylasId[]) => void;
@@ -649,7 +649,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         <div className="space-y-0.5 p-3">
         {filteredEmails.map((email) => {
           const emailId = getEmailId(email);
-          const isSelected = email.id === selectedEmailId;
+          const isSelected = getEmailId(email) === selectedEmailId;
           const isChecked = selectedIds.has(emailId);
 
           return (

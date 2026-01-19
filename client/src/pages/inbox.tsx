@@ -671,7 +671,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                 }
                 return email;
               })}
-            selectedEmailId={selectedEmail?.id ?? null}
+            selectedEmailId={selectedEmailId}
             onSelectEmail={handleSelectEmail}
             onAiReply={handleAiReply}
             onAiReplyMultiple={handleAiReplyMultiple}
