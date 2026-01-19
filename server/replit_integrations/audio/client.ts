@@ -86,41 +86,50 @@ export async function voiceChat(
     { role: "user" as const, content: userText },
   ];
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-audio-mini",
-    modalities: ["text", "audio"],
-    audio: {
-      voice: "onyx",
-      format: "wav",
-    },
+  // First get the text response using a regular chat model
+  const textResponse = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
     messages: chatMessages,
   });
 
-  const message = response.choices[0]?.message as any;
-  const text = message?.audio?.transcript || message?.content || "";
-  const audio = message?.audio?.data || "";
+  const text = textResponse.choices[0]?.message?.content || "";
+
+  // Then generate audio using TTS
+  let audio = "";
+  if (text) {
+    try {
+      const ttsResponse = await openai.audio.speech.create({
+        model: "tts-1",
+        voice: "onyx",
+        input: text,
+        response_format: "wav",
+      });
+      
+      const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+      audio = audioBuffer.toString("base64");
+    } catch (ttsError) {
+      console.error("TTS error:", ttsError);
+    }
+  }
 
   return { text, audio };
 }
 
 export async function textToSpeech(text: string): Promise<string> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-audio-mini",
-    modalities: ["text", "audio"],
-    audio: {
+  try {
+    const ttsResponse = await openai.audio.speech.create({
+      model: "tts-1",
       voice: "onyx",
-      format: "wav",
-    },
-    messages: [
-      {
-        role: "user",
-        content: `Please repeat the following text exactly, with natural speech: "${text}"`,
-      },
-    ],
-  });
-
-  const message = response.choices[0]?.message as any;
-  return message?.audio?.data || "";
+      input: text,
+      response_format: "wav",
+    });
+    
+    const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+    return audioBuffer.toString("base64");
+  } catch (error) {
+    console.error("TTS error:", error);
+    return "";
+  }
 }
 
 export { openai };
