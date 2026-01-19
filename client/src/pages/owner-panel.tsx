@@ -45,6 +45,9 @@ import {
   Plus,
   Trash2,
   TrendingDown,
+  Star,
+  Check,
+  X,
 } from "lucide-react";
 
 interface OwnerStats {
@@ -142,6 +145,17 @@ interface Revenue {
   createdAt: string;
 }
 
+interface Testimonial {
+  id: number;
+  userId: string;
+  userEmail: string;
+  content: string;
+  rating: number;
+  status: string;
+  isFounder: boolean;
+  createdAt: string;
+}
+
 const EXPENSE_CATEGORIES = [
   { value: "replit", label: "Replit", color: "#3B82F6" },
   { value: "nylas", label: "Nylas", color: "#8B5CF6" },
@@ -229,6 +243,11 @@ export default function OwnerPanel() {
   const { data: revenueList = [], isLoading: revenueLoading } = useQuery<Revenue[]>({
     queryKey: ["/api/owner/finances/revenue"],
     enabled: isOwnerData?.isOwner === true && activeTab === "finances",
+  });
+
+  const { data: testimonialsList = [], isLoading: testimonialsLoading } = useQuery<Testimonial[]>({
+    queryKey: ["/api/owner/testimonials"],
+    enabled: isOwnerData?.isOwner === true && activeTab === "testimonials",
   });
 
   const updateFeedbackMutation = useMutation({
@@ -340,6 +359,34 @@ export default function OwnerPanel() {
     },
     onError: () => {
       toast({ title: "Failed to delete expense", variant: "destructive" });
+    },
+  });
+
+  const updateTestimonialMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      return apiRequest("PATCH", `/api/owner/testimonials/${id}/status`, { status });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/testimonials"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/testimonials"] });
+      toast({ title: `Testimonial ${variables.status}` });
+    },
+    onError: () => {
+      toast({ title: "Failed to update testimonial", variant: "destructive" });
+    },
+  });
+
+  const deleteTestimonialMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/owner/testimonials/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/testimonials"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/testimonials"] });
+      toast({ title: "Testimonial deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete testimonial", variant: "destructive" });
     },
   });
 
@@ -498,6 +545,10 @@ export default function OwnerPanel() {
             <TabsTrigger value="finances" data-testid="tab-finances">
               <Wallet className="w-4 h-4 mr-2" />
               Finances
+            </TabsTrigger>
+            <TabsTrigger value="testimonials" data-testid="tab-testimonials">
+              <Star className="w-4 h-4 mr-2" />
+              Testimonials
             </TabsTrigger>
           </TabsList>
 
@@ -1499,6 +1550,106 @@ export default function OwnerPanel() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="testimonials">
+            <Card>
+              <CardHeader>
+                <CardTitle>Testimonial Management</CardTitle>
+                <CardDescription>Review and approve user testimonials for the landing page</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {testimonialsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : testimonialsList.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Star className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No testimonials submitted yet</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[600px]">
+                    <div className="space-y-4">
+                      {testimonialsList.map((testimonial) => (
+                        <div
+                          key={testimonial.id}
+                          className="p-4 border rounded-lg space-y-3"
+                          data-testid={`testimonial-${testimonial.id}`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium" data-testid={`text-email-${testimonial.id}`}>{testimonial.userEmail}</span>
+                                {testimonial.isFounder && (
+                                  <Badge variant="secondary">Founder</Badge>
+                                )}
+                                <Badge 
+                                  variant={
+                                    testimonial.status === "approved" ? "default" :
+                                    testimonial.status === "denied" ? "destructive" : "outline"
+                                  }
+                                  data-testid={`status-${testimonial.id}`}
+                                >
+                                  {testimonial.status}
+                                </Badge>
+                              </div>
+                              <div className="flex gap-0.5 mb-2" data-testid={`rating-stars-${testimonial.id}`}>
+                                {[...Array(testimonial.rating)].map((_, i) => (
+                                  <Star key={i} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                                ))}
+                                {[...Array(5 - testimonial.rating)].map((_, i) => (
+                                  <Star key={`empty-${i}`} className="w-4 h-4 text-muted-foreground" />
+                                ))}
+                              </div>
+                              <p className="text-muted-foreground">"{testimonial.content}"</p>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Submitted {format(new Date(testimonial.createdAt), "MMM d, yyyy")}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              {testimonial.status !== "approved" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateTestimonialMutation.mutate({ id: testimonial.id, status: "approved" })}
+                                  disabled={updateTestimonialMutation.isPending}
+                                  data-testid={`approve-testimonial-${testimonial.id}`}
+                                >
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Approve
+                                </Button>
+                              )}
+                              {testimonial.status !== "denied" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateTestimonialMutation.mutate({ id: testimonial.id, status: "denied" })}
+                                  disabled={updateTestimonialMutation.isPending}
+                                  data-testid={`deny-testimonial-${testimonial.id}`}
+                                >
+                                  <X className="w-4 h-4 mr-1" />
+                                  Deny
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => deleteTestimonialMutation.mutate(testimonial.id)}
+                                disabled={deleteTestimonialMutation.isPending}
+                                data-testid={`delete-testimonial-${testimonial.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

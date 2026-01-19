@@ -424,7 +424,7 @@ function TestimonialCard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-primary" />
+            <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
             Leave a Testimonial
           </CardTitle>
         </CardHeader>
@@ -440,7 +440,7 @@ function TestimonialCard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-primary" />
+            <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
             Your Testimonial
           </CardTitle>
           <CardDescription>
@@ -456,7 +456,7 @@ function TestimonialCard() {
         <CardContent className="space-y-4">
           <div className="flex gap-1">
             {[...Array(existingTestimonial.rating)].map((_, i) => (
-              <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+              <Star key={i} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
             ))}
           </div>
           <p className="text-muted-foreground">"{existingTestimonial.content}"</p>
@@ -469,7 +469,7 @@ function TestimonialCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Star className="w-5 h-5 text-primary" />
+          <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
           Leave a Testimonial
         </CardTitle>
         <CardDescription>Share your experience with Draft</CardDescription>
@@ -487,7 +487,7 @@ function TestimonialCard() {
                 data-testid={`star-rating-${star}`}
               >
                 <Star 
-                  className={`w-6 h-6 ${star <= rating ? "fill-primary text-primary" : "text-muted-foreground"}`} 
+                  className={`w-6 h-6 ${star <= rating ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} 
                 />
               </button>
             ))}
