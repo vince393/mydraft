@@ -491,36 +491,33 @@ function BenefitsSection() {
   );
 }
 
+interface Testimonial {
+  id: number;
+  userName: string;
+  content: string;
+  rating: number;
+  isFounder: boolean;
+}
+
 function TestimonialsSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
   
-  const testimonials = [
-    {
-      quote: "I used to spend 3 hours on email every morning. Now it's under an hour. Draft's AI drafts are surprisingly good.",
-      name: "Rachel Torres",
-      role: "VP of Sales"
-    },
-    {
-      quote: "The thread summaries alone are worth it. I can jump into any conversation and know exactly what's happening.",
-      name: "David Park",
-      role: "Product Manager"
-    },
-    {
-      quote: "Finally, an email tool that doesn't try to do too much. It's fast, clean, and the AI actually helps.",
-      name: "Maria Santos",
-      role: "Founder & CEO"
-    },
-    {
-      quote: "I was skeptical about AI writing my emails, but the tone customization is great. My replies still sound like me.",
-      name: "James Chen",
-      role: "Account Executive"
-    },
-    {
-      quote: "The auto-labeling saved my sanity. No more digging through newsletters to find client emails.",
-      name: "Emma Williams",
-      role: "Customer Success"
-    }
-  ];
+  // Fetch approved testimonials from API
+  const { data: apiTestimonials } = useQuery<Testimonial[]>({
+    queryKey: ["/api/testimonials"],
+  });
+
+  // Founder testimonial - always shown first
+  const founderTestimonial = {
+    id: 0,
+    userName: "Founder",
+    content: "I built Draft because I was tired of spending hours every day in my inbox. Now I use AI to help me reply faster and stay focused on what matters. I hope Draft helps you too.",
+    rating: 5,
+    isFounder: true,
+  };
+
+  // Combine founder testimonial with approved user testimonials
+  const testimonials = [founderTestimonial, ...(apiTestimonials || [])];
 
   const nextSlide = () => {
     setCurrentIndex((prev) => (prev + 1) % testimonials.length);
@@ -530,15 +527,19 @@ function TestimonialsSection() {
     setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
+  if (testimonials.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-24 px-6 border-t border-white/[0.04] overflow-hidden">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Trusted by thousands
+            What people are saying
           </h2>
           <p className="text-muted-foreground text-lg">
-            Join thousands who've reclaimed their inbox
+            Real feedback from Draft users
           </p>
         </div>
         
@@ -549,18 +550,20 @@ function TestimonialsSection() {
               style={{ transform: `translateX(-${currentIndex * 100}%)` }}
             >
               {testimonials.map((t, i) => (
-                <div key={i} className="w-full flex-shrink-0 px-4">
+                <div key={t.id || i} className="w-full flex-shrink-0 px-4">
                   <Card className="bg-white/[0.02] border-white/[0.06] max-w-2xl mx-auto">
                     <CardContent className="p-8 text-center">
                       <div className="flex justify-center gap-1 mb-6">
-                        {[...Array(5)].map((_, j) => (
+                        {[...Array(t.rating)].map((_, j) => (
                           <Star key={j} className="w-5 h-5 fill-primary text-primary" />
                         ))}
                       </div>
-                      <p className="text-lg text-muted-foreground leading-relaxed mb-6">"{t.quote}"</p>
+                      <p className="text-lg text-muted-foreground leading-relaxed mb-6">"{t.content}"</p>
                       <div>
-                        <p className="font-medium">{t.name}</p>
-                        <p className="text-sm text-muted-foreground/60">{t.role}</p>
+                        <p className="font-medium">{t.userName}</p>
+                        {t.isFounder && (
+                          <p className="text-sm text-primary/80">Founder of Draft</p>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -569,34 +572,36 @@ function TestimonialsSection() {
             </div>
           </div>
           
-          <div className="flex justify-center items-center gap-4 mt-8">
-            <button
-              onClick={prevSlide}
-              className="w-10 h-10 rounded-full border border-white/[0.1] flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-white/[0.2] transition-colors"
-              data-testid="testimonial-prev"
-            >
-              <ChevronDown className="w-5 h-5 rotate-90" />
-            </button>
-            <div className="flex gap-2">
-              {testimonials.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentIndex(i)}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    i === currentIndex ? 'bg-primary' : 'bg-white/20 hover:bg-white/30'
-                  }`}
-                  data-testid={`testimonial-dot-${i}`}
-                />
-              ))}
+          {testimonials.length > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-8">
+              <button
+                onClick={prevSlide}
+                className="w-10 h-10 rounded-full border border-white/[0.1] flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-white/[0.2] transition-colors"
+                data-testid="testimonial-prev"
+              >
+                <ChevronDown className="w-5 h-5 rotate-90" />
+              </button>
+              <div className="flex gap-2">
+                {testimonials.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentIndex(i)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      i === currentIndex ? 'bg-primary' : 'bg-white/20 hover:bg-white/30'
+                    }`}
+                    data-testid={`testimonial-dot-${i}`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={nextSlide}
+                className="w-10 h-10 rounded-full border border-white/[0.1] flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-white/[0.2] transition-colors"
+                data-testid="testimonial-next"
+              >
+                <ChevronDown className="w-5 h-5 -rotate-90" />
+              </button>
             </div>
-            <button
-              onClick={nextSlide}
-              className="w-10 h-10 rounded-full border border-white/[0.1] flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-white/[0.2] transition-colors"
-              data-testid="testimonial-next"
-            >
-              <ChevronDown className="w-5 h-5 -rotate-90" />
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </section>
