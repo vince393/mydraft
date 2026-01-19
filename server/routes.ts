@@ -5126,6 +5126,124 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  // ==================== TESTIMONIALS ROUTES ====================
+
+  // Get approved testimonials (public - for landing page)
+  app.get("/api/testimonials", async (req, res) => {
+    try {
+      const testimonialsList = await storage.getApprovedTestimonials();
+      res.json(testimonialsList);
+    } catch (error) {
+      console.error("Error fetching testimonials:", error);
+      res.status(500).json({ error: "Failed to fetch testimonials" });
+    }
+  });
+
+  // Submit a testimonial (requires auth)
+  app.post("/api/testimonials", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      // Check if user already has a testimonial
+      const existing = await storage.getUserTestimonial(userId);
+      if (existing) {
+        return res.status(400).json({ error: "You have already submitted a testimonial" });
+      }
+      
+      const { content, rating } = req.body;
+      
+      if (!content || content.trim().length < 10) {
+        return res.status(400).json({ error: "Testimonial must be at least 10 characters" });
+      }
+      
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "Rating must be between 1 and 5" });
+      }
+      
+      const testimonial = await storage.createTestimonial({
+        userId,
+        userName: user.displayName || user.email.split("@")[0],
+        userEmail: user.email,
+        content: content.trim(),
+        rating,
+        status: "pending",
+        isFounder: false,
+      });
+      
+      res.json(testimonial);
+    } catch (error) {
+      console.error("Error submitting testimonial:", error);
+      res.status(500).json({ error: "Failed to submit testimonial" });
+    }
+  });
+
+  // Get user's own testimonial
+  app.get("/api/testimonials/mine", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const testimonial = await storage.getUserTestimonial(userId);
+      res.json(testimonial || null);
+    } catch (error) {
+      console.error("Error fetching user testimonial:", error);
+      res.status(500).json({ error: "Failed to fetch testimonial" });
+    }
+  });
+
+  // Owner: Get all testimonials
+  app.get("/api/owner/testimonials", requireOwner, async (req, res) => {
+    try {
+      const testimonialsList = await storage.getAllTestimonials();
+      res.json(testimonialsList);
+    } catch (error) {
+      console.error("Error fetching all testimonials:", error);
+      res.status(500).json({ error: "Failed to fetch testimonials" });
+    }
+  });
+
+  // Owner: Update testimonial status (approve/deny)
+  app.patch("/api/owner/testimonials/:id/status", requireOwner, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!["pending", "approved", "denied"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      
+      const updated = await storage.updateTestimonialStatus(id, status);
+      if (!updated) {
+        return res.status(404).json({ error: "Testimonial not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating testimonial:", error);
+      res.status(500).json({ error: "Failed to update testimonial" });
+    }
+  });
+
+  // Owner: Delete testimonial
+  app.delete("/api/owner/testimonials/:id", requireOwner, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTestimonial(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Testimonial not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting testimonial:", error);
+      res.status(500).json({ error: "Failed to delete testimonial" });
+    }
+  });
+
   // ==================== FINANCIAL TRACKING ROUTES ====================
 
   // Get financial summary for owner panel

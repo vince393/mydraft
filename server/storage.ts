@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, testimonials } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -190,6 +190,15 @@ export interface IStorage {
   isEmailStarred(userId: string, messageId: string): Promise<boolean>;
   getStarredEmailIds(userId: string): Promise<string[]>;
   toggleStarEmail(userId: string, messageId: string): Promise<boolean>; // Returns new starred state
+
+  // Testimonials methods
+  createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial>;
+  getApprovedTestimonials(): Promise<Testimonial[]>;
+  getAllTestimonials(): Promise<Testimonial[]>;
+  getPendingTestimonials(): Promise<Testimonial[]>;
+  updateTestimonialStatus(id: number, status: string): Promise<Testimonial | undefined>;
+  deleteTestimonial(id: number): Promise<boolean>;
+  getUserTestimonial(userId: string): Promise<Testimonial | undefined>;
 }
 
 const avatarColors = [
@@ -1776,6 +1785,49 @@ Business Development`,
       await db.insert(starredEmails).values({ userId, messageId });
       return true;
     }
+  }
+
+  // Testimonials methods
+  async createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial> {
+    const [created] = await db.insert(testimonials).values(testimonial).returning();
+    return created;
+  }
+
+  async getApprovedTestimonials(): Promise<Testimonial[]> {
+    return await db.select().from(testimonials)
+      .where(eq(testimonials.status, "approved"))
+      .orderBy(desc(testimonials.createdAt));
+  }
+
+  async getAllTestimonials(): Promise<Testimonial[]> {
+    return await db.select().from(testimonials)
+      .orderBy(desc(testimonials.createdAt));
+  }
+
+  async getPendingTestimonials(): Promise<Testimonial[]> {
+    return await db.select().from(testimonials)
+      .where(eq(testimonials.status, "pending"))
+      .orderBy(desc(testimonials.createdAt));
+  }
+
+  async updateTestimonialStatus(id: number, status: string): Promise<Testimonial | undefined> {
+    const [updated] = await db.update(testimonials)
+      .set({ status, reviewedAt: new Date() })
+      .where(eq(testimonials.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTestimonial(id: number): Promise<boolean> {
+    const result = await db.delete(testimonials).where(eq(testimonials.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getUserTestimonial(userId: string): Promise<Testimonial | undefined> {
+    const [testimonial] = await db.select().from(testimonials)
+      .where(eq(testimonials.userId, userId))
+      .limit(1);
+    return testimonial;
   }
 }
 
