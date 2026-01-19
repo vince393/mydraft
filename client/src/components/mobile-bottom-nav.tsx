@@ -22,7 +22,6 @@ interface MobileBottomNavProps {
 const navItems = [
   { id: "inbox", icon: Inbox, label: "Inbox" },
   { id: "sent", icon: Send, label: "Sent" },
-  { id: "drafts", icon: FileText, label: "Drafts" },
   { id: "archived", icon: Archive, label: "Archive" },
 ];
 
