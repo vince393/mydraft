@@ -142,8 +142,12 @@ export default function AcceptableUsePolicyPage() {
             <Link href="/ai-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-ai">AI Policy</Link>
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
           </div>
-          <div className="text-center">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <a href="mailto:support@mydraft.io" className="hover:text-foreground transition-colors" data-testid="footer-email">support@mydraft.io</a>
+              <a href="tel:+16197757982" className="hover:text-foreground transition-colors" data-testid="footer-phone">+1 (619) 775-7982</a>
+            </div>
           </div>
         </div>
       </footer>
