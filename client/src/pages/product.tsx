@@ -46,7 +46,7 @@ export default function ProductPage() {
             Email, reimagined with AI
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Draft combines a clean, focused inbox with powerful AI features 
+            MyDraft combines a clean, focused inbox with powerful AI features 
             that help you communicate faster and stay organized effortlessly.
           </p>
           <Link href={getStartedHref()}>
@@ -60,7 +60,7 @@ export default function ProductPage() {
 
       <FeatureSection
         badge="AI Replies"
-        title="Draft replies in seconds"
+        title="AI drafts replies in seconds"
         description="Select any email and get an AI-generated reply that matches your tone. Professional, friendly, or concise - you choose the style, we handle the writing."
         icon={<Sparkles className="w-6 h-6" />}
         features={[
@@ -218,7 +218,7 @@ export default function ProductPage() {
       <section className="py-20 px-6 border-t border-border/30">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-semibold mb-4">
-            Ready to try Draft?
+            Ready to try MyDraft?
           </h2>
           <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
             Start free and see how AI can transform your email workflow.
@@ -354,7 +354,7 @@ function Footer() {
           <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
         </div>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -53,7 +53,7 @@ const faqSections: FAQSection[] = [
       },
       {
         question: "How do I connect my email account?",
-        answer: "After completing onboarding, you'll be prompted to connect your email. We support Gmail and Microsoft Outlook. Click the provider you use and authorize Draft to access your inbox securely via OAuth."
+        answer: "After completing onboarding, you'll be prompted to connect your email. We support Gmail and Microsoft Outlook. Click the provider you use and authorize MyDraft to access your inbox securely via OAuth."
       },
       {
         question: "Is there a free trial?",
@@ -145,7 +145,7 @@ const faqSections: FAQSection[] = [
       },
       {
         question: "Do you read or store my emails?",
-        answer: "We access emails only to display them in Draft and to power AI features. Email content is processed in memory and not permanently stored beyond caching for performance."
+        answer: "We access emails only to display them in MyDraft and to power AI features. Email content is processed in memory and not permanently stored beyond caching for performance."
       },
       {
         question: "Can I disconnect my email account?",
@@ -405,7 +405,7 @@ export default function HelpPage() {
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
           </div>
           <div className="text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Draft. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} MyDraft. All rights reserved.</p>
           </div>
         </div>
       </footer>

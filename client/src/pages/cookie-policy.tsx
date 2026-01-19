@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 export default function CookiePolicyPage() {
   useEffect(() => {
-    document.title = "Cookie Policy | Draft";
+    document.title = "Cookie Policy | MyDraft";
   }, []);
 
   return (
@@ -35,7 +35,7 @@ export default function CookiePolicyPage() {
             
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">2. How We Use Cookies</h2>
-              <p>Draft uses cookies for the following purposes:</p>
+              <p>MyDraft uses cookies for the following purposes:</p>
               
               <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Essential Cookies</h3>
               <p>These cookies are necessary for the Service to function properly. They include:</p>
@@ -126,7 +126,7 @@ export default function CookiePolicyPage() {
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
           </div>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
           </div>
         </div>
       </footer>

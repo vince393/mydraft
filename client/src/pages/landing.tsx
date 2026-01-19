@@ -102,7 +102,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                   <div className="w-3 h-3 rounded-full bg-white/10" />
                   <div className="w-3 h-3 rounded-full bg-white/10" />
                 </div>
-                <span className="text-xs text-muted-foreground/60">Draft</span>
+                <span className="text-xs text-muted-foreground/60">MyDraft</span>
                 <div className="w-16" />
               </div>
               
@@ -211,7 +211,7 @@ function DemoSection() {
             See it in action
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Experience how Draft transforms your email workflow
+            Experience how MyDraft transforms your email workflow
           </p>
         </div>
 
@@ -467,7 +467,7 @@ function BenefitsSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Why people love Draft
+            Why people love MyDraft
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Spend less time in your inbox, more time on what matters
@@ -511,7 +511,7 @@ function TestimonialsSection() {
   const founderTestimonial = {
     id: 0,
     userName: "Founder",
-    content: "I built Draft because I was tired of spending hours every day in my inbox. Now I use AI to help me reply faster and stay focused on what matters. I hope Draft helps you too.",
+    content: "I built MyDraft because I was tired of spending hours every day in my inbox. Now I use AI to help me reply faster and stay focused on what matters. I hope MyDraft helps you too.",
     rating: 5,
     isFounder: true,
   };
@@ -539,7 +539,7 @@ function TestimonialsSection() {
             What people are saying
           </h2>
           <p className="text-muted-foreground text-lg">
-            Real feedback from Draft users
+            Real feedback from MyDraft users
           </p>
         </div>
         
@@ -562,7 +562,7 @@ function TestimonialsSection() {
                       <div>
                         <p className="font-medium">{t.userName}</p>
                         {t.isFounder && (
-                          <p className="text-sm text-primary/80">Founder of Draft</p>
+                          <p className="text-sm text-primary/80">Founder of MyDraft</p>
                         )}
                       </div>
                     </CardContent>
@@ -620,7 +620,7 @@ function FAQSection() {
     },
     {
       q: "Which email providers do you support?",
-      a: "Draft works with Gmail, Google Workspace, Outlook, and Microsoft 365. We use secure OAuth authentication for all providers."
+      a: "MyDraft works with Gmail, Google Workspace, Outlook, and Microsoft 365. We use secure OAuth authentication for all providers."
     },
     {
       q: "Is there a free trial?",
@@ -631,8 +631,8 @@ function FAQSection() {
       a: "Yes, you can cancel your subscription at any time. No contracts, no cancellation fees. Your account will remain active until the end of your billing period."
     },
     {
-      q: "What makes Draft different from other email apps?",
-      a: "Draft is designed for anyone who wants to spend less time on email. Our AI understands context and tone, helping you reply faster while maintaining your voice."
+      q: "What makes MyDraft different from other email apps?",
+      a: "MyDraft is designed for anyone who wants to spend less time on email. Our AI understands context and tone, helping you reply faster while maintaining your voice."
     }
   ];
 
@@ -646,7 +646,7 @@ function FAQSection() {
             Frequently asked questions
           </h2>
           <p className="text-muted-foreground text-lg">
-            Everything you need to know about Draft
+            Everything you need to know about MyDraft
           </p>
         </div>
         <div className="space-y-3">
@@ -741,7 +741,7 @@ function Footer() {
           </div>
         </div>
         <div className="pt-8 border-t border-white/[0.04] text-center">
-          <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
         </div>
       </div>
     </footer>

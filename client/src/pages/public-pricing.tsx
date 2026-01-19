@@ -175,7 +175,7 @@ export default function PublicPricingPage() {
               planId="free"
               price="$0"
               period="forever"
-              description="Perfect for trying out Draft"
+              description="Perfect for trying out MyDraft"
               features={[
                 { text: "Connect 1 email account", included: true },
                 { text: "Basic inbox management", included: true },
@@ -500,7 +500,7 @@ function Footer() {
           <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
         </div>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
         </div>
       </div>
     </footer>

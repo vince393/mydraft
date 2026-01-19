@@ -40,8 +40,8 @@ export function MarketingNav() {
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-10">
           <Link href="/" className="flex items-center gap-2 group">
-            <img src={draftLogo} alt="Draft logo" className="h-10 w-10 object-contain" />
-            <span className="text-xl font-bold tracking-tight text-foreground">Draft</span>
+            <img src={draftLogo} alt="MyDraft logo" className="h-10 w-10 object-contain" />
+            <span className="text-xl font-bold tracking-tight text-foreground">MyDraft</span>
           </Link>
           
           <div className="hidden md:flex items-center gap-1">

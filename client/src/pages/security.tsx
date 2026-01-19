@@ -47,7 +47,7 @@ export default function SecurityPage() {
             Your privacy is our priority
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            We built Draft with security-first principles. Your emails are yours - 
+            We built MyDraft with security-first principles. Your emails are yours - 
             we're here to help you manage them better, not monetize your data.
           </p>
         </div>
@@ -143,7 +143,7 @@ export default function SecurityPage() {
               a="Our AI processes your emails to generate summaries and draft replies, but this happens in real-time and content is not stored. We don't have human employees reading your emails, and we don't use your data for advertising." 
             />
             <FAQItem 
-              q="Can Draft employees see my emails?" 
+              q="Can MyDraft employees see my emails?" 
               a="No. Our systems are designed so that employee access to user data is extremely limited and fully audited. Customer support cannot view your email content." 
             />
             <FAQItem 
@@ -250,7 +250,7 @@ function Footer() {
           <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
         </div>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
         </div>
       </div>
     </footer>

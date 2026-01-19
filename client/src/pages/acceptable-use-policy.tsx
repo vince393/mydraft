@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 export default function AcceptableUsePolicyPage() {
   useEffect(() => {
-    document.title = "Acceptable Use Policy | Draft";
+    document.title = "Acceptable Use Policy | MyDraft";
   }, []);
 
   return (
@@ -29,13 +29,13 @@ export default function AcceptableUsePolicyPage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">1. Purpose</h2>
               <p>
-                This Acceptable Use Policy ("AUP") outlines the rules and guidelines for using Draft's email management service. By using our Service, you agree to comply with this policy.
+                This Acceptable Use Policy ("AUP") outlines the rules and guidelines for using MyDraft's email management service. By using our Service, you agree to comply with this policy.
               </p>
             </section>
             
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">2. Prohibited Activities</h2>
-              <p>You may not use Draft to:</p>
+              <p>You may not use MyDraft to:</p>
               
               <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Spam and Unsolicited Messages</h3>
               <ul className="list-disc pl-6 space-y-2">
@@ -143,7 +143,7 @@ export default function AcceptableUsePolicyPage() {
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
           </div>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
           </div>
         </div>
       </footer>

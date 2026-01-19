@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 export default function PrivacyPolicyPage() {
   useEffect(() => {
-    document.title = "Privacy Policy | Draft";
+    document.title = "Privacy Policy | MyDraft";
   }, []);
 
   return (
@@ -29,7 +29,7 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">1. Introduction</h2>
               <p>
-                Draft ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our email management service.
+                MyDraft ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our email management service.
               </p>
             </section>
             
@@ -131,7 +131,7 @@ export default function PrivacyPolicyPage() {
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
           </div>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
           </div>
         </div>
       </footer>

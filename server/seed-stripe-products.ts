@@ -1,10 +1,10 @@
-// Stripe Products Seed Script for Draft Payment Plans
+// Stripe Products Seed Script for MyDraft Payment Plans
 // Run with: npx tsx server/seed-stripe-products.ts
 
 import { getUncachableStripeClient } from './stripeClient';
 
 async function seedProducts() {
-  console.log('Creating Stripe products for Draft...\n');
+  console.log('Creating Stripe products for MyDraft...\n');
   
   const stripe = await getUncachableStripeClient();
   
@@ -13,10 +13,10 @@ async function seedProducts() {
   const existingNames = existingProducts.data.map(p => p.name);
   
   // Pro Plan - $19/month or $199/year
-  if (!existingNames.includes('Draft Pro')) {
+  if (!existingNames.includes('MyDraft Pro')) {
     console.log('Creating Pro Plan...');
     const proProduct = await stripe.products.create({
-      name: 'Draft Pro',
+      name: 'MyDraft Pro',
       description: 'Professional email management with AI-powered features',
       metadata: {
         plan: 'pro',
@@ -39,10 +39,10 @@ async function seedProducts() {
   }
   
   // Business Plan - $49/month
-  if (!existingNames.includes('Draft Business')) {
+  if (!existingNames.includes('MyDraft Business')) {
     console.log('Creating Business Plan...');
     const businessProduct = await stripe.products.create({
-      name: 'Draft Business',
+      name: 'MyDraft Business',
       description: 'Enterprise-grade email management for teams',
       metadata: {
         plan: 'premium',

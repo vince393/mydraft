@@ -1,11 +1,11 @@
-# Draft - AI Email Inbox Management
+# MyDraft - AI Email Inbox Management
 
 ## Overview
 
-Draft is an AI-powered email inbox management application inspired by modern email clients like Hey.com and Superhuman. The application features a minimalist dark interface with AI-assisted reply drafting capabilities for business and service use. Users can view emails, read detailed content, and leverage AI to generate contextual reply drafts.
+MyDraft is an AI-powered email inbox management application inspired by modern email clients like Hey.com and Superhuman. The application features a minimalist dark interface with AI-assisted reply drafting capabilities for business and service use. Users can view emails, read detailed content, and leverage AI to generate contextual reply drafts.
 
 ## Branding
-- **Business Name**: Draft
+- **Business Name**: MyDraft
 - **Logo**: Located at `attached_assets/image_1768612031318.png`
 
 ## Pricing

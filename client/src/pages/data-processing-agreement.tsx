@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 export default function DataProcessingAgreementPage() {
   useEffect(() => {
-    document.title = "Data Processing Agreement | Draft";
+    document.title = "Data Processing Agreement | MyDraft";
   }, []);
 
   return (
@@ -29,7 +29,7 @@ export default function DataProcessingAgreementPage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">1. Introduction</h2>
               <p>
-                This Data Processing Agreement ("DPA") forms part of the Terms of Service between Draft ("Processor") and you ("Controller") regarding the processing of personal data in connection with our email management service.
+                This Data Processing Agreement ("DPA") forms part of the Terms of Service between MyDraft ("Processor") and you ("Controller") regarding the processing of personal data in connection with our email management service.
               </p>
             </section>
             
@@ -47,7 +47,7 @@ export default function DataProcessingAgreementPage() {
               <h2 className="text-xl font-semibold text-foreground mb-3">3. Scope of Processing</h2>
               <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Categories of Data Subjects</h3>
               <ul className="list-disc pl-6 space-y-2">
-                <li>Users of the Draft service</li>
+                <li>Users of the MyDraft service</li>
                 <li>Email correspondents of users</li>
               </ul>
               
@@ -175,7 +175,7 @@ export default function DataProcessingAgreementPage() {
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
           </div>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
           </div>
         </div>
       </footer>

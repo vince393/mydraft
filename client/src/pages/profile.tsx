@@ -423,7 +423,7 @@ export default function Profile() {
                   </div>
                   Your AI Savings
                 </CardTitle>
-                <CardDescription>See how much time and money you've saved with Draft AI</CardDescription>
+                <CardDescription>See how much time and money you've saved with MyDraft AI</CardDescription>
               </CardHeader>
               <CardContent className="pt-2">
                 <div className="grid grid-cols-2 gap-3 mb-4">
@@ -500,7 +500,7 @@ export default function Profile() {
                 <Mail className="w-5 h-5" />
                 Connected Accounts
               </CardTitle>
-              <CardDescription>Email accounts linked to Draft</CardDescription>
+              <CardDescription>Email accounts linked to MyDraft</CardDescription>
             </CardHeader>
             <CardContent>
               {user.connectedEmail ? (

@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 export default function RefundPolicyPage() {
   useEffect(() => {
-    document.title = "Refund and Billing Policy | Draft";
+    document.title = "Refund and Billing Policy | MyDraft";
   }, []);
 
   return (
@@ -28,7 +28,7 @@ export default function RefundPolicyPage() {
           <div className="prose prose-invert max-w-none space-y-6 text-muted-foreground">
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">1. Subscription Plans</h2>
-              <p>Draft offers the following subscription plans:</p>
+              <p>MyDraft offers the following subscription plans:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
                 <li><strong>Free:</strong> $0 - Basic email management features</li>
                 <li><strong>Pro:</strong> $19/month or $199/year - Advanced AI features</li>
@@ -151,7 +151,7 @@ export default function RefundPolicyPage() {
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
           </div>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
           </div>
         </div>
       </footer>

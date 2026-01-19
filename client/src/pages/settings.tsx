@@ -472,7 +472,7 @@ function TestimonialCard() {
           <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
           Leave a Testimonial
         </CardTitle>
-        <CardDescription>Share your experience with Draft</CardDescription>
+        <CardDescription>Share your experience with MyDraft</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -499,7 +499,7 @@ function TestimonialCard() {
             id="testimonial-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Tell us what you love about Draft..."
+            placeholder="Tell us what you love about MyDraft..."
             className="min-h-[100px]"
             data-testid="textarea-testimonial"
           />
@@ -1284,7 +1284,7 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Disconnect Email?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will disconnect your email account. You'll need to reconnect to access your emails through Draft.
+                      This will disconnect your email account. You'll need to reconnect to access your emails through MyDraft.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -1303,7 +1303,7 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                No email account connected. Connect your email to start using Draft.
+                No email account connected. Connect your email to start using MyDraft.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
@@ -1444,7 +1444,7 @@ function TeamTab() {
               <div className="space-y-2">
                 <Label htmlFor="inviteEmail">Invite by Email</Label>
                 <p className="text-sm text-muted-foreground">
-                  Enter the email of an existing Draft user to invite them to your team.
+                  Enter the email of an existing MyDraft user to invite them to your team.
                 </p>
               </div>
               <div className="flex gap-2">
@@ -1686,7 +1686,7 @@ function AppearanceTab() {
             Appearance
           </CardTitle>
           <CardDescription>
-            Customize how Draft looks on your device
+            Customize how MyDraft looks on your device
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

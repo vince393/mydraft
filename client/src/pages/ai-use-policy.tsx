@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 export default function AIUsePolicyPage() {
   useEffect(() => {
-    document.title = "AI Use Policy | Draft";
+    document.title = "AI Use Policy | MyDraft";
   }, []);
 
   return (
@@ -29,13 +29,13 @@ export default function AIUsePolicyPage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">1. Overview</h2>
               <p>
-                Draft uses artificial intelligence (AI) to help you manage your email more efficiently. This policy explains how we use AI, what data is processed, and your responsibilities when using AI-powered features.
+                MyDraft uses artificial intelligence (AI) to help you manage your email more efficiently. This policy explains how we use AI, what data is processed, and your responsibilities when using AI-powered features.
               </p>
             </section>
             
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">2. AI Features</h2>
-              <p>Draft provides the following AI-powered capabilities:</p>
+              <p>MyDraft provides the following AI-powered capabilities:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
                 <li><strong>AI Draft:</strong> Generate email replies with customizable tone</li>
                 <li><strong>AI Polish:</strong> Improve the clarity and professionalism of your drafts</li>
@@ -58,7 +58,7 @@ export default function AIUsePolicyPage() {
               
               <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Data Retention</h3>
               <p>
-                Email content sent to AI is processed in real-time and not stored by Draft after the response is generated. Our AI provider (OpenAI) processes data according to their own data policies, which include not using API data for training.
+                Email content sent to AI is processed in real-time and not stored by MyDraft after the response is generated. Our AI provider (OpenAI) processes data according to their own data policies, which include not using API data for training.
               </p>
             </section>
             
@@ -141,7 +141,7 @@ export default function AIUsePolicyPage() {
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
           </div>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -41,7 +41,7 @@ const basePlans = [
     name: "Free",
     monthlyPrice: 0,
     annualPrice: 0,
-    description: "Perfect for trying out Draft",
+    description: "Perfect for trying out MyDraft",
     features: [
       "Connect 1 email account",
       "Basic inbox management",
@@ -55,7 +55,7 @@ const basePlans = [
     annualPrice: 199,
     annualSavings: 29, // $19 * 12 = $228 - $199 = $29
     description: "For professionals who need more",
-    stripeName: "Draft Pro",
+    stripeName: "MyDraft Pro",
     features: [
       "Connect 1 email account",
       "Unlimited AI replies",
@@ -72,7 +72,7 @@ const basePlans = [
     annualPrice: 299,
     annualSavings: 289, // $49 * 12 = $588 - $299 = $289
     description: "For teams and power users",
-    stripeName: "Draft Business",
+    stripeName: "MyDraft Business",
     features: [
       "Connect 1 email account",
       "Unlimited AI replies",

@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = 'Draft <support@mydraft.io>';
+const FROM_EMAIL = 'MyDraft <support@mydraft.io>';
 
 export async function sendVerificationEmail(to: string, code: string, type: 'signup' | 'login' | 'action'): Promise<boolean> {
   let subject: string;
@@ -10,15 +10,15 @@ export async function sendVerificationEmail(to: string, code: string, type: 'sig
   
   switch (type) {
     case 'signup':
-      subject = 'Verify your Draft account';
-      bodyText = `Welcome to Draft! Your verification code is: ${code}. This code expires in 10 minutes.`;
+      subject = 'Verify your MyDraft account';
+      bodyText = `Welcome to MyDraft! Your verification code is: ${code}. This code expires in 10 minutes.`;
       break;
     case 'login':
-      subject = 'Your Draft login verification code';
+      subject = 'Your MyDraft login verification code';
       bodyText = `Your login verification code is: ${code}. If you didn't request this, please ignore this email. This code expires in 10 minutes.`;
       break;
     case 'action':
-      subject = 'Confirm your action on Draft';
+      subject = 'Confirm your action on MyDraft';
       bodyText = `Your verification code is: ${code}. Use this code to confirm your action. This code expires in 10 minutes.`;
       break;
   }
@@ -38,7 +38,7 @@ export async function sendVerificationEmail(to: string, code: string, type: 'sig
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0f172a; color: #e2e8f0; margin: 0; padding: 40px 20px;">
   <div style="max-width: 480px; margin: 0 auto; background-color: #1e293b; border-radius: 12px; padding: 40px;">
     <div style="text-align: center; margin-bottom: 32px;">
-      <h1 style="font-size: 28px; font-weight: bold; color: #f8fafc; margin: 0;">Draft</h1>
+      <h1 style="font-size: 28px; font-weight: bold; color: #f8fafc; margin: 0;">MyDraft</h1>
     </div>
     
     <h2 style="font-size: 20px; color: #f8fafc; margin-bottom: 16px; text-align: center;">
@@ -47,7 +47,7 @@ export async function sendVerificationEmail(to: string, code: string, type: 'sig
     
     <p style="color: #94a3b8; margin-bottom: 24px; text-align: center; line-height: 1.6;">
       ${type === 'signup' 
-        ? 'Welcome to Draft! Use the code below to verify your email address.' 
+        ? 'Welcome to MyDraft! Use the code below to verify your email address.' 
         : type === 'login' 
         ? 'Enter this code to complete your login.' 
         : 'Use this code to confirm your action.'}
@@ -69,7 +69,7 @@ export async function sendVerificationEmail(to: string, code: string, type: 'sig
   </div>
   
   <p style="color: #475569; font-size: 12px; text-align: center; margin-top: 24px;">
-    © ${new Date().getFullYear()} Draft
+    © ${new Date().getFullYear()} MyDraft
   </p>
 </body>
 </html>

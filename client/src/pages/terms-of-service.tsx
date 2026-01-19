@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 export default function TermsOfServicePage() {
   useEffect(() => {
-    document.title = "Terms of Service | Draft";
+    document.title = "Terms of Service | MyDraft";
   }, []);
 
   return (
@@ -29,14 +29,14 @@ export default function TermsOfServicePage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">1. Acceptance of Terms</h2>
               <p>
-                By accessing or using Draft ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.
+                By accessing or using MyDraft ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.
               </p>
             </section>
             
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">2. Description of Service</h2>
               <p>
-                Draft is an AI-powered email management platform that helps users manage their inbox, generate email drafts, and improve productivity. The Service requires you to connect your email account via secure OAuth authentication.
+                MyDraft is an AI-powered email management platform that helps users manage their inbox, generate email drafts, and improve productivity. The Service requires you to connect your email account via secure OAuth authentication.
               </p>
             </section>
             
@@ -54,7 +54,7 @@ export default function TermsOfServicePage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">4. Subscriptions and Payments</h2>
               <p>
-                Draft offers Free, Pro, and Business subscription plans. Paid plans are billed monthly or annually. Pro and Business plans include a 14-day free trial. You may cancel your subscription at any time through your account settings.
+                MyDraft offers Free, Pro, and Business subscription plans. Paid plans are billed monthly or annually. Pro and Business plans include a 14-day free trial. You may cancel your subscription at any time through your account settings.
               </p>
             </section>
             
@@ -74,21 +74,21 @@ export default function TermsOfServicePage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">6. Intellectual Property</h2>
               <p>
-                The Service and its original content, features, and functionality are owned by Draft and are protected by international copyright, trademark, and other intellectual property laws. Your email content remains your property.
+                The Service and its original content, features, and functionality are owned by MyDraft and are protected by international copyright, trademark, and other intellectual property laws. Your email content remains your property.
               </p>
             </section>
             
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">7. AI-Generated Content</h2>
               <p>
-                Draft uses AI to generate email drafts and suggestions. You are responsible for reviewing and editing AI-generated content before sending. We do not guarantee the accuracy, appropriateness, or completeness of AI-generated content.
+                MyDraft uses AI to generate email drafts and suggestions. You are responsible for reviewing and editing AI-generated content before sending. We do not guarantee the accuracy, appropriateness, or completeness of AI-generated content.
               </p>
             </section>
             
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">8. Limitation of Liability</h2>
               <p>
-                To the maximum extent permitted by law, Draft shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the Service.
+                To the maximum extent permitted by law, MyDraft shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the Service.
               </p>
             </section>
             
@@ -142,7 +142,7 @@ export default function TermsOfServicePage() {
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
           </div>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground/50">© 2024 Draft. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
           </div>
         </div>
       </footer>

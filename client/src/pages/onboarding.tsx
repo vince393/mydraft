@@ -38,7 +38,7 @@ const basePlans = [
     name: "Free",
     monthlyPrice: 0,
     annualPrice: 0,
-    description: "Perfect for trying out Draft",
+    description: "Perfect for trying out MyDraft",
     features: [
       "Connect 1 email account",
       "Basic inbox management",
@@ -260,7 +260,7 @@ export default function OnboardingPage() {
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </div>
             <CardTitle className="text-lg sm:text-xl">
-              {step === "primary-use" && "How will you use Draft?"}
+              {step === "primary-use" && "How will you use MyDraft?"}
               {step === "email-volume" && "How many emails do you receive daily?"}
               {step === "ai-features" && "Which AI features interest you?"}
               {step === "automation" && "How much automation do you want?"}

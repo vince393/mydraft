@@ -3518,7 +3518,7 @@ Return only the improved text, nothing else.`;
         content: m.content
       }));
 
-      const systemPrompt = `You are ${assistantName}, a helpful AI email assistant for Draft. You can only perform actions the user has granted you permission for.
+      const systemPrompt = `You are ${assistantName}, a helpful AI email assistant for MyDraft. You can only perform actions the user has granted you permission for.
 
 PERSONALITY:
 - Warm, capable, and proactive - like having a trusted executive assistant
@@ -5517,7 +5517,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       
       const amount = pricing[plan][interval];
       const recurringInterval = interval === "annual" ? "year" : "month";
-      const productName = plan === "pro" ? "Draft Pro" : "Draft Business";
+      const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
       
       // Create or get customer
       let customerId = user.stripeCustomerId;
