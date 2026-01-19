@@ -46,7 +46,8 @@ import {
   Palette,
   Sun,
   Moon,
-  Monitor
+  Monitor,
+  Star
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
@@ -343,6 +344,8 @@ function AccountTab({ settings }: { settings: Settings }) {
         </CardContent>
       </Card>
 
+      <TestimonialCard />
+
       <Card className="border-destructive/50">
         <CardHeader>
           <CardTitle className="text-destructive">Danger Zone</CardTitle>
@@ -380,6 +383,140 @@ function AccountTab({ settings }: { settings: Settings }) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+interface UserTestimonial {
+  id: number;
+  content: string;
+  rating: number;
+  status: string;
+  createdAt: string;
+}
+
+function TestimonialCard() {
+  const { toast } = useToast();
+  const [content, setContent] = useState("");
+  const [rating, setRating] = useState(5);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const { data: existingTestimonial, isLoading } = useQuery<UserTestimonial | null>({
+    queryKey: ["/api/testimonials/mine"],
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/testimonials", { content, rating });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Thank you for your testimonial!", description: "It will be reviewed before appearing on our site." });
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/testimonials/mine"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to submit testimonial", description: error.message, variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="w-5 h-5 text-primary" />
+            Leave a Testimonial
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (existingTestimonial && !isEditing) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="w-5 h-5 text-primary" />
+            Your Testimonial
+          </CardTitle>
+          <CardDescription>
+            Status: {existingTestimonial.status === "approved" ? (
+              <span className="text-green-500">Approved</span>
+            ) : existingTestimonial.status === "denied" ? (
+              <span className="text-red-500">Not Approved</span>
+            ) : (
+              <span className="text-yellow-500">Pending Review</span>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-1">
+            {[...Array(existingTestimonial.rating)].map((_, i) => (
+              <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+            ))}
+          </div>
+          <p className="text-muted-foreground">"{existingTestimonial.content}"</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Star className="w-5 h-5 text-primary" />
+          Leave a Testimonial
+        </CardTitle>
+        <CardDescription>Share your experience with Draft</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Rating</Label>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(star)}
+                className="p-1 hover:scale-110 transition-transform"
+                data-testid={`star-rating-${star}`}
+              >
+                <Star 
+                  className={`w-6 h-6 ${star <= rating ? "fill-primary text-primary" : "text-muted-foreground"}`} 
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="testimonial-content">Your Experience</Label>
+          <Textarea
+            id="testimonial-content"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Tell us what you love about Draft..."
+            className="min-h-[100px]"
+            data-testid="textarea-testimonial"
+          />
+          <p className="text-xs text-muted-foreground">
+            Minimum 10 characters. Your testimonial will be reviewed before appearing on our site.
+          </p>
+        </div>
+        <Button
+          onClick={() => submitMutation.mutate()}
+          disabled={submitMutation.isPending || content.trim().length < 10}
+          data-testid="button-submit-testimonial"
+        >
+          {submitMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          Submit Testimonial
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
