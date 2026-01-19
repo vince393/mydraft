@@ -723,3 +723,26 @@ export const insertAiInboxSuggestionSchema = createInsertSchema(aiInboxSuggestio
 
 export type AiInboxSuggestion = typeof aiInboxSuggestions.$inferSelect;
 export type InsertAiInboxSuggestion = z.infer<typeof insertAiInboxSuggestionSchema>;
+
+// User testimonials with moderation
+export const testimonials = pgTable("testimonials", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(), // User who submitted
+  userName: text("user_name").notNull(),
+  userEmail: text("user_email").notNull(),
+  content: text("content").notNull(),
+  rating: integer("rating").default(5).notNull(), // 1-5 stars
+  status: text("status").default("pending").notNull(), // "pending", "approved", "denied"
+  isFounder: boolean("is_founder").default(false).notNull(), // Founder testimonials always show
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+  createdAt: true,
+  reviewedAt: true,
+});
+
+export type Testimonial = typeof testimonials.$inferSelect;
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
