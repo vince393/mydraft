@@ -340,12 +340,12 @@ export function SwipeableEmailItem({
         onTouchEnd={handleTouchEnd}
         className={`
           group relative py-3 px-4 cursor-pointer bg-background
-          transition-transform select-none
+          transition-all select-none rounded-lg
           ${!isSwiping ? "duration-200 ease-out" : "duration-0"}
           ${isSelectionMode && isChecked
-            ? "bg-primary/10"
+            ? "bg-primary/10 ring-2 ring-primary/30"
             : isSelected 
-              ? "bg-muted/40" 
+              ? "bg-primary/10 ring-2 ring-primary/40 shadow-sm" 
               : "hover:bg-muted/30"
           }
         `}
