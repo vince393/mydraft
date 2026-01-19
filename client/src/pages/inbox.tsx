@@ -613,9 +613,9 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       <div className={`email-list-panel overflow-x-hidden ${screen.isMobile && showMobileDetail ? 'hidden' : ''}`}>
         {/* Mobile header - only show on mobile in list view */}
         {screen.isMobile && !showMobileDetail && (
-          <header className="flex items-center justify-between gap-2 h-12 px-3 border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0">
-            <h1 className="text-lg font-semibold capitalize">{activeFolder}</h1>
-            <div className="flex items-center gap-2">
+          <header className="flex items-center justify-between gap-2 h-14 px-4 border-b border-border/20 bg-background sticky top-0 z-50 flex-shrink-0">
+            <h1 className="text-xl font-semibold capitalize tracking-tight">{activeFolder}</h1>
+            <div className="flex items-center gap-1">
               <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

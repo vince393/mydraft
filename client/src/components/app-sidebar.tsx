@@ -273,7 +273,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         onMouseLeave={handleMouseLeave}
         onClick={handleSidebarClick}
       >
-        <Sidebar collapsible="none" className={`border-r border-border/30 transition-all duration-300 ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}`}>
+        <Sidebar collapsible="none" className={`border-r border-border/20 transition-all duration-300 ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}`}>
         <SidebarContent className={`${isExpanded ? "px-3" : "px-1.5"} transition-all duration-300`}>
           <SidebarGroup>
             <SidebarGroupContent>

@@ -339,50 +339,50 @@ export function SwipeableEmailItem({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={`
-          group relative py-4 pl-4 pr-6 cursor-pointer bg-background
+          group relative py-3 px-4 cursor-pointer bg-background
           transition-transform select-none
           ${!isSwiping ? "duration-200 ease-out" : "duration-0"}
           ${isSelectionMode && isChecked
-            ? "bg-primary/15"
+            ? "bg-primary/10"
             : isSelected 
-              ? "bg-muted/60" 
-              : "hover:bg-muted/50"
+              ? "bg-muted/40" 
+              : "hover:bg-muted/30"
           }
         `}
         style={{ transform: `translateX(${swipeX}px)` }}
       >
         <div className="flex items-start gap-3">
           <div className="relative flex-shrink-0">
-            <Avatar className="w-11 h-11 ring-2 ring-border/30">
+            <Avatar className="w-10 h-10">
               <AvatarImage 
                 src={getAvatarUrl(senderEmail, sender)} 
                 alt={sender}
               />
               <AvatarFallback 
                 style={{ backgroundColor: avatarColor }}
-                className="text-white text-sm font-medium"
+                className="text-white text-xs font-medium"
               >
                 {initials}
               </AvatarFallback>
             </Avatar>
             {!isRead && !isSelectionMode && (
-              <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary ring-2 ring-background" />
+              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-background" />
             )}
             {isSelectionMode && isChecked && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-primary ring-2 ring-background flex items-center justify-center">
-                <Check className="w-3 h-3 text-white" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary ring-2 ring-background flex items-center justify-center">
+                <Check className="w-2.5 h-2.5 text-white" />
               </div>
             )}
           </div>
 
           <div className="flex-1 min-w-0 overflow-hidden">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`min-w-0 text-sm truncate block ${!isRead ? "font-semibold" : "font-medium text-foreground/90"}`}>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className={`min-w-0 text-[13px] truncate block ${!isRead ? "font-semibold text-foreground" : "font-medium text-foreground/80"}`}>
                 {sender}
               </span>
               {threadCount > 1 && (
                 <span 
-                  className="flex-shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-medium rounded-full bg-muted text-muted-foreground"
+                  className="flex-shrink-0 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium rounded bg-muted/60 text-muted-foreground"
                   data-testid={`thread-count-badge-${threadCount}`}
                 >
                   {threadCount}
@@ -391,7 +391,7 @@ export function SwipeableEmailItem({
               <span className="flex-1" />
               <div className="flex-shrink-0 flex items-center gap-1">
                 {/* Date/time - visible by default, hidden on hover */}
-                <span className="text-xs text-muted-foreground whitespace-nowrap group-hover:hidden">
+                <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap group-hover:hidden">
                   {formatTime(new Date(receivedAt))}
                 </span>
                 {/* Star icon - always visible when starred, placed after date */}
@@ -480,11 +480,11 @@ export function SwipeableEmailItem({
               </div>
             </div>
             
-            <h4 className={`text-sm mb-1.5 truncate pr-1 ${!isRead ? "font-medium" : "text-foreground/80"}`}>
+            <h4 className={`text-[13px] mb-1 truncate pr-1 ${!isRead ? "font-medium text-foreground" : "text-foreground/70"}`}>
               {subject}
             </h4>
             
-            <p className="text-xs text-muted-foreground/80 truncate pr-1">
+            <p className="text-[12px] text-muted-foreground/60 truncate pr-1 leading-relaxed">
               {preview.replace(/[\u200B-\u200D\uFEFF\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180E\u2000-\u200F\u2028-\u202F\u205F-\u206F\u3000\u3164\uFFA0]/g, '').trim()}
             </p>
           </div>

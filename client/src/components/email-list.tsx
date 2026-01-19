@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { SwipeableEmailItem } from "@/components/swipeable-email-item";
 import { AiInboxRefreshButton } from "@/components/ai-inbox-refresh";
 import { getAvatarUrl } from "@/lib/avatar";
@@ -67,18 +68,18 @@ interface ResponseTimeEstimate {
 
 function EmailListSkeleton() {
   return (
-    <div className="space-y-1 p-3">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="p-4 rounded-xl animate-pulse">
-          <div className="flex items-start gap-3">
-            <div className="w-11 h-11 rounded-full bg-muted/50" />
-            <div className="flex-1 space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="h-4 w-28 bg-muted/50 rounded-full" />
-                <div className="h-3 w-14 bg-muted/50 rounded-full" />
+    <div className="space-y-0 p-0">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={i} className="px-4 py-3 animate-pulse border-b border-border/10">
+          <div className="flex flex-wrap items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-muted/30" />
+            <div className="flex-1 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="h-3.5 w-24 bg-muted/30 rounded" />
+                <div className="h-2.5 w-12 bg-muted/20 rounded" />
               </div>
-              <div className="h-4 w-48 bg-muted/50 rounded-full" />
-              <div className="h-3 w-full bg-muted/50 rounded-full" />
+              <div className="h-3.5 w-44 bg-muted/25 rounded" />
+              <div className="h-3 w-full bg-muted/20 rounded" />
             </div>
           </div>
         </div>
@@ -91,17 +92,17 @@ function EmailListEmpty({ hasConnectedAccount, onConnectAccount }: { hasConnecte
   if (!hasConnectedAccount) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600/20 to-purple-600/20 flex items-center justify-center mb-6">
-          <svg className="w-9 h-9 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-16 h-16 rounded-full bg-muted/30 flex flex-wrap items-center justify-center mb-5">
+          <svg className="w-7 h-7 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
         </div>
-        <h3 className="font-medium text-xl mb-2 tracking-tight">Connect your email</h3>
-        <p className="text-sm text-muted-foreground mb-4">Add an account to start managing your inbox</p>
+        <h3 className="font-medium text-lg mb-1.5 tracking-tight">Connect your email</h3>
+        <p className="text-sm text-muted-foreground/70 mb-5">Add an account to start managing your inbox</p>
         {onConnectAccount && (
           <Button 
             onClick={onConnectAccount}
-            className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white"
+            className="gap-2"
             data-testid="button-connect-email-empty"
           >
             <Link className="w-4 h-4" />
@@ -114,13 +115,13 @@ function EmailListEmpty({ hasConnectedAccount, onConnectAccount }: { hasConnecte
   
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-8">
-      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-muted/80 to-muted/30 flex items-center justify-center mb-6">
-        <svg className="w-9 h-9 text-muted-foreground/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="w-16 h-16 rounded-full bg-muted/20 flex flex-wrap items-center justify-center mb-5">
+        <svg className="w-7 h-7 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       </div>
-      <h3 className="font-medium text-xl mb-2 tracking-tight">No emails yet</h3>
-      <p className="text-sm text-muted-foreground">Your inbox is empty</p>
+      <h3 className="font-medium text-lg mb-1.5 tracking-tight">No emails yet</h3>
+      <p className="text-sm text-muted-foreground/70">Your inbox is empty</p>
     </div>
   );
 }
@@ -470,34 +471,35 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
 
   return (
     <div className="flex flex-col h-full overflow-x-hidden">
-      <div className="p-4 border-b border-border/30">
-        <div className="relative flex items-center gap-2 mb-3">
+      <div className="p-3 border-b border-border/20">
+        <div className="relative flex flex-wrap items-center gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
             <Input 
               type="search"
               placeholder="Search emails..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-muted/30 border-0 h-10 rounded-xl focus:bg-muted/50 transition-colors"
+              className="pl-9 bg-muted/20 border-border/30 h-9 rounded-lg text-sm focus:bg-muted/30 transition-colors"
               data-testid="input-search"
             />
             {searchQuery && (
-              <button
+              <Button
+                size="icon"
+                variant="ghost"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
                 data-testid="button-clear-search"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             )}
           </div>
           <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
             <PopoverTrigger asChild>
               <Button 
                 size="icon" 
-                variant="ghost" 
-                className={`h-10 w-10 rounded-xl transition-colors ${hasActiveFilters ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"}`}
+                variant={hasActiveFilters ? "secondary" : "ghost"}
                 data-testid="button-filter"
               >
                 <SlidersHorizontal className="w-4 h-4" />
@@ -505,14 +507,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </PopoverTrigger>
             <PopoverContent className="w-72 p-4" align="end">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h4 className="font-medium text-sm">Filters</h4>
                   {hasActiveFilters && (
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       onClick={clearFilters}
-                      className="h-7 text-xs text-muted-foreground hover:text-foreground"
                       data-testid="button-clear-filters"
                     >
                       Clear all
@@ -520,21 +521,21 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                   )}
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center space-x-2">
                   <Checkbox 
                     id="unread-only" 
                     checked={filters.unreadOnly}
                     onCheckedChange={(checked) => setFilters(f => ({ ...f, unreadOnly: !!checked }))}
                     data-testid="checkbox-unread-only"
                   />
-                  <Label htmlFor="unread-only" className="text-sm flex items-center gap-2 cursor-pointer">
+                  <Label htmlFor="unread-only" className="text-sm flex flex-wrap items-center gap-2 cursor-pointer">
                     <Mail className="w-4 h-4 text-muted-foreground" />
                     Unread only
                   </Label>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm flex items-center gap-2">
+                  <Label className="text-sm flex flex-wrap items-center gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
                     Date range
                   </Label>
@@ -555,7 +556,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm flex items-center gap-2">
+                  <Label className="text-sm flex flex-wrap items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground" />
                     Sender
                   </Label>
@@ -569,14 +570,15 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                   {uniqueSenders.length > 0 && !filters.sender && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {uniqueSenders.slice(0, 5).map(([email, name]) => (
-                        <button
+                        <Badge
                           key={email}
+                          variant="secondary"
                           onClick={() => setFilters(f => ({ ...f, sender: name }))}
-                          className="text-xs px-2 py-1 rounded-md bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors truncate max-w-[120px]"
+                          className="cursor-pointer text-xs truncate max-w-[120px]"
                           data-testid={`button-sender-${email}`}
                         >
                           {name}
-                        </button>
+                        </Badge>
                       ))}
                     </div>
                   )}
@@ -586,7 +588,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </Popover>
         </div>
         {(hasActiveFilters || searchQuery) && (
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex flex-wrap items-center gap-2 mt-2">
             <span className="text-xs text-muted-foreground">
               {filteredEmails.length} result{filteredEmails.length !== 1 ? "s" : ""}
             </span>
@@ -594,7 +596,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               variant="ghost"
               size="sm"
               onClick={clearFilters}
-              className="h-6 text-xs px-2 text-muted-foreground hover:text-foreground"
               data-testid="button-clear-all-filters"
             >
               <X className="w-3 h-3 mr-1" />
@@ -603,21 +604,21 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </div>
         )}
         {activeFolder.toLowerCase() !== "sent" && activeFolder.toLowerCase() !== "trash" && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 backdrop-blur-sm rounded-md border border-blue-200 dark:border-blue-800/30">
-            <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400/80" />
-            <span className="text-sm text-blue-700 dark:text-blue-100/80">
+          <div className="flex flex-wrap items-center gap-2 mt-2 px-2.5 py-1.5 bg-muted/30 rounded-md">
+            <Clock className="w-3 h-3 text-muted-foreground/60" />
+            <span className="text-[11px] text-muted-foreground">
               {isLoadingTime ? (
                 "Calculating..."
               ) : responseTime?.message ? (
                 responseTime.message
               ) : responseTime?.estimatedMinutes ? (
-                `Est. response time: ${
+                `Est. ${
                   responseTime.estimatedMinutes >= 60
                     ? `${Math.floor(responseTime.estimatedMinutes / 60)}h ${responseTime.estimatedMinutes % 60}m`
                     : `${responseTime.estimatedMinutes} min`
-                }`
+                } to reply`
               ) : (
-                "Est. response time: --"
+                "Est. -- to reply"
               )}
             </span>
           </div>
@@ -693,12 +694,11 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
 
       <div className="p-3 border-t border-border/30 bg-background/95 backdrop-blur-xl">
         {isSelectionMode ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button 
               size="icon"
               variant="ghost"
               onClick={handleCancelSelection}
-              className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
               data-testid="button-cancel-selection"
             >
               <X className="w-4 h-4" />
@@ -711,28 +711,25 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               size="sm"
               variant="ghost"
               onClick={handleSelectAll}
-              className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
               data-testid="button-select-all"
             >
               {allSelected ? "Deselect" : "All"}
             </Button>
-            <div className="flex items-center">
+            <div className="flex flex-wrap items-center">
               <Button 
                 size="icon"
                 variant="ghost"
                 onClick={handleArchiveSelected}
                 disabled={selectedIds.size === 0 || isMoving}
-                className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground"
                 data-testid="button-archive-selected"
               >
                 {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
               </Button>
               <Button 
                 size="icon"
-                variant="ghost"
+                variant="destructive"
                 onClick={handleTrashSelected}
                 disabled={selectedIds.size === 0 || isMoving}
-                className="h-10 w-10 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10"
                 data-testid="button-delete-selected"
               >
                 <Trash2 className="w-4 h-4" />
@@ -740,24 +737,22 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </div>
             <Button 
               size="icon"
-              variant="ghost"
+              variant="default"
               disabled={selectedIds.size === 0}
               onClick={handleAiSelected}
-              className="h-10 w-10 rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
               data-testid="button-ai-selected"
             >
               <Sparkles className="w-4 h-4" />
             </Button>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center">
               <Button 
                 size="icon"
                 variant="ghost"
                 disabled={!selectedEmailId || isMoving}
                 onClick={onArchiveEmail}
-                className="text-muted-foreground"
                 data-testid="button-archive"
               >
                 {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
@@ -767,7 +762,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 variant="ghost"
                 disabled={!selectedEmailId || isMoving}
                 onClick={onTrashEmail}
-                className="text-red-500"
                 data-testid="button-trash"
               >
                 <Trash2 className="w-4 h-4" />
@@ -779,7 +773,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             <Button 
               onClick={onAiReply}
               disabled={!selectedEmailId || isAiLoading}
-              className="flex-1 gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0 transition-all"
+              className="flex-1 gap-2"
               data-testid="button-ai-reply"
             >
               {isAiLoading ? (

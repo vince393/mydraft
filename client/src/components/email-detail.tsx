@@ -62,14 +62,14 @@ interface EmailDetailProps {
 
 function EmailDetailEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-8 -mt-24">
-      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-8">
-        <svg className="w-10 h-10 text-primary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="flex flex-col items-center justify-center h-full text-center p-8 -mt-16">
+      <div className="w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center mb-5">
+        <svg className="w-7 h-7 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
         </svg>
       </div>
-      <h3 className="font-medium text-2xl mb-3 tracking-tight">Select an email</h3>
-      <p className="text-sm text-muted-foreground max-w-[300px] leading-relaxed">
+      <h3 className="font-medium text-lg mb-1.5 tracking-tight">Select an email</h3>
+      <p className="text-sm text-muted-foreground/60 max-w-[260px] leading-relaxed">
         Choose an email from the list to view its contents
       </p>
     </div>
@@ -386,17 +386,16 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-border/50">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border/20">
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-          <h1 className="text-base sm:text-lg font-medium truncate pr-2 sm:pr-4 tracking-tight" data-testid="email-subject">
+          <h1 className="text-[15px] sm:text-base font-medium truncate pr-2 sm:pr-4 tracking-tight" data-testid="email-subject">
             {showTranslated && translatedContent?.subject ? translatedContent.subject : email.subject}
           </h1>
         </div>
-        <div className="flex items-center gap-0.5 flex-shrink-0">
+        <div className="flex items-center gap-0 flex-shrink-0">
           <Button 
             size="icon" 
             variant="ghost" 
-            className="text-muted-foreground hover:text-foreground transition-colors" 
             data-testid="button-archive"
             onClick={onArchive}
           >
@@ -405,7 +404,6 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
           <Button 
             size="icon" 
             variant="ghost" 
-            className="text-muted-foreground hover:text-foreground transition-colors" 
             data-testid="button-trash"
             onClick={onTrash}
           >
@@ -414,20 +412,19 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
           <Button 
             size="icon" 
             variant="ghost" 
-            className="text-muted-foreground hover:text-foreground transition-colors" 
             data-testid="button-star"
             onClick={onStar}
           >
             <Star className={`w-4 h-4 ${email.isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
           </Button>
-          <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-more">
+          <Button size="icon" variant="ghost" data-testid="button-more">
             <MoreHorizontal className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       <ScrollArea className="flex-1 scrollbar-thin">
-        <div className="px-3 sm:pl-6 sm:pr-8 pt-3 sm:pt-4 pb-6 sm:pb-8">
+        <div className="px-4 sm:px-6 pt-4 pb-6 sm:pb-8">
           {/* Thread indicator - Gmail-style with first message preview and expandable rest */}
           {hasThread && olderEmails.length > 0 && (() => {
             // Separator between thread and current email
