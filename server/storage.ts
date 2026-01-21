@@ -199,6 +199,10 @@ export interface IStorage {
   updateTestimonialStatus(id: number, status: string): Promise<Testimonial | undefined>;
   deleteTestimonial(id: number): Promise<boolean>;
   getUserTestimonial(userId: string): Promise<Testimonial | undefined>;
+
+  // Daily send limit methods (Free plan)
+  checkDailySendLimit(userId: string): Promise<{ canSend: boolean; remaining: number; resetAt: Date | null }>;
+  incrementDailySendCount(userId: string): Promise<void>;
 }
 
 const avatarColors = [
@@ -1828,6 +1832,58 @@ Business Development`,
       .where(eq(testimonials.userId, userId))
       .limit(1);
     return testimonial;
+  }
+
+  // Daily send limit methods (Free plan - 5 emails per day)
+  async checkDailySendLimit(userId: string): Promise<{ canSend: boolean; remaining: number; resetAt: Date | null }> {
+    const FREE_DAILY_LIMIT = 5;
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { canSend: false, remaining: 0, resetAt: null };
+    }
+
+    // Paid plans have unlimited sends
+    if (user.plan !== "free") {
+      return { canSend: true, remaining: -1, resetAt: null };
+    }
+
+    const now = new Date();
+    let resetAt = user.dailySendResetAt;
+    let count = user.dailySendCount;
+
+    // Check if we need to reset the counter (24 hours elapsed)
+    if (!resetAt || now >= resetAt) {
+      // Reset the counter
+      const newResetAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      await db.update(users)
+        .set({ dailySendCount: 0, dailySendResetAt: newResetAt })
+        .where(eq(users.id, userId));
+      return { canSend: true, remaining: FREE_DAILY_LIMIT, resetAt: newResetAt };
+    }
+
+    const remaining = Math.max(0, FREE_DAILY_LIMIT - count);
+    return { canSend: remaining > 0, remaining, resetAt };
+  }
+
+  async incrementDailySendCount(userId: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user || user.plan !== "free") {
+      return;
+    }
+
+    const now = new Date();
+    let newCount = user.dailySendCount + 1;
+    let resetAt = user.dailySendResetAt;
+
+    // If no reset time set, set it for 24 hours from now
+    if (!resetAt || now >= resetAt) {
+      resetAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      newCount = 1;
+    }
+
+    await db.update(users)
+      .set({ dailySendCount: newCount, dailySendResetAt: resetAt })
+      .where(eq(users.id, userId));
   }
 }
 

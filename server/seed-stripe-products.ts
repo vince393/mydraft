@@ -12,7 +12,7 @@ async function seedProducts() {
   const existingProducts = await stripe.products.search({ query: "active:'true'" });
   const existingNames = existingProducts.data.map(p => p.name);
   
-  // Pro Plan - $19/month or $199/year
+  // Pro Plan - $10/month or $99/year
   if (!existingNames.includes('MyDraft Pro')) {
     console.log('Creating Pro Plan...');
     const proProduct = await stripe.products.create({
@@ -26,19 +26,19 @@ async function seedProducts() {
     
     const proPrice = await stripe.prices.create({
       product: proProduct.id,
-      unit_amount: 1900, // $19.00
+      unit_amount: 1000, // $10.00
       currency: 'usd',
       recurring: { interval: 'month' },
       metadata: { plan: 'pro' }
     });
     
     console.log(`  Created: ${proProduct.name} (${proProduct.id})`);
-    console.log(`  Price: $19/month (${proPrice.id})\n`);
+    console.log(`  Price: $10/month (${proPrice.id})\n`);
   } else {
     console.log('Pro Plan already exists, skipping...\n');
   }
   
-  // Business Plan - $49/month
+  // Business Plan - $29/month or $299/year
   if (!existingNames.includes('MyDraft Business')) {
     console.log('Creating Business Plan...');
     const businessProduct = await stripe.products.create({
@@ -52,14 +52,14 @@ async function seedProducts() {
     
     const businessPrice = await stripe.prices.create({
       product: businessProduct.id,
-      unit_amount: 4900, // $49.00
+      unit_amount: 2900, // $29.00
       currency: 'usd',
       recurring: { interval: 'month' },
       metadata: { plan: 'premium' }
     });
     
     console.log(`  Created: ${businessProduct.name} (${businessProduct.id})`);
-    console.log(`  Price: $49/month (${businessPrice.id})\n`);
+    console.log(`  Price: $29/month (${businessPrice.id})\n`);
   } else {
     console.log('Business Plan already exists, skipping...\n');
   }

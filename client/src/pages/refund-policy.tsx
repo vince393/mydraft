@@ -31,8 +31,8 @@ export default function RefundPolicyPage() {
               <p>MyDraft offers the following subscription plans:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
                 <li><strong>Free:</strong> $0 - Basic email management features</li>
-                <li><strong>Pro:</strong> $19/month or $199/year - Advanced AI features</li>
-                <li><strong>Business:</strong> $49/month or $299/year - Enterprise features</li>
+                <li><strong>Pro:</strong> $10/month or $99/year - Advanced AI features</li>
+                <li><strong>Business:</strong> $29/month or $299/year - Enterprise features</li>
               </ul>
             </section>
             

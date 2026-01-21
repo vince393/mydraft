@@ -2304,6 +2304,16 @@ Rules:
       if (!grant) {
         return res.status(401).json({ error: "Not connected to email provider" });
       }
+
+      // Check daily send limit for Free plan users
+      const sendLimit = await storage.checkDailySendLimit(req.session.userId!);
+      if (!sendLimit.canSend) {
+        return res.status(403).json({ 
+          error: "Free plan limit reached. Upgrade to send unlimited emails.",
+          limitReached: true,
+          resetAt: sendLimit.resetAt
+        });
+      }
       
       // Check if user has Pro/Business plan for scheduled sends
       if (scheduledFor) {
@@ -2323,6 +2333,8 @@ Rules:
       if (immediate) {
         await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId, cc, bcc);
         nylas.invalidateMessagesCache(grant.grantId);
+        // Increment daily send count for Free plan users
+        await storage.incrementDailySendCount(req.session.userId!);
         return res.json({ success: true, sent: true });
       }
       
@@ -2351,6 +2363,9 @@ Rules:
         delaySeconds: isScheduledSend ? 0 : Math.min(Math.max(delaySeconds, 1), 30),
         status: "pending",
       });
+
+      // Increment daily send count for Free plan users when queuing
+      await storage.incrementDailySendCount(req.session.userId!);
       
       res.json({ 
         success: true, 

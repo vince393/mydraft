@@ -44,6 +44,8 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").default(false).notNull(),
   twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  dailySendCount: integer("daily_send_count").default(0).notNull(),
+  dailySendResetAt: timestamp("daily_send_reset_at"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

@@ -852,8 +852,8 @@ function BillingTab({ settings }: { settings: Settings }) {
 
   const planDetails = {
     free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "Standard support"] },
-    pro: { name: "Pro", price: "$19/month or $199/year", features: ["Unlimited AI replies", "Advanced tone customization", "Email scheduling", "Priority support"] },
-    business: { name: "Business", price: "$49/month or $299/year", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
+    pro: { name: "Pro", price: "$10/month or $99/year", features: ["Unlimited AI replies", "Advanced tone customization", "Email scheduling", "Priority support"] },
+    business: { name: "Business", price: "$29/month or $299/year", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
   };
 
   const currentPlan = settings.plan ? planDetails[settings.plan as keyof typeof planDetails] : planDetails.free;

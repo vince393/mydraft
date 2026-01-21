@@ -192,9 +192,9 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Pro"
               planId="pro"
-              price={billingInterval === "annual" ? "$199" : "$19"}
+              price={billingInterval === "annual" ? "$99" : "$10"}
               period={billingInterval === "annual" ? "year" : "month"}
-              annualSavings={billingInterval === "annual" ? 29 : undefined}
+              annualSavings={billingInterval === "annual" ? 21 : undefined}
               description="For professionals who need more"
               features={[
                 { text: "Connect 1 email account", included: true },
@@ -213,9 +213,9 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Business"
               planId="business"
-              price={billingInterval === "annual" ? "$299" : "$49"}
+              price={billingInterval === "annual" ? "$299" : "$29"}
               period={billingInterval === "annual" ? "year" : "month"}
-              annualSavings={billingInterval === "annual" ? 289 : undefined}
+              annualSavings={billingInterval === "annual" ? 49 : undefined}
               description="For teams and power users"
               features={[
                 { text: "Connect 1 email account", included: true },
