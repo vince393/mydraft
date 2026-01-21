@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type EmailUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, emailUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, testimonials } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, testimonials } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -123,10 +123,6 @@ export interface IStorage {
   // AI usage tracking methods
   getAiUsageToday(userId: string): Promise<number>;
   incrementAiUsage(userId: string): Promise<void>;
-
-  // Email usage tracking methods (Free plan: 5 emails/day limit)
-  getEmailUsageToday(userId: string): Promise<number>;
-  incrementEmailUsage(userId: string): Promise<void>;
 
   // Financial tracking methods
   createExpense(expense: InsertExpense): Promise<Expense>;
@@ -1348,37 +1344,6 @@ Business Development`,
         userId,
         usageDate: today,
         draftsGenerated: 1,
-      });
-    }
-  }
-
-  // Email usage tracking methods (Free plan: 5 emails/day limit)
-  async getEmailUsageToday(userId: string): Promise<number> {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD in UTC
-    const [usage] = await db.select()
-      .from(emailUsage)
-      .where(and(eq(emailUsage.userId, userId), eq(emailUsage.usageDate, today)));
-    return usage?.emailsSent || 0;
-  }
-
-  async incrementEmailUsage(userId: string): Promise<void> {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD in UTC
-    const [existing] = await db.select()
-      .from(emailUsage)
-      .where(and(eq(emailUsage.userId, userId), eq(emailUsage.usageDate, today)));
-    
-    if (existing) {
-      await db.update(emailUsage)
-        .set({ 
-          emailsSent: existing.emailsSent + 1,
-          updatedAt: new Date()
-        })
-        .where(eq(emailUsage.id, existing.id));
-    } else {
-      await db.insert(emailUsage).values({
-        userId,
-        usageDate: today,
-        emailsSent: 1,
       });
     }
   }
