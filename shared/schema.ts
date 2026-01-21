@@ -502,6 +502,25 @@ export const insertAiUsageSchema = createInsertSchema(aiUsage).omit({
 export type AiUsage = typeof aiUsage.$inferSelect;
 export type InsertAiUsage = z.infer<typeof insertAiUsageSchema>;
 
+// Email send usage tracking for free plan limits (5 emails/day)
+export const emailUsage = pgTable("email_usage", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  usageDate: text("usage_date").notNull(), // YYYY-MM-DD format for daily tracking
+  emailsSent: integer("emails_sent").default(0).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertEmailUsageSchema = createInsertSchema(emailUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type EmailUsage = typeof emailUsage.$inferSelect;
+export type InsertEmailUsage = z.infer<typeof insertEmailUsageSchema>;
+
 // Expense categories for tracking service costs
 export const expenseCategorySchema = z.enum([
   "replit",

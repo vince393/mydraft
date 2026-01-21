@@ -319,7 +319,7 @@ export async function registerRoutes(
       // Create the user
       const user = await storage.createUser({ 
         email: normalizedEmail, 
-        password: pending.hashedPassword 
+        password: pending.hashedPassword
       });
       
       // Mark email as verified
@@ -495,6 +495,7 @@ export async function registerRoutes(
       }
       
       // Verify code
+      
       const verificationCode = await storage.getVerificationCode(normalizedEmail, code, "login");
       if (!verificationCode) {
         return res.status(400).json({ error: "Invalid or expired verification code" });
