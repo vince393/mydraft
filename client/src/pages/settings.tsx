@@ -846,17 +846,48 @@ function SecurityTab({ settings }: { settings: Settings }) {
   );
 }
 
+interface BillingInfo {
+  hasSubscription: boolean;
+  nextBillDate: string | null;
+  currentPeriodEnd: number | null;
+  subscriptionStatus: string | null;
+  planName: string | null;
+  planAmount: number | null;
+  planInterval: string | null;
+  invoices: Array<{
+    id: string;
+    number: string | null;
+    amount: number;
+    currency: string;
+    status: string | null;
+    date: string;
+    pdfUrl: string | null;
+    hostedUrl: string | null;
+  }>;
+  paymentMethod: {
+    brand: string;
+    last4: string;
+    expMonth: number;
+    expYear: number;
+  } | null;
+}
+
 function BillingTab({ settings }: { settings: Settings }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const planDetails = {
-    free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "Standard support"] },
-    pro: { name: "Pro", price: "$10/month or $99/year", features: ["Unlimited AI replies", "Advanced tone customization", "Email scheduling", "Priority support"] },
+    free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "5 emails/day limit", "Standard support"] },
+    pro: { name: "Pro", price: "$10/month or $99/year", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
     business: { name: "Business", price: "$29/month or $299/year", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
   };
 
   const currentPlan = settings.plan ? planDetails[settings.plan as keyof typeof planDetails] : planDetails.free;
+
+  const { data: billingInfo, isLoading: billingLoading } = useQuery<BillingInfo>({
+    queryKey: ["/api/stripe/billing-info"],
+    enabled: settings.plan !== "free",
+  });
 
   const portalMutation = useMutation({
     mutationFn: async () => {
@@ -877,6 +908,30 @@ function BillingTab({ settings }: { settings: Settings }) {
     },
   });
 
+  const formatCurrency = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+    }).format(amount / 100);
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const getCardBrandIcon = (brand: string) => {
+    const brandLower = brand?.toLowerCase() || '';
+    if (brandLower === 'visa') return 'Visa';
+    if (brandLower === 'mastercard') return 'Mastercard';
+    if (brandLower === 'amex') return 'Amex';
+    if (brandLower === 'discover') return 'Discover';
+    return brand?.charAt(0).toUpperCase() + brand?.slice(1) || 'Card';
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -895,6 +950,19 @@ function BillingTab({ settings }: { settings: Settings }) {
               Active
             </div>
           </div>
+
+          {settings.plan && settings.plan !== "free" && billingInfo?.nextBillDate && (
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <p className="text-sm text-muted-foreground">Next billing date</p>
+              <p className="text-lg font-medium text-foreground">{formatDate(billingInfo.nextBillDate)}</p>
+              {billingInfo.planAmount && billingInfo.planInterval && (
+                <p className="text-sm text-muted-foreground">
+                  {formatCurrency(billingInfo.planAmount, 'usd')} / {billingInfo.planInterval}
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Plan features:</p>
             <ul className="space-y-1">
@@ -908,6 +976,112 @@ function BillingTab({ settings }: { settings: Settings }) {
           </div>
         </CardContent>
       </Card>
+
+      {settings.plan && settings.plan !== "free" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Method</CardTitle>
+            <CardDescription>Your card on file</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {billingLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading payment details...
+              </div>
+            ) : billingInfo?.paymentMethod ? (
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-8 rounded bg-background flex items-center justify-center border">
+                    <CreditCard className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {getCardBrandIcon(billingInfo.paymentMethod.brand)} ending in {billingInfo.paymentMethod.last4}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Expires {billingInfo.paymentMethod.expMonth}/{billingInfo.paymentMethod.expYear}
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  data-testid="button-update-card"
+                >
+                  Update
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No payment method on file</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {settings.plan && settings.plan !== "free" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing History</CardTitle>
+            <CardDescription>Your past invoices</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {billingLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading invoices...
+              </div>
+            ) : billingInfo?.invoices && billingInfo.invoices.length > 0 ? (
+              <div className="space-y-2">
+                {billingInfo.invoices.map((invoice) => (
+                  <div 
+                    key={invoice.id} 
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <p className="font-medium text-foreground text-sm">
+                          {invoice.number || 'Invoice'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(invoice.date)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-medium text-foreground text-sm">
+                          {formatCurrency(invoice.amount, invoice.currency)}
+                        </p>
+                        <Badge 
+                          variant={invoice.status === 'paid' ? 'default' : 'secondary'} 
+                          className="text-xs"
+                        >
+                          {invoice.status === 'paid' ? 'Paid' : invoice.status}
+                        </Badge>
+                      </div>
+                      {invoice.pdfUrl && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => window.open(invoice.pdfUrl!, '_blank')}
+                          data-testid={`button-download-invoice-${invoice.id}`}
+                        >
+                          Download
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No invoices yet</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -926,34 +1100,11 @@ function BillingTab({ settings }: { settings: Settings }) {
               data-testid="button-cancel-subscription"
             >
               {portalMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Cancel Subscription
+              Manage Billing
             </Button>
           )}
         </CardContent>
       </Card>
-
-      {settings.plan && settings.plan !== "free" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Method</CardTitle>
-            <CardDescription>Manage your payment details and billing history</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              View invoices, update payment method, or download receipts through the billing portal.
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={() => portalMutation.mutate()}
-              disabled={portalMutation.isPending}
-              data-testid="button-manage-payment"
-            >
-              {portalMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Open Billing Portal
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

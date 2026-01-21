@@ -12,6 +12,7 @@ import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { sendVerificationEmail } from "./email";
+import { jsonSchema } from "drizzle-zod";
 
 // Pending registrations waiting for email verification
 const pendingRegistrations: Map<string, { email: string; hashedPassword: string; expiresAt: number }> = new Map();
@@ -5022,7 +5023,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       if (!updated) {
         return res.status(404).json({ error: "Feedback not found" });
       }
-      
+        
       res.json(updated);
     } catch (error) {
       console.error("Error updating feedback:", error);
@@ -5620,6 +5621,112 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error fetching subscription:", error);
       res.status(500).json({ error: "Failed to fetch subscription" });
+    }
+  });
+
+  // Get detailed billing information
+  app.get("/api/stripe/billing-info", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || !user.stripeCustomerId) {
+        return res.json({ 
+          hasSubscription: false,
+          nextBillDate: null,
+          invoices: [],
+          paymentMethod: null
+        });
+      }
+      
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      
+      // Get subscription details for next bill date
+      let nextBillDate = null;
+      let currentPeriodEnd = null;
+      let subscriptionStatus = null;
+      let planName = null;
+      let planAmount = null;
+      let planInterval = null;
+      
+      if (user.stripeSubscriptionId) {
+        try {
+          const subscriptionResponse = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          const subscription = subscriptionResponse as any;
+          currentPeriodEnd = subscription.current_period_end;
+          nextBillDate = new Date(subscription.current_period_end * 1000).toISOString();
+          subscriptionStatus = subscription.status;
+          
+          // Get plan details from subscription items
+          if (subscription.items.data.length > 0) {
+            const price = subscription.items.data[0].price;
+            planAmount = price.unit_amount;
+            planInterval = price.recurring?.interval;
+            if (price.product && typeof price.product === 'string') {
+              const product = await stripe.products.retrieve(price.product);
+              planName = product.name;
+            }
+          }
+        } catch (e) {
+          console.error("Error fetching subscription:", e);
+        }
+      }
+      
+      // Get past invoices
+      let invoices: any[] = [];
+      try {
+        const invoiceList = await stripe.invoices.list({
+          customer: user.stripeCustomerId,
+          limit: 10,
+        });
+        invoices = invoiceList.data.map(inv => ({
+          id: inv.id,
+          number: inv.number,
+          amount: inv.amount_paid,
+          currency: inv.currency,
+          status: inv.status,
+          date: new Date(inv.created * 1000).toISOString(),
+          pdfUrl: inv.invoice_pdf,
+          hostedUrl: inv.hosted_invoice_url,
+        }));
+      } catch (e) {
+        console.error("Error fetching invoices:", e);
+      }
+      
+      // Get payment method (last 4 digits of card)
+      let paymentMethod = null;
+      try {
+        const paymentMethods = await stripe.paymentMethods.list({
+          customer: user.stripeCustomerId,
+          type: 'card',
+          limit: 1,
+        });
+        if (paymentMethods.data.length > 0) {
+          const pm = paymentMethods.data[0];
+          paymentMethod = {
+            brand: pm.card?.brand,
+            last4: pm.card?.last4,
+            expMonth: pm.card?.exp_month,
+            expYear: pm.card?.exp_year,
+          };
+        }
+      } catch (e) {
+        console.error("Error fetching payment methods:", e);
+      }
+      
+      res.json({
+        hasSubscription: !!user.stripeSubscriptionId,
+        nextBillDate,
+        currentPeriodEnd,
+        subscriptionStatus,
+        planName,
+        planAmount,
+        planInterval,
+        invoices,
+        paymentMethod,
+      });
+    } catch (error) {
+      console.error("Error fetching billing info:", error);
+      res.status(500).json({ error: "Failed to fetch billing info" });
     }
   });
 
