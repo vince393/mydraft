@@ -25,7 +25,7 @@ export const aiPreferencesSchema = z.object({
 
 export type AiPreferences = z.infer<typeof aiPreferencesSchema>;
 
-export const planSchema = z.enum(["free", "pro", "premium"]);
+export const planSchema = z.enum(["free", "pro", "premium", "business"]);
 export type Plan = z.infer<typeof planSchema>;
 
 export const users = pgTable("users", {

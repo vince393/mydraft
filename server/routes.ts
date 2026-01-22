@@ -23,24 +23,17 @@ const pending2FALogins: Map<string, { userId: string; expiresAt: number }> = new
 // Cleanup expired pending items
 function cleanupPendingItems(): void {
   const now = Date.now();
-  for (const [key, data] of pendingRegistrations.entries()) {
+  for (const [key, data] of Array.from(pendingRegistrations.entries())) {
     if (data.expiresAt < now) {
       pendingRegistrations.delete(key);
     }
   }
-  for (const [key, data] of pending2FALogins.entries()) {
+  for (const [key, data] of Array.from(pending2FALogins.entries())) {
     if (data.expiresAt < now) {
       pending2FALogins.delete(key);
     }
   }
 }
-
-// Get client startup by id
-async function getClientStartupById(req: Request, res: Response) {
-  const getClientStartup = await storage.getClientStartupById(req.params.id);
-  res.json({ getClientStartup });
-}  
-
 
 // Helper to get client IP
 function getClientIp(req: Request): string {
@@ -185,7 +178,7 @@ function generateStateToken(): string {
 
 function cleanupExpiredStates(): void {
   const now = Date.now();
-  for (const [token, data] of pendingOAuthStates.entries()) {
+  for (const [token, data] of Array.from(pendingOAuthStates.entries())) {
     if (data.expiresAt < now) {
       pendingOAuthStates.delete(token);
     }
@@ -1729,7 +1722,7 @@ Return ONLY valid JSON, no other text.`;
       
       // Get recent emails for analysis
       console.log("[AI Inbox Refresh] Fetching messages...");
-      const messages = await nylas.getMessages(grant.grantId, "inbox", 50);
+      const messages = await nylas.getMessages(grant.grantId, "inbox");
       console.log("[AI Inbox Refresh] Messages fetched:", messages?.length || 0);
       
       if (!messages || messages.length === 0) {
@@ -1944,27 +1937,20 @@ Respond with valid JSON only:
         try {
           switch (suggestion.actionType) {
             case "spam":
-              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                folders: ["spam"],
-              });
+              // Move to trash as spam folder handling
+              await nylas.trashMessage(grant.grantId, suggestion.messageId);
               break;
             case "archive":
-              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                folders: ["archive"],
-              });
+              await nylas.archiveMessage(grant.grantId, suggestion.messageId);
               break;
             case "delete":
               await nylas.deleteMessage(grant.grantId, suggestion.messageId);
               break;
             case "star":
-              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                starred: true,
-              });
+              await nylas.toggleStar(grant.grantId, suggestion.messageId, true);
               break;
             case "mark_read":
-              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                unread: false,
-              });
+              await nylas.markAsRead(grant.grantId, suggestion.messageId);
               break;
             case "move_to_folder":
               // Move email to custom folder by assigning it in our database
@@ -2569,33 +2555,16 @@ Reply:`;
         generatedContent = `${generatedContent}\n\n${user.emailSignature}`;
       }
 
-      // If emailId was numeric, save the draft
-      const numericEmailId = parseInt(emailId);
-      let draft = null;
-      if (!isNaN(numericEmailId)) {
-        const existingDraft = await storage.getDraftByEmailId(numericEmailId);
-        if (existingDraft) {
-          await storage.deleteDraft(existingDraft.id);
-        }
-        
-        draft = await storage.createDraft({
-          emailId: numericEmailId,
-          content: generatedContent,
-          isAiGenerated: true,
-          status: "draft",
-        });
-      } else {
-        // For Nylas IDs, just return the content without saving
-        draft = {
-          id: 0,
-          emailId: 0,
-          content: generatedContent,
-          isAiGenerated: true,
-          status: "draft",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      }
+      // Return draft content without saving to DB (reply drafts are used immediately)
+      const draft = {
+        id: 0,
+        emailId: emailId,
+        content: generatedContent,
+        isAiGenerated: true,
+        status: "draft",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       // Increment usage for free plan users
       if (userPlan === "free") {
@@ -4916,10 +4885,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      // Reset dailyAICount to 0 and clear lastAICountReset
+      // Reset dailySendCount to 0 and clear dailySendResetAt
       await storage.updateUser(userId, { 
-        dailyAICount: 0, 
-        lastAICountReset: new Date() 
+        dailySendCount: 0, 
+        dailySendResetAt: new Date() 
       });
       res.json({ success: true, message: "Usage limits reset" });
     } catch (error) {
@@ -5478,7 +5447,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       
       // Group prices by product
       const productsMap = new Map();
-      for (const row of result.rows as any[]) {
+      const rows = result as unknown as any[];
+      for (const row of rows) {
         if (!productsMap.has(row.product_id)) {
           productsMap.set(row.product_id, {
             id: row.product_id,
@@ -5623,7 +5593,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         sql`SELECT * FROM stripe.subscriptions WHERE id = ${user.stripeSubscriptionId}`
       );
       
-      const subscription = result.rows[0] || null;
+      const rows = result as unknown as any[];
+      const subscription = rows[0] || null;
       res.json({ subscription, plan: user.plan });
     } catch (error) {
       console.error("Error fetching subscription:", error);
