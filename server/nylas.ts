@@ -11,7 +11,7 @@ interface CacheEntry<T> {
 
 const messagesCache = new Map<string, CacheEntry<EmailListItem[]>>();
 const pendingRequests = new Map<string, Promise<EmailListItem[]>>();
-const CACHE_TTL = 30000;
+const CACHE_TTL = 60000; // 60 seconds cache for faster reloads
 
 interface NylasEmailParticipant {
   email: string;

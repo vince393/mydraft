@@ -169,10 +169,10 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       return response.json();
     },
     enabled: !!userData?.user && !isCustomFolder,
-    staleTime: 10000,
+    staleTime: 60000, // 1 minute stale time for faster perceived loading
     gcTime: 300000,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
+    refetchOnWindowFocus: false, // Don't refetch on focus to avoid slowdowns
+    refetchOnMount: false, // Use cache on mount
     retry: 2,
     retryDelay: 500,
   });

@@ -20,15 +20,6 @@ const pendingRegistrations: Map<string, { email: string; hashedPassword: string;
 // Pending login sessions waiting for 2FA verification  
 const pending2FALogins: Map<string, { userId: string; expiresAt: number }> = new Map();
 
-// Cleanup expired email verification codes
-async function cleanupExpiredVerificationCodes(): Promise<void>
-if (!req.session.userId)
-  try {
-    await db.delete(verificationCodes).where(
-      sql`expires_at < ${new Date()}`
-    );
-  }
-
 // Cleanup expired pending items
 function cleanupPendingItems(): void {
   const now = Date.now();
