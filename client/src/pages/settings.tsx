@@ -876,13 +876,14 @@ function BillingTab({ settings }: { settings: Settings }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const planDetails = {
+  const planDetails: Record<string, { name: string; price: string; features: string[] }> = {
     free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "5 emails/day limit", "Standard support"] },
     pro: { name: "Pro", price: "$10/month or $99/year", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
+    premium: { name: "Pro", price: "$10/month or $99/year", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
     business: { name: "Business", price: "$29/month or $299/year", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
   };
 
-  const currentPlan = settings.plan ? planDetails[settings.plan as keyof typeof planDetails] : planDetails.free;
+  const currentPlan = (settings?.plan && planDetails[settings.plan]) ? planDetails[settings.plan] : planDetails.free;
 
   const { data: billingInfo, isLoading: billingLoading } = useQuery<BillingInfo>({
     queryKey: ["/api/stripe/billing-info"],
