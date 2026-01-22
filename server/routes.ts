@@ -35,6 +35,13 @@ function cleanupPendingItems(): void {
   }
 }
 
+// Get client startup by id
+async function getClientStartupById(req: Request, res: Response) {
+  const getClientStartup = await storage.getClientStartupById(req.params.id);
+  res.json({ getClientStartup });
+}  
+
+
 // Helper to get client IP
 function getClientIp(req: Request): string {
   const forwarded = req.headers['x-forwarded-for'];
