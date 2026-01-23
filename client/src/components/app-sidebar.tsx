@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles } from "lucide-react";
+import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, type LucideIcon } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -46,10 +46,56 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { AssistantModal } from "./assistant-modal";
 
+// Icon map for custom folder icons
+const iconMap: Record<string, LucideIcon> = {
+  folder: Folder,
+  star: Star,
+  heart: Heart,
+  bookmark: Bookmark,
+  flag: Flag,
+  tag: Tag,
+  zap: Zap,
+  bell: Bell,
+  mail: Mail,
+  message: MessageSquare,
+  users: Users,
+  briefcase: Briefcase,
+  cart: ShoppingCart,
+  dollar: DollarSign,
+  calendar: Calendar,
+  clock: Clock,
+  image: ImageIcon,
+  inbox: Inbox,
+  send: Send,
+  file: FileText,
+  archive: Archive,
+  trash: Trash2,
+};
+
+const availableIcons = [
+  { name: "folder", icon: Folder },
+  { name: "star", icon: Star },
+  { name: "heart", icon: Heart },
+  { name: "bookmark", icon: Bookmark },
+  { name: "flag", icon: Flag },
+  { name: "tag", icon: Tag },
+  { name: "zap", icon: Zap },
+  { name: "bell", icon: Bell },
+  { name: "mail", icon: Mail },
+  { name: "message", icon: MessageSquare },
+  { name: "users", icon: Users },
+  { name: "briefcase", icon: Briefcase },
+  { name: "cart", icon: ShoppingCart },
+  { name: "dollar", icon: DollarSign },
+  { name: "calendar", icon: Calendar },
+  { name: "clock", icon: Clock },
+];
+
 interface FolderItem {
   id?: number;
   title: string;
-  icon: typeof Inbox;
+  icon: LucideIcon;
+  iconName?: string;
   isCustom?: boolean;
   aiDescription?: string; // AI sorting description for Pro+ users
 }
@@ -89,15 +135,17 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
-  // Rename/Delete folder state
+  // Rename/Delete/Icon folder state
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
   const [renameFolderName, setRenameFolderName] = useState("");
   const [folderActionMenuOpen, setFolderActionMenuOpen] = useState<string | null>(null);
   
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggeredRef = useRef(false);
   const justCollapsedRef = useRef(false);
   const { hasPro } = usePlan();
 
@@ -112,7 +160,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     ...(customFoldersData?.folders || []).map(f => ({
       id: f.id,
       title: f.name,
-      icon: FileText,
+      icon: iconMap[f.icon || "folder"] || Folder,
+      iconName: f.icon || "folder",
       isCustom: true,
       aiDescription: f.aiDescription || undefined,
     })),
@@ -150,10 +199,23 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     },
   });
 
+  // Mutation to update folder icon
+  const updateIconMutation = useMutation({
+    mutationFn: async ({ id, icon }: { id: number; icon: string }) => {
+      const response = await apiRequest("PATCH", `/api/folders/${id}`, { icon });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+    },
+  });
+
   // Long press handlers for folder actions (0.5 seconds for responsive feel)
   const handleFolderTouchStart = useCallback((folder: FolderItem) => {
     if (!folder.isCustom) return;
+    longPressTriggeredRef.current = false;
     longPressTimeoutRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
       setFolderActionMenuOpen(folder.title);
     }, 500); // 0.5 second long press for responsive feel
   }, []);
@@ -164,6 +226,15 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
       longPressTimeoutRef.current = null;
     }
   }, []);
+
+  const handleFolderClick = useCallback((folderId: string) => {
+    // Don't navigate if long press was triggered or menu is open
+    if (longPressTriggeredRef.current) {
+      longPressTriggeredRef.current = false;
+      return;
+    }
+    onFolderChange(folderId);
+  }, [onFolderChange]);
   
   const handleOpenAssistant = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -216,6 +287,19 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
       setSelectedFolder(null);
     }
   }, [selectedFolder, activeFolder, onFolderChange, deleteFolderMutation]);
+
+  const handleOpenIconPicker = useCallback((folder: FolderItem) => {
+    setSelectedFolder(folder);
+    setIsIconPickerOpen(true);
+  }, []);
+
+  const handleSelectIcon = useCallback((iconName: string) => {
+    if (selectedFolder && selectedFolder.id) {
+      updateIconMutation.mutate({ id: selectedFolder.id, icon: iconName });
+      setIsIconPickerOpen(false);
+      setSelectedFolder(null);
+    }
+  }, [selectedFolder, updateIconMutation]);
 
   const handleMouseEnter = () => {
     if (isCollapsed && !justCollapsedRef.current) {
@@ -414,15 +498,12 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                             <SidebarMenuButton 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // Only navigate if menu is not open
+                                // Only navigate if menu is not open and long press wasn't triggered
                                 if (folderActionMenuOpen !== item.title) {
-                                  onFolderChange(folderId);
+                                  handleFolderClick(folderId);
                                 }
                               }}
-                              onTouchStart={(e) => {
-                                e.preventDefault();
-                                handleFolderTouchStart(item);
-                              }}
+                              onTouchStart={() => handleFolderTouchStart(item)}
                               onTouchEnd={handleFolderTouchEnd}
                               onTouchCancel={handleFolderTouchEnd}
                               onMouseDown={() => handleFolderTouchStart(item)}
@@ -456,7 +537,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                               )}
                             </SidebarMenuButton>
                           </PopoverTrigger>
-                          <PopoverContent className="w-40 p-1" align="start" side="right">
+                          <PopoverContent className="w-44 p-1" align="start" side="right">
                             <button
                               onClick={() => {
                                 setFolderActionMenuOpen(null);
@@ -467,6 +548,17 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                             >
                               <Pencil className="w-4 h-4" />
                               Rename
+                            </button>
+                            <button
+                              onClick={() => {
+                                setFolderActionMenuOpen(null);
+                                handleOpenIconPicker(item);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
+                              data-testid={`button-icon-${item.title.toLowerCase()}`}
+                            >
+                              <ImageIcon className="w-4 h-4" />
+                              Change Icon
                             </button>
                             <button
                               onClick={() => {
@@ -699,6 +791,32 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Icon Picker Dialog */}
+      <Dialog open={isIconPickerOpen} onOpenChange={setIsIconPickerOpen}>
+        <DialogContent className="sm:max-w-[320px]">
+          <DialogHeader>
+            <DialogTitle>Choose Icon</DialogTitle>
+            <DialogDescription>
+              Select an icon for "{selectedFolder?.title}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-4 gap-2 py-4">
+            {availableIcons.map(({ name, icon: Icon }) => (
+              <button
+                key={name}
+                onClick={() => handleSelectIcon(name)}
+                className={`w-12 h-12 flex items-center justify-center rounded-lg transition-colors hover:bg-muted ${
+                  selectedFolder?.iconName === name ? "bg-primary/20 ring-2 ring-primary" : "bg-muted/30"
+                }`}
+                data-testid={`icon-option-${name}`}
+              >
+                <Icon className="w-5 h-5" />
+              </button>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
 

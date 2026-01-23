@@ -125,6 +125,7 @@ export const customFolders = pgTable("custom_folders", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull(),
   name: text("name").notNull(),
+  icon: text("icon").default("folder"), // Icon name from lucide-react
   aiDescription: text("ai_description"), // AI sorting prompt for Pro+ users
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
