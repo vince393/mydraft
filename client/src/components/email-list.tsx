@@ -473,26 +473,25 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     <div className="flex flex-col h-full overflow-x-hidden">
       <div className="p-3 border-b border-border/20">
         <div className="relative flex flex-wrap items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none" />
             <Input 
               type="search"
               placeholder="Search emails..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-muted/20 border-border/30 h-9 rounded-lg text-sm focus:bg-muted/30 transition-colors"
+              className={`pl-9 ${searchQuery ? 'pr-8' : 'pr-3'} bg-muted/20 border-border/30 h-9 rounded-lg text-sm focus:bg-muted/30 transition-colors`}
               data-testid="input-search"
             />
             {searchQuery && (
-              <Button
-                size="icon"
-                variant="ghost"
+              <button
+                type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                 data-testid="button-clear-search"
               >
-                <X className="w-4 h-4" />
-              </Button>
+                <X className="w-3 h-3" />
+              </button>
             )}
           </div>
           <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
