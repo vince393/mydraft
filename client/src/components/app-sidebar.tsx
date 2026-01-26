@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, type LucideIcon } from "lucide-react";
+import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, type LucideIcon } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -486,93 +486,90 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     </SidebarMenuButton>
                   );
 
-                  // Custom folders get long-press popup for rename/delete
+                  // Custom folders get a visible menu button for rename/delete/icon
                   if (item.isCustom) {
                     return (
-                      <SidebarMenuItem key={item.title}>
-                        <Popover 
-                          open={folderActionMenuOpen === item.title} 
-                          onOpenChange={(open) => setFolderActionMenuOpen(open ? item.title : null)}
-                        >
-                          <PopoverTrigger asChild>
-                            <SidebarMenuButton 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Only navigate if menu is not open and long press wasn't triggered
-                                if (folderActionMenuOpen !== item.title) {
-                                  handleFolderClick(folderId);
-                                }
-                              }}
-                              onTouchStart={() => handleFolderTouchStart(item)}
-                              onTouchEnd={handleFolderTouchEnd}
-                              onTouchCancel={handleFolderTouchEnd}
-                              onMouseDown={() => handleFolderTouchStart(item)}
-                              onMouseUp={handleFolderTouchEnd}
-                              onMouseLeave={handleFolderTouchEnd}
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                setFolderActionMenuOpen(item.title);
-                              }}
-                              className={`
-                                w-full justify-between h-11 rounded-xl transition-all duration-200 select-none
-                                ${isActive 
-                                  ? "bg-muted/60 text-foreground" 
-                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                                }
-                              `}
-                              style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
-                              data-testid={`nav-${item.title.toLowerCase()}`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <item.icon className="w-[18px] h-[18px]" />
-                                <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
-                                {item.aiDescription && (
-                                  <Sparkles className="w-3 h-3 text-primary/60" />
-                                )}
-                              </div>
-                              {showCount && (
-                                <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
-                                  {folderCount}
-                                </Badge>
+                      <SidebarMenuItem key={item.title} className="group/folder">
+                        <div className="flex items-center w-full">
+                          <SidebarMenuButton 
+                            onClick={() => handleFolderClick(folderId)}
+                            className={`
+                              flex-1 justify-between h-11 rounded-xl transition-all duration-200
+                              ${isActive 
+                                ? "bg-muted/60 text-foreground" 
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              }
+                            `}
+                            data-testid={`nav-${item.title.toLowerCase()}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <item.icon className="w-[18px] h-[18px]" />
+                              <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
+                              {item.aiDescription && (
+                                <Sparkles className="w-3 h-3 text-primary/60" />
                               )}
-                            </SidebarMenuButton>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-44 p-1" align="start" side="right">
-                            <button
-                              onClick={() => {
-                                setFolderActionMenuOpen(null);
-                                handleOpenRename(item);
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
-                              data-testid={`button-rename-${item.title.toLowerCase()}`}
-                            >
-                              <Pencil className="w-4 h-4" />
-                              Rename
-                            </button>
-                            <button
-                              onClick={() => {
-                                setFolderActionMenuOpen(null);
-                                handleOpenIconPicker(item);
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
-                              data-testid={`button-icon-${item.title.toLowerCase()}`}
-                            >
-                              <ImageIcon className="w-4 h-4" />
-                              Change Icon
-                            </button>
-                            <button
-                              onClick={() => {
-                                setFolderActionMenuOpen(null);
-                                handleOpenDelete(item);
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted text-destructive transition-colors"
-                              data-testid={`button-delete-${item.title.toLowerCase()}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Delete
-                            </button>
-                          </PopoverContent>
-                        </Popover>
+                            </div>
+                            {showCount && (
+                              <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
+                                {folderCount}
+                              </Badge>
+                            )}
+                          </SidebarMenuButton>
+                          
+                          {/* Visible menu button for custom folders */}
+                          <Popover 
+                            open={folderActionMenuOpen === item.title} 
+                            onOpenChange={(open) => setFolderActionMenuOpen(open ? item.title : null)}
+                          >
+                            <PopoverTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFolderActionMenuOpen(folderActionMenuOpen === item.title ? null : item.title);
+                                }}
+                                className="ml-1 p-1.5 rounded-lg opacity-0 group-hover/folder:opacity-100 hover:bg-muted/60 transition-all text-muted-foreground hover:text-foreground"
+                                data-testid={`button-folder-menu-${item.title.toLowerCase()}`}
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-44 p-1" align="start" side="right">
+                              <button
+                                onClick={() => {
+                                  setFolderActionMenuOpen(null);
+                                  handleOpenRename(item);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
+                                data-testid={`button-rename-${item.title.toLowerCase()}`}
+                              >
+                                <Pencil className="w-4 h-4" />
+                                Rename
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setFolderActionMenuOpen(null);
+                                  handleOpenIconPicker(item);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
+                                data-testid={`button-icon-${item.title.toLowerCase()}`}
+                              >
+                                <ImageIcon className="w-4 h-4" />
+                                Change Icon
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setFolderActionMenuOpen(null);
+                                  handleOpenDelete(item);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted text-destructive transition-colors"
+                                data-testid={`button-delete-${item.title.toLowerCase()}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </button>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       </SidebarMenuItem>
                     );
                   }
