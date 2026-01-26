@@ -1,4 +1,4 @@
-# MailFlow - Design Guidelines
+# MyDraft - Design Guidelines
 
 ## Design Approach
 **Futuristic Minimalist:** Ultra-clean, smooth interfaces with subtle depth, refined animations, and a focus on content clarity. Inspired by modern email clients with emphasis on simplicity and elegance.

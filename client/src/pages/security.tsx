@@ -156,7 +156,7 @@ export default function SecurityPage() {
             />
             <FAQItem 
               q="How do I report a security issue?" 
-              a="We take security reports seriously. Please email security@mailflow.com with any concerns or potential vulnerabilities. We respond within 24 hours." 
+              a="We take security reports seriously. Please email security@mydraft.io with any concerns or potential vulnerabilities. We respond within 24 hours." 
             />
           </div>
         </div>
