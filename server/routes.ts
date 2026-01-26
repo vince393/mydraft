@@ -1598,6 +1598,7 @@ Return ONLY valid JSON, no other text.`;
   const updateFolderSchema = z.object({
     name: z.string().min(1).max(50).optional(),
     aiDescription: z.string().max(200).optional().nullable(),
+    icon: z.string().max(50).optional(),
   });
 
   app.post("/api/folders", requireAuth, async (req, res) => {
@@ -1629,10 +1630,11 @@ Return ONLY valid JSON, no other text.`;
       if (!result.success) {
         return res.status(400).json({ error: result.error.errors[0].message });
       }
-      const { name, aiDescription } = result.data;
-      const updates: { name?: string; aiDescription?: string } = {};
+      const { name, aiDescription, icon } = result.data;
+      const updates: { name?: string; aiDescription?: string; icon?: string } = {};
       if (name) updates.name = name.trim();
       if (aiDescription !== undefined) updates.aiDescription = aiDescription?.trim() || undefined;
+      if (icon) updates.icon = icon.trim();
       
       const folder = await storage.updateCustomFolder(id, req.session.userId!, updates);
       if (!folder) {

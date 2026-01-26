@@ -177,7 +177,7 @@ export interface IStorage {
   // Custom folders methods
   getCustomFolders(userId: string): Promise<CustomFolder[]>;
   createCustomFolder(userId: string, name: string, aiDescription?: string): Promise<CustomFolder>;
-  updateCustomFolder(id: number, userId: string, updates: { name?: string; aiDescription?: string }): Promise<CustomFolder | undefined>;
+  updateCustomFolder(id: number, userId: string, updates: { name?: string; aiDescription?: string; icon?: string }): Promise<CustomFolder | undefined>;
   deleteCustomFolder(id: number, userId: string): Promise<boolean>;
 
   // Email folder assignment methods
@@ -1719,7 +1719,7 @@ Business Development`,
     return created;
   }
 
-  async updateCustomFolder(id: number, userId: string, updates: { name?: string; aiDescription?: string }): Promise<CustomFolder | undefined> {
+  async updateCustomFolder(id: number, userId: string, updates: { name?: string; aiDescription?: string; icon?: string }): Promise<CustomFolder | undefined> {
     const [updated] = await db.update(customFolders)
       .set({ ...updates, updatedAt: new Date() })
       .where(and(eq(customFolders.id, id), eq(customFolders.userId, userId)))
