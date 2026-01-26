@@ -4,6 +4,7 @@ import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { CustomFolder } from "@shared/schema";
 import {
   Sidebar,
@@ -156,6 +157,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const longPressTriggeredRef = useRef(false);
   const justCollapsedRef = useRef(false);
   const { hasPro } = usePlan();
+  const { toast } = useToast();
 
   // Fetch custom folders from API
   const { data: customFoldersData } = useQuery<{ folders: CustomFolder[] }>({
@@ -251,25 +253,43 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     } catch (error) {
       console.error("Failed to get AI suggestions:", error);
       setSuggestedEmails([]);
+      toast({
+        title: "Could not analyze emails",
+        description: "We couldn't find matching emails. You can still add emails manually later.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingSuggestions(false);
     }
-  }, [getAiSuggestionsMutation]);
+  }, [getAiSuggestionsMutation, toast]);
 
   // Handle confirming AI suggestions
   const handleConfirmSuggestions = useCallback(async () => {
     if (suggestionFolderId && selectedSuggestions.size > 0) {
-      await bulkAssignMutation.mutateAsync({
-        folderId: suggestionFolderId,
-        messageIds: Array.from(selectedSuggestions),
-      });
+      try {
+        await bulkAssignMutation.mutateAsync({
+          folderId: suggestionFolderId,
+          messageIds: Array.from(selectedSuggestions),
+        });
+        toast({
+          title: "Emails added",
+          description: `${selectedSuggestions.size} email${selectedSuggestions.size !== 1 ? "s" : ""} added to ${suggestionFolderName}`,
+        });
+      } catch (error) {
+        console.error("Failed to assign emails:", error);
+        toast({
+          title: "Failed to add emails",
+          description: "Some emails could not be added to the folder. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
     setIsSuggestionOpen(false);
     setSuggestedEmails([]);
     setSelectedSuggestions(new Set());
     setSuggestionFolderId(null);
     setSuggestionFolderName("");
-  }, [suggestionFolderId, selectedSuggestions, bulkAssignMutation]);
+  }, [suggestionFolderId, selectedSuggestions, bulkAssignMutation, suggestionFolderName, toast]);
 
   // Toggle email selection in suggestions
   const toggleSuggestionSelection = useCallback((emailId: string) => {
