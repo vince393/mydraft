@@ -1710,6 +1710,144 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  // AI Folder Sort - analyze emails and suggest which ones match a folder's AI description
+  app.post("/api/folders/:id/ai-suggest", requireAuth, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      if (isNaN(folderId)) {
+        return res.status(400).json({ error: "Invalid folder ID" });
+      }
+
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      // Check if user has Pro plan for AI features
+      if (user?.plan === "free") {
+        return res.status(403).json({ error: "AI folder sorting requires a Pro or Business plan" });
+      }
+
+      // Get the folder and its AI description
+      const folders = await storage.getCustomFolders(userId);
+      const folder = folders.find(f => f.id === folderId);
+      
+      if (!folder) {
+        return res.status(404).json({ error: "Folder not found" });
+      }
+      
+      if (!folder.aiDescription) {
+        return res.status(400).json({ error: "Folder does not have an AI description" });
+      }
+
+      const grant = await storage.getNylasGrant(userId);
+      if (!grant) {
+        return res.status(400).json({ error: "No email account connected" });
+      }
+
+      // Fetch recent emails from inbox
+      const emails = await nylas.getMessages(grant.grantId, { in: "INBOX", limit: 50 });
+      
+      if (!emails.length) {
+        return res.json({ suggestions: [] });
+      }
+
+      // Use OpenAI to analyze which emails match the folder's AI description
+      const emailSummaries = emails.slice(0, 30).map((e: any) => ({
+        id: e.id,
+        sender: e.from?.[0]?.name || e.from?.[0]?.email || "Unknown",
+        subject: e.subject || "(No subject)",
+        preview: e.snippet || ""
+      }));
+
+      const aiResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an email sorting assistant. Analyze the provided emails and determine which ones match the folder description. Return a JSON array of email IDs that match the criteria.`
+          },
+          {
+            role: "user",
+            content: `Folder: "${folder.name}"
+Folder Description: "${folder.aiDescription}"
+
+Emails to analyze:
+${JSON.stringify(emailSummaries, null, 2)}
+
+Return ONLY a JSON array of email IDs that match this folder's criteria. Example: ["id1", "id2"]
+If no emails match, return an empty array: []`
+          }
+        ],
+        temperature: 0.3,
+        max_completion_tokens: 1000
+      });
+
+      const responseText = aiResponse.choices[0]?.message?.content || "[]";
+      
+      // Parse the AI response to get matching email IDs
+      let matchingIds: string[] = [];
+      try {
+        const cleanResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+        matchingIds = JSON.parse(cleanResponse);
+        if (!Array.isArray(matchingIds)) {
+          matchingIds = [];
+        }
+      } catch {
+        console.error("Failed to parse AI response:", responseText);
+        matchingIds = [];
+      }
+
+      // Filter emails to only include matches
+      const suggestions = emails.filter((e: any) => matchingIds.includes(e.id)).map((e: any) => ({
+        id: e.id,
+        sender: e.from?.[0]?.name || e.from?.[0]?.email || "Unknown",
+        senderEmail: e.from?.[0]?.email || "",
+        subject: e.subject || "(No subject)",
+        preview: e.snippet || "",
+        date: e.date ? new Date(e.date * 1000).toISOString() : null
+      }));
+
+      res.json({ suggestions, folderName: folder.name });
+    } catch (error) {
+      console.error("Error getting AI folder suggestions:", error);
+      res.status(500).json({ error: "Failed to get folder suggestions" });
+    }
+  });
+
+  // Bulk assign emails to folder
+  app.post("/api/folders/:id/bulk-assign", requireAuth, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      if (isNaN(folderId)) {
+        return res.status(400).json({ error: "Invalid folder ID" });
+      }
+
+      const { messageIds } = req.body;
+      if (!Array.isArray(messageIds) || messageIds.length === 0) {
+        return res.status(400).json({ error: "No message IDs provided" });
+      }
+
+      const userId = req.session.userId!;
+      
+      // Verify folder exists and belongs to user
+      const folders = await storage.getCustomFolders(userId);
+      const folder = folders.find(f => f.id === folderId);
+      
+      if (!folder) {
+        return res.status(404).json({ error: "Folder not found" });
+      }
+
+      // Assign each email to the folder
+      for (const messageId of messageIds) {
+        await storage.assignEmailToFolder(userId, messageId, folderId);
+      }
+
+      res.json({ success: true, assignedCount: messageIds.length });
+    } catch (error) {
+      console.error("Error bulk assigning emails:", error);
+      res.status(500).json({ error: "Failed to assign emails to folder" });
+    }
+  });
+
   // AI Inbox Refresh - analyze emails and suggest actions
   app.post("/api/ai/inbox-refresh", requireAuth, async (req, res) => {
     console.log("[AI Inbox Refresh] Starting analysis...");

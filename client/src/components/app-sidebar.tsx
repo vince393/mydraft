@@ -143,6 +143,14 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [renameFolderName, setRenameFolderName] = useState("");
   const [folderActionMenuOpen, setFolderActionMenuOpen] = useState<string | null>(null);
   
+  // AI folder suggestion state
+  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
+  const [suggestedEmails, setSuggestedEmails] = useState<any[]>([]);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
+  const [suggestionFolderId, setSuggestionFolderId] = useState<number | null>(null);
+  const [suggestionFolderName, setSuggestionFolderName] = useState("");
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggeredRef = useRef(false);
@@ -210,6 +218,72 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     },
   });
 
+  // Mutation to get AI suggestions for a folder
+  const getAiSuggestionsMutation = useMutation({
+    mutationFn: async (folderId: number) => {
+      const response = await apiRequest("POST", `/api/folders/${folderId}/ai-suggest`);
+      return response.json();
+    },
+  });
+
+  // Mutation to bulk assign emails to folder
+  const bulkAssignMutation = useMutation({
+    mutationFn: async ({ folderId, messageIds }: { folderId: number; messageIds: string[] }) => {
+      const response = await apiRequest("POST", `/api/folders/${folderId}/bulk-assign`, { messageIds });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+    },
+  });
+
+  // Function to fetch AI suggestions for a newly created folder
+  const fetchAiSuggestions = useCallback(async (folderId: number, folderName: string) => {
+    setIsLoadingSuggestions(true);
+    setSuggestionFolderId(folderId);
+    setSuggestionFolderName(folderName);
+    setIsSuggestionOpen(true);
+    
+    try {
+      const result = await getAiSuggestionsMutation.mutateAsync(folderId);
+      setSuggestedEmails(result.suggestions || []);
+      setSelectedSuggestions(new Set((result.suggestions || []).map((e: any) => e.id)));
+    } catch (error) {
+      console.error("Failed to get AI suggestions:", error);
+      setSuggestedEmails([]);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  }, [getAiSuggestionsMutation]);
+
+  // Handle confirming AI suggestions
+  const handleConfirmSuggestions = useCallback(async () => {
+    if (suggestionFolderId && selectedSuggestions.size > 0) {
+      await bulkAssignMutation.mutateAsync({
+        folderId: suggestionFolderId,
+        messageIds: Array.from(selectedSuggestions),
+      });
+    }
+    setIsSuggestionOpen(false);
+    setSuggestedEmails([]);
+    setSelectedSuggestions(new Set());
+    setSuggestionFolderId(null);
+    setSuggestionFolderName("");
+  }, [suggestionFolderId, selectedSuggestions, bulkAssignMutation]);
+
+  // Toggle email selection in suggestions
+  const toggleSuggestionSelection = useCallback((emailId: string) => {
+    setSelectedSuggestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(emailId)) {
+        newSet.delete(emailId);
+      } else {
+        newSet.add(emailId);
+      }
+      return newSet;
+    });
+  }, []);
+
   // Long press handlers for folder actions (0.5 seconds for responsive feel)
   const handleFolderTouchStart = useCallback((folder: FolderItem) => {
     if (!folder.isCustom) return;
@@ -245,15 +319,28 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     }
   };
 
-  const handleCreateFolder = () => {
+  const handleCreateFolder = async () => {
     if (newFolderName.trim()) {
-      createFolderMutation.mutate({
-        name: newFolderName.trim(),
-        aiDescription: hasPro && newFolderAiDescription.trim() ? newFolderAiDescription.trim() : undefined,
-      });
-      setNewFolderName("");
-      setNewFolderAiDescription("");
-      setIsCreateOpen(false);
+      const folderName = newFolderName.trim();
+      const aiDesc = hasPro && newFolderAiDescription.trim() ? newFolderAiDescription.trim() : undefined;
+      
+      try {
+        const result = await createFolderMutation.mutateAsync({
+          name: folderName,
+          aiDescription: aiDesc,
+        });
+        
+        setNewFolderName("");
+        setNewFolderAiDescription("");
+        setIsCreateOpen(false);
+        
+        // If folder has AI description and Pro plan, fetch AI suggestions
+        if (aiDesc && result.folder?.id && hasPro) {
+          fetchAiSuggestions(result.folder.id, folderName);
+        }
+      } catch (error) {
+        console.error("Failed to create folder:", error);
+      }
     }
   };
 
@@ -814,6 +901,92 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
               </button>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Email Suggestions Dialog */}
+      <Dialog open={isSuggestionOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsSuggestionOpen(false);
+          setSuggestedEmails([]);
+          setSelectedSuggestions(new Set());
+          setSuggestionFolderId(null);
+          setSuggestionFolderName("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              AI Found Matching Emails
+            </DialogTitle>
+            <DialogDescription>
+              {isLoadingSuggestions 
+                ? "Analyzing your emails..."
+                : suggestedEmails.length > 0
+                  ? `These emails match your "${suggestionFolderName}" folder criteria. Select which ones to add.`
+                  : "No matching emails were found in your inbox."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto py-2 space-y-2">
+            {isLoadingSuggestions ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : suggestedEmails.length > 0 ? (
+              suggestedEmails.map((email) => (
+                <div 
+                  key={email.id}
+                  onClick={() => toggleSuggestionSelection(email.id)}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                    selectedSuggestions.has(email.id)
+                      ? "bg-primary/10 border-primary/50"
+                      : "bg-muted/30 border-transparent hover:bg-muted/50"
+                  }`}
+                  data-testid={`suggestion-email-${email.id}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${
+                      selectedSuggestions.has(email.id)
+                        ? "bg-primary border-primary text-primary-foreground"
+                        : "border-muted-foreground/50"
+                    }`}>
+                      {selectedSuggestions.has(email.id) && (
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{email.sender}</div>
+                      <div className="text-sm text-foreground truncate">{email.subject}</div>
+                      <div className="text-xs text-muted-foreground truncate mt-1">{email.preview}</div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No matching emails found. New emails that match this folder's criteria will be suggested in the future.
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsSuggestionOpen(false)}>
+              {suggestedEmails.length > 0 ? "Skip" : "Close"}
+            </Button>
+            {suggestedEmails.length > 0 && (
+              <Button 
+                onClick={handleConfirmSuggestions}
+                disabled={selectedSuggestions.size === 0 || bulkAssignMutation.isPending}
+              >
+                {bulkAssignMutation.isPending ? "Adding..." : `Add ${selectedSuggestions.size} Email${selectedSuggestions.size !== 1 ? "s" : ""}`}
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
