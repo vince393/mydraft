@@ -47,7 +47,11 @@ import {
   Sun,
   Moon,
   Monitor,
-  Star
+  Star,
+  MessageSquare,
+  Lightbulb,
+  Bug,
+  CheckCircle2
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
@@ -111,7 +115,7 @@ export default function SettingsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-8" : "sm:grid-cols-7"}`}>
+            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-9" : "sm:grid-cols-8"}`}>
               <TabsTrigger value="account" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-account">
                 <User className="w-4 h-4" />
                 <span className="text-xs sm:text-sm">Account</span>
@@ -139,6 +143,10 @@ export default function SettingsPage() {
               <TabsTrigger value="connections" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-connections">
                 <Link2 className="w-4 h-4" />
                 <span className="text-xs sm:text-sm">Connect</span>
+              </TabsTrigger>
+              <TabsTrigger value="feedback" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-feedback">
+                <MessageSquare className="w-4 h-4" />
+                <span className="text-xs sm:text-sm">Feedback</span>
               </TabsTrigger>
               {settings.plan === "premium" && (
                 <TabsTrigger value="team" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-team">
@@ -169,6 +177,9 @@ export default function SettingsPage() {
           </TabsContent>
           <TabsContent value="connections">
             <ConnectionsTab settings={settings!} />
+          </TabsContent>
+          <TabsContent value="feedback">
+            <FeedbackTab settings={settings!} />
           </TabsContent>
           {settings.plan === "premium" && (
             <TabsContent value="team">
@@ -1926,6 +1937,212 @@ function AppearanceTab() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+const FEEDBACK_TYPES = [
+  { id: "feature_request", label: "Feature Request", icon: Lightbulb },
+  { id: "bug_report", label: "Bug Report", icon: Bug },
+  { id: "general", label: "General Feedback", icon: MessageSquare },
+] as const;
+
+type FeedbackType = typeof FEEDBACK_TYPES[number]["id"];
+
+interface UserFeedback {
+  id: number;
+  feedbackType: string;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
+function FeedbackTab({ settings }: { settings: Settings }) {
+  const { toast } = useToast();
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>("general");
+  const [message, setMessage] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const { data: pastFeedback = [], isLoading: isLoadingHistory } = useQuery<UserFeedback[]>({
+    queryKey: ["/api/feedback"],
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: async (data: { feedbackType: string; message: string }) => {
+      const response = await apiRequest("POST", "/api/feedback", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/feedback"] });
+      setSubmitted(true);
+      setMessage("");
+      toast({
+        title: "Feedback submitted",
+        description: "Thank you for your feedback!",
+      });
+      setTimeout(() => setSubmitted(false), 3000);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to submit feedback. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = () => {
+    if (message.trim()) {
+      submitMutation.mutate({ feedbackType, message: message.trim() });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return <Badge variant="secondary">Pending</Badge>;
+      case "reviewed":
+        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Reviewed</Badge>;
+      case "resolved":
+        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Resolved</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            Send Feedback
+          </CardTitle>
+          <CardDescription>
+            Share your thoughts, report bugs, or request features
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {submitted ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" />
+              <p className="font-medium">Thank you for your feedback!</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                We'll review it and get back to you if needed.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="feedback-type">Type</Label>
+                <div className="flex gap-2">
+                  {FEEDBACK_TYPES.map((type) => {
+                    const Icon = type.icon;
+                    return (
+                      <Button
+                        key={type.id}
+                        type="button"
+                        variant={feedbackType === type.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFeedbackType(type.id)}
+                        className="flex items-center gap-2"
+                        data-testid={`feedback-type-${type.id}`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {type.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="feedback-message">Message</Label>
+                <Textarea
+                  id="feedback-message"
+                  placeholder="Tell us what's on your mind..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={4}
+                  data-testid="input-feedback-message"
+                />
+              </div>
+
+              <Button
+                onClick={handleSubmit}
+                disabled={!message.trim() || submitMutation.isPending}
+                className="w-full sm:w-auto"
+                data-testid="button-submit-feedback"
+              >
+                {submitMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Feedback"
+                )}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Feedback History</CardTitle>
+          <CardDescription>
+            Your previously submitted feedback
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingHistory ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : pastFeedback.length === 0 ? (
+            <div className="text-center py-8">
+              <MessageSquare className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                No feedback submitted yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pastFeedback.map((item) => {
+                const typeInfo = FEEDBACK_TYPES.find(t => t.id === item.feedbackType);
+                const Icon = typeInfo?.icon || MessageSquare;
+                return (
+                  <div
+                    key={item.id}
+                    className="p-4 rounded-lg border bg-muted/20"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">
+                          {typeInfo?.label || item.feedbackType}
+                        </span>
+                      </div>
+                      {getStatusBadge(item.status)}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {item.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70">
+                      {new Date(item.createdAt).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
