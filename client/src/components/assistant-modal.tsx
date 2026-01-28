@@ -28,8 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   Mic, 
-  Volume2, 
-  VolumeX, 
   Send,
   User,
   Loader2,
@@ -141,7 +139,6 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   });
 
   const selectedVoice = settings?.selectedVoice || "vince";
-  const voiceOutputEnabled = settings?.voiceOutputEnabled ?? true;
   const canReadEmails = settings?.canReadEmails ?? false;
   const canDraftEmails = settings?.canDraftEmails ?? false;
   const canSendEmails = settings?.canSendEmails ?? false;
@@ -256,12 +253,9 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
       });
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/assistant/messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ai/context"] });
-      if (voiceOutputEnabled && data.response) {
-        speakResponse(data.response);
-      }
     },
   });
 
@@ -310,29 +304,6 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open]);
-
-  const speakResponse = (text: string) => {
-    if (!("speechSynthesis" in window)) return;
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    
-    const maleVoice = voices.find(v => 
-      v.name.toLowerCase().includes("male") || 
-      v.name.toLowerCase().includes("david") ||
-      v.name.toLowerCase().includes("james") ||
-      v.name.toLowerCase().includes("daniel") ||
-      v.name.toLowerCase().includes("google uk english male")
-    );
-    
-    if (maleVoice) {
-      utterance.voice = maleVoice;
-    }
-    
-    utterance.rate = 1;
-    utterance.pitch = 0.9;
-    window.speechSynthesis.speak(utterance);
-  };
 
   const handleSendMessage = () => {
     if (!message.trim() || sendMessageMutation.isPending) return;
@@ -518,20 +489,6 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                   ))}
                 </SelectContent>
               </Select>
-              
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={() => updateSettingsMutation.mutate({ voiceOutputEnabled: !voiceOutputEnabled })}
-                data-testid="button-toggle-voice-output"
-              >
-                {voiceOutputEnabled ? (
-                  <Volume2 className="w-4 h-4" />
-                ) : (
-                  <VolumeX className="w-4 h-4 text-muted-foreground" />
-                )}
-              </Button>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
