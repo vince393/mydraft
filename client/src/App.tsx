@@ -32,6 +32,7 @@ import AcceptableUsePolicyPage from "@/pages/acceptable-use-policy";
 import DataProcessingAgreementPage from "@/pages/data-processing-agreement";
 import AIUsePolicyPage from "@/pages/ai-use-policy";
 import RefundPolicyPage from "@/pages/refund-policy";
+import CampaignsPage from "@/pages/campaigns";
 import type { Email, User } from "@shared/schema";
 import { Loader2, Sparkles } from "lucide-react";
 
@@ -283,6 +284,11 @@ function AppRoutes() {
       <Route path="/owner">
         <ProtectedRoute>
           <OwnerPanel />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/campaigns">
+        <ProtectedRoute>
+          <CampaignsPage />
         </ProtectedRoute>
       </Route>
       <Route path="/">
