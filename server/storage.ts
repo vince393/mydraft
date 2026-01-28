@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, testimonials } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, testimonials, emailCampaigns, campaignRecipients } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -203,6 +203,18 @@ export interface IStorage {
   // Daily send limit methods (Free plan)
   checkDailySendLimit(userId: string): Promise<{ canSend: boolean; remaining: number; resetAt: Date | null }>;
   incrementDailySendCount(userId: string): Promise<void>;
+
+  // Email Campaign methods (Business plan only)
+  createCampaign(campaign: InsertCampaign): Promise<EmailCampaign>;
+  getCampaigns(userId: string): Promise<EmailCampaign[]>;
+  getCampaign(id: number): Promise<EmailCampaign | undefined>;
+  updateCampaign(id: number, updates: Partial<EmailCampaign>): Promise<EmailCampaign | undefined>;
+  deleteCampaign(id: number): Promise<boolean>;
+  addCampaignRecipients(campaignId: number, recipients: { email: string; name?: string }[]): Promise<CampaignRecipient[]>;
+  getCampaignRecipients(campaignId: number): Promise<CampaignRecipient[]>;
+  updateCampaignRecipientStatus(id: number, status: string, errorMessage?: string): Promise<CampaignRecipient | undefined>;
+  deleteCampaignRecipient(id: number): Promise<boolean>;
+  clearCampaignRecipients(campaignId: number): Promise<boolean>;
 }
 
 const avatarColors = [
@@ -1884,6 +1896,91 @@ Business Development`,
     await db.update(users)
       .set({ dailySendCount: newCount, dailySendResetAt: resetAt })
       .where(eq(users.id, userId));
+  }
+
+  // Email Campaign methods (Business plan only)
+  async createCampaign(campaign: InsertCampaign): Promise<EmailCampaign> {
+    const [created] = await db.insert(emailCampaigns).values(campaign).returning();
+    return created;
+  }
+
+  async getCampaigns(userId: string): Promise<EmailCampaign[]> {
+    return await db.select().from(emailCampaigns)
+      .where(eq(emailCampaigns.userId, userId))
+      .orderBy(desc(emailCampaigns.createdAt));
+  }
+
+  async getCampaign(id: number): Promise<EmailCampaign | undefined> {
+    const [campaign] = await db.select().from(emailCampaigns)
+      .where(eq(emailCampaigns.id, id));
+    return campaign;
+  }
+
+  async updateCampaign(id: number, updates: Partial<EmailCampaign>): Promise<EmailCampaign | undefined> {
+    const [updated] = await db.update(emailCampaigns)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(emailCampaigns.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCampaign(id: number): Promise<boolean> {
+    // First delete all recipients
+    await db.delete(campaignRecipients).where(eq(campaignRecipients.campaignId, id));
+    // Then delete the campaign
+    const result = await db.delete(emailCampaigns).where(eq(emailCampaigns.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async addCampaignRecipients(campaignId: number, recipients: { email: string; name?: string }[]): Promise<CampaignRecipient[]> {
+    if (recipients.length === 0) return [];
+    const toInsert = recipients.map(r => ({ campaignId, email: r.email, name: r.name, status: "pending" }));
+    const inserted = await db.insert(campaignRecipients).values(toInsert).returning();
+    // Update total recipients count
+    await db.update(emailCampaigns)
+      .set({ totalRecipients: sql`${emailCampaigns.totalRecipients} + ${recipients.length}` })
+      .where(eq(emailCampaigns.id, campaignId));
+    return inserted;
+  }
+
+  async getCampaignRecipients(campaignId: number): Promise<CampaignRecipient[]> {
+    return await db.select().from(campaignRecipients)
+      .where(eq(campaignRecipients.campaignId, campaignId))
+      .orderBy(campaignRecipients.createdAt);
+  }
+
+  async updateCampaignRecipientStatus(id: number, status: string, errorMessage?: string): Promise<CampaignRecipient | undefined> {
+    const updates: Partial<CampaignRecipient> = { status };
+    if (status === "sent") {
+      updates.sentAt = new Date();
+    }
+    if (errorMessage) {
+      updates.errorMessage = errorMessage;
+    }
+    const [updated] = await db.update(campaignRecipients)
+      .set(updates)
+      .where(eq(campaignRecipients.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCampaignRecipient(id: number): Promise<boolean> {
+    const recipient = await db.select().from(campaignRecipients).where(eq(campaignRecipients.id, id));
+    if (recipient.length > 0) {
+      await db.update(emailCampaigns)
+        .set({ totalRecipients: sql`GREATEST(${emailCampaigns.totalRecipients} - 1, 0)` })
+        .where(eq(emailCampaigns.id, recipient[0].campaignId));
+    }
+    const result = await db.delete(campaignRecipients).where(eq(campaignRecipients.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async clearCampaignRecipients(campaignId: number): Promise<boolean> {
+    await db.delete(campaignRecipients).where(eq(campaignRecipients.campaignId, campaignId));
+    await db.update(emailCampaigns)
+      .set({ totalRecipients: 0 })
+      .where(eq(emailCampaigns.id, campaignId));
+    return true;
   }
 }
 

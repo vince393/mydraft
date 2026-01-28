@@ -5915,5 +5915,316 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  // ==================== EMAIL CAMPAIGN ROUTES (Business Plan Only) ====================
+
+  // Middleware to check if user has Business plan
+  async function requireBusinessPlan(req: Request, res: Response, next: NextFunction) {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+    if (user.plan !== "premium") {
+      return res.status(403).json({ error: "Email campaigns require a Business plan" });
+    }
+    next();
+  }
+
+  // Get all campaigns for the current user
+  app.get("/api/campaigns", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const campaigns = await storage.getCampaigns(req.session.userId!);
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Error fetching campaigns:", error);
+      res.status(500).json({ error: "Failed to fetch campaigns" });
+    }
+  });
+
+  // Get a single campaign
+  app.get("/api/campaigns/:id", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      const recipients = await storage.getCampaignRecipients(id);
+      res.json({ ...campaign, recipients });
+    } catch (error) {
+      console.error("Error fetching campaign:", error);
+      res.status(500).json({ error: "Failed to fetch campaign" });
+    }
+  });
+
+  // Create a new campaign
+  app.post("/api/campaigns", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const { name, subject, body, recipients } = req.body;
+      
+      if (!name || !subject || !body) {
+        return res.status(400).json({ error: "Name, subject, and body are required" });
+      }
+      
+      const campaign = await storage.createCampaign({
+        userId: req.session.userId!,
+        name,
+        subject,
+        body,
+        status: "draft",
+        totalRecipients: 0,
+      });
+      
+      // Add recipients if provided
+      if (recipients && Array.isArray(recipients) && recipients.length > 0) {
+        await storage.addCampaignRecipients(campaign.id, recipients);
+      }
+      
+      const updatedCampaign = await storage.getCampaign(campaign.id);
+      res.json(updatedCampaign);
+    } catch (error) {
+      console.error("Error creating campaign:", error);
+      res.status(500).json({ error: "Failed to create campaign" });
+    }
+  });
+
+  // Update a campaign
+  app.patch("/api/campaigns/:id", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      if (campaign.status === "sending" || campaign.status === "completed") {
+        return res.status(400).json({ error: "Cannot edit a campaign that is sending or completed" });
+      }
+      
+      const { name, subject, body, status } = req.body;
+      const updates: Record<string, any> = {};
+      
+      if (name !== undefined) updates.name = name;
+      if (subject !== undefined) updates.subject = subject;
+      if (body !== undefined) updates.body = body;
+      if (status !== undefined) updates.status = status;
+      
+      const updated = await storage.updateCampaign(id, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating campaign:", error);
+      res.status(500).json({ error: "Failed to update campaign" });
+    }
+  });
+
+  // Delete a campaign
+  app.delete("/api/campaigns/:id", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      if (campaign.status === "sending") {
+        return res.status(400).json({ error: "Cannot delete a campaign that is currently sending" });
+      }
+      
+      await storage.deleteCampaign(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting campaign:", error);
+      res.status(500).json({ error: "Failed to delete campaign" });
+    }
+  });
+
+  // Add recipients to a campaign
+  app.post("/api/campaigns/:id/recipients", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      if (campaign.status !== "draft") {
+        return res.status(400).json({ error: "Can only add recipients to draft campaigns" });
+      }
+      
+      const { recipients } = req.body;
+      
+      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({ error: "Recipients array is required" });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const validRecipients = recipients.filter((r: any) => 
+        r.email && emailRegex.test(r.email)
+      );
+      
+      if (validRecipients.length === 0) {
+        return res.status(400).json({ error: "No valid email addresses provided" });
+      }
+      
+      const added = await storage.addCampaignRecipients(id, validRecipients);
+      res.json({ added: added.length, recipients: added });
+    } catch (error) {
+      console.error("Error adding recipients:", error);
+      res.status(500).json({ error: "Failed to add recipients" });
+    }
+  });
+
+  // Get recipients for a campaign
+  app.get("/api/campaigns/:id/recipients", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      const recipients = await storage.getCampaignRecipients(id);
+      res.json(recipients);
+    } catch (error) {
+      console.error("Error fetching recipients:", error);
+      res.status(500).json({ error: "Failed to fetch recipients" });
+    }
+  });
+
+  // Clear all recipients from a campaign
+  app.delete("/api/campaigns/:id/recipients", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      if (campaign.status !== "draft") {
+        return res.status(400).json({ error: "Can only clear recipients from draft campaigns" });
+      }
+      
+      await storage.clearCampaignRecipients(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error clearing recipients:", error);
+      res.status(500).json({ error: "Failed to clear recipients" });
+    }
+  });
+
+  // Delete a single recipient
+  app.delete("/api/campaigns/:id/recipients/:recipientId", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const recipientId = parseInt(req.params.recipientId);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      if (campaign.status !== "draft") {
+        return res.status(400).json({ error: "Can only remove recipients from draft campaigns" });
+      }
+      
+      await storage.deleteCampaignRecipient(recipientId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting recipient:", error);
+      res.status(500).json({ error: "Failed to delete recipient" });
+    }
+  });
+
+  // Send a campaign (start sending emails)
+  app.post("/api/campaigns/:id/send", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      if (campaign.status !== "draft") {
+        return res.status(400).json({ error: "Can only send draft campaigns" });
+      }
+      
+      const recipients = await storage.getCampaignRecipients(id);
+      
+      if (recipients.length === 0) {
+        return res.status(400).json({ error: "No recipients in this campaign" });
+      }
+      
+      // Check if user has connected email
+      const nylasGrant = await storage.getNylasGrant(req.session.userId!);
+      if (!nylasGrant) {
+        return res.status(400).json({ error: "Please connect your email account first" });
+      }
+      
+      // Update campaign status to sending
+      await storage.updateCampaign(id, { 
+        status: "sending", 
+        startedAt: new Date() 
+      });
+      
+      // Send emails in the background
+      (async () => {
+        let sentCount = 0;
+        let failedCount = 0;
+        
+        for (const recipient of recipients) {
+          try {
+            await nylas.sendMessage(
+              nylasGrant.grantId,
+              [recipient.email],
+              campaign.subject,
+              campaign.body
+            );
+            
+            await storage.updateCampaignRecipientStatus(recipient.id, "sent");
+            sentCount++;
+          } catch (error: any) {
+            console.error(`Failed to send to ${recipient.email}:`, error);
+            await storage.updateCampaignRecipientStatus(
+              recipient.id, 
+              "failed", 
+              error.message || "Unknown error"
+            );
+            failedCount++;
+          }
+          
+          // Small delay between emails to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        // Update campaign as completed
+        await storage.updateCampaign(id, {
+          status: "completed",
+          sentCount,
+          failedCount,
+          completedAt: new Date()
+        });
+      })();
+      
+      res.json({ 
+        message: "Campaign started", 
+        totalRecipients: recipients.length 
+      });
+    } catch (error) {
+      console.error("Error starting campaign:", error);
+      res.status(500).json({ error: "Failed to start campaign" });
+    }
+  });
+
   return httpServer;
 }
