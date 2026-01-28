@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, type LucideIcon } from "lucide-react";
+import { useLocation } from "wouter";
+import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, Megaphone, type LucideIcon } from "lucide-react";
 import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -156,8 +157,9 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggeredRef = useRef(false);
   const justCollapsedRef = useRef(false);
-  const { hasPro } = usePlan();
+  const { hasPro, hasPremium } = usePlan();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   // Fetch custom folders from API
   const { data: customFoldersData } = useQuery<{ folders: CustomFolder[] }>({
@@ -484,6 +486,23 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                           <FolderPlus className="w-4 h-4" />
                           <span className="text-sm">Folder</span>
                         </button>
+                        {hasPremium && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLocation("/campaigns");
+                                }}
+                                className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-all duration-200"
+                                data-testid="button-campaigns"
+                              >
+                                <Megaphone className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">Email Campaigns</TooltipContent>
+                          </Tooltip>
+                        )}
                         <button
                           onClick={handleToggleCollapse}
                           className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
@@ -516,6 +535,23 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                           </TooltipTrigger>
                           <TooltipContent side="right">New Folder</TooltipContent>
                         </Tooltip>
+                        {hasPremium && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLocation("/campaigns");
+                                }}
+                                className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-all duration-200"
+                                data-testid="button-campaigns"
+                              >
+                                <Megaphone className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">Email Campaigns</TooltipContent>
+                          </Tooltip>
+                        )}
                       </>
                     )}
                   </div>
