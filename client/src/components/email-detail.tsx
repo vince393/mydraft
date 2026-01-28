@@ -20,7 +20,11 @@ import {
   StickyNote,
   FileText,
   Circle,
-  ArrowRight
+  ArrowRight,
+  Paperclip,
+  Download,
+  Image as ImageIcon,
+  File
 } from "lucide-react";
 import { EmailNotePanel } from "./email-note";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -39,10 +43,19 @@ import { useToast } from "@/hooks/use-toast";
 import { getAvatarUrl } from "@/lib/avatar";
 import type { Email, Draft } from "@shared/schema";
 
+interface EmailAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  isInline: boolean;
+}
+
 interface ExtendedEmail extends Email {
   nylasId?: string;
   to?: string[];
   cc?: string[];
+  attachments?: EmailAttachment[];
 }
 
 interface EmailDetailProps {
@@ -719,6 +732,57 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
               </>
             )}
           </div>
+
+          {/* Attachments Section */}
+          {(email as ExtendedEmail).attachments && (email as ExtendedEmail).attachments!.length > 0 && (
+            <div className="mb-6 p-4 bg-muted/30 rounded-xl border border-border/50" data-testid="attachments-section">
+              <div className="flex items-center gap-2 mb-3">
+                <Paperclip className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">
+                  Attachments ({(email as ExtendedEmail).attachments!.length})
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {(email as ExtendedEmail).attachments!.map((attachment) => {
+                  const isImage = attachment.contentType.startsWith('image/');
+                  const isPdf = attachment.contentType === 'application/pdf';
+                  const messageId = (email as any).nylasId || email.id;
+                  const downloadUrl = `/api/emails/${messageId}/attachments/${attachment.id}`;
+                  
+                  const formatSize = (bytes: number) => {
+                    if (bytes < 1024) return `${bytes} B`;
+                    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                  };
+                  
+                  return (
+                    <a
+                      key={attachment.id}
+                      href={downloadUrl}
+                      download={attachment.filename}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-background hover:bg-muted/50 transition-colors border border-border/30"
+                      data-testid={`attachment-${attachment.id}`}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+                        {isImage ? (
+                          <ImageIcon className="w-5 h-5 text-blue-500" />
+                        ) : isPdf ? (
+                          <FileText className="w-5 h-5 text-red-500" />
+                        ) : (
+                          <File className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{attachment.filename}</p>
+                        <p className="text-xs text-muted-foreground">{formatSize(attachment.size)}</p>
+                      </div>
+                      <Download className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* AI Summary Section */}
           {showSummary && (summaryData?.summary || isSummaryLoading) && (

@@ -18,6 +18,15 @@ interface NylasEmailParticipant {
   name?: string;
 }
 
+interface NylasAttachment {
+  id: string;
+  filename?: string;
+  content_type: string;
+  size: number;
+  content_id?: string;
+  is_inline?: boolean;
+}
+
 interface NylasMessage {
   id: string;
   grant_id: string;
@@ -34,6 +43,7 @@ interface NylasMessage {
   starred: boolean;
   folders?: string[];
   labels?: string[];
+  attachments?: NylasAttachment[];
 }
 
 interface NylasGrant {
@@ -55,6 +65,14 @@ export interface EmailListItem {
   avatarColor: string;
 }
 
+export interface EmailAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  isInline: boolean;
+}
+
 export interface EmailDetail {
   id: string;
   subject: string;
@@ -67,6 +85,7 @@ export interface EmailDetail {
   threadId: string;
   isRead: boolean;
   isStarred: boolean;
+  attachments?: EmailAttachment[];
 }
 
 const avatarColors = [
@@ -318,6 +337,17 @@ export async function getMessage(grantId: string, messageId: string): Promise<Em
   const toEmails = (msg.to ?? []).map(p => p.email).filter(Boolean) as string[];
   const ccEmails = (msg.cc ?? []).map(p => p.email).filter(Boolean) as string[];
 
+  // Transform attachments, filtering out inline images
+  const attachments: EmailAttachment[] = (msg.attachments ?? [])
+    .filter(a => !a.is_inline)
+    .map(a => ({
+      id: a.id,
+      filename: a.filename || 'Unnamed file',
+      contentType: a.content_type,
+      size: a.size,
+      isInline: a.is_inline || false,
+    }));
+
   return {
     id: msg.id,
     subject: msg.subject || '(No Subject)',
@@ -330,6 +360,7 @@ export async function getMessage(grantId: string, messageId: string): Promise<Em
     threadId: msg.thread_id,
     isRead: !msg.unread,
     isStarred: msg.starred,
+    attachments: attachments.length > 0 ? attachments : undefined,
   };
 }
 
@@ -544,4 +575,41 @@ export async function toggleStar(grantId: string, messageId: string, starred: bo
     const error = await response.text();
     throw new Error(`Failed to toggle star: ${error}`);
   }
+}
+
+export async function downloadAttachment(
+  grantId: string, 
+  messageId: string, 
+  attachmentId: string
+): Promise<{ data: Buffer; contentType: string; filename: string }> {
+  // First get attachment metadata
+  const metaResponse = await nylasRequest(
+    `/v3/grants/${grantId}/attachments/${attachmentId}?message_id=${messageId}`
+  );
+  
+  if (!metaResponse.ok) {
+    const error = await metaResponse.text();
+    throw new Error(`Failed to get attachment metadata: ${error}`);
+  }
+  
+  const metaData = await metaResponse.json();
+  const attachment = metaData.data;
+  
+  // Download the attachment content
+  const downloadResponse = await nylasRequest(
+    `/v3/grants/${grantId}/attachments/${attachmentId}/download?message_id=${messageId}`
+  );
+  
+  if (!downloadResponse.ok) {
+    const error = await downloadResponse.text();
+    throw new Error(`Failed to download attachment: ${error}`);
+  }
+  
+  const arrayBuffer = await downloadResponse.arrayBuffer();
+  
+  return {
+    data: Buffer.from(arrayBuffer),
+    contentType: attachment.content_type || 'application/octet-stream',
+    filename: attachment.filename || 'attachment',
+  };
 }

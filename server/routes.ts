@@ -1579,6 +1579,27 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  // Download email attachment
+  app.get("/api/emails/:messageId/attachments/:attachmentId", requireAuth, async (req, res) => {
+    try {
+      const { messageId, attachmentId } = req.params;
+      const grant = await storage.getNylasGrant(req.session.userId!);
+      
+      if (!grant) {
+        return res.status(400).json({ error: "No email account connected" });
+      }
+
+      const attachment = await nylas.downloadAttachment(grant.grantId, messageId, attachmentId);
+      
+      res.setHeader("Content-Type", attachment.contentType);
+      res.setHeader("Content-Disposition", `attachment; filename="${attachment.filename}"`);
+      res.send(attachment.data);
+    } catch (error) {
+      console.error("Error downloading attachment:", error);
+      res.status(500).json({ error: "Failed to download attachment" });
+    }
+  });
+
   // Custom folders CRUD
   app.get("/api/folders", requireAuth, async (req, res) => {
     try {
