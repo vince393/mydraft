@@ -364,6 +364,12 @@ export async function getMessage(grantId: string, messageId: string): Promise<Em
   };
 }
 
+export interface SendAttachment {
+  filename: string;
+  content: string; // base64 encoded content
+  contentType: string;
+}
+
 export async function sendMessage(
   grantId: string, 
   to: string[], 
@@ -371,7 +377,8 @@ export async function sendMessage(
   body: string, 
   replyToMessageId?: string,
   cc?: string[],
-  bcc?: string[]
+  bcc?: string[],
+  attachments?: SendAttachment[]
 ): Promise<void> {
   const payload: Record<string, unknown> = {
     to: to.map(email => ({ email })),
@@ -389,6 +396,15 @@ export async function sendMessage(
 
   if (replyToMessageId) {
     payload.reply_to_message_id = replyToMessageId;
+  }
+  
+  // Add attachments if provided
+  if (attachments && attachments.length > 0) {
+    payload.attachments = attachments.map(att => ({
+      filename: att.filename,
+      content: att.content,
+      content_type: att.contentType,
+    }));
   }
 
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/send`, {

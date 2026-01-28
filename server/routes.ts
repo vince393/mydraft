@@ -11,6 +11,7 @@ import { promisify } from "util";
 import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
+import { registerImageRoutes } from "./replit_integrations/image";
 import { sendVerificationEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
 
@@ -240,6 +241,7 @@ export async function registerRoutes(
 ): Promise<Server> {
 
   registerAudioRoutes(app);
+  registerImageRoutes(app);
 
   // Step 1: Initiate registration - sends verification email
   app.post("/api/auth/register", async (req, res) => {
@@ -2453,7 +2455,7 @@ Rules:
 
   app.post("/api/send", requireAuth, async (req, res) => {
     try {
-      const { to, cc, bcc, subject, body, replyToMessageId, delaySeconds = 5, immediate = false, scheduledFor } = req.body;
+      const { to, cc, bcc, subject, body, replyToMessageId, delaySeconds = 5, immediate = false, scheduledFor, attachments } = req.body;
       
       if (!to || !Array.isArray(to) || to.length === 0) {
         return res.status(400).json({ error: "Recipients required" });
@@ -2493,7 +2495,7 @@ Rules:
 
       // If immediate send is requested (e.g., from undo confirmation), send now
       if (immediate) {
-        await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId, cc, bcc);
+        await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId, cc, bcc, attachments);
         nylas.invalidateMessagesCache(grant.grantId);
         // Increment daily send count for Free plan users
         await storage.incrementDailySendCount(req.session.userId!);
@@ -2520,7 +2522,7 @@ Rules:
       const pendingSend = await storage.createPendingSend({
         userId: req.session.userId!,
         grantId: grant.grantId,
-        payload: { to, cc, bcc, subject, body, replyToMessageId },
+        payload: { to, cc, bcc, subject, body, replyToMessageId, attachments },
         scheduledSendAt,
         delaySeconds: isScheduledSend ? 0 : Math.min(Math.max(delaySeconds, 1), 30),
         status: "pending",

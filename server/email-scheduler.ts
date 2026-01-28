@@ -121,8 +121,8 @@ async function processPendingSends() {
           continue;
         }
         
-        const { to, cc, bcc, subject, body, replyToMessageId } = claimed.payload;
-        await nylas.sendMessage(claimed.grantId, to, subject, body, replyToMessageId, cc, bcc);
+        const { to, cc, bcc, subject, body, replyToMessageId, attachments } = claimed.payload;
+        await nylas.sendMessage(claimed.grantId, to, subject, body, replyToMessageId, cc, bcc, attachments);
         nylas.invalidateMessagesCache(claimed.grantId);
         await storage.markPendingSendSent(claimed.id);
         console.log(`[EmailScheduler] Successfully sent email ${claimed.id} to ${to.join(", ")}`);
