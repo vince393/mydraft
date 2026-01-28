@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -648,6 +648,12 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2" onClick={() => {
+                    logoutMutation.mutate();
+                  }} data-testid="menu-switch-account-mobile">
+                    <RefreshCw className="w-4 h-4" />
+                    Switch Account
+                  </DropdownMenuItem>
                   <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
                     <LogOut className="w-4 h-4" />
                     Log out
@@ -775,6 +781,14 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                       <span>Settings</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="gap-2" 
+                      data-testid="menu-switch-account"
+                      onClick={() => logoutMutation.mutate()}
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Switch Account</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem 
                       className="gap-2 text-destructive" 
                       data-testid="menu-logout"
