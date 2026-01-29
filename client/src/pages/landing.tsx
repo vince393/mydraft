@@ -123,43 +123,38 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 
                 <div className="flex-1 p-4 space-y-2">
                   <MockEmailItem 
+                    from="Google Calendar" 
+                    subject="Reminder: Team standup in 30 min"
+                    preview="You have an upcoming event at 10:00 AM..."
+                    time="8m"
+                    unread
+                  />
+                  <MockEmailItem 
                     from="Sarah Chen" 
-                    subject="Q4 Report Review"
-                    preview="Could you review the attached report and..."
-                    time="2m"
+                    subject="Re: Q4 budget discussion"
+                    preview="Sounds good, let's sync tomorrow morning..."
+                    time="23m"
                     unread
                     selected
                   />
                   <MockEmailItem 
-                    from="James Wilson" 
-                    subject="Meeting Tomorrow"
-                    preview="Just confirming our 2pm call regarding..."
-                    time="15m"
-                  />
-                  <MockEmailItem 
-                    from="HR Team" 
-                    subject="Benefits Enrollment"
-                    preview="Open enrollment period starts next..."
+                    from="Stripe" 
+                    subject="Your receipt from Figma"
+                    preview="Receipt #4829-2847 for $15.00..."
                     time="1h"
                   />
+                  <MockEmailItem 
+                    from="The Hustle" 
+                    subject="Why AI startups are struggling to find PMF and what the smartest..."
+                    preview="Good morning. Here's what you need..."
+                    time="3h"
+                  />
                   
-                  <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-6 h-6 rounded-lg bg-primary/30 flex items-center justify-center">
-                        <Zap className="w-3 h-3 text-primary" />
-                      </div>
-                      <span className="text-sm font-medium text-primary">Quick Reply</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      "Hi Sarah, I've reviewed the Q4 report and it looks great. I have a few minor suggestions for the executive summary..."
-                    </p>
-                    <div className="flex items-center gap-2 mt-3">
-                      <Button size="sm" className="h-7 text-xs px-3">
-                        Send
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs px-3 text-muted-foreground">
-                        Edit
-                      </Button>
+                  <div className="mt-3 pl-11">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
+                      <Zap className="w-3 h-3 text-primary/60" />
+                      <span className="italic">Suggested: "Thanks Sarah, morning works for me."</span>
+                      <button className="text-primary/70 hover:text-primary ml-1">Use</button>
                     </div>
                   </div>
                 </div>
@@ -210,7 +205,7 @@ function DemoSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Designed to get you to zero
+            Designed to keep you focused
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Less time managing email. More time for everything else.
@@ -291,37 +286,37 @@ function DemoUnified() {
   return (
     <div className="p-6">
       <div className="mb-5 pb-5 border-b border-white/[0.06]">
-        <h4 className="font-medium text-base mb-1">Priority</h4>
-        <p className="text-sm text-muted-foreground/60">3 messages need attention</p>
+        <h4 className="font-medium text-base mb-1">Inbox</h4>
+        <p className="text-sm text-muted-foreground/60">12 unread</p>
       </div>
       <div className="space-y-3">
         <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
-          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">S</div>
+          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">A</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">Sarah Chen</span>
-            <p className="text-xs text-muted-foreground/60 truncate">Q4 Report - Awaiting approval</p>
+            <span className="text-sm font-medium">Amazon</span>
+            <p className="text-xs text-muted-foreground/60 truncate">Your order has shipped</p>
           </div>
-          <span className="text-xs text-primary/80 font-medium">Now</span>
+          <span className="text-xs text-muted-foreground/40">5m</span>
         </div>
         <div className="flex items-center gap-3 p-3 rounded-lg border border-white/[0.06] hover:bg-white/[0.02] transition-colors">
-          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">D</div>
+          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">J</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">David Park</span>
-            <p className="text-xs text-muted-foreground/60 truncate">Contract review needed</p>
+            <span className="text-sm font-medium">John (3)</span>
+            <p className="text-xs text-muted-foreground/60 truncate">Re: Re: lunch tomorrow?</p>
           </div>
-          <span className="text-xs text-muted-foreground/40">15m</span>
+          <span className="text-xs text-muted-foreground/40">28m</span>
         </div>
         <div className="flex items-center gap-3 p-3 rounded-lg border border-white/[0.06] hover:bg-white/[0.02] transition-colors">
           <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">L</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">Legal Team</span>
-            <p className="text-xs text-muted-foreground/60 truncate">Signature required by EOD</p>
+            <span className="text-sm font-medium">LinkedIn</span>
+            <p className="text-xs text-muted-foreground/60 truncate">You appeared in 14 searches this week</p>
           </div>
-          <span className="text-xs text-muted-foreground/40">1h</span>
+          <span className="text-xs text-muted-foreground/40">2h</span>
         </div>
       </div>
       <p className="text-xs text-muted-foreground/50 mt-5">
-        Important messages surface first. Everything else waits.
+        Your inbox, organized the way you'd expect.
       </p>
     </div>
   );
@@ -363,28 +358,28 @@ function DemoOrganize() {
   return (
     <div className="p-6">
       <div className="mb-5 pb-5 border-b border-white/[0.06]">
-        <h4 className="font-medium text-base mb-1">Smart filters</h4>
-        <p className="text-sm text-muted-foreground/60">Automatically organized</p>
+        <h4 className="font-medium text-base mb-1">Search</h4>
+        <p className="text-sm text-muted-foreground/60">Find any email, instantly</p>
       </div>
       <div className="space-y-3">
         <MockCategoryEmail 
           from="HR Team" 
-          subject="Benefits Enrollment Reminder"
-          category={{ name: "Action", color: "bg-red-500/20 text-red-400 border-red-500/20" }}
+          subject="Updated PTO policy effective Jan 1"
+          category={{ name: "Work", color: "bg-purple-500/20 text-purple-400 border-purple-500/20" }}
         />
         <MockCategoryEmail 
-          from="Newsletter" 
-          subject="Weekly Tech Digest"
-          category={{ name: "FYI", color: "bg-blue-500/20 text-blue-400 border-blue-500/20" }}
+          from="Delta Airlines" 
+          subject="Your flight confirmation #DL2847"
+          category={{ name: "Travel", color: "bg-blue-500/20 text-blue-400 border-blue-500/20" }}
         />
         <MockCategoryEmail 
-          from="Stripe" 
-          subject="Payment received"
-          category={{ name: "Receipt", color: "bg-green-500/20 text-green-400 border-green-500/20" }}
+          from="Chase" 
+          subject="Statement ready for account ending in 4821"
+          category={{ name: "Finance", color: "bg-green-500/20 text-green-400 border-green-500/20" }}
         />
       </div>
       <p className="text-xs text-muted-foreground/50 mt-5">
-        Labels applied automatically. Search works instantly.
+        Type to search. Results appear as you type.
       </p>
     </div>
   );
