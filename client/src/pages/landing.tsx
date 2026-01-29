@@ -65,17 +65,17 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
           <div className="max-w-xl text-center lg:text-left mx-auto lg:mx-0">
             <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm sm:text-sm font-medium mb-8 sm:mb-8">
               <Mail className="w-4 h-4" />
-              Email that works for you
+              Finally, email done right
             </div>
             <h1 className="text-[2.75rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.05] mb-6 sm:mb-6">
-              Your inbox,
+              The inbox you
               <br />
               <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
-                rebuilt.
+                actually control.
               </span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed mb-10 sm:mb-10 max-w-md mx-auto lg:mx-0">
-              A modern email client for Gmail, Outlook, and business accounts. Fast, focused, and clutter-free.
+              Works with your existing Gmail or Outlook account. Nothing to migrate. Just a faster, cleaner way to manage email.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row sm:gap-4 justify-center lg:justify-start">
               <Link href={getStartedHref}>
@@ -91,7 +91,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               </Link>
             </div>
             <p className="text-base sm:text-sm text-muted-foreground/70 mt-8 sm:mt-5">
-              Free plan available. No credit card required.
+              Free plan available. Connect in under 2 minutes.
             </p>
           </div>
           
@@ -210,10 +210,10 @@ function DemoSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Everything you need in one place
+            Designed to get you to zero
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Connect all your email accounts and manage them from a single, clean interface
+            Less time managing email. More time for everything else.
           </p>
         </div>
 
@@ -223,24 +223,24 @@ function DemoSection() {
               active={activeDemo === 'unified'}
               onClick={() => setActiveDemo('unified')}
               icon={<Inbox className="w-5 h-5" />}
-              title="Clean inbox"
-              description="A focused view of your messages. No clutter, no distractions, just what matters."
+              title="See what matters first"
+              description="Important messages surface automatically. Everything else stays out of your way."
               testId="demo-toggle-unified"
             />
             <DemoToggle 
               active={activeDemo === 'speed'}
               onClick={() => setActiveDemo('speed')}
               icon={<Zap className="w-5 h-5" />}
-              title="Built for speed"
-              description="Keyboard shortcuts, instant search, and a responsive interface that keeps up with you."
+              title="Move through email faster"
+              description="Keyboard-first navigation. Instant actions. No waiting, no friction."
               testId="demo-toggle-speed"
             />
             <DemoToggle 
               active={activeDemo === 'organize'}
               onClick={() => setActiveDemo('organize')}
               icon={<Filter className="w-5 h-5" />}
-              title="Smart organization"
-              description="Automatic categorization and filters help you find what matters without the clutter."
+              title="Find anything instantly"
+              description="Search that actually works. Filters that stay organized without effort."
               testId="demo-toggle-organize"
             />
           </div>
@@ -291,37 +291,37 @@ function DemoUnified() {
   return (
     <div className="p-6">
       <div className="mb-5 pb-5 border-b border-white/[0.06]">
-        <h4 className="font-medium text-base mb-1">Inbox</h4>
-        <p className="text-sm text-muted-foreground/60">22 unread messages</p>
+        <h4 className="font-medium text-base mb-1">Priority</h4>
+        <p className="text-sm text-muted-foreground/60">3 messages need attention</p>
       </div>
       <div className="space-y-3">
         <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
           <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">S</div>
           <div className="flex-1 min-w-0">
             <span className="text-sm font-medium">Sarah Chen</span>
-            <p className="text-xs text-muted-foreground/60 truncate">Q4 Report - Final review</p>
+            <p className="text-xs text-muted-foreground/60 truncate">Q4 Report - Awaiting approval</p>
           </div>
-          <span className="text-xs text-muted-foreground/40">2m</span>
+          <span className="text-xs text-primary/80 font-medium">Now</span>
         </div>
         <div className="flex items-center gap-3 p-3 rounded-lg border border-white/[0.06] hover:bg-white/[0.02] transition-colors">
-          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">M</div>
+          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">D</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">Marketing Team</span>
-            <p className="text-xs text-muted-foreground/60 truncate">Campaign results are in</p>
+            <span className="text-sm font-medium">David Park</span>
+            <p className="text-xs text-muted-foreground/60 truncate">Contract review needed</p>
           </div>
           <span className="text-xs text-muted-foreground/40">15m</span>
         </div>
         <div className="flex items-center gap-3 p-3 rounded-lg border border-white/[0.06] hover:bg-white/[0.02] transition-colors">
-          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">J</div>
+          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">L</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">John Miller</span>
-            <p className="text-xs text-muted-foreground/60 truncate">Meeting follow-up notes</p>
+            <span className="text-sm font-medium">Legal Team</span>
+            <p className="text-xs text-muted-foreground/60 truncate">Signature required by EOD</p>
           </div>
           <span className="text-xs text-muted-foreground/40">1h</span>
         </div>
       </div>
       <p className="text-xs text-muted-foreground/50 mt-5">
-        Clean, organized, and easy to navigate.
+        Important messages surface first. Everything else waits.
       </p>
     </div>
   );
@@ -331,29 +331,29 @@ function DemoSpeed() {
   return (
     <div className="p-6">
       <div className="mb-5 pb-5 border-b border-white/[0.06]">
-        <h4 className="font-medium text-base mb-1">Keyboard shortcuts</h4>
-        <p className="text-sm text-muted-foreground/60">Navigate without your mouse</p>
+        <h4 className="font-medium text-base mb-1">Keyboard-first</h4>
+        <p className="text-sm text-muted-foreground/60">Everything has a shortcut</p>
       </div>
       <div className="space-y-3">
         <div className="flex items-center justify-between p-3 rounded-lg border border-white/[0.06]">
-          <span className="text-sm text-muted-foreground">Compose new email</span>
+          <span className="text-sm text-muted-foreground">Compose</span>
           <kbd className="px-2 py-1 rounded bg-white/[0.06] text-xs font-mono">C</kbd>
         </div>
         <div className="flex items-center justify-between p-3 rounded-lg border border-white/[0.06]">
-          <span className="text-sm text-muted-foreground">Reply to email</span>
+          <span className="text-sm text-muted-foreground">Reply</span>
           <kbd className="px-2 py-1 rounded bg-white/[0.06] text-xs font-mono">R</kbd>
         </div>
         <div className="flex items-center justify-between p-3 rounded-lg border border-white/[0.06]">
-          <span className="text-sm text-muted-foreground">Archive email</span>
+          <span className="text-sm text-muted-foreground">Archive</span>
           <kbd className="px-2 py-1 rounded bg-white/[0.06] text-xs font-mono">E</kbd>
         </div>
         <div className="flex items-center justify-between p-3 rounded-lg border border-white/[0.06]">
-          <span className="text-sm text-muted-foreground">Search inbox</span>
+          <span className="text-sm text-muted-foreground">Search</span>
           <kbd className="px-2 py-1 rounded bg-white/[0.06] text-xs font-mono">/</kbd>
         </div>
       </div>
       <p className="text-xs text-muted-foreground/50 mt-5">
-        Power through your inbox with ease.
+        Navigate, act, and move on. No clicking required.
       </p>
     </div>
   );
@@ -361,29 +361,30 @@ function DemoSpeed() {
 
 function DemoOrganize() {
   return (
-    <div className="p-6 space-y-3">
-      <MockCategoryEmail 
-        from="HR Team" 
-        subject="Benefits Enrollment Reminder"
-        category={{ name: "Action Required", color: "bg-red-500/20 text-red-400 border-red-500/20" }}
-      />
-      <MockCategoryEmail 
-        from="Newsletter" 
-        subject="Weekly Tech Digest"
-        category={{ name: "Newsletter", color: "bg-blue-500/20 text-blue-400 border-blue-500/20" }}
-      />
-      <MockCategoryEmail 
-        from="Sarah Chen" 
-        subject="Q4 Report Review"
-        category={{ name: "Work", color: "bg-purple-500/20 text-purple-400 border-purple-500/20" }}
-      />
-      <MockCategoryEmail 
-        from="Amazon" 
-        subject="Your order has shipped"
-        category={{ name: "Receipts", color: "bg-green-500/20 text-green-400 border-green-500/20" }}
-      />
-      <p className="text-xs text-muted-foreground/50 pt-3">
-        Messages are sorted automatically so you can focus on what matters.
+    <div className="p-6">
+      <div className="mb-5 pb-5 border-b border-white/[0.06]">
+        <h4 className="font-medium text-base mb-1">Smart filters</h4>
+        <p className="text-sm text-muted-foreground/60">Automatically organized</p>
+      </div>
+      <div className="space-y-3">
+        <MockCategoryEmail 
+          from="HR Team" 
+          subject="Benefits Enrollment Reminder"
+          category={{ name: "Action", color: "bg-red-500/20 text-red-400 border-red-500/20" }}
+        />
+        <MockCategoryEmail 
+          from="Newsletter" 
+          subject="Weekly Tech Digest"
+          category={{ name: "FYI", color: "bg-blue-500/20 text-blue-400 border-blue-500/20" }}
+        />
+        <MockCategoryEmail 
+          from="Stripe" 
+          subject="Payment received"
+          category={{ name: "Receipt", color: "bg-green-500/20 text-green-400 border-green-500/20" }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground/50 mt-5">
+        Labels applied automatically. Search works instantly.
       </p>
     </div>
   );
@@ -417,34 +418,34 @@ function MockCategoryEmail({ from, subject, category }: {
 function BenefitsSection() {
   const benefits = [
     {
-      icon: <Layers className="w-5 h-5" />,
-      title: "A clean, focused inbox",
-      description: "No clutter, no distractions. Just your messages organized the way they should be."
+      icon: <Inbox className="w-5 h-5" />,
+      title: "Reach inbox zero daily",
+      description: "A clear view of what needs attention. Archive, reply, or defer with a single keystroke."
     },
     {
       icon: <Zap className="w-5 h-5" />,
-      title: "Fast by design",
-      description: "Instant search, keyboard shortcuts, and a responsive interface that never keeps you waiting."
+      title: "Reply in seconds, not minutes",
+      description: "Intelligent suggestions help you respond faster. Edit or send as-is."
     },
     {
       icon: <Eye className="w-5 h-5" />,
-      title: "Clarity over clutter",
-      description: "Smart filters separate what's important from what's noise. Focus on the messages that matter."
+      title: "Never miss what matters",
+      description: "Priority signals surface urgent messages. Low-priority threads stay quiet."
     },
     {
-      icon: <Mail className="w-5 h-5" />,
-      title: "Smart replies in the background",
-      description: "AI suggests replies and summaries when you need them. Always optional, never intrusive."
+      icon: <Clock className="w-5 h-5" />,
+      title: "Schedule sends and follow-ups",
+      description: "Send later. Get reminded if no reply. Stay on top without the mental overhead."
     },
     {
       icon: <Lock className="w-5 h-5" />,
-      title: "Your privacy, protected",
-      description: "OAuth authentication only. We never store your password. Your emails stay yours."
+      title: "Private by default",
+      description: "OAuth only. We never see your password. Your data stays encrypted and yours."
     },
     {
       icon: <Shield className="w-5 h-5" />,
-      title: "Built for professionals",
-      description: "Designed for people who rely on email every day. No gimmicks, just a better inbox."
+      title: "Built for daily use",
+      description: "Designed to be your primary inbox. Fast, reliable, and trusted by professionals."
     }
   ];
 
@@ -453,10 +454,10 @@ function BenefitsSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Built for the way you actually work
+            Everything you need, nothing you don't
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            A modern email client that respects your time and attention
+            The tools to take control of your inbox, built into one simple interface.
           </p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -497,7 +498,7 @@ function TestimonialsSection() {
   const founderTestimonial = {
     id: 0,
     userName: "Founder",
-    content: "I built MyDraft because I wanted a modern email client that actually works for me. Something fast, clean, and focused. No distractions, no clutter. Just email done right.",
+    content: "We built MyDraft for ourselves first. An inbox that loads instantly, clears quickly, and never gets in the way. Now we use it every day.",
     rating: 5,
     isFounder: true,
   };
@@ -522,10 +523,10 @@ function TestimonialsSection() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Trusted by professionals
+            People who switched, stayed
           </h2>
           <p className="text-muted-foreground text-lg">
-            Real feedback from people who use MyDraft every day
+            Hear from users who made MyDraft their primary inbox.
           </p>
         </div>
         
@@ -597,28 +598,28 @@ function TestimonialsSection() {
 function FAQSection() {
   const faqs = [
     {
-      q: "Which email providers do you support?",
-      a: "MyDraft works with Gmail, Google Workspace, Outlook, and Microsoft 365. Connect your account and start managing your inbox in minutes."
+      q: "Does this replace Gmail or Outlook?",
+      a: "Yes. MyDraft connects to your existing account and becomes your primary inbox. Your emails stay where they are. Nothing to migrate."
     },
     {
-      q: "Is MyDraft a replacement for Gmail or Outlook?",
-      a: "Yes. MyDraft connects to your existing email account and gives you a faster, cleaner way to manage your messages. Your emails stay where they are."
+      q: "Which providers are supported?",
+      a: "Gmail, Google Workspace, Outlook, and Microsoft 365. Connect in under two minutes."
     },
     {
-      q: "How does the AI work?",
-      a: "AI features like smart replies and summaries run in the background. They're there when you need them, but never in your way. All processing is secure and your data is never used for training."
+      q: "How is my data protected?",
+      a: "We use OAuth, so we never see your password. Your emails are encrypted in transit and at rest. We don't sell data or use it for training."
     },
     {
-      q: "Is there a free plan?",
-      a: "Yes. The free plan gives you access to basic inbox features. Upgrade to Pro or Business for advanced features like AI assistance and priority support."
-    },
-    {
-      q: "Is my email secure?",
-      a: "We use OAuth authentication, which means we never see or store your password. Your emails are encrypted in transit and we follow industry best practices for security."
+      q: "What does the free plan include?",
+      a: "Basic inbox access with core features. Upgrade to Pro for intelligent suggestions, scheduled sends, and priority support."
     },
     {
       q: "Can I cancel anytime?",
-      a: "Yes, you can cancel your subscription at any time. No contracts, no cancellation fees. Your account will remain active until the end of your billing period."
+      a: "Yes. No contracts. No cancellation fees. Your subscription runs until the end of your billing period."
+    },
+    {
+      q: "Is there a trial for paid plans?",
+      a: "Pro and Business plans include a 14-day trial. Full access, no restrictions."
     }
   ];
 
@@ -667,10 +668,10 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
       <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.05] via-transparent to-transparent pointer-events-none" />
       <div className="max-w-2xl mx-auto text-center relative">
         <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-5">
-          A better inbox is waiting
+          Take back your inbox
         </h2>
         <p className="text-lg text-muted-foreground mb-10">
-          Start for free. Connect your accounts in minutes.
+          Connect your account and see the difference in minutes.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href={getStartedHref}>
