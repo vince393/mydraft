@@ -6,7 +6,6 @@ import { MarketingNav } from "@/components/marketing-nav";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useScrollAnimation, useParallax } from "@/hooks/use-scroll-animation";
-import catMascotVideo from "@assets/videos/cat-mascot.mp4";
 import { 
   Clock, 
   Shield, 
@@ -65,33 +64,10 @@ export default function LandingPage() {
 
 function HeroSection({ getStartedHref }: { getStartedHref: string }) {
   const [mounted, setMounted] = useState(false);
-  const [buttonSpin, setButtonSpin] = useState(false);
-  const [mascotPhase, setMascotPhase] = useState<'entering' | 'slapping' | 'running' | 'done'>('entering');
   const parallaxOffset = useParallax(0.15);
   
   useEffect(() => {
     setMounted(true);
-    
-    // Mascot animation sequence
-    const enterTimer = setTimeout(() => {
-      setMascotPhase('slapping');
-      setButtonSpin(true);
-    }, 1500);
-    
-    const runTimer = setTimeout(() => {
-      setMascotPhase('running');
-    }, 2200);
-    
-    const doneTimer = setTimeout(() => {
-      setMascotPhase('done');
-      setButtonSpin(false);
-    }, 3200);
-    
-    return () => {
-      clearTimeout(enterTimer);
-      clearTimeout(runTimer);
-      clearTimeout(doneTimer);
-    };
   }, []);
 
   return (
@@ -156,12 +132,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               }}
             >
               <Link href={getStartedHref}>
-                <Button 
-                  size="lg" 
-                  className={`gap-2 w-full sm:w-auto shadow-lg shadow-primary/25 transition-transform ${buttonSpin ? 'animate-spin' : ''}`}
-                  style={{ animationDuration: buttonSpin ? '0.3s' : undefined, animationIterationCount: buttonSpin ? '3' : undefined }}
-                  data-testid="hero-getstarted"
-                >
+                <Button size="lg" className="gap-2 w-full sm:w-auto shadow-lg shadow-primary/25" data-testid="hero-getstarted">
                   Start free
                   <ArrowRight className="w-4 h-4" />
                 </Button>
@@ -182,24 +153,6 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
             >
               Connect Gmail or Outlook in under 2 minutes
             </p>
-            
-            {mascotPhase !== 'done' && (
-              <div 
-                className="absolute bottom-0 transition-all duration-700 ease-out pointer-events-none"
-                style={{
-                  left: mascotPhase === 'entering' ? '-150px' : mascotPhase === 'slapping' ? '20px' : 'calc(100% + 200px)',
-                  transform: mascotPhase === 'running' ? 'scaleX(-1)' : 'scaleX(1)'
-                }}
-              >
-                <video 
-                  src={catMascotVideo} 
-                  autoPlay 
-                  muted 
-                  playsInline
-                  className="w-32 h-32 object-contain"
-                />
-              </div>
-            )}
           </div>
           
           <div 
