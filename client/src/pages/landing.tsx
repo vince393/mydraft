@@ -19,7 +19,12 @@ import {
   Zap,
   Eye,
   Filter,
-  Lock
+  Lock,
+  X,
+  Sparkles,
+  Brain,
+  Search,
+  RefreshCw
 } from "lucide-react";
 
 interface AuthResponse {
@@ -44,6 +49,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       <MarketingNav />
       <HeroSection getStartedHref={getStartedHref()} />
+      <ComparisonSection />
       <DemoSection />
       <BenefitsSection />
       <TestimonialsSection />
@@ -64,18 +70,18 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
         <div className="grid lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-16 items-center">
           <div className="max-w-xl text-center lg:text-left mx-auto lg:mx-0">
             <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm sm:text-sm font-medium mb-8 sm:mb-8">
-              <Mail className="w-4 h-4" />
-              A smarter way to email
+              <RefreshCw className="w-4 h-4" />
+              Replace your inbox
             </div>
             <h1 className="text-[2.75rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.05] mb-6 sm:mb-6">
-              The inbox you
+              Your new
               <br />
               <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
-                actually control.
+                primary inbox.
               </span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed mb-10 sm:mb-10 max-w-md mx-auto lg:mx-0">
-              Works with your existing Gmail or Outlook account. Nothing to migrate. Just a faster, cleaner way to manage email.
+              Gmail and Outlook weren't built for how you work today. MyDraft is. Same emails, smarter inbox—replies drafted for you, threads summarized, clutter gone.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row sm:gap-4 justify-center lg:justify-start">
               <Link href={getStartedHref}>
@@ -91,7 +97,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               </Link>
             </div>
             <p className="text-base sm:text-sm text-muted-foreground/70 mt-8 sm:mt-5">
-              Free plan available. Connect in under 2 minutes.
+              Connect your Gmail or Outlook. Keep your address. Get a better inbox.
             </p>
           </div>
           
@@ -197,6 +203,73 @@ function MockEmailItem({ from, subject, preview, time, unread = false, selected 
   );
 }
 
+function ComparisonSection() {
+  const comparisons = [
+    {
+      feature: "Reply assistance",
+      theirs: "None. You write every word.",
+      ours: "AI drafts replies based on context. Edit or send."
+    },
+    {
+      feature: "Thread summaries",
+      theirs: "Scroll through 47 messages yourself.",
+      ours: "Get the key points in seconds."
+    },
+    {
+      feature: "Inbox focus",
+      theirs: "Promotions, social, forums, updates—endless tabs.",
+      ours: "One clean inbox. Priority signals what matters."
+    },
+    {
+      feature: "Speed",
+      theirs: "Loads slow. Clicks everywhere.",
+      ours: "Instant load. Built for keyboard-first workflows."
+    },
+    {
+      feature: "Privacy",
+      theirs: "Your emails train their AI models.",
+      ours: "Your data stays yours. Period."
+    }
+  ];
+
+  return (
+    <section className="py-24 px-6 border-t border-white/[0.04]">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
+            What Gmail and Outlook are missing
+          </h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            The big inboxes haven't changed in years. Here's what they still don't do.
+          </p>
+        </div>
+        
+        <div className="space-y-4">
+          {comparisons.map((item, i) => (
+            <div key={i} className="grid md:grid-cols-3 gap-4 p-5 rounded-xl border border-white/[0.06] bg-white/[0.01]">
+              <div className="font-medium text-foreground">{item.feature}</div>
+              <div className="flex items-start gap-3">
+                <X className="w-4 h-4 text-red-400/80 mt-0.5 flex-shrink-0" />
+                <span className="text-sm text-muted-foreground/70">{item.theirs}</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-4 h-4 text-green-400/80 mt-0.5 flex-shrink-0" />
+                <span className="text-sm text-foreground/90">{item.ours}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-10 p-6 rounded-xl bg-primary/5 border border-primary/20 text-center">
+          <p className="text-muted-foreground">
+            <span className="text-foreground font-medium">Same email address. Same contacts.</span> Just a smarter way to manage it all.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function DemoSection() {
   const [activeDemo, setActiveDemo] = useState<'unified' | 'speed' | 'organize'>('unified');
 
@@ -205,10 +278,10 @@ function DemoSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Designed to keep you focused
+            See the difference
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Less time managing email. More time for everything else.
+            A real inbox, rebuilt from scratch. Here's how it works.
           </p>
         </div>
 
@@ -218,24 +291,24 @@ function DemoSection() {
               active={activeDemo === 'unified'}
               onClick={() => setActiveDemo('unified')}
               icon={<Inbox className="w-5 h-5" />}
-              title="Your inbox, cleaner"
-              description="Connect your Gmail or Outlook. See all your emails in one focused view."
+              title="Clean, focused inbox"
+              description="No tabs. No clutter. Just the emails that matter, front and center."
               testId="demo-toggle-unified"
             />
             <DemoToggle 
               active={activeDemo === 'speed'}
               onClick={() => setActiveDemo('speed')}
-              icon={<Zap className="w-5 h-5" />}
-              title="Respond in seconds"
-              description="AI drafts replies based on context. Edit them or send as-is."
+              icon={<Sparkles className="w-5 h-5" />}
+              title="Instant reply drafts"
+              description="See a suggested reply the moment you open an email. Edit or send."
               testId="demo-toggle-speed"
             />
             <DemoToggle 
               active={activeDemo === 'organize'}
               onClick={() => setActiveDemo('organize')}
-              icon={<Filter className="w-5 h-5" />}
-              title="Instant search"
-              description="Find any email in seconds. Search by sender, subject, or content."
+              icon={<Brain className="w-5 h-5" />}
+              title="Thread summaries"
+              description="Long email chains condensed to key points. Get up to speed instantly."
               testId="demo-toggle-organize"
             />
           </div>
@@ -354,29 +427,36 @@ function DemoOrganize() {
   return (
     <div className="p-6">
       <div className="mb-5 pb-5 border-b border-white/[0.06]">
-        <h4 className="font-medium text-base mb-1">Search</h4>
-        <p className="text-sm text-muted-foreground/60">Find any email, instantly</p>
+        <h4 className="font-medium text-base mb-1">Thread Summary</h4>
+        <p className="text-sm text-muted-foreground/60">47 messages condensed</p>
       </div>
-      <div className="space-y-3">
-        <MockCategoryEmail 
-          from="Rachel Kim" 
-          subject="Project deadline moved to next week"
-          category={{ name: "Work", color: "bg-purple-500/20 text-purple-400 border-purple-500/20" }}
-        />
-        <MockCategoryEmail 
-          from="Tom Anderson" 
-          subject="Docs you requested"
-          category={{ name: "Files", color: "bg-blue-500/20 text-blue-400 border-blue-500/20" }}
-        />
-        <MockCategoryEmail 
-          from="Alex Johnson" 
-          subject="Invoice for last month's work"
-          category={{ name: "Finance", color: "bg-green-500/20 text-green-400 border-green-500/20" }}
-        />
+      <div className="space-y-4">
+        <div className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px]">M</div>
+            <span className="text-sm font-medium">Project launch thread</span>
+            <span className="text-xs text-muted-foreground/40 ml-auto">47 messages</span>
+          </div>
+          <div className="space-y-2 text-sm text-muted-foreground/80">
+            <p className="flex items-start gap-2">
+              <span className="text-primary/60">•</span>
+              Launch date confirmed for March 15th
+            </p>
+            <p className="flex items-start gap-2">
+              <span className="text-primary/60">•</span>
+              Marketing assets due by March 10th
+            </p>
+            <p className="flex items-start gap-2">
+              <span className="text-primary/60">•</span>
+              Waiting on final approval from legal
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground/50">
+          <Brain className="w-3 h-3" />
+          <span>Summarized from 47 messages spanning 2 weeks</span>
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground/50 mt-5">
-        Type to search. Results appear as you type.
-      </p>
     </div>
   );
 }
@@ -409,34 +489,34 @@ function MockCategoryEmail({ from, subject, category }: {
 function BenefitsSection() {
   const benefits = [
     {
-      icon: <Inbox className="w-5 h-5" />,
-      title: "Connect Gmail or Outlook",
-      description: "Link your existing account in seconds. Your emails sync instantly, nothing to migrate."
+      icon: <RefreshCw className="w-5 h-5" />,
+      title: "Keep your email address",
+      description: "Connect Gmail or Outlook in seconds. Nothing to migrate. Your contacts stay the same."
+    },
+    {
+      icon: <Sparkles className="w-5 h-5" />,
+      title: "Replies written for you",
+      description: "Open an email, see a draft reply. Edit it or send it. Respond in seconds, not minutes."
+    },
+    {
+      icon: <Brain className="w-5 h-5" />,
+      title: "Threads summarized",
+      description: "Skip scrolling through 50-message threads. Get the key points instantly."
     },
     {
       icon: <Zap className="w-5 h-5" />,
-      title: "AI-suggested replies",
-      description: "Get smart reply suggestions based on context. Edit them or send as-is."
-    },
-    {
-      icon: <Eye className="w-5 h-5" />,
-      title: "Automatic email summaries",
-      description: "Long threads summarized so you get the point without scrolling."
-    },
-    {
-      icon: <Clock className="w-5 h-5" />,
-      title: "Respond faster",
-      description: "AI drafts context-aware replies. Review, edit, or send in seconds."
+      title: "Actually fast",
+      description: "Instant load. No waiting. Built to handle how fast you actually work."
     },
     {
       icon: <Lock className="w-5 h-5" />,
-      title: "Secure OAuth connection",
-      description: "We never see your password. Your data stays encrypted and private."
+      title: "Private by design",
+      description: "OAuth only—we never see your password. Your emails aren't used to train anything."
     },
     {
       icon: <Shield className="w-5 h-5" />,
-      title: "Works with your workflow",
-      description: "Star, archive, and organize emails the way you already do. Familiar, but faster."
+      title: "Works the way you expect",
+      description: "Star, archive, search. The actions you know, without the bloat you don't."
     }
   ];
 
@@ -445,10 +525,10 @@ function BenefitsSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            Everything you need, nothing you don't
+            Built to be your only inbox
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            The tools to take control of your inbox, built into one simple interface.
+            Not a plugin. Not a wrapper. A complete email experience, rebuilt from scratch.
           </p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -514,10 +594,10 @@ function TestimonialsSection() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-            People who switched, stayed
+            Made the switch
           </h2>
           <p className="text-muted-foreground text-lg">
-            Hear from users who made MyDraft their primary inbox.
+            People who left Gmail and Outlook behind.
           </p>
         </div>
         
@@ -659,10 +739,10 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
       <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.05] via-transparent to-transparent pointer-events-none" />
       <div className="max-w-2xl mx-auto text-center relative">
         <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-5">
-          Take back your inbox
+          Ready to upgrade your inbox?
         </h2>
         <p className="text-lg text-muted-foreground mb-10">
-          Connect your account and see the difference in minutes.
+          Same email address. Same contacts. Better everything else. Connect in 2 minutes.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href={getStartedHref}>
