@@ -81,7 +81,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               </span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed mb-10 sm:mb-10 max-w-md mx-auto lg:mx-0">
-              Gmail and Outlook weren't built for how you work today. MyDraft is. Same emails, smarter inbox—replies drafted for you, threads summarized, clutter gone.
+              Same emails, smarter inbox. Replies drafted for you, threads summarized, clutter gone.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row sm:gap-4 justify-center lg:justify-start">
               <Link href={getStartedHref}>
