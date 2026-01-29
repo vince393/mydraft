@@ -123,9 +123,9 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 
                 <div className="flex-1 p-4 space-y-2">
                   <MockEmailItem 
-                    from="Google Calendar" 
-                    subject="Reminder: Team standup in 30 min"
-                    preview="You have an upcoming event at 10:00 AM..."
+                    from="David Park" 
+                    subject="Quick question about the proposal"
+                    preview="Hey, just wanted to check if you had a chance..."
                     time="8m"
                     unread
                   />
@@ -138,15 +138,15 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                     selected
                   />
                   <MockEmailItem 
-                    from="Stripe" 
-                    subject="Your receipt from Figma"
-                    preview="Receipt #4829-2847 for $15.00..."
+                    from="James Wilson" 
+                    subject="Meeting notes from today"
+                    preview="Hi team, here are the notes from our call..."
                     time="1h"
                   />
                   <MockEmailItem 
-                    from="The Hustle" 
-                    subject="Why AI startups are struggling to find PMF and what the smartest..."
-                    preview="Good morning. Here's what you need..."
+                    from="Lisa Martinez" 
+                    subject="Can you review this before Friday?"
+                    preview="I've attached the updated version..."
                     time="3h"
                   />
                   
@@ -226,8 +226,8 @@ function DemoSection() {
               active={activeDemo === 'speed'}
               onClick={() => setActiveDemo('speed')}
               icon={<Zap className="w-5 h-5" />}
-              title="Keyboard shortcuts"
-              description="Archive, reply, and navigate with single keystrokes. Built for speed."
+              title="Respond in seconds"
+              description="AI drafts replies based on context. Edit them or send as-is."
               testId="demo-toggle-speed"
             />
             <DemoToggle 
@@ -291,10 +291,10 @@ function DemoUnified() {
       </div>
       <div className="space-y-3">
         <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
-          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">A</div>
+          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">M</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">Amazon</span>
-            <p className="text-xs text-muted-foreground/60 truncate">Your order has shipped</p>
+            <span className="text-sm font-medium">Michael Torres</span>
+            <p className="text-xs text-muted-foreground/60 truncate">Following up on our call</p>
           </div>
           <span className="text-xs text-muted-foreground/40">5m</span>
         </div>
@@ -307,10 +307,10 @@ function DemoUnified() {
           <span className="text-xs text-muted-foreground/40">28m</span>
         </div>
         <div className="flex items-center gap-3 p-3 rounded-lg border border-white/[0.06] hover:bg-white/[0.02] transition-colors">
-          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">L</div>
+          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">E</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">LinkedIn</span>
-            <p className="text-xs text-muted-foreground/60 truncate">You appeared in 14 searches this week</p>
+            <span className="text-sm font-medium">Emily Rodriguez</span>
+            <p className="text-xs text-muted-foreground/60 truncate">Thanks for sending that over</p>
           </div>
           <span className="text-xs text-muted-foreground/40">2h</span>
         </div>
@@ -326,29 +326,25 @@ function DemoSpeed() {
   return (
     <div className="p-6">
       <div className="mb-5 pb-5 border-b border-white/[0.06]">
-        <h4 className="font-medium text-base mb-1">Keyboard-first</h4>
-        <p className="text-sm text-muted-foreground/60">Everything has a shortcut</p>
+        <h4 className="font-medium text-base mb-1">AI Replies</h4>
+        <p className="text-sm text-muted-foreground/60">Draft responses instantly</p>
       </div>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between p-3 rounded-lg border border-white/[0.06]">
-          <span className="text-sm text-muted-foreground">Compose</span>
-          <kbd className="px-2 py-1 rounded bg-white/[0.06] text-xs font-mono">C</kbd>
+      <div className="space-y-4">
+        <div className="p-3 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+          <p className="text-xs text-muted-foreground/60 mb-2">From: Sarah Chen</p>
+          <p className="text-sm text-muted-foreground">"Can we move the meeting to 3pm instead?"</p>
         </div>
-        <div className="flex items-center justify-between p-3 rounded-lg border border-white/[0.06]">
-          <span className="text-sm text-muted-foreground">Reply</span>
-          <kbd className="px-2 py-1 rounded bg-white/[0.06] text-xs font-mono">R</kbd>
-        </div>
-        <div className="flex items-center justify-between p-3 rounded-lg border border-white/[0.06]">
-          <span className="text-sm text-muted-foreground">Archive</span>
-          <kbd className="px-2 py-1 rounded bg-white/[0.06] text-xs font-mono">E</kbd>
-        </div>
-        <div className="flex items-center justify-between p-3 rounded-lg border border-white/[0.06]">
-          <span className="text-sm text-muted-foreground">Search</span>
-          <kbd className="px-2 py-1 rounded bg-white/[0.06] text-xs font-mono">/</kbd>
+        <div className="p-3 rounded-lg border border-primary/30 bg-primary/5">
+          <p className="text-xs text-primary/70 mb-2">Suggested reply</p>
+          <p className="text-sm text-foreground/80">"Sure, 3pm works for me. See you then!"</p>
+          <div className="flex gap-2 mt-3">
+            <Button size="sm" className="h-7 text-xs">Send</Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs">Edit</Button>
+          </div>
         </div>
       </div>
       <p className="text-xs text-muted-foreground/50 mt-5">
-        Navigate, act, and move on. No clicking required.
+        Review, edit, or send. You're always in control.
       </p>
     </div>
   );
@@ -363,18 +359,18 @@ function DemoOrganize() {
       </div>
       <div className="space-y-3">
         <MockCategoryEmail 
-          from="HR Team" 
-          subject="Updated PTO policy effective Jan 1"
+          from="Rachel Kim" 
+          subject="Project deadline moved to next week"
           category={{ name: "Work", color: "bg-purple-500/20 text-purple-400 border-purple-500/20" }}
         />
         <MockCategoryEmail 
-          from="Delta Airlines" 
-          subject="Your flight confirmation #DL2847"
-          category={{ name: "Travel", color: "bg-blue-500/20 text-blue-400 border-blue-500/20" }}
+          from="Tom Anderson" 
+          subject="Docs you requested"
+          category={{ name: "Files", color: "bg-blue-500/20 text-blue-400 border-blue-500/20" }}
         />
         <MockCategoryEmail 
-          from="Chase" 
-          subject="Statement ready for account ending in 4821"
+          from="Alex Johnson" 
+          subject="Invoice for last month's work"
           category={{ name: "Finance", color: "bg-green-500/20 text-green-400 border-green-500/20" }}
         />
       </div>
@@ -429,8 +425,8 @@ function BenefitsSection() {
     },
     {
       icon: <Clock className="w-5 h-5" />,
-      title: "Keyboard shortcuts",
-      description: "Archive, reply, and navigate with single keystrokes. No clicking required."
+      title: "Respond faster",
+      description: "AI drafts context-aware replies. Review, edit, or send in seconds."
     },
     {
       icon: <Lock className="w-5 h-5" />,
