@@ -65,7 +65,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
           <div className="max-w-xl text-center lg:text-left mx-auto lg:mx-0">
             <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm sm:text-sm font-medium mb-8 sm:mb-8">
               <Mail className="w-4 h-4" />
-              One inbox for all your accounts
+              Email that works for you
             </div>
             <h1 className="text-[2.75rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.05] mb-6 sm:mb-6">
               Your inbox,
@@ -80,7 +80,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
             <div className="flex flex-col gap-4 sm:flex-row sm:gap-4 justify-center lg:justify-start">
               <Link href={getStartedHref}>
                 <Button size="lg" className="gap-2 w-full sm:w-auto h-14 sm:h-11 text-base font-medium shadow-lg shadow-primary/25" data-testid="hero-getstarted">
-                  Get started
+                  Start free
                   <ArrowRight className="w-5 h-5 sm:w-4 sm:h-4" />
                 </Button>
               </Link>
@@ -222,9 +222,9 @@ function DemoSection() {
             <DemoToggle 
               active={activeDemo === 'unified'}
               onClick={() => setActiveDemo('unified')}
-              icon={<Layers className="w-5 h-5" />}
-              title="Unified inbox"
-              description="Gmail, Outlook, and business email all in one view. Switch accounts instantly."
+              icon={<Inbox className="w-5 h-5" />}
+              title="Clean inbox"
+              description="A focused view of your messages. No clutter, no distractions, just what matters."
               testId="demo-toggle-unified"
             />
             <DemoToggle 
@@ -291,35 +291,37 @@ function DemoUnified() {
   return (
     <div className="p-6">
       <div className="mb-5 pb-5 border-b border-white/[0.06]">
-        <h4 className="font-medium text-base mb-1">All Accounts</h4>
-        <p className="text-sm text-muted-foreground/60">3 accounts connected</p>
+        <h4 className="font-medium text-base mb-1">Inbox</h4>
+        <p className="text-sm text-muted-foreground/60">22 unread messages</p>
       </div>
       <div className="space-y-3">
         <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
-          <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-xs font-medium text-red-400">G</div>
+          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">S</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">work@gmail.com</span>
-            <p className="text-xs text-muted-foreground/60">12 unread</p>
+            <span className="text-sm font-medium">Sarah Chen</span>
+            <p className="text-xs text-muted-foreground/60 truncate">Q4 Report - Final review</p>
           </div>
-          <CheckCircle className="w-4 h-4 text-green-500" />
+          <span className="text-xs text-muted-foreground/40">2m</span>
         </div>
         <div className="flex items-center gap-3 p-3 rounded-lg border border-white/[0.06] hover:bg-white/[0.02] transition-colors">
-          <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-medium text-blue-400">O</div>
+          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">M</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">john@outlook.com</span>
-            <p className="text-xs text-muted-foreground/60">3 unread</p>
+            <span className="text-sm font-medium">Marketing Team</span>
+            <p className="text-xs text-muted-foreground/60 truncate">Campaign results are in</p>
           </div>
+          <span className="text-xs text-muted-foreground/40">15m</span>
         </div>
         <div className="flex items-center gap-3 p-3 rounded-lg border border-white/[0.06] hover:bg-white/[0.02] transition-colors">
-          <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-medium text-purple-400">B</div>
+          <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-medium">J</div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">john@business.co</span>
-            <p className="text-xs text-muted-foreground/60">7 unread</p>
+            <span className="text-sm font-medium">John Miller</span>
+            <p className="text-xs text-muted-foreground/60 truncate">Meeting follow-up notes</p>
           </div>
+          <span className="text-xs text-muted-foreground/40">1h</span>
         </div>
       </div>
       <p className="text-xs text-muted-foreground/50 mt-5">
-        All your email in one place. No tab switching.
+        Clean, organized, and easy to navigate.
       </p>
     </div>
   );
@@ -416,8 +418,8 @@ function BenefitsSection() {
   const benefits = [
     {
       icon: <Layers className="w-5 h-5" />,
-      title: "One inbox for everything",
-      description: "Connect Gmail, Outlook, and your business email. See all your messages in a single, unified view."
+      title: "A clean, focused inbox",
+      description: "No clutter, no distractions. Just your messages organized the way they should be."
     },
     {
       icon: <Zap className="w-5 h-5" />,
@@ -596,11 +598,11 @@ function FAQSection() {
   const faqs = [
     {
       q: "Which email providers do you support?",
-      a: "MyDraft works with Gmail, Google Workspace, Outlook, and Microsoft 365. Connect multiple accounts and manage them all from one place."
+      a: "MyDraft works with Gmail, Google Workspace, Outlook, and Microsoft 365. Connect your account and start managing your inbox in minutes."
     },
     {
       q: "Is MyDraft a replacement for Gmail or Outlook?",
-      a: "Yes. MyDraft connects to your existing email accounts and gives you a faster, cleaner way to manage your messages. Your emails stay where they are."
+      a: "Yes. MyDraft connects to your existing email account and gives you a faster, cleaner way to manage your messages. Your emails stay where they are."
     },
     {
       q: "How does the AI work?",
@@ -673,7 +675,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href={getStartedHref}>
             <Button size="lg" className="gap-2 h-12 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" data-testid="cta-getstarted">
-              Get started free
+              Start free
               <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
