@@ -974,8 +974,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
 
 function Footer() {
   return (
-    <footer className="py-16 px-6 relative">
-      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-transparent to-background pointer-events-none -translate-y-full" />
+    <footer className="py-16 px-6 border-t border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
           <div>
