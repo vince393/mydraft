@@ -498,12 +498,27 @@ function BenefitsSection() {
   ];
 
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.1 });
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const positions = [
+    { x: '15%', y: '20%', delay: 0 },
+    { x: '75%', y: '15%', delay: 100 },
+    { x: '5%', y: '55%', delay: 200 },
+    { x: '85%', y: '50%', delay: 300 },
+    { x: '25%', y: '80%', delay: 400 },
+    { x: '65%', y: '85%', delay: 500 },
+  ];
 
   return (
-    <section className="min-h-screen flex items-center py-32 px-6 relative">
-      <div className="max-w-6xl mx-auto w-full" ref={ref}>
+    <section className="min-h-screen flex items-center py-32 px-6 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-primary/3 rounded-full blur-3xl" />
+      </div>
+      
+      <div className="max-w-7xl mx-auto w-full" ref={ref}>
         <div 
-          className="text-center mb-24 transition-all duration-1000 ease-out"
+          className="text-center mb-16 transition-all duration-1000 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
@@ -517,7 +532,63 @@ function BenefitsSection() {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="relative h-[600px] md:h-[700px] hidden md:block">
+          {benefits.map((benefit, i) => (
+            <div 
+              key={i}
+              className="absolute transition-all duration-1000 ease-out cursor-pointer"
+              style={{ 
+                left: positions[i].x,
+                top: positions[i].y,
+                opacity: isVisible ? 1 : 0,
+                transform: `translate(-50%, -50%) ${isVisible ? 'scale(1)' : 'scale(0.8)'}`,
+                transitionDelay: `${positions[i].delay}ms`,
+                zIndex: hoveredIndex === i ? 10 : 1
+              }}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
+              <div 
+                className={`relative p-8 rounded-3xl border transition-all duration-500 ${
+                  hoveredIndex === i 
+                    ? 'bg-primary/10 border-primary/30 scale-110 shadow-2xl shadow-primary/20' 
+                    : 'bg-white/[0.03] border-white/[0.08] hover-elevate'
+                }`}
+                style={{ maxWidth: '280px' }}
+              >
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-colors duration-300 ${
+                  hoveredIndex === i ? 'bg-primary/20 text-primary' : 'bg-primary/10 text-primary'
+                }`}>
+                  {benefit.icon}
+                </div>
+                <h3 className="font-medium text-lg mb-2">{benefit.title}</h3>
+                <p className={`text-sm leading-relaxed transition-colors duration-300 ${
+                  hoveredIndex === i ? 'text-muted-foreground' : 'text-muted-foreground/60'
+                }`}>
+                  {benefit.description}
+                </p>
+              </div>
+            </div>
+          ))}
+          
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+            <defs>
+              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
+                <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
+              </linearGradient>
+            </defs>
+            <line x1="15%" y1="20%" x2="75%" y2="15%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '600ms' }} />
+            <line x1="15%" y1="20%" x2="5%" y2="55%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '700ms' }} />
+            <line x1="75%" y1="15%" x2="85%" y2="50%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '800ms' }} />
+            <line x1="5%" y1="55%" x2="25%" y2="80%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '900ms' }} />
+            <line x1="85%" y1="50%" x2="65%" y2="85%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '1000ms' }} />
+            <line x1="25%" y1="80%" x2="65%" y2="85%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '1100ms' }} />
+          </svg>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:hidden">
           {benefits.map((benefit, i) => (
             <div 
               key={i}
@@ -529,12 +600,12 @@ function BenefitsSection() {
               }}
             >
               <Card className="bg-white/[0.02] border-white/[0.06] transition-all duration-300 h-full hover-elevate">
-                <CardContent className="p-8">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 text-primary">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 text-primary">
                     {benefit.icon}
                   </div>
-                  <h3 className="font-medium text-lg mb-3">{benefit.title}</h3>
-                  <p className="text-muted-foreground/70 leading-relaxed">{benefit.description}</p>
+                  <h3 className="font-medium mb-2">{benefit.title}</h3>
+                  <p className="text-sm text-muted-foreground/70 leading-relaxed">{benefit.description}</p>
                 </CardContent>
               </Card>
             </div>
@@ -565,7 +636,7 @@ function ComparisonSection() {
     {
       feature: "Speed",
       theirs: "Loads slow. Clicks everywhere.",
-      ours: "Instant. Keyboard-first."
+      ours: "Instant. Zero lag."
     },
     {
       feature: "Privacy",
@@ -903,7 +974,8 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
 
 function Footer() {
   return (
-    <footer className="py-16 px-6 border-t border-white/[0.04]">
+    <footer className="py-16 px-6 relative">
+      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-transparent to-background pointer-events-none -translate-y-full" />
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
           <div>
