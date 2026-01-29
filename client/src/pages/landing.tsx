@@ -1009,7 +1009,7 @@ function Footer() {
           </div>
         </div>
         <div className="pt-10 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground/50">© 2026 MyDraft</p>
           <a href="mailto:support@mydraft.io" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-email">support@mydraft.io</a>
         </div>
       </div>
