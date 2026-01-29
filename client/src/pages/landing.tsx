@@ -49,9 +49,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       <MarketingNav />
       <HeroSection getStartedHref={getStartedHref()} />
-      <ComparisonSection />
       <DemoSection />
       <BenefitsSection />
+      <ComparisonSection />
       <TestimonialsSection />
       <FAQSection />
       <FinalCTASection getStartedHref={getStartedHref()} />
