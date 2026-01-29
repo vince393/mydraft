@@ -65,7 +65,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
           <div className="max-w-xl text-center lg:text-left mx-auto lg:mx-0">
             <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm sm:text-sm font-medium mb-8 sm:mb-8">
               <Mail className="w-4 h-4" />
-              Finally, email done right
+              A smarter way to email
             </div>
             <h1 className="text-[2.75rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] font-semibold tracking-tight leading-[1.05] mb-6 sm:mb-6">
               The inbox you
@@ -218,24 +218,24 @@ function DemoSection() {
               active={activeDemo === 'unified'}
               onClick={() => setActiveDemo('unified')}
               icon={<Inbox className="w-5 h-5" />}
-              title="See what matters first"
-              description="Important messages surface automatically. Everything else stays out of your way."
+              title="Your inbox, cleaner"
+              description="Connect your Gmail or Outlook. See all your emails in one focused view."
               testId="demo-toggle-unified"
             />
             <DemoToggle 
               active={activeDemo === 'speed'}
               onClick={() => setActiveDemo('speed')}
               icon={<Zap className="w-5 h-5" />}
-              title="Move through email faster"
-              description="Keyboard-first navigation. Instant actions. No waiting, no friction."
+              title="Keyboard shortcuts"
+              description="Archive, reply, and navigate with single keystrokes. Built for speed."
               testId="demo-toggle-speed"
             />
             <DemoToggle 
               active={activeDemo === 'organize'}
               onClick={() => setActiveDemo('organize')}
               icon={<Filter className="w-5 h-5" />}
-              title="Find anything instantly"
-              description="Search that actually works. Filters that stay organized without effort."
+              title="Instant search"
+              description="Find any email in seconds. Search by sender, subject, or content."
               testId="demo-toggle-organize"
             />
           </div>
@@ -414,33 +414,33 @@ function BenefitsSection() {
   const benefits = [
     {
       icon: <Inbox className="w-5 h-5" />,
-      title: "Reach inbox zero daily",
-      description: "A clear view of what needs attention. Archive, reply, or defer with a single keystroke."
+      title: "Connect Gmail or Outlook",
+      description: "Link your existing account in seconds. Your emails sync instantly, nothing to migrate."
     },
     {
       icon: <Zap className="w-5 h-5" />,
-      title: "Reply in seconds, not minutes",
-      description: "Intelligent suggestions help you respond faster. Edit or send as-is."
+      title: "AI-suggested replies",
+      description: "Get smart reply suggestions based on context. Edit them or send as-is."
     },
     {
       icon: <Eye className="w-5 h-5" />,
-      title: "Never miss what matters",
-      description: "Priority signals surface urgent messages. Low-priority threads stay quiet."
+      title: "Automatic email summaries",
+      description: "Long threads summarized so you get the point without scrolling."
     },
     {
       icon: <Clock className="w-5 h-5" />,
-      title: "Schedule sends and follow-ups",
-      description: "Send later. Get reminded if no reply. Stay on top without the mental overhead."
+      title: "Keyboard shortcuts",
+      description: "Archive, reply, and navigate with single keystrokes. No clicking required."
     },
     {
       icon: <Lock className="w-5 h-5" />,
-      title: "Private by default",
-      description: "OAuth only. We never see your password. Your data stays encrypted and yours."
+      title: "Secure OAuth connection",
+      description: "We never see your password. Your data stays encrypted and private."
     },
     {
       icon: <Shield className="w-5 h-5" />,
-      title: "Built for daily use",
-      description: "Designed to be your primary inbox. Fast, reliable, and trusted by professionals."
+      title: "Works with your workflow",
+      description: "Star, archive, and organize emails the way you already do. Familiar, but faster."
     }
   ];
 
