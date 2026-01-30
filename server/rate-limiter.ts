@@ -1,16 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import type { Request, Response } from 'express';
 
-// Helper to normalize IP addresses (handles IPv6-mapped IPv4)
-function normalizeIp(ip: string | undefined): string {
-  if (!ip) return 'unknown';
-  // Convert IPv6-mapped IPv4 addresses to regular IPv4
-  if (ip.startsWith('::ffff:')) {
-    return ip.substring(7);
-  }
-  return ip;
-}
-
 // Rate limiter for authentication endpoints (login, register)
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -18,8 +8,9 @@ export const authLimiter = rateLimit({
   message: { error: 'Too many authentication attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   handler: (req: Request, res: Response) => {
-    console.warn(`Rate limit exceeded for auth: ${normalizeIp(req.ip)}`);
+    console.warn(`Rate limit exceeded for auth: ${req.ip}`);
     res.status(429).json({ error: 'Too many authentication attempts. Please try again in 15 minutes.' });
   }
 });
@@ -30,7 +21,8 @@ export const passwordResetLimiter = rateLimit({
   max: 5, // 5 reset attempts per hour
   message: { error: 'Too many password reset attempts. Please try again later.' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 // Rate limiter for 2FA verification
@@ -39,7 +31,8 @@ export const twoFactorLimiter = rateLimit({
   max: 5, // 5 attempts per window
   message: { error: 'Too many verification attempts. Please try again later.' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 // Rate limiter for API endpoints (general)
@@ -48,7 +41,8 @@ export const apiLimiter = rateLimit({
   max: 100, // 100 requests per minute
   message: { error: 'Too many requests. Please slow down.' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 // Stricter rate limiter for AI generation endpoints (expensive operations)
@@ -59,9 +53,10 @@ export const aiGenerationLimiter = rateLimit({
   message: { error: 'Too many AI requests. Please wait before generating more.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   keyGenerator: (req: Request) => {
-    // Prefer session userId for authenticated requests, otherwise use normalized IP
-    return req.session?.userId?.toString() || normalizeIp(req.ip);
+    // Prefer session userId for authenticated requests
+    return req.session?.userId?.toString() || req.ip || 'unknown';
   }
 });
 
@@ -72,8 +67,9 @@ export const emailSendLimiter = rateLimit({
   message: { error: 'Too many emails sent. Please wait before sending more.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   keyGenerator: (req: Request) => {
-    return req.session?.userId?.toString() || normalizeIp(req.ip);
+    return req.session?.userId?.toString() || req.ip || 'unknown';
   }
 });
 
@@ -84,7 +80,8 @@ export const fileLimiter = rateLimit({
   message: { error: 'Too many file operations. Please wait.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   keyGenerator: (req: Request) => {
-    return req.session?.userId?.toString() || normalizeIp(req.ip);
+    return req.session?.userId?.toString() || req.ip || 'unknown';
   }
 });

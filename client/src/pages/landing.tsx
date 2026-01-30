@@ -317,18 +317,21 @@ function DemoSection() {
                 active={activeDemo === 'unified'}
                 onClick={() => { setActiveDemo('unified'); setIsPaused(true); }}
                 label="Inbox"
+                icon={Inbox}
                 testId="demo-toggle-unified"
               />
               <DemoTab 
                 active={activeDemo === 'speed'}
                 onClick={() => { setActiveDemo('speed'); setIsPaused(true); }}
                 label="AI Reply"
+                icon={Sparkles}
                 testId="demo-toggle-speed"
               />
               <DemoTab 
                 active={activeDemo === 'organize'}
                 onClick={() => { setActiveDemo('organize'); setIsPaused(true); }}
                 label="Summaries"
+                icon={Brain}
                 testId="demo-toggle-organize"
               />
             </div>
@@ -363,22 +366,24 @@ function DemoSection() {
   );
 }
 
-function DemoTab({ active, onClick, label, testId }: {
+function DemoTab({ active, onClick, label, icon: Icon, testId }: {
   active: boolean;
   onClick: () => void;
   label: string;
+  icon: React.ComponentType<{ className?: string }>;
   testId: string;
 }) {
   return (
     <button
       onClick={onClick}
       data-testid={testId}
-      className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+      className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
         active 
           ? 'bg-primary text-primary-foreground' 
           : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.05]'
       }`}
     >
+      <Icon className="w-4 h-4" />
       {label}
     </button>
   );
@@ -398,26 +403,31 @@ function DemoUnified() {
       </div>
       <div className="space-y-3">
         <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600" />
-          <div className="flex-1">
-            <div className="h-2 w-24 bg-foreground/80 rounded mb-1.5" />
-            <div className="h-1.5 w-40 bg-muted-foreground/30 rounded" />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-medium">D</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">David Park</p>
+            <p className="text-xs text-muted-foreground truncate">Quick question about the proposal</p>
           </div>
-          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-        </div>
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600" />
-          <div className="flex-1">
-            <div className="h-2 w-20 bg-muted-foreground/40 rounded mb-1.5" />
-            <div className="h-1.5 w-32 bg-muted-foreground/20 rounded" />
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground">8m</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
           </div>
         </div>
         <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600" />
-          <div className="flex-1">
-            <div className="h-2 w-28 bg-muted-foreground/40 rounded mb-1.5" />
-            <div className="h-1.5 w-36 bg-muted-foreground/20 rounded" />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-xs font-medium">S</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-muted-foreground truncate">Sarah Chen</p>
+            <p className="text-xs text-muted-foreground/60 truncate">Re: Q4 budget discussion</p>
           </div>
+          <span className="text-[10px] text-muted-foreground">1h</span>
+        </div>
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">J</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-muted-foreground truncate">James Wilson</p>
+            <p className="text-xs text-muted-foreground/60 truncate">Meeting notes from today</p>
+          </div>
+          <span className="text-[10px] text-muted-foreground">3h</span>
         </div>
       </div>
     </div>
@@ -438,10 +448,10 @@ function DemoSpeed() {
       </div>
       <div className="space-y-4">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-pink-600" />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">L</div>
           <div className="flex-1 p-3 rounded-lg bg-white/[0.02]">
-            <div className="h-1.5 w-32 bg-muted-foreground/30 rounded mb-2" />
-            <div className="h-1.5 w-48 bg-muted-foreground/20 rounded" />
+            <p className="text-xs text-muted-foreground mb-1">Lisa Martinez</p>
+            <p className="text-sm text-foreground/80">Can we reschedule our meeting to Thursday? I have a conflict on Wednesday.</p>
           </div>
         </div>
         <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
@@ -449,11 +459,9 @@ function DemoSpeed() {
             <Sparkles className="w-3.5 h-3.5 text-primary" />
             <span className="text-xs font-medium text-primary">AI Draft</span>
           </div>
-          <div className="space-y-2 mb-4">
-            <div className="h-1.5 w-full bg-foreground/40 rounded" />
-            <div className="h-1.5 w-4/5 bg-foreground/30 rounded" />
-            <div className="h-1.5 w-2/3 bg-foreground/20 rounded" />
-          </div>
+          <p className="text-sm text-foreground/90 mb-4">
+            Hi Lisa, Thursday works perfectly for me. Same time? Let me know if you need to adjust. Thanks!
+          </p>
           <div className="flex gap-2">
             <div className="px-3 py-1.5 rounded-md bg-primary text-xs font-medium text-primary-foreground">Send</div>
             <div className="px-3 py-1.5 rounded-md bg-white/[0.05] text-xs text-muted-foreground">Edit</div>
@@ -483,28 +491,28 @@ function DemoOrganize() {
           <span className="text-[10px] text-muted-foreground/50 ml-auto">12 messages</span>
         </div>
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-            <div className="h-1.5 flex-1 bg-foreground/30 rounded" />
+          <div className="flex items-start gap-2">
+            <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-foreground/80">Budget approved for Q4 marketing campaign</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-            <div className="h-1.5 flex-1 bg-foreground/25 rounded" />
+          <div className="flex items-start gap-2">
+            <Clock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-foreground/70">Waiting on vendor pricing by Friday</p>
           </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-            <div className="h-1.5 w-3/4 bg-foreground/20 rounded" />
+          <div className="flex items-start gap-2">
+            <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-foreground/60">Team agreed on launch date: Nov 15</p>
           </div>
         </div>
       </div>
       <div className="space-y-2">
         <div className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02]">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600" />
-          <div className="h-1.5 w-32 bg-muted-foreground/20 rounded" />
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-[10px] font-medium">M</div>
+          <p className="text-xs text-muted-foreground truncate">Mike: "Sounds good, let's finalize..."</p>
         </div>
         <div className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02]">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600" />
-          <div className="h-1.5 w-28 bg-muted-foreground/20 rounded" />
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-[10px] font-medium">A</div>
+          <p className="text-xs text-muted-foreground truncate">Anna: "I'll send the docs today"</p>
         </div>
       </div>
     </div>
