@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare, Inbox, Users, Shield, Check, Star } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare, Inbox, Users, Shield, Check, Star, TrendingUp, Clock, Brain, Rocket } from "lucide-react";
 import type { User } from "@shared/schema";
 
 interface AuthResponse {
@@ -306,7 +306,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8 sm:py-12">
-      <div className={`w-full transition-all ${step === "select-plan" ? "max-w-2xl" : "max-w-lg"}`}>
+      <div className={`w-full transition-all ${step === "select-plan" ? "max-w-4xl" : "max-w-lg"}`}>
         <div className="flex justify-center gap-1 sm:gap-1.5 mb-6 sm:mb-8">
           {steps.map((s, i) => (
             <div
@@ -604,7 +604,6 @@ export default function OnboardingPage() {
                   <>
                     {(() => {
                       const plan = basePlans.find(p => p.id === recommendedPlan)!;
-                      const reasons = getRecommendationReasons(recommendedPlan, preferences);
                       const displayPrice = plan.id === "free" 
                         ? "$0" 
                         : billingInterval === "annual" 
@@ -616,42 +615,49 @@ export default function OnboardingPage() {
                           ? "/year" 
                           : "/month";
 
+                      const getVisualizationData = () => {
+                        const emailVolume = preferences.emailVolume;
+                        const automationLevel = preferences.automationLevel;
+                        
+                        const emailsPerDay = emailVolume === "very-high" ? 120 : emailVolume === "high" ? 75 : emailVolume === "medium" ? 35 : 15;
+                        const timeSavedPerEmail = plan.id === "business" ? 3 : plan.id === "pro" ? 2.5 : plan.id === "student" ? 2 : 1;
+                        const dailyTimeSaved = Math.round((emailsPerDay * timeSavedPerEmail) / 60);
+                        const monthlyTimeSaved = dailyTimeSaved * 22;
+                        const yearlyTimeSaved = monthlyTimeSaved * 12;
+                        
+                        const productivityBoost = plan.id === "business" ? 95 : plan.id === "pro" ? 78 : plan.id === "student" ? 65 : 25;
+                        const aiCapability = plan.id === "business" ? 100 : plan.id === "pro" ? 75 : plan.id === "student" ? 60 : 20;
+                        
+                        return { emailsPerDay, dailyTimeSaved, monthlyTimeSaved, yearlyTimeSaved, productivityBoost, aiCapability };
+                      };
+                      
+                      const vizData = getVisualizationData();
+
                       return (
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div className="p-4 sm:p-5 rounded-lg border-2 border-primary bg-primary/5 relative">
                             <Badge className="absolute -top-2.5 left-3 sm:left-4 bg-primary text-primary-foreground text-[10px] sm:text-xs">
                               <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
                               Recommended for you
                             </Badge>
                             
-                            <div className="flex items-start justify-between gap-4 mb-4">
+                            <div className="flex items-start justify-between gap-4 mb-6 mt-2">
                               <div>
-                                <h3 className="text-xl font-bold">{plan.name}</h3>
+                                <h3 className="text-2xl font-bold">{plan.name}</h3>
                                 <p className="text-sm text-muted-foreground">{plan.description}</p>
                               </div>
                               <div className="text-right">
-                                <div className="text-2xl font-bold">{displayPrice}</div>
-                                <div className="text-xs text-muted-foreground">{displayPeriod}</div>
+                                <div className="text-3xl font-bold">{displayPrice}</div>
+                                <div className="text-sm text-muted-foreground">{displayPeriod}</div>
                               </div>
                             </div>
 
-                            <div className="space-y-2 mb-4">
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Why this plan fits you</p>
-                              {reasons.map((reason, i) => (
-                                <div key={i} className="flex items-start gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                                  <span>{reason}</span>
-                                </div>
-                              ))}
-                            </div>
-
-                            <div className="space-y-2 mb-4">
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Features included</p>
-                              <div className="grid grid-cols-1 gap-1">
+                            <div className="space-y-2 mb-6">
+                              <div className="grid grid-cols-1 gap-1.5">
                                 {plan.features.map((feature) => (
                                   <div key={feature} className="flex items-center gap-2 text-sm">
-                                    <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                                    <span className="text-muted-foreground">{feature}</span>
+                                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                    <span>{feature}</span>
                                   </div>
                                 ))}
                               </div>
@@ -677,14 +683,114 @@ export default function OnboardingPage() {
                             </Button>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setShowAllPlans(true)}
-                            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-                            data-testid="button-view-all-plans"
-                          >
-                            View all plans
-                          </button>
+                          <div className="p-4 sm:p-5 rounded-lg border border-border bg-card">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <TrendingUp className="w-4 h-4 text-primary" />
+                              </div>
+                              <h4 className="font-semibold">Why {plan.name} is perfect for you</h4>
+                            </div>
+
+                            <div className="space-y-5">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-muted-foreground" />
+                                    Time saved per month
+                                  </span>
+                                  <span className="font-bold text-primary">{vizData.monthlyTimeSaved}+ hours</span>
+                                </div>
+                                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all duration-1000 ease-out"
+                                    style={{ 
+                                      width: `${Math.min(vizData.monthlyTimeSaved * 2.5, 100)}%`,
+                                      animation: 'slideIn 1s ease-out'
+                                    }}
+                                  />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  With {vizData.emailsPerDay} emails/day, you'll save {vizData.yearlyTimeSaved}+ hours/year
+                                </p>
+                              </div>
+
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="flex items-center gap-2">
+                                    <Brain className="w-4 h-4 text-muted-foreground" />
+                                    AI capability unlocked
+                                  </span>
+                                  <span className="font-bold text-primary">{vizData.aiCapability}%</span>
+                                </div>
+                                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-1000 ease-out"
+                                    style={{ 
+                                      width: `${vizData.aiCapability}%`,
+                                      animation: 'slideIn 1.2s ease-out'
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="flex items-center gap-2">
+                                    <Rocket className="w-4 h-4 text-muted-foreground" />
+                                    Productivity boost
+                                  </span>
+                                  <span className="font-bold text-primary">{vizData.productivityBoost}%</span>
+                                </div>
+                                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-1000 ease-out"
+                                    style={{ 
+                                      width: `${vizData.productivityBoost}%`,
+                                      animation: 'slideIn 1.4s ease-out'
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              {plan.id !== "free" && (
+                                <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Sparkles className="w-4 h-4 text-primary" />
+                                    <span className="text-sm font-medium">Value comparison</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    At ${billingInterval === "annual" ? Math.round((plan.annualPrice || 0) / 12) : plan.monthlyPrice}/month, 
+                                    you're paying just ${(((billingInterval === "annual" ? (plan.annualPrice || 0) / 12 : plan.monthlyPrice) || 0) / vizData.monthlyTimeSaved).toFixed(2)}/hour 
+                                    for time saved. That's {Math.round(25 / (((billingInterval === "annual" ? (plan.annualPrice || 0) / 12 : plan.monthlyPrice) || 1) / vizData.monthlyTimeSaved))}x more 
+                                    valuable than your hourly rate.
+                                  </p>
+                                </div>
+                              )}
+
+                              {plan.id === "free" && (
+                                <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Good starting point</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    Perfect for trying MyDraft. Upgrade anytime when you're ready for more AI power.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="lg:col-span-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowAllPlans(true)}
+                              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                              data-testid="button-view-all-plans"
+                            >
+                              View all plans
+                            </button>
+                          </div>
                         </div>
                       );
                     })()}
