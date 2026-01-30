@@ -91,9 +91,9 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transform: mounted ? 'translateY(0)' : 'translateY(30px)'
               }}
             >
-              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
-                <RefreshCw className="w-4 h-4" />
-                Replace your inbox
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-muted-foreground text-sm mb-8">
+                <Mail className="w-3.5 h-3.5" />
+                Works with Gmail & Outlook
               </div>
             </div>
             
@@ -105,11 +105,11 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transitionDelay: '150ms'
               }}
             >
-              Your new
+              The inbox
               <br />
-              <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
-                primary inbox.
-              </span>
+              that works
+              <br />
+              <span className="text-primary">for you.</span>
             </h1>
             
             <p 
@@ -120,7 +120,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transitionDelay: '300ms'
               }}
             >
-              Same emails, smarter inbox. Replies drafted for you, threads summarized, clutter gone.
+              AI drafts your replies. Summarizes long threads. Keeps your focus on what matters.
             </p>
             
             <div 
@@ -365,35 +365,66 @@ function DemoToggle({ active, onClick, icon, title, description, testId }: {
 
 function DemoUnified() {
   return (
-    <div className="p-8">
-      <div className="mb-6 pb-6 border-b border-white/[0.06]">
-        <h4 className="font-medium text-lg mb-1">Inbox</h4>
-        <p className="text-sm text-muted-foreground/60">12 unread</p>
+    <div className="bg-background">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/10">
+        <div className="flex items-center gap-3">
+          <Inbox className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Inbox</span>
+          <span className="text-xs text-muted-foreground/60 bg-muted/20 px-1.5 py-0.5 rounded">12</span>
+        </div>
+        <Search className="w-4 h-4 text-muted-foreground/40" />
       </div>
-      <div className="space-y-4">
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-primary/10 border border-primary/20">
-          <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center text-sm font-medium">M</div>
+      <div>
+        <div className="flex items-start gap-3 px-4 py-3 bg-primary/5 border-l-2 border-primary">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">MT</div>
           <div className="flex-1 min-w-0">
-            <span className="font-medium">Michael Torres</span>
-            <p className="text-sm text-muted-foreground/60 truncate">Following up on our call</p>
+            <div className="flex items-center justify-between gap-2 mb-0.5">
+              <span className="text-sm font-medium truncate">Michael Torres</span>
+              <span className="text-[11px] text-muted-foreground/50 flex-shrink-0">5m</span>
+            </div>
+            <p className="text-sm text-foreground/80 truncate mb-0.5">Following up on our call</p>
+            <p className="text-xs text-muted-foreground/50 truncate">Thanks for taking the time to chat yesterday...</p>
           </div>
-          <span className="text-xs text-muted-foreground/40">5m</span>
+          <Star className="w-4 h-4 text-muted-foreground/30 flex-shrink-0 mt-1" />
         </div>
-        <div className="flex items-center gap-4 p-4 rounded-xl border border-white/[0.06] hover-elevate transition-colors">
-          <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center text-sm font-medium">J</div>
+        <div className="flex items-start gap-3 px-4 py-3 border-b border-border/10">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">JC</div>
           <div className="flex-1 min-w-0">
-            <span className="font-medium">John (3)</span>
-            <p className="text-sm text-muted-foreground/60 truncate">Re: lunch tomorrow?</p>
+            <div className="flex items-center justify-between gap-2 mb-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium truncate">John Chen</span>
+                <span className="text-[10px] text-muted-foreground/40 bg-muted/20 px-1 rounded">3</span>
+              </div>
+              <span className="text-[11px] text-muted-foreground/50 flex-shrink-0">28m</span>
+            </div>
+            <p className="text-sm text-foreground/80 truncate mb-0.5">Re: lunch tomorrow?</p>
+            <p className="text-xs text-muted-foreground/50 truncate">Sounds good, let's meet at noon</p>
           </div>
-          <span className="text-xs text-muted-foreground/40">28m</span>
+          <Star className="w-4 h-4 text-amber-400 fill-amber-400 flex-shrink-0 mt-1" />
         </div>
-        <div className="flex items-center gap-4 p-4 rounded-xl border border-white/[0.06] hover-elevate transition-colors">
-          <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center text-sm font-medium">E</div>
+        <div className="flex items-start gap-3 px-4 py-3 border-b border-border/10">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">ER</div>
           <div className="flex-1 min-w-0">
-            <span className="font-medium">Emily Rodriguez</span>
-            <p className="text-sm text-muted-foreground/60 truncate">Thanks for sending that over</p>
+            <div className="flex items-center justify-between gap-2 mb-0.5">
+              <span className="text-sm text-muted-foreground truncate">Emily Rodriguez</span>
+              <span className="text-[11px] text-muted-foreground/50 flex-shrink-0">2h</span>
+            </div>
+            <p className="text-sm text-muted-foreground/70 truncate mb-0.5">Thanks for sending that over</p>
+            <p className="text-xs text-muted-foreground/40 truncate">I'll review and get back to you by EOD</p>
           </div>
-          <span className="text-xs text-muted-foreground/40">2h</span>
+          <Star className="w-4 h-4 text-muted-foreground/20 flex-shrink-0 mt-1" />
+        </div>
+        <div className="flex items-start gap-3 px-4 py-3">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">AL</div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 mb-0.5">
+              <span className="text-sm text-muted-foreground truncate">Alex Lin</span>
+              <span className="text-[11px] text-muted-foreground/50 flex-shrink-0">Yesterday</span>
+            </div>
+            <p className="text-sm text-muted-foreground/70 truncate mb-0.5">Project update</p>
+            <p className="text-xs text-muted-foreground/40 truncate">Here's where we are on the Q1 deliverables</p>
+          </div>
+          <Star className="w-4 h-4 text-muted-foreground/20 flex-shrink-0 mt-1" />
         </div>
       </div>
     </div>
@@ -402,22 +433,40 @@ function DemoUnified() {
 
 function DemoSpeed() {
   return (
-    <div className="p-8">
-      <div className="mb-6 pb-6 border-b border-white/[0.06]">
-        <h4 className="font-medium text-lg mb-1">AI Replies</h4>
-        <p className="text-sm text-muted-foreground/60">Draft responses instantly</p>
-      </div>
-      <div className="space-y-5">
-        <div className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02]">
-          <p className="text-xs text-muted-foreground/60 mb-2">From: Sarah Chen</p>
-          <p className="text-muted-foreground">"Can we move the meeting to 3pm instead?"</p>
+    <div className="bg-background">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/10">
+        <Button size="icon" variant="ghost" className="h-8 w-8">
+          <ArrowRight className="w-4 h-4 rotate-180" />
+        </Button>
+        <div className="flex-1">
+          <p className="text-sm font-medium">Re: Meeting reschedule</p>
+          <p className="text-xs text-muted-foreground/60">Sarah Chen</p>
         </div>
-        <div className="p-4 rounded-xl border border-primary/30 bg-primary/5">
-          <p className="text-xs text-primary/70 mb-2">Suggested reply</p>
-          <p className="text-foreground/80">"Sure, 3pm works for me. See you then!"</p>
-          <div className="flex gap-3 mt-4">
+        <Star className="w-4 h-4 text-muted-foreground/30" />
+      </div>
+      <div className="p-4">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">SC</div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-medium">Sarah Chen</span>
+              <span className="text-[11px] text-muted-foreground/50">10:32 AM</span>
+            </div>
+            <p className="text-sm text-muted-foreground/80">Can we move the meeting to 3pm instead? I have a conflict at 2.</p>
+          </div>
+        </div>
+        <div className="ml-11 p-4 rounded-xl bg-primary/5 border border-primary/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">Draft reply</span>
+          </div>
+          <p className="text-sm text-foreground/90 mb-4">Hi Sarah,</p>
+          <p className="text-sm text-foreground/90 mb-4">3pm works perfectly for me. I'll update the calendar invite.</p>
+          <p className="text-sm text-foreground/90 mb-4">See you then!</p>
+          <div className="flex gap-2 pt-2 border-t border-primary/10">
             <Button size="sm">Send</Button>
             <Button size="sm" variant="ghost">Edit</Button>
+            <Button size="sm" variant="ghost">Regenerate</Button>
           </div>
         </div>
       </div>
@@ -427,36 +476,67 @@ function DemoSpeed() {
 
 function DemoOrganize() {
   return (
-    <div className="p-8">
-      <div className="mb-6 pb-6 border-b border-white/[0.06]">
-        <h4 className="font-medium text-lg mb-1">Thread Summary</h4>
-        <p className="text-sm text-muted-foreground/60">47 messages condensed</p>
-      </div>
-      <div className="space-y-5">
-        <div className="p-5 rounded-xl border border-white/[0.06] bg-white/[0.02]">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs">M</div>
-            <span className="font-medium">Project launch thread</span>
-            <span className="text-xs text-muted-foreground/40 ml-auto">47 messages</span>
+    <div className="bg-background">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/10">
+        <Button size="icon" variant="ghost" className="h-8 w-8">
+          <ArrowRight className="w-4 h-4 rotate-180" />
+        </Button>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium">Project Launch Planning</p>
+            <span className="text-[10px] text-muted-foreground/40 bg-muted/20 px-1 rounded">47</span>
           </div>
-          <div className="space-y-3 text-muted-foreground/80">
-            <p className="flex items-start gap-3">
-              <span className="text-primary/60">•</span>
-              Launch date confirmed for March 15th
-            </p>
-            <p className="flex items-start gap-3">
-              <span className="text-primary/60">•</span>
-              Marketing assets due by March 10th
-            </p>
-            <p className="flex items-start gap-3">
-              <span className="text-primary/60">•</span>
-              Waiting on final approval from legal
-            </p>
+          <p className="text-xs text-muted-foreground/60">Marketing Team</p>
+        </div>
+        <Archive className="w-4 h-4 text-muted-foreground/30" />
+      </div>
+      <div className="p-4">
+        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Brain className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">Thread summary</span>
+            <span className="text-[10px] text-muted-foreground/50 ml-auto">47 messages</span>
+          </div>
+          <div className="space-y-2.5 text-sm">
+            <div className="flex items-start gap-2">
+              <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+              <span className="text-foreground/80">Launch date confirmed: March 15th</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <Clock className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <span className="text-foreground/80">Marketing assets due by March 10th</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <Clock className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <span className="text-foreground/80">Awaiting legal approval on terms</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+              <span className="text-foreground/80">Budget approved by finance</span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground/50">
-          <Brain className="w-4 h-4" />
-          <span>Summarized from 47 messages</span>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-[10px] font-medium text-white flex-shrink-0">JD</div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium">James Dean</span>
+                <span className="text-[10px] text-muted-foreground/40">Mar 5</span>
+              </div>
+              <p className="text-xs text-muted-foreground/60">Sounds good, I'll get the assets ready...</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-[10px] font-medium text-white flex-shrink-0">LM</div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium">Lisa Martinez</span>
+                <span className="text-[10px] text-muted-foreground/40">Mar 5</span>
+              </div>
+              <p className="text-xs text-muted-foreground/60">Legal is reviewing the final draft now...</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
