@@ -204,10 +204,26 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   // Mutation to delete folder
   const deleteFolderMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/folders/${id}`);
+      const response = await apiRequest("DELETE", `/api/folders/${id}`);
+      if (!response.ok && response.status !== 204) {
+        const error = await response.json().catch(() => ({ error: "Failed to delete folder" }));
+        throw new Error(error.error || "Failed to delete folder");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+      toast({
+        title: "Folder deleted",
+        description: "The folder has been removed.",
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Delete folder error:", error);
+      toast({
+        title: "Failed to delete folder",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -387,13 +403,17 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   }, []);
 
   const handleDeleteFolder = useCallback(() => {
-    if (selectedFolder && selectedFolder.id) {
+    console.log("handleDeleteFolder called", { selectedFolder, id: selectedFolder?.id });
+    if (selectedFolder && selectedFolder.id !== undefined) {
+      console.log("Deleting folder with id:", selectedFolder.id);
       deleteFolderMutation.mutate(selectedFolder.id);
       if (activeFolder.toLowerCase() === selectedFolder.title.toLowerCase()) {
         onFolderChange("inbox");
       }
       setIsDeleteOpen(false);
       setSelectedFolder(null);
+    } else {
+      console.error("Cannot delete: selectedFolder or id is missing", selectedFolder);
     }
   }, [selectedFolder, activeFolder, onFolderChange, deleteFolderMutation]);
 
@@ -924,11 +944,16 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} data-testid="button-cancel-delete">
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteFolder}>
-              Delete
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteFolder}
+              disabled={deleteFolderMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteFolderMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

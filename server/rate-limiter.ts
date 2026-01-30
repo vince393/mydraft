@@ -8,7 +8,7 @@ export const authLimiter = rateLimit({
   message: { error: 'Too many authentication attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false },
+  validate: false,
   handler: (req: Request, res: Response) => {
     console.warn(`Rate limit exceeded for auth: ${req.ip}`);
     res.status(429).json({ error: 'Too many authentication attempts. Please try again in 15 minutes.' });
@@ -22,7 +22,7 @@ export const passwordResetLimiter = rateLimit({
   message: { error: 'Too many password reset attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false }
+  validate: false
 });
 
 // Rate limiter for 2FA verification
@@ -32,7 +32,7 @@ export const twoFactorLimiter = rateLimit({
   message: { error: 'Too many verification attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false }
+  validate: false
 });
 
 // Rate limiter for API endpoints (general)
@@ -42,22 +42,17 @@ export const apiLimiter = rateLimit({
   message: { error: 'Too many requests. Please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false }
+  validate: false
 });
 
 // Stricter rate limiter for AI generation endpoints (expensive operations)
-// Uses session-based limiting when available for authenticated users
 export const aiGenerationLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 20, // 20 AI generations per minute
   message: { error: 'Too many AI requests. Please wait before generating more.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false },
-  keyGenerator: (req: Request) => {
-    // Prefer session userId for authenticated requests
-    return req.session?.userId?.toString() || req.ip || 'unknown';
-  }
+  validate: false
 });
 
 // Rate limiter for email sending
@@ -67,10 +62,7 @@ export const emailSendLimiter = rateLimit({
   message: { error: 'Too many emails sent. Please wait before sending more.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false },
-  keyGenerator: (req: Request) => {
-    return req.session?.userId?.toString() || req.ip || 'unknown';
-  }
+  validate: false
 });
 
 // Rate limiter for file uploads/downloads
@@ -80,8 +72,5 @@ export const fileLimiter = rateLimit({
   message: { error: 'Too many file operations. Please wait.' },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false },
-  keyGenerator: (req: Request) => {
-    return req.session?.userId?.toString() || req.ip || 'unknown';
-  }
+  validate: false
 });
