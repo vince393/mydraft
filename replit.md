@@ -104,3 +104,37 @@ shared/           # Shared types and schemas
 - `openai`: OpenAI API client
 - `wouter`: Client-side routing
 - Radix UI primitives: Accessible UI components
+
+## CASA Security Compliance
+
+### Data Classification (Q4)
+All sensitive data is identified and classified into 4 protection levels:
+- **RESTRICTED**: Passwords, API keys, OAuth tokens, session tokens, 2FA codes, payment info
+- **CONFIDENTIAL**: Email content, user email addresses, AI drafts, writing style data, audit logs
+- **INTERNAL**: User preferences, subscription status, custom folders, usage metrics
+- **PUBLIC**: Application metadata, pricing information
+
+Full classification schema: `shared/data-classification.ts`
+
+### Protection Requirements (Q5)
+Each protection level has defined requirements:
+
+| Level | Encryption | Auth Required | MFA | Access Logged | Retention |
+|-------|------------|---------------|-----|---------------|-----------|
+| RESTRICTED | At-rest + Transit (scrypt/AES-256) | Yes | Yes | Yes | 365 days |
+| CONFIDENTIAL | At-rest + Transit (PostgreSQL/TLS) | Yes | No | Yes | 90 days |
+| INTERNAL | At-rest + Transit | Yes | No | Modifications only | 30 days |
+| PUBLIC | Transit only (TLS) | No | No | No | N/A |
+
+### Security Features Implemented
+- **Rate Limiting**: Auth (10/15min), Password Reset (5/hour), 2FA (5/5min), API (100/min), AI (20/min), Email (30/min), Files (50/min)
+- **Session Security**: httpOnly cookies, 7-day expiry, terminated on password change
+- **XSS Prevention**: SVG sanitization on upload and download (DOMPurify)
+- **Audit Logging**: Login attempts, password changes, email sends, attachment downloads
+- **Malware Scanning**: File type blocking, ClamAV integration for attachments
+
+### Security Files
+- `server/rate-limiter.ts`: Rate limiting middleware
+- `server/antivirus.ts`: Malware scanning and SVG sanitization
+- `server/storage.ts`: Security audit log storage
+- `shared/data-classification.ts`: Data classification schema and protection requirements
