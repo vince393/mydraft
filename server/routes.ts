@@ -14,6 +14,7 @@ import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
 import { sendVerificationEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
+import { scanFile, checkFileType } from "./antivirus";
 
 // Pending registrations waiting for email verification
 const pendingRegistrations: Map<string, { email: string; hashedPassword: string; expiresAt: number }> = new Map();
@@ -1581,7 +1582,7 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
-  // Download email attachment
+  // Download email attachment (with antivirus scanning)
   app.get("/api/emails/:messageId/attachments/:attachmentId", requireAuth, async (req, res) => {
     try {
       const { messageId, attachmentId } = req.params;
@@ -1592,6 +1593,21 @@ Return ONLY valid JSON, no other text.`;
       }
 
       const attachment = await nylas.downloadAttachment(grant.grantId, messageId, attachmentId);
+      
+      // Scan attachment for malware before serving
+      const scanResult = await scanFile(
+        attachment.data,
+        attachment.filename,
+        attachment.contentType
+      );
+      
+      if (!scanResult.isClean) {
+        console.warn(`Blocked malicious attachment: ${attachment.filename} - ${scanResult.malwareName}`);
+        return res.status(403).json({ 
+          error: "File blocked for security reasons",
+          reason: scanResult.malwareName 
+        });
+      }
       
       res.setHeader("Content-Type", attachment.contentType);
       res.setHeader("Content-Disposition", `attachment; filename="${attachment.filename}"`);
@@ -2490,6 +2506,28 @@ Rules:
         const user = await storage.getUser(req.session.userId!);
         if (!user || (user.plan !== "pro" && user.plan !== "premium" && user.plan !== "business")) {
           return res.status(403).json({ error: "Schedule send is a Pro/Business feature" });
+        }
+      }
+
+      // Scan attachments for malware before sending
+      if (attachments && Array.isArray(attachments)) {
+        for (const attachment of attachments) {
+          if (attachment.content && attachment.filename) {
+            const scanResult = await scanFile(
+              attachment.content,
+              attachment.filename,
+              attachment.contentType,
+              true // isBase64
+            );
+            
+            if (!scanResult.isClean) {
+              console.warn(`Blocked malicious attachment upload: ${attachment.filename} - ${scanResult.malwareName}`);
+              return res.status(403).json({
+                error: `Attachment "${attachment.filename}" blocked for security reasons`,
+                reason: scanResult.malwareName
+              });
+            }
+          }
         }
       }
 
