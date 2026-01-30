@@ -197,6 +197,7 @@ export interface IStorage {
 
   // Local email state methods (UI-only, not synced with Nylas mailbox)
   getLocalEmailState(userId: string, messageId: string): Promise<LocalEmailState | undefined>;
+  getAllLocalEmailStates(userId: string): Promise<Map<string, string>>; // Returns messageId -> folder map
   setLocalEmailFolder(userId: string, messageId: string, folder: string): Promise<LocalEmailState>;
   getLocalEmailsByFolder(userId: string, folder: string): Promise<string[]>; // Returns messageIds
   getLocalTrashedEmails(userId: string): Promise<string[]>;
@@ -1841,6 +1842,13 @@ Business Development`,
     const [state] = await db.select().from(localEmailStates)
       .where(and(eq(localEmailStates.userId, userId), eq(localEmailStates.messageId, messageId)));
     return state;
+  }
+
+  async getAllLocalEmailStates(userId: string): Promise<Map<string, string>> {
+    const states = await db.select({ messageId: localEmailStates.messageId, localFolder: localEmailStates.localFolder })
+      .from(localEmailStates)
+      .where(eq(localEmailStates.userId, userId));
+    return new Map(states.map(s => [s.messageId, s.localFolder]));
   }
 
   async setLocalEmailFolder(userId: string, messageId: string, folder: string): Promise<LocalEmailState> {

@@ -1335,11 +1335,15 @@ Return ONLY valid JSON, no other text.`;
     try {
       const folder = req.query.folder as string | undefined;
       const allFolders = req.query.allFolders === "true";
+      const userId = req.session.userId!;
       
-      const grant = await storage.getNylasGrant(req.session.userId!);
+      const grant = await storage.getNylasGrant(userId);
       if (grant) {
         nylas.prefetchFolderIds(grant.grantId);
         let allMessages: any[] = [];
+        
+        // Get all local email states to apply folder overrides
+        const localStates = await storage.getAllLocalEmailStates(userId);
         
         if (allFolders) {
           // Fetch from all folders for threading
@@ -1373,8 +1377,27 @@ Return ONLY valid JSON, no other text.`;
           allMessages = messages.map(m => ({ ...m, folder: folder || "inbox" }));
         }
         
+        // Apply local folder overrides for all states
+        allMessages = allMessages.map(msg => {
+          const localFolder = localStates.get(msg.id);
+          if (localFolder) {
+            return { ...msg, folder: localFolder };
+          }
+          return msg;
+        });
+        
+        // Filter by requested folder (applies local overrides)
+        if (!allFolders && folder) {
+          allMessages = allMessages.filter(msg => msg.folder === folder);
+        } else if (!allFolders) {
+          // Default to inbox - exclude trashed and archived
+          allMessages = allMessages.filter(msg => 
+            msg.folder !== "trash" && msg.folder !== "archived"
+          );
+        }
+        
         // Get starred emails from database (UI-only, not Nylas)
-        const starredIds = await storage.getStarredEmailIds(req.session.userId!);
+        const starredIds = await storage.getStarredEmailIds(userId);
         const starredSet = new Set(starredIds);
         
         const emails = allMessages.map((msg, index) => ({
@@ -1512,53 +1535,31 @@ Return ONLY valid JSON, no other text.`;
   });
 
   app.patch("/api/emails/:id/folder", requireAuth, async (req, res) => {
-    console.log("[Move Email] Request received:", req.params.id, req.body);
     try {
       const id = req.params.id;
       const { folder } = req.body;
+      const userId = req.session.userId!;
       
       if (!folder || !["inbox", "archived", "trash", "sent", "drafts", "junk"].includes(folder)) {
-        console.log("[Move Email] Invalid folder:", folder);
         return res.status(400).json({ error: "Invalid folder" });
       }
       
-      const grant = await storage.getNylasGrant(req.session.userId!);
-      console.log("[Move Email] Grant found:", !!grant, "ID length:", id.length);
-      if (grant && id.length > 10) {
-        console.log(`[Move Email] Moving Nylas email ${id} to folder: ${folder}, grantId: ${grant.grantId}`);
-        try {
-          if (folder === "trash") {
-            console.log(`[Move Email] Calling nylas.trashMessage...`);
-            await nylas.trashMessage(grant.grantId, id);
-            console.log(`[Move Email] Successfully trashed email ${id}`);
-          } else if (folder === "archived") {
-            console.log(`[Move Email] Calling nylas.archiveMessage...`);
-            await nylas.archiveMessage(grant.grantId, id);
-            console.log(`[Move Email] Successfully archived email ${id}`);
-          } else if (folder === "inbox") {
-            console.log(`[Move Email] Calling nylas.moveToInbox...`);
-            await nylas.moveToInbox(grant.grantId, id);
-            console.log(`[Move Email] Successfully moved email ${id} to inbox`);
-          } else {
-            console.log(`[Move Email] Folder ${folder} not handled by Nylas`);
-          }
-          nylas.invalidateMessagesCache(grant.grantId);
-          console.log(`[Move Email] Returning success for ${id}`);
-          return res.json({ success: true, folder });
-        } catch (nylasError: any) {
-          console.error(`[Move Email] Nylas error moving email ${id}:`, nylasError.message);
-          throw nylasError;
-        }
-      } else {
-        console.log(`[Move Email] No grant or short ID, using local storage for ${id}`);
-      }
+      // Check if this is a Nylas message ID (long alphanumeric string)
+      const isNylasId = id.length > 10 && !/^\d+$/.test(id);
       
-      const numericId = parseInt(id);
-      const email = await storage.updateEmail(numericId, { folder });
-      if (!email) {
-        return res.status(404).json({ error: "Email not found" });
+      if (isNylasId) {
+        // Use local storage only - don't sync folder changes to Nylas
+        await storage.setLocalEmailFolder(userId, id, folder);
+        return res.json({ success: true, folder });
+      } else {
+        // Local email storage for demo/test emails
+        const numericId = parseInt(id);
+        const email = await storage.updateEmail(numericId, { folder });
+        if (!email) {
+          return res.status(404).json({ error: "Email not found" });
+        }
+        res.json(email);
       }
-      res.json(email);
     } catch (error) {
       console.error("Error moving email:", error);
       res.status(500).json({ error: "Failed to move email" });
@@ -4640,8 +4641,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
           case "trash":
             if (finalMetadata?.messageId) {
-              await nylas.trashMessage(grant.grantId, finalMetadata.messageId);
-              nylas.invalidateMessagesCache(grant.grantId);
+              // Use local storage - don't sync to Nylas
+              await storage.setLocalEmailFolder(userId, finalMetadata.messageId, "trash");
               result = { success: true, message: "Email moved to trash" };
             } else {
               result = { success: false, error: "Missing messageId" };
@@ -4650,9 +4651,20 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
           case "archive":
             if (finalMetadata?.messageId) {
-              await nylas.archiveMessage(grant.grantId, finalMetadata.messageId);
-              nylas.invalidateMessagesCache(grant.grantId);
+              // Use local storage - don't sync to Nylas
+              await storage.setLocalEmailFolder(userId, finalMetadata.messageId, "archived");
               result = { success: true, message: "Email archived" };
+            } else {
+              result = { success: false, error: "Missing messageId" };
+            }
+            break;
+
+          case "restore":
+          case "move_to_inbox":
+            if (finalMetadata?.messageId) {
+              // Use local storage - restore to inbox
+              await storage.restoreEmailToInbox(userId, finalMetadata.messageId);
+              result = { success: true, message: "Email restored to inbox" };
             } else {
               result = { success: false, error: "Missing messageId" };
             }
