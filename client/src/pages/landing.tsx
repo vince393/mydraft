@@ -286,42 +286,35 @@ function DemoSection() {
         </div>
 
         <div 
-          className="grid lg:grid-cols-[40%_60%] gap-8 lg:gap-12 items-start transition-all duration-1000 ease-out delay-200"
+          className="flex flex-col items-center transition-all duration-1000 ease-out delay-200"
           style={{ 
             opacity: isVisible ? 1 : 0, 
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
           }}
         >
-          <div className="space-y-3">
-            <DemoToggle 
+          <div className="flex items-center justify-center gap-2 mb-10 p-1.5 rounded-full bg-white/[0.03] border border-white/[0.06]">
+            <DemoTab 
               active={activeDemo === 'unified'}
               onClick={() => setActiveDemo('unified')}
-              icon={<Inbox className="w-5 h-5" />}
-              title="Clean, focused inbox"
-              description="No tabs. No clutter. Just the emails that matter."
+              label="Inbox"
               testId="demo-toggle-unified"
             />
-            <DemoToggle 
+            <DemoTab 
               active={activeDemo === 'speed'}
               onClick={() => setActiveDemo('speed')}
-              icon={<Sparkles className="w-5 h-5" />}
-              title="Instant reply drafts"
-              description="See a suggested reply the moment you open an email."
+              label="AI Reply"
               testId="demo-toggle-speed"
             />
-            <DemoToggle 
+            <DemoTab 
               active={activeDemo === 'organize'}
               onClick={() => setActiveDemo('organize')}
-              icon={<Brain className="w-5 h-5" />}
-              title="Thread summaries"
-              description="Long email chains condensed to key points."
+              label="Summaries"
               testId="demo-toggle-organize"
             />
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent rounded-2xl" />
-            <div className="relative rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden">
+          <div className="w-full max-w-3xl mx-auto">
+            <div className="rounded-2xl border border-white/[0.08] bg-card/80 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/20">
               {activeDemo === 'unified' && <DemoUnified />}
               {activeDemo === 'speed' && <DemoSpeed />}
               {activeDemo === 'organize' && <DemoOrganize />}
@@ -333,35 +326,23 @@ function DemoSection() {
   );
 }
 
-function DemoToggle({ active, onClick, icon, title, description, testId }: {
+function DemoTab({ active, onClick, label, testId }: {
   active: boolean;
   onClick: () => void;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
+  label: string;
   testId: string;
 }) {
   return (
     <button
       onClick={onClick}
       data-testid={testId}
-      className={`group w-full text-left p-4 rounded-xl border transition-all duration-300 ${
+      className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
         active 
-          ? 'border-primary/40 bg-primary/5' 
-          : 'border-transparent hover:bg-white/[0.03]'
+          ? 'bg-primary text-primary-foreground' 
+          : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.05]'
       }`}
     >
-      <div className="flex items-center gap-3">
-        <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-          active ? 'bg-primary/20 text-primary' : 'bg-white/[0.05] text-muted-foreground/60 group-hover:text-muted-foreground'
-        }`}>
-          {icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className={`font-medium text-sm mb-0.5 transition-colors ${active ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground/90'}`}>{title}</h3>
-          <p className="text-xs text-muted-foreground/60 line-clamp-1">{description}</p>
-        </div>
-      </div>
+      {label}
     </button>
   );
 }
