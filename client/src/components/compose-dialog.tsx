@@ -881,10 +881,10 @@ export function ComposeDialog({
           </div>
         </div>
         
-        {/* Footer Actions */}
-        <div className="flex-shrink-0 px-6 py-4 border-t border-border/50 bg-muted/20">
+        {/* Footer Actions - Minimalist */}
+        <div className="flex-shrink-0 px-6 py-3 border-t border-border/50">
           <div className="flex items-center justify-between gap-3">
-            {/* Left Actions */}
+            {/* Left - Discard + AI Menu */}
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -897,164 +897,47 @@ export function ComposeDialog({
                 Discard
               </Button>
               
-              {/* AI Draft Button - quick click for instant generation */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => aiReplyMutation.mutate()}
-                disabled={isGenerating || sendMutation.isPending || aiLimitReached}
-                className="h-9 gap-2 border-primary/30 bg-primary/5 text-primary"
-                data-testid="button-ai-draft"
-                title={aiLimitReached ? "Daily limit reached. Upgrade to Pro for unlimited AI drafts." : "Generate an AI-powered draft"}
-              >
-                {isGenerating ? (
-                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                <span className="font-medium">
-                  {isGenerating ? "Writing..." : userPlan === "free" ? `AI Draft (${aiRemaining}/5)` : "AI Draft"}
-                </span>
-              </Button>
-              
-              {/* AI Options Popover for tone/instructions */}
-              <Popover open={showAiOptions} onOpenChange={setShowAiOptions}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={isGenerating || sendMutation.isPending || aiLimitReached}
-                    className="text-muted-foreground"
-                    data-testid="button-ai-options"
-                    title="AI Draft Options"
-                  >
-                    <Settings2 className="w-4 h-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-80 p-4" data-testid="popover-ai-options">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Sparkles className="w-4 h-4 text-primary" />
-                      AI Draft Options
-                    </div>
-                    
-                    {/* Tone Selector */}
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Tone
-                      </label>
-                      <Select value={aiTone} onValueChange={setAiTone}>
-                        <SelectTrigger className="w-full" data-testid="select-ai-tone">
-                          <SelectValue placeholder="Select tone" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="professional">Professional</SelectItem>
-                          <SelectItem value="friendly">Friendly</SelectItem>
-                          <SelectItem value="formal">Formal</SelectItem>
-                          <SelectItem value="casual">Casual</SelectItem>
-                          <SelectItem value="concise">Concise</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    {/* Custom Instructions */}
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-                        <Settings2 className="w-3.5 h-3.5" />
-                        Instructions (optional)
-                      </label>
-                      <Textarea
-                        value={aiInstructions}
-                        onChange={(e) => setAiInstructions(e.target.value)}
-                        placeholder="e.g., Make it more enthusiastic, add a call to action, mention the deadline..."
-                        className="min-h-[80px] text-sm resize-none"
-                        data-testid="textarea-ai-instructions"
-                      />
-                    </div>
-                    
-                    {/* Generate Button */}
-                    <Button
-                      className="w-full gap-2"
-                      onClick={() => aiReplyMutation.mutate()}
-                      disabled={isGenerating}
-                      data-testid="button-generate-draft"
-                    >
-                      {isGenerating ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Sparkles className="w-4 h-4" />
-                      )}
-                      {getUserContent() ? "Improve Draft" : "Generate Draft"}
-                    </Button>
-                    
-                    {getUserContent() && (
-                      <p className="text-xs text-muted-foreground">
-                        AI will read your existing text and improve it based on your instructions and tone selection.
-                      </p>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-              
-              {/* AI Polish Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
-                    className="h-9 gap-2"
-                    data-testid="button-ai-polish"
+                    disabled={isGenerating || sendMutation.isPending}
+                    className="h-9 gap-2 text-primary"
+                    data-testid="button-ai-menu"
+                    title="AI features"
                   >
-                    <Wand2 className="w-4 h-4" />
-                    <span>Polish</span>
-                    <ChevronDown className="w-3 h-3 ml-1" />
+                    {isGenerating ? (
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    <span>{isGenerating ? "Writing..." : userPlan === "free" ? `AI (${aiRemaining}/5)` : "AI"}</span>
+                    <ChevronDown className="w-3 h-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuContent align="start" className="w-56">
                   <DropdownMenuItem
-                    onClick={() => aiPolishMutation.mutate("polish")}
-                    disabled={isGenerating}
-                    data-testid="button-polish-improve"
+                    onClick={() => aiReplyMutation.mutate()}
+                    disabled={isGenerating || sendMutation.isPending || aiLimitReached}
+                    data-testid="button-ai-draft"
                   >
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Improve Writing
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {getUserContent() ? "Improve Draft" : "Generate Draft"}
+                    {aiLimitReached && <span className="text-xs text-destructive ml-auto">Limit</span>}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => {
-                      if (isPro) {
-                        aiPolishMutation.mutate("longer");
-                      } else {
-                        toast({
-                          title: "Pro feature",
-                          description: "Upgrade to Pro to make your text longer",
-                        });
-                      }
-                    }}
-                    disabled={isGenerating}
-                    className="flex items-center justify-between"
-                    data-testid="button-polish-longer"
+                    onClick={() => aiPolishMutation.mutate("polish")}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
+                    data-testid="button-polish-improve"
                   >
-                    <div className="flex items-center">
-                      <ArrowUpRight className="w-4 h-4 mr-2" />
-                      Make Longer
-                    </div>
-                    {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Polish Writing
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => {
-                      if (isPro) {
-                        aiPolishMutation.mutate("shorter");
-                      } else {
-                        toast({
-                          title: "Pro feature",
-                          description: "Upgrade to Pro to make your text shorter",
-                        });
-                      }
-                    }}
-                    disabled={isGenerating}
+                    onClick={() => isPro ? aiPolishMutation.mutate("shorter") : toast({ title: "Pro feature", description: "Upgrade to Pro for this feature" })}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
                     className="flex items-center justify-between"
                     data-testid="button-polish-shorter"
                   >
@@ -1065,17 +948,20 @@ export function ComposeDialog({
                     {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => {
-                      if (isPro) {
-                        aiPolishMutation.mutate("concise");
-                      } else {
-                        toast({
-                          title: "Pro feature",
-                          description: "Upgrade to Pro for concise rewrites",
-                        });
-                      }
-                    }}
-                    disabled={isGenerating}
+                    onClick={() => isPro ? aiPolishMutation.mutate("longer") : toast({ title: "Pro feature", description: "Upgrade to Pro for this feature" })}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
+                    className="flex items-center justify-between"
+                    data-testid="button-polish-longer"
+                  >
+                    <div className="flex items-center">
+                      <ArrowUpRight className="w-4 h-4 mr-2" />
+                      Make Longer
+                    </div>
+                    {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => isPro ? aiPolishMutation.mutate("concise") : toast({ title: "Pro feature", description: "Upgrade to Pro for this feature" })}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
                     className="flex items-center justify-between"
                     data-testid="button-polish-concise"
                   >
@@ -1085,82 +971,148 @@ export function ComposeDialog({
                     </div>
                     {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowAiOptions(true)}
+                    data-testid="button-ai-options"
+                  >
+                    <Settings2 className="w-4 h-4 mr-2" />
+                    Tone & Instructions
+                  </DropdownMenuItem>
+                  {isPro && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setShowImageGenerator(true)}
+                        disabled={isGenerating || sendMutation.isPending || isGeneratingImage}
+                        data-testid="button-ai-create"
+                      >
+                        <FileImage className="w-4 h-4 mr-2" />
+                        Generate Image
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-              
-              {/* AI Create (Images) - Pro/Business only */}
-              {isPro && (
-                <Popover open={showImageGenerator} onOpenChange={setShowImageGenerator}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isGenerating || sendMutation.isPending || isGeneratingImage}
-                      className="h-9 gap-2 border-primary/30 bg-primary/5 text-primary"
-                      data-testid="button-ai-create"
-                    >
-                      <FileImage className="w-4 h-4" />
-                      <span>AI Create</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-80 p-4" data-testid="popover-ai-create">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <Image className="w-4 h-4 text-primary" />
-                        Generate AI Image
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Textarea
-                          value={imagePrompt}
-                          onChange={(e) => setImagePrompt(e.target.value)}
-                          placeholder="Describe the image... e.g., 'A professional business chart showing growth', 'Modern office workspace photo'"
-                          className="min-h-[80px] text-sm resize-none"
-                          data-testid="textarea-image-prompt"
-                        />
-                      </div>
-                      
-                      <Button
-                        className="w-full gap-2"
-                        onClick={handleGenerateImage}
-                        disabled={isGeneratingImage || !imagePrompt.trim()}
-                        data-testid="button-generate-image"
-                      >
-                        {isGeneratingImage ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Image className="w-4 h-4" />
-                        )}
-                        {isGeneratingImage ? "Generating..." : "Generate Image"}
-                      </Button>
-                      
-                      {/* Generated images gallery */}
-                      {generatedImages.length > 0 && (
-                        <div className="space-y-2">
-                          <span className="text-xs text-muted-foreground">Click to insert:</span>
-                          <div className="grid grid-cols-2 gap-2">
-                            {generatedImages.map((img, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => insertImageToBody(img)}
-                                className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors"
-                                data-testid={`button-insert-image-${idx}`}
-                              >
-                                <img src={img} alt={`Generated ${idx + 1}`} className="w-full h-full object-cover" />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      <p className="text-xs text-muted-foreground">
-                        AI-generated images will be attached to your email when sent.
-                      </p>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
             </div>
+
+            {/* AI Options Popover (triggered from menu) */}
+            <Popover open={showAiOptions} onOpenChange={setShowAiOptions}>
+              <PopoverTrigger asChild>
+                <span className="hidden" />
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-80 p-4" data-testid="popover-ai-options">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    AI Draft Options
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm text-muted-foreground">Tone</label>
+                    <Select value={aiTone} onValueChange={setAiTone}>
+                      <SelectTrigger className="w-full" data-testid="select-ai-tone">
+                        <SelectValue placeholder="Select tone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="friendly">Friendly</SelectItem>
+                        <SelectItem value="formal">Formal</SelectItem>
+                        <SelectItem value="casual">Casual</SelectItem>
+                        <SelectItem value="concise">Concise</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm text-muted-foreground">Instructions (optional)</label>
+                    <Textarea
+                      value={aiInstructions}
+                      onChange={(e) => setAiInstructions(e.target.value)}
+                      placeholder="e.g., Add a call to action, mention the deadline..."
+                      className="min-h-[70px] text-sm resize-none"
+                      data-testid="textarea-ai-instructions"
+                    />
+                  </div>
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => {
+                      setShowAiOptions(false);
+                      aiReplyMutation.mutate();
+                    }}
+                    disabled={isGenerating || sendMutation.isPending || aiLimitReached}
+                    data-testid="button-generate-draft"
+                  >
+                    {isGenerating ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    {getUserContent() ? "Improve Draft" : "Generate Draft"}
+                  </Button>
+                  {getUserContent() && (
+                    <p className="text-xs text-muted-foreground">
+                      AI will read your text and improve it based on tone and instructions.
+                    </p>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Image Generator Popover (triggered from menu) - Pro only */}
+            {isPro && (
+              <Popover open={showImageGenerator} onOpenChange={setShowImageGenerator}>
+                <PopoverTrigger asChild>
+                  <span className="hidden" />
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-80 p-4" data-testid="popover-ai-create">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Image className="w-4 h-4 text-primary" />
+                      Generate AI Image
+                    </div>
+                    <Textarea
+                      value={imagePrompt}
+                      onChange={(e) => setImagePrompt(e.target.value)}
+                      placeholder="Describe the image... e.g., 'A professional business chart showing growth'"
+                      className="min-h-[80px] text-sm resize-none"
+                      data-testid="textarea-image-prompt"
+                    />
+                    <Button
+                      className="w-full gap-2"
+                      onClick={handleGenerateImage}
+                      disabled={isGeneratingImage || !imagePrompt.trim()}
+                      data-testid="button-generate-image"
+                    >
+                      {isGeneratingImage ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Image className="w-4 h-4" />
+                      )}
+                      {isGeneratingImage ? "Generating..." : "Generate Image"}
+                    </Button>
+                    {generatedImages.length > 0 && (
+                      <div className="space-y-2">
+                        <span className="text-xs text-muted-foreground">Click to insert:</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          {generatedImages.map((img, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => insertImageToBody(img)}
+                              className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors"
+                              data-testid={`button-insert-image-${idx}`}
+                            >
+                              <img src={img} alt={`Generated ${idx + 1}`} className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      AI images will be attached to your email when sent.
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
             
             {/* Right Actions */}
             <div className="flex items-center gap-2">

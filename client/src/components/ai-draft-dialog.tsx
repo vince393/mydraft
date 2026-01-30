@@ -366,33 +366,29 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-border/50 bg-muted/20 flex-shrink-0">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border/50 flex-shrink-0">
           <Button variant="ghost" size="sm" onClick={handleClose} data-testid="button-cancel-draft">
             Cancel
           </Button>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveDraft}
-              disabled={generateMutation.isPending || !hasDraftContent || isSaving || isSending}
-              className="gap-1.5"
-              data-testid="button-save-draft"
-            >
-              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              Save Draft
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSend}
-              disabled={generateMutation.isPending || !hasDraftContent || isSending || isSaving}
-              className="gap-1.5"
-              data-testid="button-send-draft"
-            >
-              {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              Send
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSaveDraft}
+            disabled={generateMutation.isPending || !hasDraftContent || isSaving || isSending}
+            data-testid="button-save-draft"
+          >
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSend}
+            disabled={generateMutation.isPending || !hasDraftContent || isSending || isSaving}
+            className="gap-1.5"
+            data-testid="button-send-draft"
+          >
+            {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            Send
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
