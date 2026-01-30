@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, testimonials, emailCampaigns, campaignRecipients } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, testimonials, emailCampaigns, campaignRecipients, securityAuditLog } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -78,6 +78,10 @@ export interface IStorage {
   // Audit log methods
   createAuditLog(userId: string, actionType: string, status: string, targetMessageId?: string, details?: string): Promise<AssistantAuditLogRecord>;
   getRecentAuditLogs(userId: string, limit?: number): Promise<AssistantAuditLogRecord[]>;
+  
+  // Security audit log methods (CASA Q52)
+  createSecurityAuditLog(log: InsertSecurityAuditLog): Promise<SecurityAuditLogRecord>;
+  getSecurityAuditLogs(userId?: string, limit?: number): Promise<SecurityAuditLogRecord[]>;
 
   // Pending sends methods (undo send)
   createPendingSend(send: InsertPendingSend): Promise<PendingSend>;
@@ -1116,6 +1120,26 @@ Business Development`,
       .from(assistantAuditLog)
       .where(eq(assistantAuditLog.userId, userId))
       .orderBy(desc(assistantAuditLog.createdAt))
+      .limit(limit);
+  }
+
+  // Security audit log methods (CASA Q52)
+  async createSecurityAuditLog(log: InsertSecurityAuditLog): Promise<SecurityAuditLogRecord> {
+    const [created] = await db.insert(securityAuditLog).values(log).returning();
+    return created;
+  }
+
+  async getSecurityAuditLogs(userId?: string, limit: number = 100): Promise<SecurityAuditLogRecord[]> {
+    if (userId) {
+      return db.select()
+        .from(securityAuditLog)
+        .where(eq(securityAuditLog.userId, userId))
+        .orderBy(desc(securityAuditLog.createdAt))
+        .limit(limit);
+    }
+    return db.select()
+      .from(securityAuditLog)
+      .orderBy(desc(securityAuditLog.createdAt))
       .limit(limit);
   }
 

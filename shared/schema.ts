@@ -423,6 +423,28 @@ export const assistantAuditLog = pgTable("assistant_audit_log", {
 
 export type AssistantAuditLogRecord = typeof assistantAuditLog.$inferSelect;
 
+// Security audit log for tracking sensitive data access (CASA Q52)
+export const securityAuditLog = pgTable("security_audit_log", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id"),
+  eventType: text("event_type").notNull(), // "login", "login_failed", "logout", "password_change", "2fa_enabled", "2fa_disabled", "sensitive_access", "permission_change", "attachment_download", "data_export"
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  resourceType: text("resource_type"), // "email", "attachment", "settings", "account"
+  resourceId: varchar("resource_id"),
+  outcome: text("outcome").notNull(), // "success", "failure", "blocked"
+  details: text("details"), // Additional context (NOT including actual sensitive data)
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertSecurityAuditLogSchema = createInsertSchema(securityAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SecurityAuditLogRecord = typeof securityAuditLog.$inferSelect;
+export type InsertSecurityAuditLog = z.infer<typeof insertSecurityAuditLogSchema>;
+
 // Team invites for Business plan
 export const teamInvites = pgTable("team_invites", {
   id: serial("id").primaryKey(),

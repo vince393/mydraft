@@ -14,7 +14,8 @@ import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
 import { sendVerificationEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
-import { scanFile, checkFileType } from "./antivirus";
+import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
+import { authLimiter, passwordResetLimiter, twoFactorLimiter, apiLimiter, aiGenerationLimiter, emailSendLimiter, fileLimiter } from "./rate-limiter";
 
 // Pending registrations waiting for email verification
 const pendingRegistrations: Map<string, { email: string; hashedPassword: string; expiresAt: number }> = new Map();
@@ -245,7 +246,7 @@ export async function registerRoutes(
   registerImageRoutes(app);
 
   // Step 1: Initiate registration - sends verification email
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {
       const { email, password } = req.body;
       
@@ -294,7 +295,7 @@ export async function registerRoutes(
   });
 
   // Step 2: Verify email and complete registration
-  app.post("/api/auth/verify-registration", async (req, res) => {
+  app.post("/api/auth/verify-registration", twoFactorLimiter, async (req, res) => {
     try {
       const { email, code } = req.body;
       
@@ -373,7 +374,7 @@ export async function registerRoutes(
   });
 
   // Resend verification code
-  app.post("/api/auth/resend-verification", async (req, res) => {
+  app.post("/api/auth/resend-verification", authLimiter, async (req, res) => {
     try {
       const { email, type } = req.body;
       
@@ -401,7 +402,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
       const { email, password } = req.body;
       
@@ -413,12 +414,33 @@ export async function registerRoutes(
       const normalizedEmail = email.toLowerCase().trim();
 
       const user = await storage.getUserByEmail(normalizedEmail);
+      const clientIp = getClientIp(req);
+      const userAgent = req.headers['user-agent'] || null;
+      
       if (!user) {
+        // Log failed login attempt
+        storage.createSecurityAuditLog({
+          userId: null,
+          eventType: "login_failed",
+          ipAddress: clientIp,
+          userAgent,
+          outcome: "failure",
+          details: `Failed login attempt for: ${normalizedEmail}`
+        }).catch(err => console.warn("Failed to log security event:", err));
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
       const isValid = await verifyPassword(user.password, password);
       if (!isValid) {
+        // Log failed login attempt
+        storage.createSecurityAuditLog({
+          userId: user.id,
+          eventType: "login_failed",
+          ipAddress: clientIp,
+          userAgent,
+          outcome: "failure",
+          details: "Invalid password"
+        }).catch(err => console.warn("Failed to log security event:", err));
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
@@ -452,16 +474,25 @@ export async function registerRoutes(
         req.session.userId = user.id;
         
         // Create login session record
-        const clientIp = getClientIp(req);
         storage.createLoginSession({
           userId: user.id,
           sessionId: req.sessionID,
           ipAddress: clientIp,
-          userAgent: req.headers['user-agent'] || null,
+          userAgent,
           city: null,
           region: null,
           country: null,
         }).catch(err => console.error("Failed to create login session:", err));
+        
+        // Log successful login (CASA Q52)
+        storage.createSecurityAuditLog({
+          userId: user.id,
+          eventType: "login",
+          ipAddress: clientIp,
+          userAgent,
+          outcome: "success",
+          details: "Successful login without 2FA"
+        }).catch(err => console.warn("Failed to log security event:", err));
         
         res.json({ 
           user: { 
@@ -481,7 +512,7 @@ export async function registerRoutes(
   });
 
   // Verify 2FA code and complete login
-  app.post("/api/auth/verify-2fa", async (req, res) => {
+  app.post("/api/auth/verify-2fa", twoFactorLimiter, async (req, res) => {
     try {
       const { email, code } = req.body;
       
@@ -952,14 +983,14 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/settings/password", requireAuth, async (req, res) => {
+  app.put("/api/settings/password", requireAuth, passwordResetLimiter, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
       if (!currentPassword || !newPassword) {
         return res.status(400).json({ error: "Current and new password are required" });
       }
-      if (newPassword.length < 6) {
-        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
       }
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
@@ -971,7 +1002,40 @@ export async function registerRoutes(
       }
       const hashedPassword = await hashPassword(newPassword);
       await storage.updateUser(req.session.userId!, { password: hashedPassword });
-      res.json({ success: true });
+      
+      // Security: Terminate all other sessions after password change (CASA Q27)
+      const currentSessionId = req.sessionID;
+      await storage.deleteAllUserSessions(req.session.userId!, currentSessionId);
+      
+      // Clear any pending 2FA logins for this user (CASA Q27 extended)
+      for (const [key, data] of pending2FALogins.entries()) {
+        if (data.userId === req.session.userId!) {
+          pending2FALogins.delete(key);
+        }
+      }
+      
+      // Also invalidate express-sessions in database (except current)
+      try {
+        await db.execute(sql`
+          DELETE FROM user_sessions 
+          WHERE sess->>'userId' = ${req.session.userId!} 
+          AND sid != ${currentSessionId}
+        `);
+      } catch (err) {
+        console.warn("Could not clear express sessions:", err);
+      }
+      
+      // Log password change event (CASA Q52)
+      storage.createSecurityAuditLog({
+        userId: req.session.userId!,
+        eventType: "password_change",
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'] || null,
+        outcome: "success",
+        details: "Password changed, all other sessions terminated"
+      }).catch(err => console.warn("Failed to log security event:", err));
+      
+      res.json({ success: true, sessionsTerminated: true });
     } catch (error) {
       console.error("Password change error:", error);
       res.status(500).json({ error: "Failed to change password" });
@@ -1583,7 +1647,7 @@ Return ONLY valid JSON, no other text.`;
   });
 
   // Download email attachment (with antivirus scanning)
-  app.get("/api/emails/:messageId/attachments/:attachmentId", requireAuth, async (req, res) => {
+  app.get("/api/emails/:messageId/attachments/:attachmentId", requireAuth, fileLimiter, async (req, res) => {
     try {
       const { messageId, attachmentId } = req.params;
       const grant = await storage.getNylasGrant(req.session.userId!);
@@ -1609,9 +1673,28 @@ Return ONLY valid JSON, no other text.`;
         });
       }
       
+      // Sanitize SVG files to prevent XSS attacks (CASA Q40)
+      let fileData = attachment.data;
+      if (Buffer.isBuffer(fileData)) {
+        const { buffer: sanitizedBuffer } = sanitizeSVGBuffer(fileData, attachment.filename, attachment.contentType);
+        fileData = sanitizedBuffer;
+      }
+      
+      // Log attachment download (CASA Q52)
+      storage.createSecurityAuditLog({
+        userId: req.session.userId!,
+        eventType: "attachment_download",
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'] || null,
+        resourceType: "attachment",
+        resourceId: attachmentId,
+        outcome: "success",
+        details: `Downloaded: ${attachment.filename} (${attachment.contentType})`
+      }).catch(err => console.warn("Failed to log security event:", err));
+      
       res.setHeader("Content-Type", attachment.contentType);
       res.setHeader("Content-Disposition", `attachment; filename="${attachment.filename}"`);
-      res.send(attachment.data);
+      res.send(fileData);
     } catch (error) {
       console.error("Error downloading attachment:", error);
       res.status(500).json({ error: "Failed to download attachment" });
@@ -2469,7 +2552,7 @@ Rules:
     }
   });
 
-  app.post("/api/send", requireAuth, async (req, res) => {
+  app.post("/api/send", requireAuth, emailSendLimiter, async (req, res) => {
     try {
       const { to, cc, bcc, subject, body, replyToMessageId, delaySeconds = 5, immediate = false, scheduledFor, attachments } = req.body;
       
@@ -2509,9 +2592,10 @@ Rules:
         }
       }
 
-      // Scan attachments for malware before sending
+      // Scan and sanitize attachments before sending
       if (attachments && Array.isArray(attachments)) {
-        for (const attachment of attachments) {
+        for (let i = 0; i < attachments.length; i++) {
+          const attachment = attachments[i];
           if (attachment.content && attachment.filename) {
             const scanResult = await scanFile(
               attachment.content,
@@ -2527,6 +2611,25 @@ Rules:
                 reason: scanResult.malwareName
               });
             }
+            
+            // Sanitize SVG files on upload/send (CASA Q40 - defense in depth)
+            const isSVG = attachment.filename?.toLowerCase().endsWith('.svg') || 
+                          attachment.contentType?.includes('svg');
+            if (isSVG) {
+              try {
+                const originalBuffer = Buffer.from(attachment.content, 'base64');
+                const { buffer: sanitizedBuffer, wasSanitized } = sanitizeSVGBuffer(
+                  originalBuffer, 
+                  attachment.filename, 
+                  attachment.contentType
+                );
+                if (wasSanitized) {
+                  attachments[i].content = sanitizedBuffer.toString('base64');
+                }
+              } catch (err) {
+                console.warn(`Failed to sanitize SVG attachment: ${attachment.filename}`, err);
+              }
+            }
           }
         }
       }
@@ -2537,6 +2640,18 @@ Rules:
         nylas.invalidateMessagesCache(grant.grantId);
         // Increment daily send count for Free plan users
         await storage.incrementDailySendCount(req.session.userId!);
+        
+        // Log email send for security audit (CASA Q52)
+        storage.createSecurityAuditLog({
+          userId: req.session.userId!,
+          eventType: "email_send",
+          ipAddress: getClientIp(req),
+          userAgent: req.headers['user-agent'] || null,
+          resourceType: "email",
+          outcome: "success",
+          details: `Sent to: ${Array.isArray(to) ? to.join(', ') : to}, Subject: ${subject?.substring(0, 50) || 'No subject'}`
+        }).catch(err => console.warn("Failed to log security event:", err));
+        
         return res.json({ success: true, sent: true });
       }
       
@@ -2568,6 +2683,17 @@ Rules:
 
       // Increment daily send count for Free plan users when queuing
       await storage.incrementDailySendCount(req.session.userId!);
+      
+      // Log email queue for security audit (CASA Q52)
+      storage.createSecurityAuditLog({
+        userId: req.session.userId!,
+        eventType: isScheduledSend ? "email_schedule" : "email_queue",
+        ipAddress: getClientIp(req),
+        userAgent: req.headers['user-agent'] || null,
+        resourceType: "email",
+        outcome: "success",
+        details: `Queued for: ${Array.isArray(to) ? to.join(', ') : to}, Subject: ${subject?.substring(0, 50) || 'No subject'}`
+      }).catch(err => console.warn("Failed to log security event:", err));
       
       res.json({ 
         success: true, 
@@ -2620,7 +2746,7 @@ Rules:
   });
 
   // AI draft generation - all plans can use, free plan has 5/day limit
-  app.post("/api/drafts/generate", requireAuth, async (req, res) => {
+  app.post("/api/drafts/generate", requireAuth, aiGenerationLimiter, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
       const userPlan = user?.plan || "free";
@@ -2819,7 +2945,7 @@ Reply:`;
   });
 
   // AI Polish - improves existing text
-  app.post("/api/ai/polish", requireAuth, async (req, res) => {
+  app.post("/api/ai/polish", requireAuth, aiGenerationLimiter, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
       const userPlan = user?.plan || "free";
@@ -2952,7 +3078,7 @@ Please modify the response according to the instruction.`
 
   // Quick AI draft generation for compose dialog (returns subject + body)
   // All plans can use AI drafts - free plan has 5/day limit
-  app.post("/api/drafts/quick-generate", requireAuth, async (req, res) => {
+  app.post("/api/drafts/quick-generate", requireAuth, aiGenerationLimiter, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
       const userPlan = user?.plan || "free";
@@ -4196,7 +4322,7 @@ RESPONSE STYLE:
   });
 
   // Generate AI draft (compose/reply/reply-all/forward) (requires Pro+)
-  app.post("/api/ai/draft", requireAuth, async (req, res) => {
+  app.post("/api/ai/draft", requireAuth, aiGenerationLimiter, async (req, res) => {
     try {
       const userId = req.session.userId!;
       

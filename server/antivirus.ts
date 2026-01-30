@@ -1,4 +1,6 @@
 import { spawn } from 'child_process';
+import { JSDOM } from 'jsdom';
+import DOMPurify from 'dompurify';
 
 export interface ScanResult {
   isClean: boolean;
@@ -120,4 +122,59 @@ export async function scanFile(
   }
   
   return { isClean: true };
+}
+
+// SVG sanitization to prevent XSS attacks (CASA Q40)
+export function sanitizeSVG(svgContent: string): { sanitized: string; wasModified: boolean } {
+  const window = new JSDOM('').window;
+  const purify = DOMPurify(window as any);
+  
+  // Configure DOMPurify for SVG
+  const sanitized = purify.sanitize(svgContent, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    // Remove potentially dangerous elements and attributes
+    FORBID_TAGS: ['script', 'foreignObject', 'use'],
+    FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'onfocus', 'onblur', 
+                  'onmouseenter', 'onmouseleave', 'onmousedown', 'onmouseup',
+                  'onkeydown', 'onkeyup', 'onkeypress', 'xlink:href'],
+    ALLOW_DATA_ATTR: false,
+  });
+  
+  return {
+    sanitized,
+    wasModified: sanitized !== svgContent
+  };
+}
+
+// Check if content is SVG
+export function isSVG(filename: string, contentType?: string): boolean {
+  const ext = filename.toLowerCase();
+  return ext.endsWith('.svg') || contentType === 'image/svg+xml';
+}
+
+// Sanitize buffer if it's an SVG
+export function sanitizeSVGBuffer(buffer: Buffer, filename: string, contentType?: string): { 
+  buffer: Buffer; 
+  wasModified: boolean;
+} {
+  if (!isSVG(filename, contentType)) {
+    return { buffer, wasModified: false };
+  }
+  
+  try {
+    const svgContent = buffer.toString('utf-8');
+    const { sanitized, wasModified } = sanitizeSVG(svgContent);
+    
+    if (wasModified) {
+      console.log(`SVG sanitized: ${filename} - potentially dangerous content removed`);
+    }
+    
+    return {
+      buffer: Buffer.from(sanitized, 'utf-8'),
+      wasModified
+    };
+  } catch (error) {
+    console.warn(`Failed to sanitize SVG ${filename}:`, error);
+    return { buffer, wasModified: false };
+  }
 }
