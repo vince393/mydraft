@@ -4,6 +4,11 @@ let connectionSettings: any;
 
 async function getCredentials() {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  
+  if (!hostname) {
+    throw new Error('REPLIT_CONNECTORS_HOSTNAME not found. Stripe integration requires the Replit connector to be set up.');
+  }
+  
   const xReplitToken = process.env.REPL_IDENTITY
     ? 'repl ' + process.env.REPL_IDENTITY
     : process.env.WEB_REPL_RENEWAL
@@ -48,7 +53,7 @@ export async function getUncachableStripeClient() {
   const { secretKey } = await getCredentials();
 
   return new Stripe(secretKey, {
-    apiVersion: '2025-08-27.basil',
+    apiVersion: '2025-11-17.clover',
   });
 }
 

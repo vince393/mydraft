@@ -109,6 +109,48 @@ function getRecommendedPlan(preferences: AIPreferences): string {
   return "pro";
 }
 
+function getRecommendationReasons(planId: string, preferences: AIPreferences): string[] {
+  const reasons: string[] = [];
+  const { emailVolume, automationLevel, primaryUse, aiFeatures } = preferences;
+  
+  if (planId === "business") {
+    if (emailVolume === "very-high") {
+      reasons.push("You receive a high volume of emails daily - unlimited AI assistance will save you hours");
+    }
+    if (automationLevel === "high") {
+      reasons.push("You want maximum automation - Business includes advanced workflows and custom AI training");
+    }
+    if (primaryUse === "work") {
+      reasons.push("For professional use, you'll benefit from team collaboration and dedicated support");
+    }
+    reasons.push("Voice assistant and custom AI training included");
+  } else if (planId === "pro") {
+    if (emailVolume === "high" || emailVolume === "medium") {
+      reasons.push("100 AI emails per day is perfect for your email volume");
+    }
+    if (automationLevel === "medium" || automationLevel === "high") {
+      reasons.push("Advanced automation and custom rules to streamline your workflow");
+    }
+    if (aiFeatures?.includes("drafts") || aiFeatures?.includes("tone")) {
+      reasons.push("Personal writing style memory learns how you communicate");
+    }
+    reasons.push("API access and integrations for power users");
+  } else if (planId === "student") {
+    reasons.push("50% discount for students - all the essentials at half the price");
+    reasons.push("Email humanizer makes AI text sound natural");
+  } else if (planId === "free") {
+    if (emailVolume === "low") {
+      reasons.push("Your low email volume is perfect for the free tier");
+    }
+    if (automationLevel === "low") {
+      reasons.push("You prefer writing replies yourself - free plan gives you the basics");
+    }
+    reasons.push("Try MyDraft risk-free before upgrading");
+  }
+  
+  return reasons.slice(0, 3);
+}
+
 export default function OnboardingPage() {
   const [step, setStep] = useState<Step>("primary-use");
   const [preferences, setPreferences] = useState<AIPreferences>({
@@ -120,6 +162,7 @@ export default function OnboardingPage() {
     referralSource: "",
   });
   const [billingInterval, setBillingInterval] = useState<"annual" | "monthly">("annual");
+  const [showAllPlans, setShowAllPlans] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -557,63 +600,163 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {basePlans.map((plan) => {
-                    const isRecommended = plan.id === recommendedPlan;
-                    const displayPrice = plan.id === "free" 
-                      ? "$0" 
-                      : billingInterval === "annual" 
-                        ? `$${plan.annualPrice}` 
-                        : `$${plan.monthlyPrice}`;
-                    const displayPeriod = plan.id === "free" 
-                      ? "forever" 
-                      : billingInterval === "annual" 
-                        ? "/year" 
-                        : "/month";
+                {!showAllPlans ? (
+                  <>
+                    {(() => {
+                      const plan = basePlans.find(p => p.id === recommendedPlan)!;
+                      const reasons = getRecommendationReasons(recommendedPlan, preferences);
+                      const displayPrice = plan.id === "free" 
+                        ? "$0" 
+                        : billingInterval === "annual" 
+                          ? `$${plan.annualPrice}` 
+                          : `$${plan.monthlyPrice}`;
+                      const displayPeriod = plan.id === "free" 
+                        ? "forever" 
+                        : billingInterval === "annual" 
+                          ? "/year" 
+                          : "/month";
 
-                    return (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        onClick={() => handlePlanSelect(plan.id)}
-                        disabled={isPlanLoading}
-                        className={`w-full p-3 sm:p-4 rounded-lg border text-left transition-all relative touch-target ${
-                          isRecommended
-                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-border hover:border-muted-foreground"
-                        } ${isPlanLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-                        data-testid={`button-plan-${plan.id}`}
-                      >
-                        {isRecommended && (
-                          <Badge className="absolute -top-2.5 left-3 sm:left-4 bg-primary text-primary-foreground text-[10px] sm:text-xs">
-                            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
-                            Recommended
-                          </Badge>
-                        )}
-                        <div className="flex items-center justify-between gap-3 sm:gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-sm sm:text-base">{plan.name}</div>
-                            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</div>
-                            <div className="flex flex-wrap gap-x-2 sm:gap-x-3 gap-y-1 mt-2">
-                              {plan.features.slice(0, 2).map((feature) => (
-                                <span key={feature} className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-0.5 sm:gap-1">
-                                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary flex-shrink-0" />
-                                  <span className="line-clamp-1">{feature}</span>
-                                </span>
+                      return (
+                        <div className="space-y-4">
+                          <div className="p-4 sm:p-5 rounded-lg border-2 border-primary bg-primary/5 relative">
+                            <Badge className="absolute -top-2.5 left-3 sm:left-4 bg-primary text-primary-foreground text-[10px] sm:text-xs">
+                              <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
+                              Recommended for you
+                            </Badge>
+                            
+                            <div className="flex items-start justify-between gap-4 mb-4">
+                              <div>
+                                <h3 className="text-xl font-bold">{plan.name}</h3>
+                                <p className="text-sm text-muted-foreground">{plan.description}</p>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-bold">{displayPrice}</div>
+                                <div className="text-xs text-muted-foreground">{displayPeriod}</div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 mb-4">
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Why this plan fits you</p>
+                              {reasons.map((reason, i) => (
+                                <div key={i} className="flex items-start gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                                  <span>{reason}</span>
+                                </div>
                               ))}
                             </div>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-lg sm:text-xl font-bold">{displayPrice}</div>
-                            <div className="text-[10px] sm:text-xs text-muted-foreground">{displayPeriod}</div>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
 
-                {isPlanLoading && (
+                            <div className="space-y-2 mb-4">
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Features included</p>
+                              <div className="grid grid-cols-1 gap-1">
+                                {plan.features.map((feature) => (
+                                  <div key={feature} className="flex items-center gap-2 text-sm">
+                                    <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                                    <span className="text-muted-foreground">{feature}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <Button
+                              className="w-full"
+                              size="lg"
+                              onClick={() => handlePlanSelect(plan.id)}
+                              disabled={isPlanLoading}
+                              data-testid={`button-plan-${plan.id}`}
+                            >
+                              {isPlanLoading ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                  Setting up...
+                                </>
+                              ) : plan.id === "free" ? (
+                                "Get started free"
+                              ) : (
+                                `Start 14-day free trial`
+                              )}
+                            </Button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowAllPlans(true)}
+                            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                            data-testid="button-view-all-plans"
+                          >
+                            View all plans
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    {basePlans.map((plan) => {
+                      const isRecommended = plan.id === recommendedPlan;
+                      const displayPrice = plan.id === "free" 
+                        ? "$0" 
+                        : billingInterval === "annual" 
+                          ? `$${plan.annualPrice}` 
+                          : `$${plan.monthlyPrice}`;
+                      const displayPeriod = plan.id === "free" 
+                        ? "forever" 
+                        : billingInterval === "annual" 
+                          ? "/year" 
+                          : "/month";
+
+                      return (
+                        <button
+                          key={plan.id}
+                          type="button"
+                          onClick={() => handlePlanSelect(plan.id)}
+                          disabled={isPlanLoading}
+                          className={`w-full p-3 sm:p-4 rounded-lg border text-left transition-all relative touch-target ${
+                            isRecommended
+                              ? "border-primary bg-primary/5 ring-1 ring-primary"
+                              : "border-border hover:border-muted-foreground"
+                          } ${isPlanLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                          data-testid={`button-plan-${plan.id}`}
+                        >
+                          {isRecommended && (
+                            <Badge className="absolute -top-2.5 left-3 sm:left-4 bg-primary text-primary-foreground text-[10px] sm:text-xs">
+                              <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
+                              Recommended
+                            </Badge>
+                          )}
+                          <div className="flex items-center justify-between gap-3 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm sm:text-base">{plan.name}</div>
+                              <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</div>
+                              <div className="flex flex-wrap gap-x-2 sm:gap-x-3 gap-y-1 mt-2">
+                                {plan.features.slice(0, 2).map((feature) => (
+                                  <span key={feature} className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-0.5 sm:gap-1">
+                                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary flex-shrink-0" />
+                                    <span className="line-clamp-1">{feature}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-lg sm:text-xl font-bold">{displayPrice}</div>
+                              <div className="text-[10px] sm:text-xs text-muted-foreground">{displayPeriod}</div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => setShowAllPlans(false)}
+                      className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                      data-testid="button-hide-all-plans"
+                    >
+                      Show recommended only
+                    </button>
+                  </div>
+                )}
+
+                {isPlanLoading && !showAllPlans && (
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Setting up your account...</span>
