@@ -263,7 +263,22 @@ function HeroEmailItem({ from, subject, time, unread = false, selected = false }
 
 function DemoSection() {
   const [activeDemo, setActiveDemo] = useState<'unified' | 'speed' | 'organize'>('unified');
+  const [isPaused, setIsPaused] = useState(false);
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
+
+  useEffect(() => {
+    if (!isVisible || isPaused) return;
+    
+    const demos: Array<'unified' | 'speed' | 'organize'> = ['unified', 'speed', 'organize'];
+    const interval = setInterval(() => {
+      setActiveDemo(current => {
+        const currentIndex = demos.indexOf(current);
+        return demos[(currentIndex + 1) % demos.length];
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [isVisible, isPaused]);
 
   return (
     <section className="min-h-screen flex items-center py-32 px-6 relative">
@@ -292,32 +307,54 @@ function DemoSection() {
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
           }}
         >
-          <div className="flex items-center justify-center gap-2 mb-10 p-1.5 rounded-full bg-white/[0.03] border border-white/[0.06]">
-            <DemoTab 
-              active={activeDemo === 'unified'}
-              onClick={() => setActiveDemo('unified')}
-              label="Inbox"
-              testId="demo-toggle-unified"
-            />
-            <DemoTab 
-              active={activeDemo === 'speed'}
-              onClick={() => setActiveDemo('speed')}
-              label="AI Reply"
-              testId="demo-toggle-speed"
-            />
-            <DemoTab 
-              active={activeDemo === 'organize'}
-              onClick={() => setActiveDemo('organize')}
-              label="Summaries"
-              testId="demo-toggle-organize"
-            />
+          <div 
+            className="flex flex-col items-center gap-4 mb-10"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+          >
+            <div className="flex items-center justify-center gap-2 p-1.5 rounded-full bg-white/[0.03] border border-white/[0.06]">
+              <DemoTab 
+                active={activeDemo === 'unified'}
+                onClick={() => { setActiveDemo('unified'); setIsPaused(true); }}
+                label="Inbox"
+                testId="demo-toggle-unified"
+              />
+              <DemoTab 
+                active={activeDemo === 'speed'}
+                onClick={() => { setActiveDemo('speed'); setIsPaused(true); }}
+                label="AI Reply"
+                testId="demo-toggle-speed"
+              />
+              <DemoTab 
+                active={activeDemo === 'organize'}
+                onClick={() => { setActiveDemo('organize'); setIsPaused(true); }}
+                label="Summaries"
+                testId="demo-toggle-organize"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              {['unified', 'speed', 'organize'].map((demo) => (
+                <div 
+                  key={demo}
+                  className={`h-1 rounded-full transition-all duration-500 ${
+                    activeDemo === demo ? 'w-8 bg-primary' : 'w-2 bg-white/20'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
 
-          <div className="w-full max-w-3xl mx-auto">
+          <div 
+            className="w-full max-w-3xl mx-auto"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+          >
             <div className="rounded-2xl border border-white/[0.08] bg-card/80 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/20">
-              {activeDemo === 'unified' && <DemoUnified />}
-              {activeDemo === 'speed' && <DemoSpeed />}
-              {activeDemo === 'organize' && <DemoOrganize />}
+              <div className="transition-opacity duration-500" key={activeDemo}>
+                {activeDemo === 'unified' && <DemoUnified />}
+                {activeDemo === 'speed' && <DemoSpeed />}
+                {activeDemo === 'organize' && <DemoOrganize />}
+              </div>
             </div>
           </div>
         </div>
