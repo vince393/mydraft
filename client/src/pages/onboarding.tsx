@@ -46,11 +46,27 @@ const basePlans = [
     ],
   },
   {
+    id: "student",
+    name: "Student",
+    monthlyPrice: 5,
+    annualPrice: 45,
+    annualSavings: 15,
+    description: "50% student discount",
+    badge: "Student Discount",
+    features: [
+      "Unlimited AI replies",
+      "Email humanizer",
+      "Make AI text sound natural",
+      "Tone customization",
+      "Priority support",
+    ],
+  },
+  {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 19,
-    annualPrice: 199,
-    annualSavings: 29,
+    monthlyPrice: 10,
+    annualPrice: 99,
+    annualSavings: 21,
     description: "For professionals who need more",
     features: [
       "Unlimited AI replies",
@@ -63,9 +79,9 @@ const basePlans = [
   {
     id: "business",
     name: "Business",
-    monthlyPrice: 49,
+    monthlyPrice: 29,
     annualPrice: 299,
-    annualSavings: 289,
+    annualSavings: 49,
     description: "For teams and power users",
     features: [
       "Voice assistant",

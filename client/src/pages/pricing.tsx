@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Loader2, Star, ExternalLink, Sparkles, Zap, Users, ChevronDown } from "lucide-react";
+import { Check, Loader2, Star, ExternalLink, Sparkles, Zap, Users, ChevronDown, GraduationCap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AIPreferences {
@@ -60,6 +60,23 @@ function getRecommendationReasons(planId: string, aiPreferences: AIPreferences |
         "No commitment required",
         "Core inbox management features",
         "Upgrade anytime when you need more"
+      ]
+    };
+  }
+
+  if (planId === "student") {
+    return {
+      title: "Perfect for students",
+      reasons: [
+        "50% discount on Pro features",
+        "Email humanizer makes AI-written text sound natural",
+        "Great for essays, applications, and academic emails"
+      ],
+      benefits: [
+        "Make AI-generated emails sound like you wrote them",
+        "Unlimited AI replies for all your correspondence",
+        "Customize tone for professors, peers, or employers",
+        "Priority support when deadlines are tight"
       ]
     };
   }
@@ -151,6 +168,26 @@ const basePlans = [
       "Connect 1 email account",
       "Basic inbox management",
       "Standard support",
+    ],
+  },
+  {
+    id: "student",
+    name: "Student",
+    monthlyPrice: 5,
+    annualPrice: 45,
+    annualSavings: 15,
+    description: "50% student discount",
+    icon: GraduationCap,
+    color: "text-emerald-500",
+    stripeName: "MyDraft Student",
+    badge: "Student Discount",
+    features: [
+      "Connect 1 email account",
+      "Unlimited AI replies",
+      "Email humanizer",
+      "Make AI text sound natural",
+      "Tone customization",
+      "Priority support",
     ],
   },
   {
@@ -522,7 +559,7 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {basePlans.map((plan) => {
             const isRecommended = plan.id === recommendedPlan;
             const isCurrentPlan = plan.id === currentPlan || (plan.id === "business" && currentPlan === "premium");
@@ -549,12 +586,20 @@ export default function PricingPage() {
                     </Badge>
                   </div>
                 )}
+                {!isRecommended && !isCurrentPlan && (plan as any).badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-emerald-500 text-white">
+                      <GraduationCap className="w-3 h-3 mr-1" />
+                      {(plan as any).badge}
+                    </Badge>
+                  </div>
+                )}
                 <CardHeader>
                   <div className="flex items-center gap-2 mb-1">
                     <PlanIcon className={`w-5 h-5 ${plan.color}`} />
-                    <CardTitle className="text-xl">{plan.name}</CardTitle>
+                    <CardTitle className="text-lg">{plan.name}</CardTitle>
                   </div>
-                  <CardDescription>{plan.description}</CardDescription>
+                  <CardDescription className="text-xs">{plan.description}</CardDescription>
                   <div className="mt-4">
                     <span className="text-4xl font-bold">{displayPrice(plan)}</span>
                     <span className="text-muted-foreground">/{displayPeriod(plan)}</span>
