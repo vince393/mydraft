@@ -349,66 +349,38 @@ function DemoTab({ active, onClick, label, testId }: {
 
 function DemoUnified() {
   return (
-    <div className="bg-background">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/10">
-        <div className="flex items-center gap-3">
-          <Inbox className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Inbox</span>
-          <span className="text-xs text-muted-foreground/60 bg-muted/20 px-1.5 py-0.5 rounded">12</span>
+    <div className="p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+          <Inbox className="w-4 h-4 text-primary" />
         </div>
-        <Search className="w-4 h-4 text-muted-foreground/40" />
+        <div>
+          <p className="text-sm font-medium">Focus on what matters</p>
+          <p className="text-xs text-muted-foreground">Your inbox, distraction-free</p>
+        </div>
       </div>
-      <div>
-        <div className="flex items-start gap-3 px-4 py-3 bg-primary/5 border-l-2 border-primary">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">MT</div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-0.5">
-              <span className="text-sm font-medium truncate">Michael Torres</span>
-              <span className="text-[11px] text-muted-foreground/50 flex-shrink-0">5m</span>
-            </div>
-            <p className="text-sm text-foreground/80 truncate mb-0.5">Following up on our call</p>
-            <p className="text-xs text-muted-foreground/50 truncate">Thanks for taking the time to chat yesterday...</p>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600" />
+          <div className="flex-1">
+            <div className="h-2 w-24 bg-foreground/80 rounded mb-1.5" />
+            <div className="h-1.5 w-40 bg-muted-foreground/30 rounded" />
           </div>
-          <Star className="w-4 h-4 text-muted-foreground/30 flex-shrink-0 mt-1" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
         </div>
-        <div className="flex items-start gap-3 px-4 py-3 border-b border-border/10">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">JC</div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-0.5">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium truncate">John Chen</span>
-                <span className="text-[10px] text-muted-foreground/40 bg-muted/20 px-1 rounded">3</span>
-              </div>
-              <span className="text-[11px] text-muted-foreground/50 flex-shrink-0">28m</span>
-            </div>
-            <p className="text-sm text-foreground/80 truncate mb-0.5">Re: lunch tomorrow?</p>
-            <p className="text-xs text-muted-foreground/50 truncate">Sounds good, let's meet at noon</p>
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600" />
+          <div className="flex-1">
+            <div className="h-2 w-20 bg-muted-foreground/40 rounded mb-1.5" />
+            <div className="h-1.5 w-32 bg-muted-foreground/20 rounded" />
           </div>
-          <Star className="w-4 h-4 text-amber-400 fill-amber-400 flex-shrink-0 mt-1" />
         </div>
-        <div className="flex items-start gap-3 px-4 py-3 border-b border-border/10">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">ER</div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-0.5">
-              <span className="text-sm text-muted-foreground truncate">Emily Rodriguez</span>
-              <span className="text-[11px] text-muted-foreground/50 flex-shrink-0">2h</span>
-            </div>
-            <p className="text-sm text-muted-foreground/70 truncate mb-0.5">Thanks for sending that over</p>
-            <p className="text-xs text-muted-foreground/40 truncate">I'll review and get back to you by EOD</p>
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600" />
+          <div className="flex-1">
+            <div className="h-2 w-28 bg-muted-foreground/40 rounded mb-1.5" />
+            <div className="h-1.5 w-36 bg-muted-foreground/20 rounded" />
           </div>
-          <Star className="w-4 h-4 text-muted-foreground/20 flex-shrink-0 mt-1" />
-        </div>
-        <div className="flex items-start gap-3 px-4 py-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">AL</div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-0.5">
-              <span className="text-sm text-muted-foreground truncate">Alex Lin</span>
-              <span className="text-[11px] text-muted-foreground/50 flex-shrink-0">Yesterday</span>
-            </div>
-            <p className="text-sm text-muted-foreground/70 truncate mb-0.5">Project update</p>
-            <p className="text-xs text-muted-foreground/40 truncate">Here's where we are on the Q1 deliverables</p>
-          </div>
-          <Star className="w-4 h-4 text-muted-foreground/20 flex-shrink-0 mt-1" />
         </div>
       </div>
     </div>
@@ -417,40 +389,37 @@ function DemoUnified() {
 
 function DemoSpeed() {
   return (
-    <div className="bg-background">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/10">
-        <Button size="icon" variant="ghost" className="h-8 w-8">
-          <ArrowRight className="w-4 h-4 rotate-180" />
-        </Button>
-        <div className="flex-1">
-          <p className="text-sm font-medium">Re: Meeting reschedule</p>
-          <p className="text-xs text-muted-foreground/60">Sarah Chen</p>
+    <div className="p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+          <Sparkles className="w-4 h-4 text-primary" />
         </div>
-        <Star className="w-4 h-4 text-muted-foreground/30" />
+        <div>
+          <p className="text-sm font-medium">AI writes your reply</p>
+          <p className="text-xs text-muted-foreground">One click to respond</p>
+        </div>
       </div>
-      <div className="p-4">
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">SC</div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium">Sarah Chen</span>
-              <span className="text-[11px] text-muted-foreground/50">10:32 AM</span>
-            </div>
-            <p className="text-sm text-muted-foreground/80">Can we move the meeting to 3pm instead? I have a conflict at 2.</p>
+      <div className="space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-pink-600" />
+          <div className="flex-1 p-3 rounded-lg bg-white/[0.02]">
+            <div className="h-1.5 w-32 bg-muted-foreground/30 rounded mb-2" />
+            <div className="h-1.5 w-48 bg-muted-foreground/20 rounded" />
           </div>
         </div>
-        <div className="ml-11 p-4 rounded-xl bg-primary/5 border border-primary/20">
+        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-xs font-medium text-primary">Draft reply</span>
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs font-medium text-primary">AI Draft</span>
           </div>
-          <p className="text-sm text-foreground/90 mb-4">Hi Sarah,</p>
-          <p className="text-sm text-foreground/90 mb-4">3pm works perfectly for me. I'll update the calendar invite.</p>
-          <p className="text-sm text-foreground/90 mb-4">See you then!</p>
-          <div className="flex gap-2 pt-2 border-t border-primary/10">
-            <Button size="sm">Send</Button>
-            <Button size="sm" variant="ghost">Edit</Button>
-            <Button size="sm" variant="ghost">Regenerate</Button>
+          <div className="space-y-2 mb-4">
+            <div className="h-1.5 w-full bg-foreground/40 rounded" />
+            <div className="h-1.5 w-4/5 bg-foreground/30 rounded" />
+            <div className="h-1.5 w-2/3 bg-foreground/20 rounded" />
+          </div>
+          <div className="flex gap-2">
+            <div className="px-3 py-1.5 rounded-md bg-primary text-xs font-medium text-primary-foreground">Send</div>
+            <div className="px-3 py-1.5 rounded-md bg-white/[0.05] text-xs text-muted-foreground">Edit</div>
           </div>
         </div>
       </div>
@@ -460,67 +429,45 @@ function DemoSpeed() {
 
 function DemoOrganize() {
   return (
-    <div className="bg-background">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/10">
-        <Button size="icon" variant="ghost" className="h-8 w-8">
-          <ArrowRight className="w-4 h-4 rotate-180" />
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium">Project Launch Planning</p>
-            <span className="text-[10px] text-muted-foreground/40 bg-muted/20 px-1 rounded">47</span>
-          </div>
-          <p className="text-xs text-muted-foreground/60">Marketing Team</p>
+    <div className="p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+          <Brain className="w-4 h-4 text-primary" />
         </div>
-        <Archive className="w-4 h-4 text-muted-foreground/30" />
+        <div>
+          <p className="text-sm font-medium">Threads summarized</p>
+          <p className="text-xs text-muted-foreground">Key points at a glance</p>
+        </div>
       </div>
-      <div className="p-4">
-        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Brain className="w-4 h-4 text-primary" />
-            <span className="text-xs font-medium text-primary">Thread summary</span>
-            <span className="text-[10px] text-muted-foreground/50 ml-auto">47 messages</span>
-          </div>
-          <div className="space-y-2.5 text-sm">
-            <div className="flex items-start gap-2">
-              <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
-              <span className="text-foreground/80">Launch date confirmed: March 15th</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <Clock className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
-              <span className="text-foreground/80">Marketing assets due by March 10th</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <Clock className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
-              <span className="text-foreground/80">Awaiting legal approval on terms</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
-              <span className="text-foreground/80">Budget approved by finance</span>
-            </div>
-          </div>
+      <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Brain className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-medium text-primary">Summary</span>
+          <span className="text-[10px] text-muted-foreground/50 ml-auto">12 messages</span>
         </div>
         <div className="space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-[10px] font-medium text-white flex-shrink-0">JD</div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium">James Dean</span>
-                <span className="text-[10px] text-muted-foreground/40">Mar 5</span>
-              </div>
-              <p className="text-xs text-muted-foreground/60">Sounds good, I'll get the assets ready...</p>
-            </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+            <div className="h-1.5 flex-1 bg-foreground/30 rounded" />
           </div>
-          <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-[10px] font-medium text-white flex-shrink-0">LM</div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium">Lisa Martinez</span>
-                <span className="text-[10px] text-muted-foreground/40">Mar 5</span>
-              </div>
-              <p className="text-xs text-muted-foreground/60">Legal is reviewing the final draft now...</p>
-            </div>
+          <div className="flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+            <div className="h-1.5 flex-1 bg-foreground/25 rounded" />
           </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+            <div className="h-1.5 w-3/4 bg-foreground/20 rounded" />
+          </div>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02]">
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600" />
+          <div className="h-1.5 w-32 bg-muted-foreground/20 rounded" />
+        </div>
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02]">
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600" />
+          <div className="h-1.5 w-28 bg-muted-foreground/20 rounded" />
         </div>
       </div>
     </div>
