@@ -14,6 +14,7 @@ import {
   Mail,
   Star,
   ChevronDown,
+  ChevronRight,
   Inbox,
   Send,
   Archive,
@@ -344,20 +345,21 @@ function DemoToggle({ active, onClick, icon, title, description, testId }: {
     <button
       onClick={onClick}
       data-testid={testId}
-      className={`w-full text-left p-6 rounded-2xl border transition-all duration-300 hover-elevate ${
+      className={`group w-full text-left py-5 pl-5 pr-6 rounded-xl border-l-2 transition-all duration-300 ${
         active 
-          ? 'bg-primary/10 border-primary/30 shadow-lg shadow-primary/10' 
-          : 'border-white/[0.06]'
+          ? 'border-l-primary bg-primary/5' 
+          : 'border-l-transparent hover:border-l-muted-foreground/30 hover:bg-white/[0.02]'
       }`}
     >
-      <div className="flex items-start gap-5">
-        <div className={`p-3 rounded-xl transition-colors ${active ? 'bg-primary/20 text-primary' : 'bg-white/[0.04] text-muted-foreground'}`}>
+      <div className="flex items-center gap-4">
+        <div className={`transition-colors ${active ? 'text-primary' : 'text-muted-foreground/50 group-hover:text-muted-foreground'}`}>
           {icon}
         </div>
-        <div>
-          <h3 className={`font-medium text-lg mb-1 ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{title}</h3>
-          <p className="text-muted-foreground/70">{description}</p>
+        <div className="flex-1">
+          <h3 className={`font-medium mb-0.5 transition-colors ${active ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground/80'}`}>{title}</h3>
+          <p className="text-sm text-muted-foreground/60">{description}</p>
         </div>
+        <ChevronRight className={`w-4 h-4 transition-all ${active ? 'text-primary opacity-100' : 'text-muted-foreground/30 opacity-0 group-hover:opacity-100'}`} />
       </div>
     </button>
   );
