@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, testimonials, emailCampaigns, campaignRecipients, securityAuditLog } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -194,6 +194,15 @@ export interface IStorage {
   isEmailStarred(userId: string, messageId: string): Promise<boolean>;
   getStarredEmailIds(userId: string): Promise<string[]>;
   toggleStarEmail(userId: string, messageId: string): Promise<boolean>; // Returns new starred state
+
+  // Local email state methods (UI-only, not synced with Nylas mailbox)
+  getLocalEmailState(userId: string, messageId: string): Promise<LocalEmailState | undefined>;
+  setLocalEmailFolder(userId: string, messageId: string, folder: string): Promise<LocalEmailState>;
+  getLocalEmailsByFolder(userId: string, folder: string): Promise<string[]>; // Returns messageIds
+  getLocalTrashedEmails(userId: string): Promise<string[]>;
+  getLocalArchivedEmails(userId: string): Promise<string[]>;
+  permanentlyDeleteEmail(userId: string, messageId: string): Promise<boolean>;
+  restoreEmailToInbox(userId: string, messageId: string): Promise<LocalEmailState | undefined>;
 
   // Testimonials methods
   createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial>;
@@ -1825,6 +1834,61 @@ Business Development`,
       await db.insert(starredEmails).values({ userId, messageId });
       return true;
     }
+  }
+
+  // Local email state methods (UI-only, not synced with Nylas mailbox)
+  async getLocalEmailState(userId: string, messageId: string): Promise<LocalEmailState | undefined> {
+    const [state] = await db.select().from(localEmailStates)
+      .where(and(eq(localEmailStates.userId, userId), eq(localEmailStates.messageId, messageId)));
+    return state;
+  }
+
+  async setLocalEmailFolder(userId: string, messageId: string, folder: string): Promise<LocalEmailState> {
+    const existing = await this.getLocalEmailState(userId, messageId);
+    if (existing) {
+      const [updated] = await db.update(localEmailStates)
+        .set({ localFolder: folder, updatedAt: new Date() })
+        .where(and(eq(localEmailStates.userId, userId), eq(localEmailStates.messageId, messageId)))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(localEmailStates)
+        .values({ userId, messageId, localFolder: folder })
+        .returning();
+      return created;
+    }
+  }
+
+  async getLocalEmailsByFolder(userId: string, folder: string): Promise<string[]> {
+    const states = await db.select({ messageId: localEmailStates.messageId })
+      .from(localEmailStates)
+      .where(and(eq(localEmailStates.userId, userId), eq(localEmailStates.localFolder, folder)));
+    return states.map(s => s.messageId);
+  }
+
+  async getLocalTrashedEmails(userId: string): Promise<string[]> {
+    return this.getLocalEmailsByFolder(userId, "trash");
+  }
+
+  async getLocalArchivedEmails(userId: string): Promise<string[]> {
+    return this.getLocalEmailsByFolder(userId, "archived");
+  }
+
+  async permanentlyDeleteEmail(userId: string, messageId: string): Promise<boolean> {
+    const result = await db.delete(localEmailStates)
+      .where(and(eq(localEmailStates.userId, userId), eq(localEmailStates.messageId, messageId)));
+    // Also remove from starred if present
+    await db.delete(starredEmails)
+      .where(and(eq(starredEmails.userId, userId), eq(starredEmails.messageId, messageId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async restoreEmailToInbox(userId: string, messageId: string): Promise<LocalEmailState | undefined> {
+    const [updated] = await db.update(localEmailStates)
+      .set({ localFolder: "inbox", updatedAt: new Date() })
+      .where(and(eq(localEmailStates.userId, userId), eq(localEmailStates.messageId, messageId)))
+      .returning();
+    return updated;
   }
 
   // Testimonials methods

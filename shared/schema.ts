@@ -167,6 +167,27 @@ export const starredEmails = pgTable("starred_emails", {
 
 export type StarredEmail = typeof starredEmails.$inferSelect;
 
+// Local email states (UI-only, not synced with Nylas mailbox)
+// Tracks local folder assignments for emails (trash, archived, etc.)
+export const localEmailStates = pgTable("local_email_states", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  messageId: varchar("message_id").notNull(), // Nylas message ID
+  localFolder: varchar("local_folder").notNull().default("inbox"), // inbox, trash, archived, spam
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertLocalEmailStateSchema = createInsertSchema(localEmailStates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type LocalEmailState = typeof localEmailStates.$inferSelect;
+export type InsertLocalEmailState = z.infer<typeof insertLocalEmailStateSchema>;
+
 export const supportMessages = pgTable("support_messages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
