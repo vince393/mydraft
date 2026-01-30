@@ -202,7 +202,7 @@ const basePlans = [
     stripeName: "MyDraft Pro",
     features: [
       "Personal writing style memory",
-      "Unlimited AI assistance",
+      "100 AI emails per day",
       "Advanced automation & workflows",
       "Custom rules and sequences",
       "Team or shared inboxes",
@@ -223,6 +223,7 @@ const basePlans = [
     stripeName: "MyDraft Business",
     features: [
       "Everything in Pro",
+      "Unlimited AI assistance",
       "Voice assistant",
       "Custom AI training",
       "Team collaboration",
