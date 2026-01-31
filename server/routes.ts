@@ -5839,7 +5839,172 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
-  // Create checkout session for subscription
+  // Create Setup Intent for custom checkout (card collection for subscription with trial)
+  app.post("/api/stripe/create-setup-intent", requireAuth, async (req, res) => {
+    try {
+      const { plan, interval } = req.body;
+      
+      if (!plan || !["pro", "business", "student"].includes(plan)) {
+        return res.status(400).json({ error: "Valid plan is required" });
+      }
+      
+      if (!interval || !["annual", "monthly"].includes(interval)) {
+        return res.status(400).json({ error: "Valid interval is required" });
+      }
+      
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      
+      // Create or get customer
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: { userId: user.id },
+        });
+        await storage.updateUser(user.id, { stripeCustomerId: customer.id });
+        customerId = customer.id;
+      }
+      
+      // Create a SetupIntent to collect payment method
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        metadata: { 
+          userId: user.id, 
+          plan: plan === "business" ? "premium" : plan,
+          interval 
+        },
+      });
+      
+      res.json({ 
+        clientSecret: setupIntent.client_secret,
+        customerId 
+      });
+    } catch (error) {
+      console.error("Error creating setup intent:", error);
+      res.status(500).json({ error: "Failed to initialize payment" });
+    }
+  });
+
+  // Confirm subscription after payment method is collected
+  app.post("/api/stripe/confirm-subscription", requireAuth, async (req, res) => {
+    try {
+      const { plan, interval, paymentMethodId } = req.body;
+      
+      if (!plan || !["pro", "business", "student"].includes(plan)) {
+        return res.status(400).json({ error: "Valid plan is required" });
+      }
+      
+      if (!interval || !["annual", "monthly"].includes(interval)) {
+        return res.status(400).json({ error: "Valid interval is required" });
+      }
+      
+      if (!paymentMethodId) {
+        return res.status(400).json({ error: "Payment method is required" });
+      }
+      
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || !user.stripeCustomerId) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      
+      // Define pricing
+      const pricing: Record<string, Record<string, number>> = {
+        student: {
+          monthly: 500,   // $5.00 in cents
+          annual: 4500,   // $45.00 in cents
+        },
+        pro: {
+          monthly: 1000,  // $10.00 in cents
+          annual: 9900,   // $99.00 in cents
+        },
+        business: {
+          monthly: 2900,  // $29.00 in cents
+          annual: 29900,  // $299.00 in cents
+        },
+      };
+      
+      const amount = pricing[plan][interval];
+      const recurringInterval = interval === "annual" ? "year" : "month";
+      const productName = plan === "student" ? "MyDraft Student" : plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
+      
+      // Attach payment method to customer
+      await stripe.paymentMethods.attach(paymentMethodId, {
+        customer: user.stripeCustomerId,
+      });
+      
+      // Set as default payment method
+      await stripe.customers.update(user.stripeCustomerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+      
+      // Find or create the product
+      let product;
+      const existingProducts = await stripe.products.list({ limit: 100 });
+      product = existingProducts.data.find(p => p.name === productName && p.active);
+      
+      if (!product) {
+        product = await stripe.products.create({
+          name: productName,
+          metadata: { plan: plan === "business" ? "premium" : plan },
+        });
+      }
+      
+      // Find or create the price
+      const existingPrices = await stripe.prices.list({ product: product.id, limit: 100 });
+      let price = existingPrices.data.find(p => 
+        p.active && 
+        p.unit_amount === amount && 
+        p.recurring?.interval === recurringInterval
+      );
+      
+      if (!price) {
+        price = await stripe.prices.create({
+          product: product.id,
+          unit_amount: amount,
+          currency: 'usd',
+          recurring: { interval: recurringInterval },
+          metadata: { plan: plan === "business" ? "premium" : plan },
+        });
+      }
+      
+      // Create subscription with 14-day trial
+      const subscription = await stripe.subscriptions.create({
+        customer: user.stripeCustomerId,
+        items: [{ price: price.id }],
+        trial_period_days: 14,
+        default_payment_method: paymentMethodId,
+        metadata: { userId: user.id, plan: plan === "business" ? "premium" : plan },
+      });
+      
+      // Update user with subscription info
+      await storage.updateUser(user.id, { 
+        stripeSubscriptionId: subscription.id,
+        plan: plan === "business" ? "premium" : plan,
+        onboardingCompleted: true
+      });
+      
+      res.json({ 
+        success: true, 
+        subscriptionId: subscription.id,
+        trialEnd: subscription.trial_end 
+      });
+    } catch (error: any) {
+      console.error("Error confirming subscription:", error);
+      res.status(500).json({ error: error.message || "Failed to create subscription" });
+    }
+  });
+
+  // Legacy: Create checkout session for subscription (redirect to Stripe)
   app.post("/api/stripe/checkout", requireAuth, async (req, res) => {
     try {
       const { plan, interval } = req.body;

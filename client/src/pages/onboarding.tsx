@@ -235,8 +235,8 @@ export default function OnboardingPage() {
     },
   });
 
-  // Stripe checkout for paid plans
-  const checkoutMutation = useMutation({
+  // Prepare for checkout by saving preferences first
+  const prepareCheckoutMutation = useMutation({
     mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
       // First save the AI preferences
       await apiRequest("POST", "/api/user/onboarding", { aiPreferences: preferences });
@@ -248,18 +248,15 @@ export default function OnboardingPage() {
           console.error("Failed to enable 2FA:", err);
         }
       }
-      // Then start checkout
-      const response = await apiRequest("POST", "/api/stripe/checkout", { plan, interval });
-      return response.json();
+      return { plan, interval };
     },
-    onSuccess: (data: { url: string }) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
+    onSuccess: ({ plan, interval }) => {
+      // Redirect to custom checkout page
+      setLocation(`/checkout?plan=${plan}&interval=${interval}`);
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to start checkout",
+        title: "Failed to save preferences",
         description: error.message,
         variant: "destructive",
       });
@@ -272,11 +269,11 @@ export default function OnboardingPage() {
     if (planId === "free") {
       selectFreePlanMutation.mutate();
     } else {
-      checkoutMutation.mutate({ plan: planId, interval: billingInterval });
+      prepareCheckoutMutation.mutate({ plan: planId, interval: billingInterval });
     }
   };
 
-  const isPlanLoading = selectFreePlanMutation.isPending || checkoutMutation.isPending || completeOnboardingMutation.isPending;
+  const isPlanLoading = selectFreePlanMutation.isPending || prepareCheckoutMutation.isPending || completeOnboardingMutation.isPending;
 
   const goNext = () => {
     const nextIndex = currentStepIndex + 1;
