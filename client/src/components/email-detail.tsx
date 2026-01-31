@@ -71,6 +71,9 @@ interface EmailDetailProps {
   onReply?: () => void;
   onReplyAll?: () => void;
   onForward?: () => void;
+  onAiDraft?: () => void;
+  hasPro?: boolean;
+  onUpgradeNeeded?: () => void;
 }
 
 function EmailDetailEmpty() {
@@ -89,7 +92,7 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward }: EmailDetailProps) {
+export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward, onAiDraft, hasPro, onUpgradeNeeded }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
@@ -102,7 +105,7 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
   const [expandedThreadEmails, setExpandedThreadEmails] = useState<Set<string | number>>(new Set());
   const [refineInput, setRefineInput] = useState("");
   const [isRefining, setIsRefining] = useState(false);
-  const [showSummary, setShowSummary] = useState(true);
+  const [showSummary, setShowSummary] = useState(false);
   const { toast } = useToast();
 
   const emailId = email ? ((email as any).nylasId || email.id) : null;
@@ -114,13 +117,30 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
     },
   });
 
+  // Reset summary state when email changes
   useEffect(() => {
     summaryMutation.reset();
-    setShowSummary(true);
-    if (emailId && email?.body) {
+    setShowSummary(false);
+  }, [emailId]);
+
+  const handleSummarize = () => {
+    if (!hasPro) {
+      onUpgradeNeeded?.();
+      return;
+    }
+    if (emailId && email?.body && !summaryMutation.data) {
       summaryMutation.mutate({ id: emailId, subject: email.subject, body: email.body });
     }
-  }, [emailId]);
+    setShowSummary(true);
+  };
+
+  const handleAiDraftClick = () => {
+    if (!hasPro) {
+      onUpgradeNeeded?.();
+      return;
+    }
+    onAiDraft?.();
+  };
 
   const summaryData = summaryMutation.data as { summary: string; keyPoints: string[]; actionItems: string[] } | undefined;
   const isSummaryLoading = summaryMutation.isPending;
@@ -434,6 +454,45 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
             <MoreHorizontal className="w-4 h-4" />
           </Button>
         </div>
+      </div>
+
+      {/* AI Action Bar */}
+      <div className="flex items-center gap-2 px-4 sm:px-6 py-2 border-b border-border/20 bg-muted/20">
+        <Button
+          size="sm"
+          variant={showSummary ? "secondary" : "ghost"}
+          className="h-8 gap-1.5 text-xs"
+          onClick={handleSummarize}
+          disabled={isSummaryLoading}
+          data-testid="button-summarize"
+        >
+          {isSummaryLoading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <FileText className="w-3.5 h-3.5" />
+          )}
+          Summarize
+          {!hasPro && (
+            <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
+              Pro
+            </span>
+          )}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 gap-1.5 text-xs"
+          onClick={handleAiDraftClick}
+          data-testid="button-ai-draft"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          Draft Reply
+          {!hasPro && (
+            <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
+              Pro
+            </span>
+          )}
+        </Button>
       </div>
 
       <ScrollArea className="flex-1 scrollbar-thin">
