@@ -691,7 +691,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         {isSyncing && (
           <div className="flex items-center justify-center gap-2 py-4 px-3" data-testid="updating-indicator">
             <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
-            <span className="text-xs text-muted-foreground">Updating emails...</span>
+            <span className="text-xs text-muted-foreground">Checking for new emails...</span>
           </div>
         )}
         </div>
