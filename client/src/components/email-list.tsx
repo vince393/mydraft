@@ -765,23 +765,11 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               >
                 <Trash2 className="w-4 h-4 text-destructive" />
               </Button>
-              {hasConnectedAccount && activeFolder === "inbox" && (
-                <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
-              )}
             </div>
-            <Button 
-              onClick={onAiReply}
-              disabled={!selectedEmailId || isAiLoading}
-              className="flex-1 gap-2"
-              data-testid="button-ai-reply"
-            >
-              {isAiLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              Draft with AI
-            </Button>
+            <span className="flex-1" />
+            {hasConnectedAccount && activeFolder === "inbox" && (
+              <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
+            )}
           </div>
         )}
       </div>

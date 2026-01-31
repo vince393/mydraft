@@ -4326,6 +4326,66 @@ RESPONSE STYLE:
     }
   });
 
+  // Generate quick AI suggestion for email reply (requires Pro+)
+  app.post("/api/ai/quick-suggestion", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Plan gating: requires Pro or Premium
+      const userPlan = await getUserPlan(userId);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({ 
+          error: "Plan upgrade required", 
+          requiredPlan: "pro",
+          currentPlan: userPlan
+        });
+      }
+      
+      const { subject, sender, preview } = req.body;
+      
+      if (!subject || !sender) {
+        return res.status(400).json({ error: "Subject and sender required" });
+      }
+
+      const user = await storage.getUser(userId);
+      const styleProfile = await storage.getUserStyleProfile(userId);
+      
+      const profile = styleProfile?.profile || {
+        tone: "professional",
+        length: "medium"
+      };
+
+      // Generate a very brief suggestion using AI
+      const prompt = `You are an email assistant. Based on this email, provide a ONE sentence suggestion for how to respond. Be concise and helpful.
+
+Email from: ${sender}
+Subject: ${subject}
+Preview: ${preview || "No preview available"}
+
+User's preferred tone: ${profile.tone || "professional"}
+
+Respond with ONLY a brief suggestion, like:
+- "Confirm the meeting time and thank them for the update"
+- "Politely decline and suggest an alternative date"
+- "Request more details about the project requirements"`;
+
+      const openai = (await import("./replit_integrations/ai/openai.js")).default;
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 100,
+        temperature: 0.7,
+      });
+
+      const suggestion = completion.choices[0]?.message?.content?.trim() || "Click to draft a response with AI";
+
+      res.json({ suggestion });
+    } catch (error) {
+      console.error("Error generating quick suggestion:", error);
+      res.status(500).json({ error: "Failed to generate suggestion" });
+    }
+  });
+
   // Generate AI draft (compose/reply/reply-all/forward) (requires Pro+)
   app.post("/api/ai/draft", requireAuth, aiGenerationLimiter, async (req, res) => {
     try {

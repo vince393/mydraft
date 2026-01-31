@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePlan } from "@/hooks/use-plan";
 import { useScreenSize } from "@/hooks/use-screen-size";
 import { NotificationBell } from "@/components/notification-bell";
+import { AiSuggestionBar } from "@/components/ai-suggestion-bar";
 import type { Email, Draft } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -802,7 +803,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
               )}
             </div>
           </header>
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto relative">
           <EmailDetail 
             email={selectedEmail ?? null}
             threadEmails={selectedThreadEmails}
@@ -817,6 +818,15 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             onReplyAll={handleReplyAll}
             onForward={handleForward}
           />
+          {selectedEmail && activeFolder === "inbox" && !generatedDraft && (
+            <AiSuggestionBar
+              email={selectedEmail}
+              onExpand={handleAiReply}
+              onDismiss={() => {}}
+              hasPro={hasPro}
+              onUpgradeNeeded={() => setShowUpgradeModal(true)}
+            />
+          )}
         </div>
         </div>
       )}
