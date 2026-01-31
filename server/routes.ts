@@ -5917,6 +5917,23 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
       
+      // Check for existing active subscription to prevent duplicates
+      const existingSubscriptions = await stripe.subscriptions.list({
+        customer: user.stripeCustomerId,
+        status: 'all',
+        limit: 10,
+      });
+      
+      const activeSubscription = existingSubscriptions.data.find(
+        sub => ['active', 'trialing'].includes(sub.status)
+      );
+      
+      if (activeSubscription) {
+        return res.status(400).json({ 
+          error: "You already have an active subscription. Please manage it from your account settings." 
+        });
+      }
+      
       // Define pricing
       const pricing: Record<string, Record<string, number>> = {
         student: {

@@ -54,11 +54,19 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   const setupIntentMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/stripe/create-setup-intent", { plan, interval });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to initialize payment");
+      }
       return response.json();
+    },
+    onError: (error: Error) => {
+      setSetupError(error.message);
     },
   });
 
@@ -69,13 +77,23 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
         interval, 
         paymentMethodId 
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create subscription");
+      }
       return response.json();
     },
   });
 
   useEffect(() => {
+    setSetupError(null);
     setupIntentMutation.mutate();
   }, [plan, interval]);
+
+  const handleRetrySetup = () => {
+    setSetupError(null);
+    setupIntentMutation.mutate();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +138,8 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
             description: "Your 14-day free trial has started.",
           });
           onSuccess();
+        } else if (result.error) {
+          setCardError(result.error);
         }
       }
     } catch (error: any) {
@@ -128,6 +148,17 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
       setIsProcessing(false);
     }
   };
+
+  if (setupError) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-destructive mb-4">{setupError}</p>
+        <Button onClick={handleRetrySetup} data-testid="button-retry-setup">
+          Try again
+        </Button>
+      </div>
+    );
+  }
 
   const planInfo = planDetails[plan];
   const priceInfo = pricing[plan]?.[interval];
