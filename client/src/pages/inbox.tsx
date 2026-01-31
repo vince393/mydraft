@@ -730,6 +730,10 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             activeFolder={activeFolder}
             hasConnectedAccount={!!userData?.user?.connectedEmail}
             onConnectAccount={() => setLocation("/connect-email")}
+            onRefresh={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/emails", "fresh"] });
+            }}
+            isRefreshing={isFetchingFresh}
           />
         )}
       </div>

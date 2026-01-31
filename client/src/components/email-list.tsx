@@ -58,6 +58,8 @@ interface EmailListProps {
   hasConnectedAccount?: boolean;
   onConnectAccount?: () => void;
   onInboxRefresh?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 interface ResponseTimeEstimate {
@@ -133,7 +135,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing }: EmailListProps) {
   const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -143,6 +145,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     sender: "",
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const pullThreshold = 60;
   
   const { data: responseTime, isLoading: isLoadingTime } = useQuery<ResponseTimeEstimate>({
     queryKey: ['/api/response-time', activeFolder],
@@ -626,8 +631,56 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       </div>
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin"
+        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative"
+        onTouchStart={(e) => {
+          if (scrollContainerRef.current?.scrollTop === 0) {
+            setIsPulling(true);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (isPulling && scrollContainerRef.current?.scrollTop === 0) {
+            const touch = e.touches[0];
+            const startY = (scrollContainerRef.current as any)._startY || touch.clientY;
+            if (!(scrollContainerRef.current as any)._startY) {
+              (scrollContainerRef.current as any)._startY = touch.clientY;
+            }
+            const distance = Math.max(0, Math.min(100, touch.clientY - startY));
+            setPullDistance(distance);
+          }
+        }}
+        onTouchEnd={() => {
+          if (pullDistance >= pullThreshold && onRefresh && !isRefreshing) {
+            onRefresh();
+          }
+          setPullDistance(0);
+          setIsPulling(false);
+          if (scrollContainerRef.current) {
+            (scrollContainerRef.current as any)._startY = null;
+          }
+        }}
       >
+        {(pullDistance > 0 || isRefreshing) && (
+          <div 
+            className="flex items-center justify-center py-3 transition-all"
+            style={{ height: isRefreshing ? 48 : pullDistance * 0.6 }}
+          >
+            <div className="flex items-center gap-2">
+              <Loader2 
+                className={`w-4 h-4 text-muted-foreground ${isRefreshing || pullDistance >= pullThreshold ? 'animate-spin' : ''}`}
+                style={{ 
+                  transform: isRefreshing ? 'none' : `rotate(${pullDistance * 3.6}deg)`,
+                  opacity: Math.min(1, pullDistance / pullThreshold)
+                }}
+              />
+              {isRefreshing && (
+                <span className="text-xs text-muted-foreground">Refreshing...</span>
+              )}
+              {!isRefreshing && pullDistance >= pullThreshold && (
+                <span className="text-xs text-muted-foreground">Release to refresh</span>
+              )}
+            </div>
+          </div>
+        )}
         {filteredEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center p-8">
             <Search className="w-10 h-10 text-muted-foreground/40 mb-4" />
