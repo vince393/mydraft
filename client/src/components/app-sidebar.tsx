@@ -519,23 +519,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                           <FolderPlus className="w-4 h-4" />
                           <span className="text-sm">Folder</span>
                         </button>
-                        {hasPremium && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLocation("/campaigns");
-                                }}
-                                className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-all duration-200"
-                                data-testid="button-campaigns"
-                              >
-                                <Megaphone className="w-4 h-4" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="right">Email Campaigns</TooltipContent>
-                          </Tooltip>
-                        )}
                         <button
                           onClick={handleToggleCollapse}
                           className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
@@ -568,23 +551,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                           </TooltipTrigger>
                           <TooltipContent side="right">New Folder</TooltipContent>
                         </Tooltip>
-                        {hasPremium && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLocation("/campaigns");
-                                }}
-                                className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-all duration-200"
-                                data-testid="button-campaigns"
-                              >
-                                <Megaphone className="w-4 h-4" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="right">Email Campaigns</TooltipContent>
-                          </Tooltip>
-                        )}
                       </>
                     )}
                   </div>

@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const [optimisticRemovals, setOptimisticRemovals] = useState<Set<string | number>>(new Set());
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { hasPro } = usePlan();
+  const { hasPro, hasPremium } = usePlan();
   const screen = useScreenSize();
 
   // Fetch current user info including connected email
@@ -642,6 +642,12 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                     <Settings className="w-4 h-4" />
                     Settings
                   </DropdownMenuItem>
+                  {hasPremium && (
+                    <DropdownMenuItem className="gap-2" onClick={() => setLocation("/campaigns")} data-testid="menu-campaigns">
+                      <Megaphone className="w-4 h-4" />
+                      Email Campaigns
+                    </DropdownMenuItem>
+                  )}
                   {!userData?.user?.connectedEmail && (
                     <DropdownMenuItem className="gap-2" onClick={() => setLocation("/connect-email")}>
                       <Link className="w-4 h-4" />
