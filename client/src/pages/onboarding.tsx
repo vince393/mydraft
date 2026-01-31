@@ -305,8 +305,8 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8 sm:py-12">
-      <div className={`w-full transition-all ${step === "select-plan" ? "max-w-4xl" : "max-w-lg"}`}>
+    <div className={`min-h-screen bg-background flex items-center justify-center px-4 py-8 sm:py-12 ${step === "select-plan" ? "items-stretch" : ""}`}>
+      <div className={`w-full transition-all ${step === "select-plan" ? "max-w-6xl" : "max-w-lg"}`}>
         <div className="flex justify-center gap-1 sm:gap-1.5 mb-6 sm:mb-8">
           {steps.map((s, i) => (
             <div
@@ -318,7 +318,8 @@ export default function OnboardingPage() {
           ))}
         </div>
 
-        <Card className="overflow-hidden">
+        <Card className={`overflow-hidden ${step === "select-plan" ? "border-0 bg-transparent shadow-none" : ""}`}>
+          {step !== "select-plan" && (
           <CardHeader className="p-4 sm:p-6">
             <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -331,7 +332,6 @@ export default function OnboardingPage() {
               {step === "tone" && "What's your preferred reply tone?"}
               {step === "security" && "Secure your account"}
               {step === "referral" && "How did you hear about us?"}
-              {step === "select-plan" && "Choose your plan"}
             </CardTitle>
             <CardDescription>
               {step === "primary-use" && "Help us personalize your experience"}
@@ -341,9 +341,9 @@ export default function OnboardingPage() {
               {step === "tone" && "This will be your default for AI replies"}
               {step === "security" && "Add extra protection with two-factor authentication"}
               {step === "referral" && "We'd love to know how you found us"}
-              {step === "select-plan" && "Select a plan to complete setup"}
             </CardDescription>
           </CardHeader>
+          )}
           <CardContent className="space-y-4">
             {step === "primary-use" && (
               <RadioGroup
@@ -572,34 +572,7 @@ export default function OnboardingPage() {
             )}
 
             {step === "select-plan" && (
-              <div className="space-y-4">
-                <div className="flex justify-center mb-4">
-                  <div className="inline-flex items-center bg-muted rounded-full p-1" data-testid="billing-toggle">
-                    <button
-                      className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all touch-target ${
-                        billingInterval === "monthly" 
-                          ? "bg-primary text-primary-foreground" 
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      onClick={() => setBillingInterval("monthly")}
-                      data-testid="button-billing-monthly"
-                    >
-                      Monthly
-                    </button>
-                    <button
-                      className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all touch-target ${
-                        billingInterval === "annual" 
-                          ? "bg-primary text-primary-foreground" 
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      onClick={() => setBillingInterval("annual")}
-                      data-testid="button-billing-annual"
-                    >
-                      Annual
-                    </button>
-                  </div>
-                </div>
-
+              <div className="-mx-4 sm:-mx-6">
                 {!showAllPlans ? (
                   <>
                     {(() => {
@@ -617,7 +590,6 @@ export default function OnboardingPage() {
 
                       const getVisualizationData = () => {
                         const emailVolume = preferences.emailVolume;
-                        const automationLevel = preferences.automationLevel;
                         
                         const emailsPerDay = emailVolume === "very-high" ? 120 : emailVolume === "high" ? 75 : emailVolume === "medium" ? 35 : 15;
                         const timeSavedPerEmail = plan.id === "business" ? 3 : plan.id === "pro" ? 2.5 : plan.id === "student" ? 2 : 1;
@@ -625,171 +597,163 @@ export default function OnboardingPage() {
                         const monthlyTimeSaved = dailyTimeSaved * 22;
                         const yearlyTimeSaved = monthlyTimeSaved * 12;
                         
-                        const productivityBoost = plan.id === "business" ? 95 : plan.id === "pro" ? 78 : plan.id === "student" ? 65 : 25;
-                        const aiCapability = plan.id === "business" ? 100 : plan.id === "pro" ? 75 : plan.id === "student" ? 60 : 20;
+                        const emailsAutomated = plan.id === "business" ? "Unlimited" : plan.id === "pro" ? "100" : plan.id === "student" ? "50" : "5";
+                        const responseTime = plan.id === "business" ? "< 30 sec" : plan.id === "pro" ? "< 1 min" : plan.id === "student" ? "< 2 min" : "< 5 min";
                         
-                        return { emailsPerDay, dailyTimeSaved, monthlyTimeSaved, yearlyTimeSaved, productivityBoost, aiCapability };
+                        return { emailsPerDay, dailyTimeSaved, monthlyTimeSaved, yearlyTimeSaved, emailsAutomated, responseTime };
                       };
                       
                       const vizData = getVisualizationData();
 
                       return (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <div className="p-4 sm:p-5 rounded-lg border-2 border-primary bg-primary/5 relative">
-                            <Badge className="absolute -top-2.5 left-3 sm:left-4 bg-primary text-primary-foreground text-[10px] sm:text-xs">
-                              <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
-                              Recommended for you
-                            </Badge>
-                            
-                            <div className="flex items-start justify-between gap-4 mb-6 mt-2">
-                              <div>
-                                <h3 className="text-2xl font-bold">{plan.name}</h3>
-                                <p className="text-sm text-muted-foreground">{plan.description}</p>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[550px] rounded-xl overflow-hidden border border-border">
+                          <div className="p-6 sm:p-10 lg:p-12 bg-card lg:border-r border-border flex flex-col">
+                            <div className="mb-6">
+                              <Badge className="bg-primary text-primary-foreground text-xs mb-4">
+                                <Star className="w-3 h-3 mr-1" />
+                                Recommended for you
+                              </Badge>
+                              
+                              <h2 className="text-3xl sm:text-4xl font-bold mb-2">{plan.name}</h2>
+                              <p className="text-muted-foreground">{plan.description}</p>
+                            </div>
+
+                            <div className="mb-6">
+                              <div className="flex items-baseline gap-1 mb-4">
+                                <span className="text-4xl sm:text-5xl font-bold">{displayPrice}</span>
+                                <span className="text-muted-foreground text-lg">{displayPeriod}</span>
                               </div>
-                              <div className="text-right">
-                                <div className="text-3xl font-bold">{displayPrice}</div>
-                                <div className="text-sm text-muted-foreground">{displayPeriod}</div>
+                              
+                              <div className="inline-flex items-center bg-muted rounded-full p-1" data-testid="billing-toggle">
+                                <button
+                                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                    billingInterval === "monthly" 
+                                      ? "bg-primary text-primary-foreground" 
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                  onClick={() => setBillingInterval("monthly")}
+                                  data-testid="button-billing-monthly"
+                                >
+                                  Monthly
+                                </button>
+                                <button
+                                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                    billingInterval === "annual" 
+                                      ? "bg-primary text-primary-foreground" 
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                  onClick={() => setBillingInterval("annual")}
+                                  data-testid="button-billing-annual"
+                                >
+                                  Annual
+                                </button>
                               </div>
                             </div>
 
-                            <div className="space-y-2 mb-6">
-                              <div className="grid grid-cols-1 gap-1.5">
-                                {plan.features.map((feature) => (
-                                  <div key={feature} className="flex items-center gap-2 text-sm">
-                                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                                    <span>{feature}</span>
+                            <div className="space-y-3 mb-8 flex-1">
+                              {plan.features.map((feature) => (
+                                <div key={feature} className="flex items-center gap-3">
+                                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                    <Check className="w-3 h-3 text-primary" />
                                   </div>
-                                ))}
-                              </div>
+                                  <span className="text-sm">{feature}</span>
+                                </div>
+                              ))}
                             </div>
 
-                            <Button
-                              className="w-full"
-                              size="lg"
-                              onClick={() => handlePlanSelect(plan.id)}
-                              disabled={isPlanLoading}
-                              data-testid={`button-plan-${plan.id}`}
-                            >
-                              {isPlanLoading ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                  Setting up...
-                                </>
-                              ) : plan.id === "free" ? (
-                                "Get started free"
-                              ) : (
-                                `Start 14-day free trial`
-                              )}
-                            </Button>
+                            <div className="space-y-3">
+                              <Button
+                                className="w-full"
+                                size="lg"
+                                onClick={() => handlePlanSelect(plan.id)}
+                                disabled={isPlanLoading}
+                                data-testid={`button-plan-${plan.id}`}
+                              >
+                                {isPlanLoading ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                    Setting up...
+                                  </>
+                                ) : plan.id === "free" ? (
+                                  "Get started free"
+                                ) : (
+                                  `Start 14-day free trial`
+                                )}
+                              </Button>
+                              
+                              <button
+                                type="button"
+                                onClick={() => setShowAllPlans(true)}
+                                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                                data-testid="button-view-all-plans"
+                              >
+                                View all plans
+                              </button>
+                            </div>
                           </div>
 
-                          <div className="p-4 sm:p-5 rounded-lg border border-border bg-card">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <TrendingUp className="w-4 h-4 text-primary" />
-                              </div>
-                              <h4 className="font-semibold">Why {plan.name} is perfect for you</h4>
-                            </div>
-
-                            <div className="space-y-5">
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-muted-foreground" />
-                                    Time saved per month
-                                  </span>
-                                  <span className="font-bold text-primary">{vizData.monthlyTimeSaved}+ hours</span>
+                          <div className="p-6 sm:p-10 lg:p-12 bg-gradient-to-br from-primary/5 via-background to-blue-500/5 flex flex-col justify-center">
+                            <div className="space-y-8">
+                              <div>
+                                <p className="text-sm text-muted-foreground mb-2">Based on your email volume, you'll save</p>
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-5xl sm:text-6xl lg:text-7xl font-bold text-emerald-500">{vizData.yearlyTimeSaved}+</span>
+                                  <span className="text-xl sm:text-2xl text-muted-foreground">hours/year</span>
                                 </div>
-                                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all duration-1000 ease-out"
-                                    style={{ 
-                                      width: `${Math.min(vizData.monthlyTimeSaved * 2.5, 100)}%`,
-                                      animation: 'slideIn 1s ease-out'
-                                    }}
-                                  />
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                  With {vizData.emailsPerDay} emails/day, you'll save {vizData.yearlyTimeSaved}+ hours/year
+                                <p className="text-sm text-muted-foreground mt-2">
+                                  That's like getting <span className="font-semibold text-foreground">{Math.round(vizData.yearlyTimeSaved / 8)} extra workdays</span> back
                                 </p>
                               </div>
 
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="flex items-center gap-2">
-                                    <Brain className="w-4 h-4 text-muted-foreground" />
-                                    AI capability unlocked
-                                  </span>
-                                  <span className="font-bold text-primary">{vizData.aiCapability}%</span>
+                              <div className="h-px bg-border" />
+
+                              <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                  <p className="text-sm text-muted-foreground mb-1">AI emails per day</p>
+                                  <p className="text-3xl sm:text-4xl font-bold text-primary">{vizData.emailsAutomated}</p>
                                 </div>
-                                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-1000 ease-out"
-                                    style={{ 
-                                      width: `${vizData.aiCapability}%`,
-                                      animation: 'slideIn 1.2s ease-out'
-                                    }}
-                                  />
+                                <div>
+                                  <p className="text-sm text-muted-foreground mb-1">Draft generation</p>
+                                  <p className="text-3xl sm:text-4xl font-bold text-blue-500">{vizData.responseTime}</p>
                                 </div>
                               </div>
 
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="flex items-center gap-2">
-                                    <Rocket className="w-4 h-4 text-muted-foreground" />
-                                    Productivity boost
-                                  </span>
-                                  <span className="font-bold text-primary">{vizData.productivityBoost}%</span>
+                              <div className="h-px bg-border" />
+
+                              <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <Clock className="w-4 h-4 text-emerald-500" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">Stop wasting time on repetitive emails</p>
+                                    <p className="text-sm text-muted-foreground">AI learns your style and drafts replies in seconds</p>
+                                  </div>
                                 </div>
-                                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-1000 ease-out"
-                                    style={{ 
-                                      width: `${vizData.productivityBoost}%`,
-                                      animation: 'slideIn 1.4s ease-out'
-                                    }}
-                                  />
+
+                                <div className="flex items-start gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <Brain className="w-4 h-4 text-primary" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">Your writing, amplified by AI</p>
+                                    <p className="text-sm text-muted-foreground">Replies sound exactly like you wrote them</p>
+                                  </div>
                                 </div>
+
+                                {plan.id !== "free" && (
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <Rocket className="w-4 h-4 text-purple-500" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium">14 days free, cancel anytime</p>
+                                      <p className="text-sm text-muted-foreground">No commitment, no credit card until you're ready</p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-
-                              {plan.id !== "free" && (
-                                <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Sparkles className="w-4 h-4 text-primary" />
-                                    <span className="text-sm font-medium">Value comparison</span>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground">
-                                    At ${billingInterval === "annual" ? Math.round((plan.annualPrice || 0) / 12) : plan.monthlyPrice}/month, 
-                                    you're paying just ${(((billingInterval === "annual" ? (plan.annualPrice || 0) / 12 : plan.monthlyPrice) || 0) / vizData.monthlyTimeSaved).toFixed(2)}/hour 
-                                    for time saved. That's {Math.round(25 / (((billingInterval === "annual" ? (plan.annualPrice || 0) / 12 : plan.monthlyPrice) || 1) / vizData.monthlyTimeSaved))}x more 
-                                    valuable than your hourly rate.
-                                  </p>
-                                </div>
-                              )}
-
-                              {plan.id === "free" && (
-                                <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium">Good starting point</span>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground">
-                                    Perfect for trying MyDraft. Upgrade anytime when you're ready for more AI power.
-                                  </p>
-                                </div>
-                              )}
                             </div>
-                          </div>
-
-                          <div className="lg:col-span-2">
-                            <button
-                              type="button"
-                              onClick={() => setShowAllPlans(true)}
-                              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-                              data-testid="button-view-all-plans"
-                            >
-                              View all plans
-                            </button>
                           </div>
                         </div>
                       );
