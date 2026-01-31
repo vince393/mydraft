@@ -143,6 +143,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
   const selectedFolderRef = useRef<FolderItem | null>(null);
+  const [deleteFolderId, setDeleteFolderId] = useState<number | null>(null);
+  const [deleteFolderTitle, setDeleteFolderTitle] = useState<string>("");
   const [renameFolderName, setRenameFolderName] = useState("");
   const [folderActionMenuOpen, setFolderActionMenuOpen] = useState<string | null>(null);
   
@@ -402,27 +404,28 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   }, [renameFolderName, renameFolderMutation]);
 
   const handleOpenDelete = useCallback((folder: FolderItem) => {
-    setSelectedFolder(folder);
-    selectedFolderRef.current = folder;
-    setIsDeleteOpen(true);
+    if (folder.id !== undefined) {
+      setDeleteFolderId(folder.id);
+      setDeleteFolderTitle(folder.title);
+      setSelectedFolder(folder);
+      selectedFolderRef.current = folder;
+      setIsDeleteOpen(true);
+    }
   }, []);
 
   const handleDeleteFolder = useCallback(() => {
-    const folder = selectedFolderRef.current;
-    console.log("handleDeleteFolder called", { folder, id: folder?.id });
-    if (folder && folder.id !== undefined) {
-      console.log("Deleting folder with id:", folder.id);
-      deleteFolderMutation.mutate(folder.id);
-      if (activeFolder.toLowerCase() === folder.title.toLowerCase()) {
+    if (deleteFolderId !== null) {
+      deleteFolderMutation.mutate(deleteFolderId);
+      if (activeFolder.toLowerCase() === deleteFolderTitle.toLowerCase()) {
         onFolderChange("inbox");
       }
       setIsDeleteOpen(false);
       setSelectedFolder(null);
       selectedFolderRef.current = null;
-    } else {
-      console.error("Cannot delete: folder or id is missing", folder);
+      setDeleteFolderId(null);
+      setDeleteFolderTitle("");
     }
-  }, [activeFolder, onFolderChange, deleteFolderMutation]);
+  }, [deleteFolderId, deleteFolderTitle, activeFolder, onFolderChange, deleteFolderMutation]);
 
   const handleOpenIconPicker = useCallback((folder: FolderItem) => {
     setSelectedFolder(folder);
@@ -945,12 +948,18 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
       </Dialog>
 
       {/* Delete Folder Confirmation Dialog */}
-      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+      <Dialog open={isDeleteOpen} onOpenChange={(open) => {
+        setIsDeleteOpen(open);
+        if (!open) {
+          setDeleteFolderId(null);
+          setDeleteFolderTitle("");
+        }
+      }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Delete Folder</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedFolder?.title}"? This action cannot be undone.
+              Are you sure you want to delete "{deleteFolderTitle}"? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">

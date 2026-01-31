@@ -1773,10 +1773,14 @@ Return ONLY valid JSON, no other text.`;
   app.delete("/api/folders/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      console.log("[DELETE /api/folders/:id]", { id, userId, rawId: req.params.id });
       if (isNaN(id)) {
+        console.log("[DELETE /api/folders/:id] Invalid folder ID (NaN)");
         return res.status(400).json({ error: "Invalid folder ID" });
       }
-      const deleted = await storage.deleteCustomFolder(id, req.session.userId!);
+      const deleted = await storage.deleteCustomFolder(id, userId);
+      console.log("[DELETE /api/folders/:id] Delete result:", { deleted, id, userId });
       if (!deleted) {
         return res.status(404).json({ error: "Folder not found" });
       }
