@@ -161,7 +161,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const customFolderId = isCustomFolder ? parseInt(activeFolder.replace("custom-", "")) : null;
 
   // Fetch all emails from all folders for proper threading
-  const { data: allEmails = [], isLoading: isLoadingEmails, isFetching } = useQuery<EmailWithNylasId[]>({
+  const { data: allEmails = [], isLoading: isLoadingEmails, isFetching, dataUpdatedAt } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", "all"],
     queryFn: async () => {
       const response = await fetch(`/api/emails?allFolders=true`);
@@ -169,13 +169,16 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       return response.json();
     },
     enabled: !!userData?.user && !isCustomFolder,
-    staleTime: 60000, // 1 minute stale time for faster perceived loading
+    staleTime: 30000, // 30 seconds - show cached data, then refetch
     gcTime: 300000,
-    refetchOnWindowFocus: false, // Don't refetch on focus to avoid slowdowns
-    refetchOnMount: false, // Use cache on mount
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    refetchOnMount: true, // Always check for new mail on mount
     retry: 2,
     retryDelay: 500,
   });
+  
+  // Track if we're syncing in background (have cached data but fetching new)
+  const isSyncing = isFetching && allEmails.length > 0 && !isLoadingEmails;
 
   // Fetch emails from custom folder when viewing a custom folder
   const { data: customFolderData, isLoading: isLoadingCustomFolder } = useQuery<{ emails: EmailWithNylasId[] }>({
@@ -699,6 +702,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             isAiLoading={false}
             isMoving={moveEmailMutation.isPending}
             isLoading={isLoadingEmails || isLoadingCustomFolder}
+            isSyncing={isSyncing}
             activeFolder={activeFolder}
             hasConnectedAccount={!!userData?.user?.connectedEmail}
             onConnectAccount={() => setLocation("/connect-email")}

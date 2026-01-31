@@ -53,6 +53,7 @@ interface EmailListProps {
   isAiLoading?: boolean;
   isMoving?: boolean;
   isLoading?: boolean;
+  isSyncing?: boolean;
   activeFolder?: string;
   hasConnectedAccount?: boolean;
   onConnectAccount?: () => void;
@@ -132,7 +133,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, isAiLoading, isMoving, isLoading, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh }: EmailListProps) {
   const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -620,6 +621,12 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 "Est. -- to reply"
               )}
             </span>
+          </div>
+        )}
+        {isSyncing && (
+          <div className="flex items-center gap-2 mt-2 px-2.5 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-md" data-testid="syncing-indicator">
+            <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
+            <span className="text-[11px] text-blue-500 font-medium">Checking for new mail...</span>
           </div>
         )}
       </div>
