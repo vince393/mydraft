@@ -1774,15 +1774,12 @@ Business Development`,
   }
 
   async deleteCustomFolder(id: number, userId: string): Promise<boolean> {
-    // First check if folder exists
-    const existing = await db.select().from(customFolders)
-      .where(and(eq(customFolders.id, id), eq(customFolders.userId, userId)));
-    console.log("[deleteCustomFolder] Checking existing folder:", { id, userId, found: existing.length, existing });
-    
-    const result = await db.delete(customFolders)
-      .where(and(eq(customFolders.id, id), eq(customFolders.userId, userId)));
-    console.log("[deleteCustomFolder] Delete result:", { rowCount: result.rowCount, id, userId });
-    return (result.rowCount ?? 0) > 0;
+    // Use .returning() to get deleted rows since rowCount can be undefined in Drizzle
+    const deleted = await db.delete(customFolders)
+      .where(and(eq(customFolders.id, id), eq(customFolders.userId, userId)))
+      .returning();
+    console.log("[deleteCustomFolder] Delete result:", { deletedCount: deleted.length, id, userId });
+    return deleted.length > 0;
   }
 
   // Email folder assignment methods
