@@ -92,12 +92,12 @@ export function SwipeableEmailItem({
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
-  const initials = sender
+  const initials = (sender || "?")
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || "?";
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     // Always trigger long press start for potential selection mode entry
