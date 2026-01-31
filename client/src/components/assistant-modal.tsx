@@ -452,7 +452,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
           </div>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40" style={{ scrollbarColor: 'rgba(128, 128, 128, 0.3) transparent', scrollbarWidth: 'thin' }}>
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
           <div className="p-4 space-y-3 h-full">
             {isLoadingMessages ? (
               <div className="flex items-center justify-center py-12">
