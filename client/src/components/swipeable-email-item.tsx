@@ -286,46 +286,69 @@ export function SwipeableEmailItem({
       data-testid={`email-item-${emailId}`}
     >
       <div 
-        className="absolute inset-y-0 right-0 flex items-stretch overflow-hidden"
-        style={{ width: Math.abs(swipeX) }}
+        className="absolute inset-y-0 right-0 flex items-center gap-2 px-3 overflow-hidden"
+        style={{ 
+          width: Math.abs(swipeX),
+          background: swipeX <= -deleteThreshold 
+            ? 'linear-gradient(90deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.3) 100%)' 
+            : 'linear-gradient(90deg, rgba(100,100,100,0.08) 0%, rgba(100,100,100,0.15) 100%)'
+        }}
       >
-        {swipeX > -deleteThreshold && (
+        {swipeX > -deleteThreshold && Math.abs(swipeX) > 50 && (
           isArchiveFolder ? (
             <button
               onClick={handleRestoreClick}
-              className="flex items-center justify-center bg-green-500 hover:bg-green-600 transition-all"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-emerald-500/90 hover:bg-emerald-500 backdrop-blur-sm transition-all duration-200 shadow-lg shadow-emerald-500/25"
               style={{ 
-                width: Math.abs(swipeX) / 2,
-                minWidth: Math.abs(swipeX) > 10 ? 40 : 0
+                opacity: Math.min((Math.abs(swipeX) - 50) / 30, 1),
+                transform: `scale(${Math.min((Math.abs(swipeX) - 50) / 40 + 0.8, 1)})`
               }}
               data-testid={`swipe-restore-${emailId}`}
             >
-              <RotateCcw className="w-5 h-5 text-white" />
+              <RotateCcw className="w-4 h-4 text-white" />
+              {Math.abs(swipeX) > 90 && (
+                <span className="text-xs font-medium text-white whitespace-nowrap">Restore</span>
+              )}
             </button>
           ) : (
             <button
               onClick={handleArchiveClick}
-              className="flex items-center justify-center bg-blue-500 hover:bg-blue-600 transition-all"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-sky-500/90 hover:bg-sky-500 backdrop-blur-sm transition-all duration-200 shadow-lg shadow-sky-500/25"
               style={{ 
-                width: Math.abs(swipeX) / 2,
-                minWidth: Math.abs(swipeX) > 10 ? 40 : 0
+                opacity: Math.min((Math.abs(swipeX) - 50) / 30, 1),
+                transform: `scale(${Math.min((Math.abs(swipeX) - 50) / 40 + 0.8, 1)})`
               }}
               data-testid={`swipe-archive-${emailId}`}
             >
-              <Archive className="w-5 h-5 text-white" />
+              <Archive className="w-4 h-4 text-white" />
+              {Math.abs(swipeX) > 90 && (
+                <span className="text-xs font-medium text-white whitespace-nowrap">Archive</span>
+              )}
             </button>
           )
         )}
-        <button
-          onClick={handleDeleteClick}
-          className="flex-1 flex items-center justify-center bg-red-500 hover:bg-red-600 transition-all"
-          style={{ 
-            minWidth: Math.abs(swipeX) > 10 ? 40 : 0
-          }}
-          data-testid={`swipe-delete-${emailId}`}
-        >
-          <Trash2 className={`text-white transition-transform ${swipeX <= -deleteThreshold ? "w-6 h-6 scale-110" : "w-5 h-5"}`} />
-        </button>
+        {Math.abs(swipeX) > 30 && (
+          <button
+            onClick={handleDeleteClick}
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-sm transition-all duration-200 ${
+              swipeX <= -deleteThreshold 
+                ? 'bg-red-500 shadow-xl shadow-red-500/40 scale-110' 
+                : 'bg-red-500/90 hover:bg-red-500 shadow-lg shadow-red-500/25'
+            }`}
+            style={{ 
+              opacity: Math.min((Math.abs(swipeX) - 30) / 30, 1),
+              transform: swipeX <= -deleteThreshold ? 'scale(1.1)' : `scale(${Math.min((Math.abs(swipeX) - 30) / 40 + 0.8, 1)})`
+            }}
+            data-testid={`swipe-delete-${emailId}`}
+          >
+            <Trash2 className={`text-white transition-all duration-200 ${swipeX <= -deleteThreshold ? "w-5 h-5" : "w-4 h-4"}`} />
+            {(Math.abs(swipeX) > 90 || swipeX <= -deleteThreshold) && (
+              <span className="text-xs font-medium text-white whitespace-nowrap">
+                {swipeX <= -deleteThreshold ? "Release to delete" : "Delete"}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       <div
