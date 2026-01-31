@@ -142,6 +142,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
+  const selectedFolderRef = useRef<FolderItem | null>(null);
   const [renameFolderName, setRenameFolderName] = useState("");
   const [folderActionMenuOpen, setFolderActionMenuOpen] = useState<string | null>(null);
   
@@ -384,51 +385,60 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
 
   const handleOpenRename = useCallback((folder: FolderItem) => {
     setSelectedFolder(folder);
+    selectedFolderRef.current = folder;
     setRenameFolderName(folder.title);
     setIsRenameOpen(true);
   }, []);
 
   const handleRenameFolder = useCallback(() => {
-    if (selectedFolder && renameFolderName.trim() && selectedFolder.id) {
-      renameFolderMutation.mutate({ id: selectedFolder.id, name: renameFolderName.trim() });
+    const folder = selectedFolderRef.current;
+    if (folder && renameFolderName.trim() && folder.id) {
+      renameFolderMutation.mutate({ id: folder.id, name: renameFolderName.trim() });
       setIsRenameOpen(false);
       setSelectedFolder(null);
+      selectedFolderRef.current = null;
       setRenameFolderName("");
     }
-  }, [selectedFolder, renameFolderName, renameFolderMutation]);
+  }, [renameFolderName, renameFolderMutation]);
 
   const handleOpenDelete = useCallback((folder: FolderItem) => {
     setSelectedFolder(folder);
+    selectedFolderRef.current = folder;
     setIsDeleteOpen(true);
   }, []);
 
   const handleDeleteFolder = useCallback(() => {
-    console.log("handleDeleteFolder called", { selectedFolder, id: selectedFolder?.id });
-    if (selectedFolder && selectedFolder.id !== undefined) {
-      console.log("Deleting folder with id:", selectedFolder.id);
-      deleteFolderMutation.mutate(selectedFolder.id);
-      if (activeFolder.toLowerCase() === selectedFolder.title.toLowerCase()) {
+    const folder = selectedFolderRef.current;
+    console.log("handleDeleteFolder called", { folder, id: folder?.id });
+    if (folder && folder.id !== undefined) {
+      console.log("Deleting folder with id:", folder.id);
+      deleteFolderMutation.mutate(folder.id);
+      if (activeFolder.toLowerCase() === folder.title.toLowerCase()) {
         onFolderChange("inbox");
       }
       setIsDeleteOpen(false);
       setSelectedFolder(null);
+      selectedFolderRef.current = null;
     } else {
-      console.error("Cannot delete: selectedFolder or id is missing", selectedFolder);
+      console.error("Cannot delete: folder or id is missing", folder);
     }
-  }, [selectedFolder, activeFolder, onFolderChange, deleteFolderMutation]);
+  }, [activeFolder, onFolderChange, deleteFolderMutation]);
 
   const handleOpenIconPicker = useCallback((folder: FolderItem) => {
     setSelectedFolder(folder);
+    selectedFolderRef.current = folder;
     setIsIconPickerOpen(true);
   }, []);
 
   const handleSelectIcon = useCallback((iconName: string) => {
-    if (selectedFolder && selectedFolder.id) {
-      updateIconMutation.mutate({ id: selectedFolder.id, icon: iconName });
+    const folder = selectedFolderRef.current;
+    if (folder && folder.id) {
+      updateIconMutation.mutate({ id: folder.id, icon: iconName });
       setIsIconPickerOpen(false);
       setSelectedFolder(null);
+      selectedFolderRef.current = null;
     }
-  }, [selectedFolder, updateIconMutation]);
+  }, [updateIconMutation]);
 
   const handleMouseEnter = () => {
     if (isCollapsed && !justCollapsedRef.current) {
