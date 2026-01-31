@@ -196,13 +196,13 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const allEmails = hasFreshData && freshEmails ? freshEmails : cachedEmails;
   
   // Show updating indicator when we have cached data and are fetching fresh
-  const isUpdating = isFetchingFresh && hasCachedData && cachedEmails.length > 0;
+  const isUpdating = isFetchingFresh && cachedEmails.length > 0;
   
-  // Only show loading if we have NO cached data at all
-  const isLoadingEmails = !hasCachedData && !hasFreshData && cachedEmails.length === 0;
+  // Show loading if we have NO data and are still fetching
+  const isLoadingEmails = cachedEmails.length === 0 && !freshEmails && isFetchingFresh;
   
   // Legacy syncing indicator (keep for compatibility but use isUpdating for new UI)
-  const isSyncing = isUpdating;
+  const isSyncing = isUpdating && !isLoadingEmails;
 
   // Fetch emails from custom folder when viewing a custom folder
   const { data: customFolderData, isLoading: isLoadingCustomFolder } = useQuery<{ emails: EmailWithNylasId[] }>({
