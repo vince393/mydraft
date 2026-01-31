@@ -623,12 +623,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </span>
           </div>
         )}
-        {isSyncing && (
-          <div className="flex items-center gap-2 mt-2 px-2.5 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-md" data-testid="syncing-indicator">
-            <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
-            <span className="text-[11px] text-blue-500 font-medium">Checking for new mail...</span>
-          </div>
-        )}
       </div>
       <div 
         ref={scrollContainerRef}
@@ -694,6 +688,12 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </div>
           );
         })}
+        {isSyncing && (
+          <div className="flex items-center justify-center gap-2 py-4 px-3" data-testid="updating-indicator">
+            <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+            <span className="text-xs text-muted-foreground">Updating emails...</span>
+          </div>
+        )}
         </div>
         )}
       </div>
