@@ -331,193 +331,85 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
         <DialogHeader className="px-4 py-3 border-b border-border/50 shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
-                <User className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
+                <User className="w-4 h-4 text-white" />
               </div>
-              <div className="flex flex-col min-w-0">
-                <DialogTitle className="text-base font-semibold">
-                  {currentVoiceName}
-                </DialogTitle>
-                <span className="text-xs text-muted-foreground">Personal Assistant</span>
-              </div>
+              <DialogTitle className="text-base font-semibold">
+                {currentVoiceName}
+              </DialogTitle>
             </div>
             
             <div className="flex items-center gap-1 shrink-0">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs gap-1"
-                onClick={() => createSessionMutation.mutate()}
-                disabled={createSessionMutation.isPending}
-                data-testid="button-new-chat"
-              >
-                <Plus className="w-3 h-3" />
-                New
-              </Button>
-
-              {sessions.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      data-testid="button-chat-history"
-                    >
-                      <History className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-72">
-                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Chat History</div>
-                    {sessions.slice(0, 10).map((session) => (
-                      <div
-                        key={session.id}
-                        className={cn(
-                          "flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm hover-elevate",
-                          session.isActive && "bg-primary/10"
-                        )}
-                        data-testid={`session-${session.id}`}
-                      >
-                        {editingSessionId === session.id ? (
-                          <div className="flex items-center gap-1 flex-1">
-                            <Input
-                              value={editingTitle}
-                              onChange={(e) => setEditingTitle(e.target.value)}
-                              className="h-6 text-xs flex-1"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  const trimmed = editingTitle.trim();
-                                  if (trimmed) {
-                                    renameSessionMutation.mutate({ sessionId: session.id, title: trimmed });
-                                  }
-                                } else if (e.key === "Escape") {
-                                  setEditingSessionId(null);
-                                  setEditingTitle("");
-                                }
-                              }}
-                              data-testid={`input-rename-session-${session.id}`}
-                            />
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-5 w-5"
-                              onClick={() => {
-                                const trimmed = editingTitle.trim();
-                                if (trimmed) {
-                                  renameSessionMutation.mutate({ sessionId: session.id, title: trimmed });
-                                }
-                              }}
-                              disabled={renameSessionMutation.isPending || !editingTitle.trim()}
-                            >
-                              <Check className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-5 w-5"
-                              onClick={() => {
-                                setEditingSessionId(null);
-                                setEditingTitle("");
-                              }}
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <div 
-                              className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
-                              onClick={() => switchSessionMutation.mutate(session.id)}
-                            >
-                              <MessageSquare className="w-3 h-3 shrink-0 text-muted-foreground" />
-                              <span className="truncate text-sm">{session.title}</span>
-                            </div>
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              {session.isActive && (
-                                <Check className="w-3 h-3 text-primary mr-1" />
-                              )}
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-5 w-5"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingSessionId(session.id);
-                                  setEditingTitle(session.title);
-                                }}
-                                data-testid={`button-rename-session-${session.id}`}
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-5 w-5 text-destructive hover:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteSessionMutation.mutate(session.id);
-                                }}
-                                disabled={deleteSessionMutation.isPending}
-                                data-testid={`button-delete-session-${session.id}`}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              
-              <Select 
-                value={selectedVoice} 
-                onValueChange={(value: VoiceId) => updateSettingsMutation.mutate({ selectedVoice: value })}
-              >
-                <SelectTrigger className="w-24 h-8 text-xs" data-testid="select-assistant-voice">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ASSISTANT_VOICES.map((voice) => (
-                    <SelectItem key={voice.id} value={voice.id} data-testid={`voice-option-${voice.id}`}>
-                      <div className="flex flex-col">
-                        <span>{voice.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className={cn(
-                      "h-8 w-8 relative",
-                      (canReadEmails || canDraftEmails || canSendEmails) && "text-primary"
-                    )}
-                    data-testid="button-assistant-permissions"
+                    className="h-8 w-8"
+                    data-testid="button-assistant-menu"
                   >
-                    <Shield className="w-4 h-4" />
-                    {(canReadEmails || canDraftEmails || canSendEmails) && (
-                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full" />
-                    )}
+                    <Settings className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64 p-3">
-                  <div className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                    <Shield className="w-3 h-3" />
-                    Email Permissions
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem
+                    onClick={() => createSessionMutation.mutate()}
+                    disabled={createSessionMutation.isPending}
+                    data-testid="menu-new-chat"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    New conversation
+                  </DropdownMenuItem>
+                  
+                  {sessions.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <History className="w-4 h-4 mr-2" />
+                          Chat history
+                          <ChevronDown className="w-3 h-3 ml-auto" />
+                        </DropdownMenuItem>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent side="left" className="w-64">
+                        {sessions.slice(0, 8).map((session) => (
+                          <DropdownMenuItem
+                            key={session.id}
+                            onClick={() => switchSessionMutation.mutate(session.id)}
+                            className="flex items-center justify-between"
+                            data-testid={`session-${session.id}`}
+                          >
+                            <span className="truncate">{session.title}</span>
+                            {session.isActive && <Check className="w-3 h-3 text-primary shrink-0" />}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  
+                  <div className="h-px bg-border my-1" />
+                  
+                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                    Assistant Voice
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Eye className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <Label htmlFor="perm-read" className="text-sm cursor-pointer">Read emails</Label>
-                      </div>
+                  {ASSISTANT_VOICES.map((voice) => (
+                    <DropdownMenuItem
+                      key={voice.id}
+                      onClick={() => updateSettingsMutation.mutate({ selectedVoice: voice.id })}
+                      data-testid={`voice-option-${voice.id}`}
+                    >
+                      {voice.name}
+                      {selectedVoice === voice.id && <Check className="w-3 h-3 ml-auto text-primary" />}
+                    </DropdownMenuItem>
+                  ))}
+                  
+                  <div className="h-px bg-border my-1" />
+                  
+                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                    Permissions
+                  </div>
+                  <div className="px-2 py-1.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="perm-read" className="text-sm cursor-pointer">Read emails</Label>
                       <Switch
                         id="perm-read"
                         checked={canReadEmails}
@@ -525,11 +417,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                         data-testid="switch-permission-read"
                       />
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileEdit className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <Label htmlFor="perm-draft" className="text-sm cursor-pointer">Draft emails</Label>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="perm-draft" className="text-sm cursor-pointer">Draft emails</Label>
                       <Switch
                         id="perm-draft"
                         checked={canDraftEmails}
@@ -537,11 +426,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                         data-testid="switch-permission-draft"
                       />
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <SendHorizonal className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <Label htmlFor="perm-send" className="text-sm cursor-pointer">Send emails</Label>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="perm-send" className="text-sm cursor-pointer">Send emails</Label>
                       <Switch
                         id="perm-send"
                         checked={canSendEmails}
@@ -550,9 +436,6 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                       />
                     </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-3 pt-2 border-t border-border/50">
-                    Enable permissions for Vince to help manage your inbox
-                  </p>
                 </DropdownMenuContent>
               </DropdownMenu>
               
@@ -569,7 +452,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
           </div>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40" style={{ scrollbarColor: 'rgba(128, 128, 128, 0.3) transparent', scrollbarWidth: 'thin' }}>
           <div className="p-4 space-y-3 h-full">
             {isLoadingMessages ? (
               <div className="flex items-center justify-center py-12">
