@@ -735,6 +735,18 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                   Connect Account
                 </Button>
               )}
+              {!screen.isMobile && hasPremium && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 h-9"
+                  onClick={() => setLocation("/campaigns")}
+                  data-testid="button-campaigns-header"
+                >
+                  <Megaphone className="w-4 h-4" />
+                  <span className="hidden lg:inline">Campaigns</span>
+                </Button>
+              )}
               {!screen.isMobile && <NotificationBell />}
               {!screen.isMobile && (
                 <DropdownMenu>
