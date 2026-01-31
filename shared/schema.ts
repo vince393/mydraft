@@ -79,6 +79,26 @@ export const insertEmailSchema = createInsertSchema(emails).omit({
 export type Email = typeof emails.$inferSelect;
 export type InsertEmail = z.infer<typeof insertEmailSchema>;
 
+// Cached emails for instant loading
+export const cachedEmails = pgTable("cached_emails", {
+  id: serial("id").primaryKey(),
+  nylasId: varchar("nylas_id").notNull(),
+  userId: integer("user_id").notNull(),
+  sender: text("sender"),
+  senderEmail: text("sender_email"),
+  subject: text("subject"),
+  preview: text("preview"),
+  body: text("body"),
+  receivedAt: timestamp("received_at"),
+  isRead: boolean("is_read").default(false),
+  folder: text("folder").default("inbox"),
+  threadId: varchar("thread_id"),
+  avatarColor: text("avatar_color"),
+  cachedAt: timestamp("cached_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type CachedEmail = typeof cachedEmails.$inferSelect;
+
 export const drafts = pgTable("drafts", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id"),

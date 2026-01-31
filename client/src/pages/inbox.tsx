@@ -160,25 +160,43 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const isCustomFolder = activeFolder.startsWith("custom-");
   const customFolderId = isCustomFolder ? parseInt(activeFolder.replace("custom-", "")) : null;
 
-  // Fetch all emails from all folders for proper threading
-  const { data: allEmails = [], isLoading: isLoadingEmails, isFetching, dataUpdatedAt } = useQuery<EmailWithNylasId[]>({
-    queryKey: ["/api/emails", "all"],
+  // First, fetch cached emails for instant display
+  const { data: cachedEmails = [] } = useQuery<EmailWithNylasId[]>({
+    queryKey: ["/api/emails", "cached"],
+    queryFn: async () => {
+      const response = await fetch(`/api/emails?allFolders=true&cached=true`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!userData?.user && !isCustomFolder,
+    staleTime: Infinity, // Never auto-refetch cached data
+    gcTime: 300000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  // Then fetch fresh emails from Nylas
+  const { data: freshEmails, isLoading: isLoadingEmails, isFetching } = useQuery<EmailWithNylasId[]>({
+    queryKey: ["/api/emails", "fresh"],
     queryFn: async () => {
       const response = await fetch(`/api/emails?allFolders=true`);
       if (!response.ok) throw new Error("Failed to fetch emails");
       return response.json();
     },
     enabled: !!userData?.user && !isCustomFolder,
-    staleTime: 30000, // 30 seconds - show cached data, then refetch
+    staleTime: 30000, // 30 seconds
     gcTime: 300000,
-    refetchOnWindowFocus: true, // Refetch when user returns to tab
-    refetchOnMount: true, // Always check for new mail on mount
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
     retry: 2,
     retryDelay: 500,
   });
   
-  // Track if we're syncing in background (have cached data but fetching new)
-  const isSyncing = isFetching && allEmails.length > 0 && !isLoadingEmails;
+  // Use fresh emails if available, otherwise use cached
+  const allEmails = freshEmails || cachedEmails;
+  
+  // Track if we're syncing in background (have cached data but fetching fresh)
+  const isSyncing = isFetching && cachedEmails.length > 0 && !freshEmails;
 
   // Fetch emails from custom folder when viewing a custom folder
   const { data: customFolderData, isLoading: isLoadingCustomFolder } = useQuery<{ emails: EmailWithNylasId[] }>({

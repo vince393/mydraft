@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -229,6 +229,11 @@ export interface IStorage {
   updateCampaignRecipientStatus(id: number, status: string, errorMessage?: string): Promise<CampaignRecipient | undefined>;
   deleteCampaignRecipient(id: number): Promise<boolean>;
   clearCampaignRecipients(campaignId: number): Promise<boolean>;
+
+  // Cached emails methods for instant loading
+  getCachedEmails(userId: number): Promise<any[]>;
+  saveCachedEmails(userId: number, emails: any[]): Promise<void>;
+  clearCachedEmails(userId: number): Promise<void>;
 }
 
 const avatarColors = [
@@ -2080,6 +2085,63 @@ Business Development`,
       .set({ totalRecipients: 0 })
       .where(eq(emailCampaigns.id, campaignId));
     return true;
+  }
+
+  // Cached emails methods for instant loading
+  async getCachedEmails(userId: number): Promise<any[]> {
+    const cached = await db.select().from(cachedEmails)
+      .where(eq(cachedEmails.userId, userId))
+      .orderBy(desc(cachedEmails.receivedAt));
+    
+    return cached.map((email, index) => ({
+      id: index + 1,
+      nylasId: email.nylasId,
+      sender: email.sender,
+      senderEmail: email.senderEmail,
+      subject: email.subject,
+      preview: email.preview,
+      body: email.body || "",
+      receivedAt: email.receivedAt,
+      isRead: email.isRead,
+      isStarred: false,
+      folder: email.folder,
+      threadId: email.threadId,
+      avatarColor: email.avatarColor,
+    }));
+  }
+
+  async saveCachedEmails(userId: number, emails: any[]): Promise<void> {
+    // Clear existing cache for user
+    await db.delete(cachedEmails).where(eq(cachedEmails.userId, userId));
+    
+    // Insert new emails
+    if (emails.length > 0) {
+      const toInsert = emails.map(email => ({
+        nylasId: email.nylasId,
+        userId,
+        sender: email.sender,
+        senderEmail: email.senderEmail,
+        subject: email.subject,
+        preview: email.preview,
+        body: email.body || "",
+        receivedAt: email.receivedAt ? new Date(email.receivedAt) : new Date(),
+        isRead: email.isRead ?? false,
+        folder: email.folder || "inbox",
+        threadId: email.threadId,
+        avatarColor: email.avatarColor,
+      }));
+      
+      // Insert in batches to avoid query size limits
+      const batchSize = 100;
+      for (let i = 0; i < toInsert.length; i += batchSize) {
+        const batch = toInsert.slice(i, i + batchSize);
+        await db.insert(cachedEmails).values(batch);
+      }
+    }
+  }
+
+  async clearCachedEmails(userId: number): Promise<void> {
+    await db.delete(cachedEmails).where(eq(cachedEmails.userId, userId));
   }
 }
 

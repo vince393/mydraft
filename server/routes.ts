@@ -1335,91 +1335,121 @@ Return ONLY valid JSON, no other text.`;
     try {
       const folder = req.query.folder as string | undefined;
       const allFolders = req.query.allFolders === "true";
+      const useCached = req.query.cached === "true";
       const userId = req.session.userId!;
+      const userIdNum = parseInt(userId, 10);
       
       const grant = await storage.getNylasGrant(userId);
-      if (grant) {
-        nylas.prefetchFolderIds(grant.grantId);
-        let allMessages: any[] = [];
-        
-        // Get all local email states to apply folder overrides
-        const localStates = await storage.getAllLocalEmailStates(userId);
-        
-        if (allFolders) {
-          // Fetch from all folders for threading
-          const folders = ["inbox", "sent", "trash", "junk", "archived"] as const;
-          const folderResults = await Promise.allSettled(
-            folders.map(async (f) => {
-              try {
-                const messages = await nylas.getMessages(grant.grantId, f, grant.provider);
-                return messages.map(m => ({ ...m, folder: f }));
-              } catch {
-                return [];
-              }
-            })
-          );
+      if (!grant) {
+        // No email account connected - return empty array
+        return res.json([]);
+      }
+
+      // If cached is requested and we have cached data, return it immediately
+      if (useCached) {
+        const cachedData = await storage.getCachedEmails(userIdNum);
+        if (cachedData.length > 0) {
+          // Apply starred status and local folder overrides
+          const starredIds = await storage.getStarredEmailIds(userId);
+          const starredSet = new Set(starredIds);
+          const localStates = await storage.getAllLocalEmailStates(userId);
           
-          for (const result of folderResults) {
-            if (result.status === "fulfilled") {
-              allMessages.push(...result.value);
-            }
-          }
-          
-          // Deduplicate by message ID
-          const seen = new Set<string>();
-          allMessages = allMessages.filter(msg => {
-            if (seen.has(msg.id)) return false;
-            seen.add(msg.id);
-            return true;
+          const emails = cachedData.map(email => {
+            const localFolder = localStates.get(email.nylasId);
+            return {
+              ...email,
+              isStarred: starredSet.has(email.nylasId),
+              folder: localFolder || email.folder,
+            };
           });
-        } else {
-          const messages = await nylas.getMessages(grant.grantId, folder || "inbox", grant.provider);
-          allMessages = messages.map(m => ({ ...m, folder: folder || "inbox" }));
+          return res.json(emails);
         }
+      }
+
+      // Fetch from Nylas
+      nylas.prefetchFolderIds(grant.grantId);
+      let allMessages: any[] = [];
+      
+      // Get all local email states to apply folder overrides
+      const localStates = await storage.getAllLocalEmailStates(userId);
+      
+      if (allFolders) {
+        // Fetch from all folders for threading
+        const folders = ["inbox", "sent", "trash", "junk", "archived"] as const;
+        const folderResults = await Promise.allSettled(
+          folders.map(async (f) => {
+            try {
+              const messages = await nylas.getMessages(grant.grantId, f, grant.provider);
+              return messages.map(m => ({ ...m, folder: f }));
+            } catch {
+              return [];
+            }
+          })
+        );
         
-        // Apply local folder overrides for all states
-        allMessages = allMessages.map(msg => {
-          const localFolder = localStates.get(msg.id);
-          if (localFolder) {
-            return { ...msg, folder: localFolder };
+        for (const result of folderResults) {
+          if (result.status === "fulfilled") {
+            allMessages.push(...result.value);
           }
-          return msg;
-        });
-        
-        // Filter by requested folder (applies local overrides)
-        if (!allFolders && folder) {
-          allMessages = allMessages.filter(msg => msg.folder === folder);
-        } else if (!allFolders) {
-          // Default to inbox - exclude trashed and archived
-          allMessages = allMessages.filter(msg => 
-            msg.folder !== "trash" && msg.folder !== "archived"
-          );
         }
         
-        // Get starred emails from database (UI-only, not Nylas)
-        const starredIds = await storage.getStarredEmailIds(userId);
-        const starredSet = new Set(starredIds);
-        
-        const emails = allMessages.map((msg, index) => ({
-          id: index + 1,
-          nylasId: msg.id,
-          sender: msg.from,
-          senderEmail: msg.fromEmail,
-          subject: msg.subject,
-          preview: msg.preview,
-          body: "",
-          receivedAt: msg.date,
-          isRead: msg.isRead,
-          isStarred: starredSet.has(msg.id),
-          folder: msg.folder || folder || "inbox",
-          threadId: msg.threadId,
-          avatarColor: msg.avatarColor,
-        }));
-        return res.json(emails);
+        // Deduplicate by message ID
+        const seen = new Set<string>();
+        allMessages = allMessages.filter(msg => {
+          if (seen.has(msg.id)) return false;
+          seen.add(msg.id);
+          return true;
+        });
+      } else {
+        const messages = await nylas.getMessages(grant.grantId, folder || "inbox", grant.provider);
+        allMessages = messages.map(m => ({ ...m, folder: folder || "inbox" }));
       }
       
-      // No email account connected - return empty array
-      res.json([]);
+      // Apply local folder overrides for all states
+      allMessages = allMessages.map(msg => {
+        const localFolder = localStates.get(msg.id);
+        if (localFolder) {
+          return { ...msg, folder: localFolder };
+        }
+        return msg;
+      });
+      
+      // Filter by requested folder (applies local overrides)
+      if (!allFolders && folder) {
+        allMessages = allMessages.filter(msg => msg.folder === folder);
+      } else if (!allFolders) {
+        // Default to inbox - exclude trashed and archived
+        allMessages = allMessages.filter(msg => 
+          msg.folder !== "trash" && msg.folder !== "archived"
+        );
+      }
+      
+      // Get starred emails from database (UI-only, not Nylas)
+      const starredIds = await storage.getStarredEmailIds(userId);
+      const starredSet = new Set(starredIds);
+      
+      const emails = allMessages.map((msg, index) => ({
+        id: index + 1,
+        nylasId: msg.id,
+        sender: msg.from,
+        senderEmail: msg.fromEmail,
+        subject: msg.subject,
+        preview: msg.preview,
+        body: "",
+        receivedAt: msg.date,
+        isRead: msg.isRead,
+        isStarred: starredSet.has(msg.id),
+        folder: msg.folder || folder || "inbox",
+        threadId: msg.threadId,
+        avatarColor: msg.avatarColor,
+      }));
+      
+      // Save to cache for instant loading next time (async, don't wait)
+      storage.saveCachedEmails(userIdNum, emails).catch(err => {
+        console.error("Failed to cache emails:", err);
+      });
+      
+      return res.json(emails);
     } catch (error) {
       console.error("Error fetching emails:", error);
       res.status(500).json({ error: "Failed to fetch emails" });
