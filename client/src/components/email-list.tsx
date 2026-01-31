@@ -662,7 +662,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 senderEmail={email.senderEmail}
                 subject={email.subject}
                 preview={email.preview || ""}
-                receivedAt={email.receivedAt.toString()}
+                receivedAt={(email.receivedAt || new Date()).toString()}
                 isRead={email.isRead}
                 isStarred={email.isStarred}
                 isSelected={isSelected}
