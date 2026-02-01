@@ -1,9 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { 
   Trash2, 
   Star, 
   Check, 
-  RotateCcw, 
   MoreHorizontal,
   Reply,
   ReplyAll,
@@ -60,9 +59,9 @@ interface SwipeableEmailItemProps {
   getAvatarUrl: (email: string, name: string) => string;
 }
 
-// Thresholds for swipe behavior
-const REVEAL_THRESHOLD = 60;
-const DELETE_THRESHOLD = 160;
+// Thresholds
+const REVEAL_THRESHOLD = 50;
+const FULL_SWIPE_THRESHOLD = 140;
 
 export function SwipeableEmailItem({
   emailId,
@@ -100,7 +99,6 @@ export function SwipeableEmailItem({
   formatTime,
   getAvatarUrl,
 }: SwipeableEmailItemProps) {
-  const isArchiveFolder = folder === "archive";
   const [swipeX, setSwipeX] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
@@ -123,7 +121,7 @@ export function SwipeableEmailItem({
     if (isSelectionMode || moreMenuOpen) return;
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
-    currentX.current = isRevealed ? -120 : 0;
+    currentX.current = isRevealed ? -100 : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
   }, [isRevealed, isSelectionMode, onLongPressStart, moreMenuOpen]);
@@ -151,7 +149,7 @@ export function SwipeableEmailItem({
 
     let newX = currentX.current + deltaX;
     if (newX > 0) newX = 0;
-    if (newX < -250) newX = -250;
+    if (newX < -220) newX = -220;
     setSwipeX(newX);
   }, [isSwiping, isSelectionMode, onLongPressEnd, moreMenuOpen]);
 
@@ -162,18 +160,20 @@ export function SwipeableEmailItem({
     
     const absSwipe = Math.abs(swipeX);
     
-    if (absSwipe >= DELETE_THRESHOLD) {
-      setSwipeX(-250);
+    // Full swipe - trigger delete
+    if (absSwipe >= FULL_SWIPE_THRESHOLD) {
+      setSwipeX(-220);
       setTimeout(() => {
         onDelete();
         setSwipeX(0);
         setIsRevealed(false);
-      }, 150);
+      }, 200);
       return;
     }
 
+    // Half swipe - reveal buttons and keep them visible
     if (absSwipe >= REVEAL_THRESHOLD) {
-      setSwipeX(-120);
+      setSwipeX(-100);
       setIsRevealed(true);
     } else {
       setSwipeX(0);
@@ -186,7 +186,7 @@ export function SwipeableEmailItem({
     if (isSelectionMode || moreMenuOpen) return;
     startX.current = e.clientX;
     startY.current = e.clientY;
-    currentX.current = isRevealed ? -120 : 0;
+    currentX.current = isRevealed ? -100 : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
   }, [isRevealed, isSelectionMode, onLongPressStart, moreMenuOpen]);
@@ -211,7 +211,7 @@ export function SwipeableEmailItem({
 
     let newX = currentX.current + deltaX;
     if (newX > 0) newX = 0;
-    if (newX < -250) newX = -250;
+    if (newX < -220) newX = -220;
     setSwipeX(newX);
   }, [isSwiping, isSelectionMode, onLongPressEnd, moreMenuOpen]);
 
@@ -271,12 +271,23 @@ export function SwipeableEmailItem({
     closeReveal();
   }, [closeReveal]);
 
-  // Calculate circle sizes based on swipe distance
+  // Calculate animations
   const absSwipe = Math.abs(swipeX);
-  const progress = Math.min(absSwipe / 120, 1);
-  const circleSize = 24 + (progress * 20); // 24px to 44px
-  const iconSize = 14 + (progress * 6); // 14px to 20px
-  const isDeleteMode = absSwipe >= DELETE_THRESHOLD;
+  const isFullSwipe = absSwipe >= FULL_SWIPE_THRESHOLD;
+  const revealProgress = Math.min(absSwipe / REVEAL_THRESHOLD, 1);
+  const fullSwipeProgress = Math.max(0, (absSwipe - REVEAL_THRESHOLD) / (FULL_SWIPE_THRESHOLD - REVEAL_THRESHOLD));
+  
+  // Circle sizes - grow from 32 to 44
+  const circleSize = 32 + (revealProgress * 12);
+  const iconSize = 16 + (revealProgress * 2);
+  
+  // More button fades out during full swipe
+  const moreOpacity = isFullSwipe ? Math.max(0, 1 - fullSwipeProgress * 2) : Math.min(revealProgress * 1.5, 1);
+  
+  // Delete button stretches into orb during full swipe
+  const deleteWidth = isFullSwipe 
+    ? circleSize + (fullSwipeProgress * 80) // Stretch to orb
+    : circleSize;
 
   return (
     <div 
@@ -284,97 +295,100 @@ export function SwipeableEmailItem({
       className="relative overflow-hidden w-full"
       data-testid={`email-item-${emailId}`}
     >
-      {/* Action circles - positioned behind email content */}
+      {/* Action area behind email */}
       <div 
-        className="absolute inset-y-0 right-0 flex items-center justify-end gap-3 pr-4"
-        style={{ 
-          width: Math.max(absSwipe, 0),
-          background: isDeleteMode 
-            ? 'rgba(239, 68, 68, 0.15)' 
-            : 'transparent'
-        }}
+        className="absolute inset-y-0 right-0 flex items-center justify-end gap-2 pr-3"
+        style={{ width: Math.max(absSwipe + 20, 0) }}
       >
-        {absSwipe > 20 && !isDeleteMode && (
+        {absSwipe > 15 && (
           <>
-            {/* More circle */}
-            <DropdownMenu open={moreMenuOpen} onOpenChange={(open) => {
-              setMoreMenuOpen(open);
-              if (!open) closeReveal();
-            }}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                  className="flex items-center justify-center rounded-full bg-neutral-500 transition-all duration-150"
-                  style={{ 
-                    width: circleSize,
-                    height: circleSize,
-                    opacity: Math.min(progress * 1.5, 1),
-                    transform: `scale(${0.5 + progress * 0.5})`
-                  }}
-                  data-testid={`swipe-more-${emailId}`}
-                >
-                  <MoreHorizontal 
-                    className="text-white" 
-                    style={{ width: iconSize, height: iconSize }}
-                  />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44 bg-popover/95 backdrop-blur-xl border-border/40">
-                <DropdownMenuItem onClick={() => handleMenuAction(onReply)} className="text-xs gap-2">
-                  <Reply className="w-3.5 h-3.5 text-muted-foreground" />
-                  Reply
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleMenuAction(onReplyAll)} className="text-xs gap-2">
-                  <ReplyAll className="w-3.5 h-3.5 text-muted-foreground" />
-                  Reply All
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleMenuAction(onForward)} className="text-xs gap-2">
-                  <Forward className="w-3.5 h-3.5 text-muted-foreground" />
-                  Forward
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/30" />
-                <DropdownMenuItem onClick={() => handleMenuAction(onToggleStar)} className="text-xs gap-2">
-                  <Star className={`w-3.5 h-3.5 ${isStarred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
-                  {isStarred ? "Unstar" : "Star"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleMenuAction(onToggleFlag)} className="text-xs gap-2">
-                  <Flag className={`w-3.5 h-3.5 ${isFlagged ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
-                  {isFlagged ? "Unflag" : "Flag"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleMenuAction(onMarkUnread)} className="text-xs gap-2">
-                  <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                  Mark Unread
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/30" />
-                <DropdownMenuItem onClick={() => handleMenuAction(onMove)} className="text-xs gap-2">
-                  <FolderInput className="w-3.5 h-3.5 text-muted-foreground" />
-                  Move
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleMenuAction(onArchive)} className="text-xs gap-2">
-                  <Archive className="w-3.5 h-3.5 text-muted-foreground" />
-                  Archive
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/30" />
-                <DropdownMenuItem onClick={() => handleMenuAction(onBlock)} className="text-xs gap-2 text-red-400 focus:text-red-400">
-                  <Ban className="w-3.5 h-3.5" />
-                  Block
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleMenuAction(onDelete)} className="text-xs gap-2 text-red-400 focus:text-red-400">
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Trash
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* More button - fades out on full swipe */}
+            {moreOpacity > 0.05 && (
+              <DropdownMenu open={moreMenuOpen} onOpenChange={(open) => {
+                setMoreMenuOpen(open);
+                if (!open) closeReveal();
+              }}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                    className="flex items-center justify-center rounded-full transition-all duration-150 backdrop-blur-sm"
+                    style={{ 
+                      width: circleSize,
+                      height: circleSize,
+                      opacity: moreOpacity,
+                      transform: `scale(${0.6 + revealProgress * 0.4})`,
+                      background: 'rgba(120, 120, 128, 0.36)',
+                    }}
+                    data-testid={`swipe-more-${emailId}`}
+                  >
+                    <MoreHorizontal 
+                      className="text-white/90" 
+                      style={{ width: iconSize, height: iconSize }}
+                    />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44 bg-popover/95 backdrop-blur-xl border-border/30 shadow-xl">
+                  <DropdownMenuItem onClick={() => handleMenuAction(onReply)} className="text-xs gap-2.5 py-2">
+                    <Reply className="w-3.5 h-3.5 text-muted-foreground" />
+                    Reply
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleMenuAction(onReplyAll)} className="text-xs gap-2.5 py-2">
+                    <ReplyAll className="w-3.5 h-3.5 text-muted-foreground" />
+                    Reply All
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleMenuAction(onForward)} className="text-xs gap-2.5 py-2">
+                    <Forward className="w-3.5 h-3.5 text-muted-foreground" />
+                    Forward
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border/20" />
+                  <DropdownMenuItem onClick={() => handleMenuAction(onToggleStar)} className="text-xs gap-2.5 py-2">
+                    <Star className={`w-3.5 h-3.5 ${isStarred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
+                    {isStarred ? "Unstar" : "Star"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleMenuAction(onToggleFlag)} className="text-xs gap-2.5 py-2">
+                    <Flag className={`w-3.5 h-3.5 ${isFlagged ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
+                    {isFlagged ? "Unflag" : "Flag"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleMenuAction(onMarkUnread)} className="text-xs gap-2.5 py-2">
+                    <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                    Mark Unread
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border/20" />
+                  <DropdownMenuItem onClick={() => handleMenuAction(onMove)} className="text-xs gap-2.5 py-2">
+                    <FolderInput className="w-3.5 h-3.5 text-muted-foreground" />
+                    Move
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleMenuAction(onArchive)} className="text-xs gap-2.5 py-2">
+                    <Archive className="w-3.5 h-3.5 text-muted-foreground" />
+                    Archive
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border/20" />
+                  <DropdownMenuItem onClick={() => handleMenuAction(onBlock)} className="text-xs gap-2.5 py-2 text-red-400 focus:text-red-400">
+                    <Ban className="w-3.5 h-3.5" />
+                    Block
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleMenuAction(onDelete)} className="text-xs gap-2.5 py-2 text-red-400 focus:text-red-400">
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Trash
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
-            {/* Trash circle */}
+            {/* Delete button - stretches into orb on full swipe */}
             <button
               onClick={handleDeleteClick}
-              className="flex items-center justify-center rounded-full bg-red-500 transition-all duration-150"
+              className="flex items-center justify-center transition-all duration-150"
               style={{ 
-                width: circleSize,
+                width: deleteWidth,
                 height: circleSize,
-                opacity: Math.min(progress * 1.5, 1),
-                transform: `scale(${0.5 + progress * 0.5})`
+                borderRadius: circleSize / 2,
+                opacity: Math.min(revealProgress * 1.5, 1),
+                transform: `scale(${0.6 + revealProgress * 0.4})`,
+                background: isFullSwipe 
+                  ? 'linear-gradient(90deg, rgba(239,68,68,0.9) 0%, rgba(220,38,38,1) 100%)'
+                  : 'rgba(239, 68, 68, 0.9)',
+                boxShadow: isFullSwipe ? '0 4px 20px rgba(239,68,68,0.4)' : 'none',
               }}
               data-testid={`swipe-delete-${emailId}`}
             >
@@ -382,16 +396,13 @@ export function SwipeableEmailItem({
                 className="text-white" 
                 style={{ width: iconSize, height: iconSize }}
               />
+              {isFullSwipe && fullSwipeProgress > 0.5 && (
+                <span className="ml-1 text-[11px] font-medium text-white/90 whitespace-nowrap">
+                  Delete
+                </span>
+              )}
             </button>
           </>
-        )}
-
-        {/* Delete mode indicator */}
-        {isDeleteMode && (
-          <div className="flex items-center gap-2 animate-pulse">
-            <Trash2 className="w-5 h-5 text-red-500" />
-            <span className="text-xs font-medium text-red-500">Release to delete</span>
-          </div>
         )}
       </div>
 
