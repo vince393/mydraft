@@ -59,6 +59,8 @@ interface SwipeableEmailItemProps {
   getAvatarUrl: (email: string, name: string) => string;
 }
 
+const BUTTON_AREA_WIDTH = 100;
+
 export function SwipeableEmailItem({
   emailId,
   sender,
@@ -116,7 +118,7 @@ export function SwipeableEmailItem({
     if (isSelectionMode || moreMenuOpen) return;
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
-    currentX.current = isRevealed ? -110 : 0;
+    currentX.current = isRevealed ? -BUTTON_AREA_WIDTH : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
   }, [isRevealed, isSelectionMode, onLongPressStart, moreMenuOpen]);
@@ -144,7 +146,7 @@ export function SwipeableEmailItem({
 
     let newX = currentX.current + deltaX;
     if (newX > 0) newX = 0;
-    if (newX < -280) newX = -280;
+    if (newX < -400) newX = -400;
     setSwipeX(newX);
   }, [isSwiping, isSelectionMode, onLongPressEnd, moreMenuOpen]);
 
@@ -155,20 +157,20 @@ export function SwipeableEmailItem({
     
     const absSwipe = Math.abs(swipeX);
     
-    // Full swipe triggers delete
-    if (absSwipe >= 200) {
-      setSwipeX(-280);
+    // Full swipe - trigger delete
+    if (absSwipe >= 250) {
+      setSwipeX(-400);
       setTimeout(() => {
         onDelete();
         setSwipeX(0);
         setIsRevealed(false);
-      }, 180);
+      }, 150);
       return;
     }
 
-    // Partial swipe reveals buttons
-    if (absSwipe >= 50) {
-      setSwipeX(-110);
+    // Partial swipe - snap to reveal buttons
+    if (absSwipe >= 40) {
+      setSwipeX(-BUTTON_AREA_WIDTH);
       setIsRevealed(true);
     } else {
       setSwipeX(0);
@@ -181,7 +183,7 @@ export function SwipeableEmailItem({
     if (isSelectionMode || moreMenuOpen) return;
     startX.current = e.clientX;
     startY.current = e.clientY;
-    currentX.current = isRevealed ? -110 : 0;
+    currentX.current = isRevealed ? -BUTTON_AREA_WIDTH : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
   }, [isRevealed, isSelectionMode, onLongPressStart, moreMenuOpen]);
@@ -206,7 +208,7 @@ export function SwipeableEmailItem({
 
     let newX = currentX.current + deltaX;
     if (newX > 0) newX = 0;
-    if (newX < -280) newX = -280;
+    if (newX < -400) newX = -400;
     setSwipeX(newX);
   }, [isSwiping, isSelectionMode, onLongPressEnd, moreMenuOpen]);
 
@@ -264,23 +266,23 @@ export function SwipeableEmailItem({
   }, [closeReveal]);
 
   const absSwipe = Math.abs(swipeX);
-  const isFullSwipe = absSwipe >= 200;
+  const isFullSwipe = absSwipe >= 250;
   
-  // Delete orb stretches on full swipe
+  // Delete stretches on full swipe
   const deleteWidth = isFullSwipe 
-    ? 52 + Math.min((absSwipe - 200) * 1.5, 120)
-    : 52;
+    ? 40 + Math.min((absSwipe - 250) * 0.8, 100)
+    : 40;
 
   return (
     <div className="relative overflow-hidden w-full" data-testid={`email-item-${emailId}`}>
-      {/* Background action area */}
+      {/* Button area */}
       <div 
-        className="absolute inset-y-0 right-0 flex items-center justify-end pr-3 gap-2"
-        style={{ width: Math.max(absSwipe + 16, 0) }}
+        className="absolute inset-y-0 right-0 flex items-center justify-end gap-2 pr-2"
+        style={{ width: Math.max(absSwipe + 8, 0) }}
       >
-        {absSwipe > 20 && (
+        {absSwipe > 15 && (
           <>
-            {/* More button - hides on full swipe */}
+            {/* More button */}
             {!isFullSwipe && (
               <DropdownMenu open={moreMenuOpen} onOpenChange={(open) => {
                 setMoreMenuOpen(open);
@@ -289,16 +291,15 @@ export function SwipeableEmailItem({
                 <DropdownMenuTrigger asChild>
                   <button
                     onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                    className="w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all duration-200"
+                    className="w-10 h-10 rounded-full flex items-center justify-center"
                     style={{
-                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                      boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
-                      opacity: Math.min(absSwipe / 60, 1),
-                      transform: `scale(${Math.min(absSwipe / 80, 1)})`,
+                      background: 'linear-gradient(145deg, #7c3aed 0%, #6d28d9 100%)',
+                      boxShadow: '0 2px 8px rgba(124, 58, 237, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
+                      opacity: Math.min(absSwipe / 50, 1),
                     }}
                     data-testid={`swipe-more-${emailId}`}
                   >
-                    <MoreHorizontal className="w-5 h-5 text-white" />
+                    <MoreHorizontal className="w-4 h-4 text-white drop-shadow-sm" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 bg-popover/95 backdrop-blur-xl border-border/30 shadow-2xl">
@@ -349,26 +350,23 @@ export function SwipeableEmailItem({
               </DropdownMenu>
             )}
 
-            {/* Delete button - stretches into pill on full swipe */}
+            {/* Delete button */}
             <button
               onClick={handleDeleteClick}
-              className="h-[52px] rounded-full flex items-center justify-center gap-2 transition-all duration-200"
+              className="h-10 rounded-full flex items-center justify-center gap-1.5"
               style={{
                 width: deleteWidth,
-                background: isFullSwipe 
-                  ? 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)'
-                  : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                background: 'linear-gradient(145deg, #ef4444 0%, #dc2626 100%)',
                 boxShadow: isFullSwipe 
-                  ? '0 6px 20px rgba(239, 68, 68, 0.5)'
-                  : '0 4px 14px rgba(239, 68, 68, 0.4)',
-                opacity: Math.min(absSwipe / 60, 1),
-                transform: `scale(${Math.min(absSwipe / 80, 1)})`,
+                  ? '0 4px 16px rgba(239, 68, 68, 0.6), inset 0 1px 0 rgba(255,255,255,0.2)'
+                  : '0 2px 8px rgba(239, 68, 68, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
+                opacity: Math.min(absSwipe / 50, 1),
               }}
               data-testid={`swipe-delete-${emailId}`}
             >
-              <Trash2 className="w-5 h-5 text-white flex-shrink-0" />
-              {isFullSwipe && deleteWidth > 100 && (
-                <span className="text-sm font-medium text-white whitespace-nowrap pr-1">
+              <Trash2 className="w-4 h-4 text-white drop-shadow-sm flex-shrink-0" />
+              {isFullSwipe && deleteWidth > 80 && (
+                <span className="text-xs font-medium text-white whitespace-nowrap">
                   Delete
                 </span>
               )}
