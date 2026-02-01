@@ -208,6 +208,29 @@ export const insertLocalEmailStateSchema = createInsertSchema(localEmailStates).
 export type LocalEmailState = typeof localEmailStates.$inferSelect;
 export type InsertLocalEmailState = z.infer<typeof insertLocalEmailStateSchema>;
 
+// Email action history - tracks what users delete/archive for AI learning
+export const emailActionHistory = pgTable("email_action_history", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  messageId: varchar("message_id").notNull(),
+  actionType: varchar("action_type").notNull(), // delete, archive, spam, move_to_folder
+  senderEmail: text("sender_email"),
+  senderDomain: text("sender_domain"), // extracted domain for pattern matching
+  subjectKeywords: text("subject_keywords").array(), // extracted keywords
+  isNewsletter: boolean("is_newsletter").default(false),
+  isPromotion: boolean("is_promotion").default(false),
+  folderMovedTo: varchar("folder_moved_to"), // if moved to folder
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertEmailActionHistorySchema = createInsertSchema(emailActionHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type EmailActionHistory = typeof emailActionHistory.$inferSelect;
+export type InsertEmailActionHistory = z.infer<typeof insertEmailActionHistorySchema>;
+
 export const supportMessages = pgTable("support_messages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),

@@ -1580,6 +1580,37 @@ Return ONLY valid JSON, no other text.`;
       if (isNylasId) {
         // Use local storage only - don't sync folder changes to Nylas
         await storage.setLocalEmailFolder(userId, id, folder);
+        
+        // Record action for AI learning (only for trash/archive)
+        if (folder === "trash" || folder === "archived") {
+          try {
+            // Get email details from Nylas for better pattern learning
+            const grant = await storage.getNylasGrant(userId);
+            if (grant) {
+              const message = await nylas.getMessage(grant.grantId, id);
+              const senderEmail = message?.from?.[0]?.email;
+              const subject = message?.subject || "";
+              // Extract keywords from subject
+              const keywords = subject.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3).slice(0, 5);
+              // Detect newsletter patterns
+              const isNewsletter = /unsubscribe|newsletter|digest|weekly|monthly/i.test(subject) || 
+                                   /@.*mail\.|noreply|no-reply|notifications?@/i.test(senderEmail || "");
+              const isPromotion = /sale|discount|offer|promo|deal|off|save|free/i.test(subject);
+              
+              await storage.recordEmailAction(userId, {
+                messageId: id,
+                actionType: folder === "trash" ? "delete" : "archive",
+                senderEmail,
+                subjectKeywords: keywords,
+                isNewsletter,
+                isPromotion,
+              });
+            }
+          } catch (e) {
+            console.log("[Action Recording] Failed to record action:", e);
+          }
+        }
+        
         return res.json({ success: true, folder });
       } else {
         // Local email storage for demo/test emails
@@ -2031,6 +2062,10 @@ If no emails match, return an empty array: []`
       const learnedStyle = await storage.getLearnedWritingStyle(userId);
       const user = await storage.getUser(userId);
       
+      // Get user's deletion/archive history patterns for smarter recommendations
+      const actionPatterns = await storage.getEmailActionPatterns(userId);
+      console.log("[AI Inbox Refresh] Action patterns found:", JSON.stringify(actionPatterns));
+      
       // Get user's custom folders with AI descriptions for auto-sorting (Pro+ feature only)
       const customFolders = await storage.getCustomFolders(userId);
       const userPlan = user?.plan || "free";
@@ -2067,14 +2102,28 @@ ${foldersWithAiDesc.map(f => `- Folder ID ${f.id}: "${f.name}" - ${f.aiDescripti
 To suggest moving to a folder, use action "move_to_folder" with folderId and folderName in the suggestion.
 ` : "";
       
-      // Call AI to analyze emails
-      const systemPrompt = `You are a VERY CONSERVATIVE email inbox assistant. Your job is to help organize emails, but you should RARELY suggest actions.
+      // Build user deletion history section for smarter AI recommendations
+      const hasHistory = actionPatterns.deletedDomains.length > 0 || actionPatterns.deletedSenders.length > 0 || actionPatterns.archivedDomains.length > 0;
+      const userHistorySection = hasHistory ? `
+USER'S DELETION & ARCHIVE HISTORY (IMPORTANT - prioritize these patterns):
+Based on user's past behavior, they frequently delete or archive emails from:
+${actionPatterns.deletedSenders.length > 0 ? `- Deleted senders: ${actionPatterns.deletedSenders.slice(0, 10).join(", ")}` : ""}
+${actionPatterns.deletedDomains.length > 0 ? `- Deleted domains: ${actionPatterns.deletedDomains.slice(0, 10).join(", ")}` : ""}
+${actionPatterns.archivedDomains.length > 0 ? `- Archived domains: ${actionPatterns.archivedDomains.slice(0, 10).join(", ")}` : ""}
+${actionPatterns.newsletterPatterns.length > 0 ? `- Newsletter sources: ${actionPatterns.newsletterPatterns.slice(0, 10).join(", ")}` : ""}
 
-IMPORTANT: Most emails should NOT have any suggested action. Only suggest actions for emails you are EXTREMELY confident about.
+PRIORITY: Suggest deleting/archiving emails from senders/domains the user has historically deleted/archived.
+` : "";
+
+      // Call AI to analyze emails
+      const systemPrompt = `You are an intelligent email inbox assistant that learns from user behavior. Your job is to recommend emails to delete or move based on the user's history.
+
+${hasHistory ? "IMPORTANT: The user has deletion/archive history. Use it to recommend similar emails for deletion or archiving." : "IMPORTANT: The user has no history yet. Be conservative and only suggest obvious spam or junk."}
 
 User preferences context:
 ${learnedStyle?.styleAnalysis ? `- Writing style: ${learnedStyle.styleAnalysis}` : ""}
 ${learnedStyle?.toneDescription ? `- Preferred tone: ${learnedStyle.toneDescription}` : ""}
+${userHistorySection}
 ${folderSortingSection}
 
 Available actions (use sparingly):

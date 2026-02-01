@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -177,6 +177,10 @@ export interface IStorage {
   updateAiInboxSuggestionStatus(id: number, status: string, executedAt?: Date): Promise<AiInboxSuggestion | undefined>;
   deleteAiInboxSuggestionsByBatch(userId: string, batchId: string): Promise<boolean>;
   clearOldAiInboxSuggestions(userId: string): Promise<void>;
+
+  // Email action history methods (AI learning)
+  recordEmailAction(userId: string, action: { messageId: string; actionType: string; senderEmail?: string; subjectKeywords?: string[]; isNewsletter?: boolean; isPromotion?: boolean; folderMovedTo?: string }): Promise<void>;
+  getEmailActionPatterns(userId: string): Promise<{ deletedDomains: string[]; deletedSenders: string[]; archivedDomains: string[]; newsletterPatterns: string[] }>;
 
   // Custom folders methods
   getCustomFolders(userId: string): Promise<CustomFolder[]>;
@@ -1752,6 +1756,61 @@ Business Development`,
         eq(aiInboxSuggestions.userId, userId),
         ne(aiInboxSuggestions.status, "pending")
       ));
+  }
+
+  // Email action history methods (AI learning)
+  async recordEmailAction(userId: string, action: { messageId: string; actionType: string; senderEmail?: string; subjectKeywords?: string[]; isNewsletter?: boolean; isPromotion?: boolean; folderMovedTo?: string }): Promise<void> {
+    const senderDomain = action.senderEmail?.split("@")[1] || null;
+    await db.insert(emailActionHistory).values({
+      userId,
+      messageId: action.messageId,
+      actionType: action.actionType,
+      senderEmail: action.senderEmail || null,
+      senderDomain,
+      subjectKeywords: action.subjectKeywords || [],
+      isNewsletter: action.isNewsletter || false,
+      isPromotion: action.isPromotion || false,
+      folderMovedTo: action.folderMovedTo || null,
+    });
+  }
+
+  async getEmailActionPatterns(userId: string): Promise<{ deletedDomains: string[]; deletedSenders: string[]; archivedDomains: string[]; newsletterPatterns: string[] }> {
+    const actions = await db.select().from(emailActionHistory)
+      .where(eq(emailActionHistory.userId, userId))
+      .orderBy(desc(emailActionHistory.createdAt))
+      .limit(500);
+    
+    const deletedDomains: Map<string, number> = new Map();
+    const deletedSenders: Map<string, number> = new Map();
+    const archivedDomains: Map<string, number> = new Map();
+    const newsletterPatterns: Set<string> = new Set();
+
+    for (const action of actions) {
+      if (action.actionType === "delete" || action.actionType === "trash") {
+        if (action.senderDomain) {
+          deletedDomains.set(action.senderDomain, (deletedDomains.get(action.senderDomain) || 0) + 1);
+        }
+        if (action.senderEmail) {
+          deletedSenders.set(action.senderEmail, (deletedSenders.get(action.senderEmail) || 0) + 1);
+        }
+      }
+      if (action.actionType === "archive") {
+        if (action.senderDomain) {
+          archivedDomains.set(action.senderDomain, (archivedDomains.get(action.senderDomain) || 0) + 1);
+        }
+      }
+      if (action.isNewsletter && action.senderDomain) {
+        newsletterPatterns.add(action.senderDomain);
+      }
+    }
+
+    // Return domains/senders that have been actioned at least 2 times (pattern)
+    return {
+      deletedDomains: Array.from(deletedDomains.entries()).filter(([_, count]) => count >= 2).map(([domain]) => domain),
+      deletedSenders: Array.from(deletedSenders.entries()).filter(([_, count]) => count >= 2).map(([sender]) => sender),
+      archivedDomains: Array.from(archivedDomains.entries()).filter(([_, count]) => count >= 2).map(([domain]) => domain),
+      newsletterPatterns: Array.from(newsletterPatterns),
+    };
   }
 
   // Custom folders methods

@@ -39,13 +39,13 @@ const actionLabels: Record<string, string> = {
   move_to_folder: "Move to Folder",
 };
 
-const actionColors: Record<string, string> = {
-  spam: "bg-red-500/10 text-red-500 border-red-500/20",
-  archive: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  delete: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  star: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  mark_read: "bg-green-500/10 text-green-500 border-green-500/20",
-  move_to_folder: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+const actionIconColors: Record<string, string> = {
+  spam: "text-red-400",
+  archive: "text-blue-400",
+  delete: "text-orange-400",
+  star: "text-yellow-400",
+  mark_read: "text-green-400",
+  move_to_folder: "text-purple-400",
 };
 
 export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?: () => void }) {
@@ -187,62 +187,64 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              AI Inbox Refresh
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col p-0 gap-0 border-border/50">
+          <DialogHeader className="p-5 pb-4 border-b border-border/30">
+            <DialogTitle className="flex items-center gap-2 text-base font-medium">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Smart Cleanup
             </DialogTitle>
-            <DialogDescription>
-              AI analyzes your emails and suggests actions. Review and approve before changes are made.
+            <DialogDescription className="text-xs">
+              Based on your history, we recommend these actions
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 flex flex-col min-h-0">
             {suggestions.length === 0 && !refreshMutation.isPending ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                  <Wand2 className="w-8 h-8 text-primary" />
+              <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-4">
+                  <Wand2 className="w-5 h-5 text-primary" />
                 </div>
-                <h3 className="font-medium text-lg mb-2">Analyze your inbox</h3>
-                <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                  AI will scan your emails and suggest actions like archiving, starring, or marking spam.
+                <h3 className="font-medium text-sm mb-1">Scan your inbox</h3>
+                <p className="text-xs text-muted-foreground mb-5 max-w-[200px]">
+                  We'll learn from your history and suggest what to clean up
                 </p>
                 <Button
                   onClick={() => refreshMutation.mutate()}
                   disabled={refreshMutation.isPending}
-                  className="gap-2"
+                  size="sm"
+                  className="gap-1.5"
                   data-testid="button-start-ai-analysis"
                 >
                   {refreshMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-3.5 h-3.5" />
                   )}
-                  Start Analysis
+                  Analyze
                 </Button>
               </div>
             ) : refreshMutation.isPending ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-                <p className="text-sm text-muted-foreground">Analyzing your inbox...</p>
+              <div className="flex flex-col items-center justify-center py-16">
+                <Loader2 className="w-6 h-6 text-primary animate-spin mb-3" />
+                <p className="text-xs text-muted-foreground">Scanning...</p>
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between py-3 border-b">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between px-5 py-3 bg-muted/30">
+                  <div className="flex items-center gap-2">
                     <Checkbox
                       checked={selectedIds.size === pendingSuggestions.length && pendingSuggestions.length > 0}
                       onCheckedChange={toggleSelectAll}
+                      className="h-4 w-4"
                       data-testid="checkbox-select-all-suggestions"
                     />
-                    <span className="text-sm text-muted-foreground">
-                      {selectedIds.size} of {pendingSuggestions.length} selected
+                    <span className="text-xs text-muted-foreground">
+                      {selectedIds.size}/{pendingSuggestions.length}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => refreshMutation.mutate()}
                       disabled={refreshMutation.isPending}
@@ -256,16 +258,17 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
                         size="sm"
                         onClick={() => dismissAllMutation.mutate()}
                         disabled={dismissAllMutation.isPending}
+                        className="text-muted-foreground"
                         data-testid="button-dismiss-all-suggestions"
                       >
-                        Dismiss All
+                        Clear
                       </Button>
                     )}
                   </div>
                 </div>
 
                 <ScrollArea className="flex-1">
-                  <div className="space-y-2 py-3">
+                  <div className="px-3 py-2 space-y-1">
                     {pendingSuggestions.map((suggestion) => {
                       const Icon = actionIcons[suggestion.actionType] || Mail;
                       const isExpanded = expandedId === suggestion.id;
@@ -274,76 +277,76 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
                       return (
                         <div
                           key={suggestion.id}
-                          className={`rounded-lg border p-3 transition-colors ${
-                            isSelected ? "bg-primary/5 border-primary/30" : "hover-elevate"
+                          className={`rounded-md p-2.5 transition-all cursor-pointer overflow-visible ${
+                            isSelected ? "bg-primary/5" : "hover-elevate"
                           }`}
+                          onClick={() => toggleSelect(suggestion.id)}
                           data-testid={`suggestion-item-${suggestion.id}`}
                         >
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-2.5">
                             <Checkbox
                               checked={isSelected}
-                              onCheckedChange={() => toggleSelect(suggestion.id)}
+                              onCheckedChange={(checked) => {
+                                if (typeof checked === 'boolean') toggleSelect(suggestion.id);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
                               className="mt-0.5"
                               data-testid={`checkbox-suggestion-${suggestion.id}`}
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge
-                                  variant="outline"
-                                  className={`${actionColors[suggestion.actionType]} gap-1 text-xs`}
-                                >
-                                  <Icon className="w-3 h-3" />
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <Icon className={`w-3 h-3 flex-shrink-0 ${actionIconColors[suggestion.actionType] || "text-muted-foreground"}`} />
+                                <span className="text-[11px] text-muted-foreground">
                                   {suggestion.actionType === "move_to_folder" && suggestion.actionData?.folderName
-                                    ? `Move to "${suggestion.actionData.folderName}"`
+                                    ? `Move to ${suggestion.actionData.folderName}`
                                     : actionLabels[suggestion.actionType]}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  {suggestion.confidence}% confident
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/60 ml-auto">
+                                  {suggestion.confidence}%
                                 </span>
                               </div>
-                              <p className="font-medium text-sm truncate">
+                              <p className="font-medium text-xs truncate leading-tight">
                                 {suggestion.messageSubject || "(No subject)"}
                               </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                From: {suggestion.messageSender || "Unknown"}
+                              <p className="text-[11px] text-muted-foreground/70 truncate">
+                                {suggestion.messageSender || "Unknown"}
                               </p>
                               {isExpanded && suggestion.actionData?.reason && (
-                                <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
+                                <p className="text-[11px] text-muted-foreground mt-1.5 py-1.5 px-2 bg-muted/30 rounded leading-relaxed">
                                   {suggestion.actionData.reason}
                                 </p>
                               )}
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
+                                onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : suggestion.id); }}
                                 data-testid={`button-expand-suggestion-${suggestion.id}`}
                               >
                                 {isExpanded ? (
-                                  <ChevronUp className="w-4 h-4" />
+                                  <ChevronUp className="w-3 h-3" />
                                 ) : (
-                                  <ChevronDown className="w-4 h-4" />
+                                  <ChevronDown className="w-3 h-3" />
                                 )}
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-green-500 hover:text-green-600 hover:bg-green-500/10"
-                                onClick={() => updateSuggestionMutation.mutate({ id: suggestion.id, status: "approved" })}
+                                className="text-green-500"
+                                onClick={(e) => { e.stopPropagation(); updateSuggestionMutation.mutate({ id: suggestion.id, status: "approved" }); }}
                                 data-testid={`button-approve-suggestion-${suggestion.id}`}
                               >
-                                <Check className="w-4 h-4" />
+                                <Check className="w-3 h-3" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                onClick={() => updateSuggestionMutation.mutate({ id: suggestion.id, status: "rejected" })}
+                                className="text-red-500"
+                                onClick={(e) => { e.stopPropagation(); updateSuggestionMutation.mutate({ id: suggestion.id, status: "rejected" }); }}
                                 data-testid={`button-reject-suggestion-${suggestion.id}`}
                               >
-                                <X className="w-4 h-4" />
+                                <X className="w-3 h-3" />
                               </Button>
                             </div>
                           </div>
@@ -352,33 +355,28 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
                     })}
 
                     {pendingSuggestions.length === 0 && approvedSuggestions.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Check className="w-12 h-12 mx-auto mb-3 text-green-500" />
-                        <p>All suggestions have been reviewed!</p>
+                      <div className="text-center py-10 text-muted-foreground">
+                        <Check className="w-8 h-8 mx-auto mb-2 text-green-500/60" />
+                        <p className="text-xs">All done!</p>
                       </div>
                     )}
 
                     {approvedSuggestions.length > 0 && (
-                      <div className="mt-4 pt-4 border-t">
-                        <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                          <Check className="w-4 h-4 text-green-500" />
-                          Approved Actions ({approvedSuggestions.length})
+                      <div className="mt-3 pt-3 border-t border-border/30">
+                        <h4 className="text-[11px] text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <Check className="w-3 h-3 text-green-500" />
+                          Ready ({approvedSuggestions.length})
                         </h4>
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                           {approvedSuggestions.map((suggestion) => {
                             const Icon = actionIcons[suggestion.actionType] || Mail;
                             return (
                               <div
                                 key={suggestion.id}
-                                className="flex items-center gap-2 p-2 rounded bg-green-500/5 text-sm"
+                                className="flex items-center gap-2 py-1.5 px-2 rounded-sm bg-green-500/5 text-xs"
                               >
-                                <Icon className="w-3 h-3 text-green-500" />
-                                <span className="truncate flex-1">{suggestion.messageSubject}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {suggestion.actionType === "move_to_folder" && suggestion.actionData?.folderName
-                                    ? `Move to "${suggestion.actionData.folderName}"`
-                                    : actionLabels[suggestion.actionType]}
-                                </Badge>
+                                <Icon className="w-3 h-3 text-green-500 flex-shrink-0" />
+                                <span className="truncate flex-1 text-[11px]">{suggestion.messageSubject}</span>
                               </div>
                             );
                           })}
@@ -389,46 +387,47 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
                 </ScrollArea>
 
                 {(pendingSuggestions.length > 0 || approvedSuggestions.length > 0) && (
-                  <div className="flex items-center justify-between pt-4 border-t gap-3">
-                    <div className="text-sm text-muted-foreground">
-                      {approvedSuggestions.length} action{approvedSuggestions.length !== 1 ? "s" : ""} ready to execute
+                  <div className="flex items-center justify-between px-5 py-3 border-t border-border/30 bg-muted/20 gap-3">
+                    <div className="text-xs text-muted-foreground">
+                      {approvedSuggestions.length} ready
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       {selectedIds.size > 0 && (
                         <>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={rejectSelected}
                             disabled={updateSuggestionMutation.isPending}
                             data-testid="button-reject-selected"
                           >
-                            Reject Selected
+                            Skip
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={approveSelected}
                             disabled={updateSuggestionMutation.isPending}
-                            className="text-green-600 border-green-600/30 hover:bg-green-600/10"
+                            className="text-green-500"
                             data-testid="button-approve-selected"
                           >
-                            Approve Selected
+                            Approve
                           </Button>
                         </>
                       )}
                       <Button
                         onClick={() => executeMutation.mutate()}
                         disabled={approvedSuggestions.length === 0 || executeMutation.isPending}
-                        className="gap-2"
+                        size="sm"
+                        className="gap-1.5"
                         data-testid="button-execute-approved"
                       >
                         {executeMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-3 h-3 animate-spin" />
                         ) : (
-                          <Check className="w-4 h-4" />
+                          <Check className="w-3 h-3" />
                         )}
-                        Execute {approvedSuggestions.length} Action{approvedSuggestions.length !== 1 ? "s" : ""}
+                        Clean Up
                       </Button>
                     </div>
                   </div>
