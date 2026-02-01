@@ -59,10 +59,6 @@ interface SwipeableEmailItemProps {
   getAvatarUrl: (email: string, name: string) => string;
 }
 
-// Thresholds
-const REVEAL_THRESHOLD = 50;
-const FULL_SWIPE_THRESHOLD = 140;
-
 export function SwipeableEmailItem({
   emailId,
   sender,
@@ -107,7 +103,6 @@ export function SwipeableEmailItem({
   const startY = useRef(0);
   const currentX = useRef(0);
   const isHorizontalSwipe = useRef<boolean | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const initials = (sender || "?")
     .split(" ")
@@ -121,7 +116,7 @@ export function SwipeableEmailItem({
     if (isSelectionMode || moreMenuOpen) return;
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
-    currentX.current = isRevealed ? -100 : 0;
+    currentX.current = isRevealed ? -110 : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
   }, [isRevealed, isSelectionMode, onLongPressStart, moreMenuOpen]);
@@ -149,7 +144,7 @@ export function SwipeableEmailItem({
 
     let newX = currentX.current + deltaX;
     if (newX > 0) newX = 0;
-    if (newX < -220) newX = -220;
+    if (newX < -280) newX = -280;
     setSwipeX(newX);
   }, [isSwiping, isSelectionMode, onLongPressEnd, moreMenuOpen]);
 
@@ -160,20 +155,20 @@ export function SwipeableEmailItem({
     
     const absSwipe = Math.abs(swipeX);
     
-    // Full swipe - trigger delete
-    if (absSwipe >= FULL_SWIPE_THRESHOLD) {
-      setSwipeX(-220);
+    // Full swipe triggers delete
+    if (absSwipe >= 200) {
+      setSwipeX(-280);
       setTimeout(() => {
         onDelete();
         setSwipeX(0);
         setIsRevealed(false);
-      }, 200);
+      }, 180);
       return;
     }
 
-    // Half swipe - reveal buttons and keep them visible
-    if (absSwipe >= REVEAL_THRESHOLD) {
-      setSwipeX(-100);
+    // Partial swipe reveals buttons
+    if (absSwipe >= 50) {
+      setSwipeX(-110);
       setIsRevealed(true);
     } else {
       setSwipeX(0);
@@ -186,7 +181,7 @@ export function SwipeableEmailItem({
     if (isSelectionMode || moreMenuOpen) return;
     startX.current = e.clientX;
     startY.current = e.clientY;
-    currentX.current = isRevealed ? -100 : 0;
+    currentX.current = isRevealed ? -110 : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
   }, [isRevealed, isSelectionMode, onLongPressStart, moreMenuOpen]);
@@ -211,7 +206,7 @@ export function SwipeableEmailItem({
 
     let newX = currentX.current + deltaX;
     if (newX > 0) newX = 0;
-    if (newX < -220) newX = -220;
+    if (newX < -280) newX = -280;
     setSwipeX(newX);
   }, [isSwiping, isSelectionMode, onLongPressEnd, moreMenuOpen]);
 
@@ -235,15 +230,12 @@ export function SwipeableEmailItem({
       setIsRevealed(false);
       return;
     }
-    
     if (Math.abs(swipeX) > 5 && !isRevealed) return;
-    
     if (isRevealed) {
       setSwipeX(0);
       setIsRevealed(false);
       return;
     }
-    
     onSelect();
   }, [swipeX, isRevealed, onSelect, moreMenuOpen]);
 
@@ -271,39 +263,25 @@ export function SwipeableEmailItem({
     closeReveal();
   }, [closeReveal]);
 
-  // Calculate animations
   const absSwipe = Math.abs(swipeX);
-  const isFullSwipe = absSwipe >= FULL_SWIPE_THRESHOLD;
-  const revealProgress = Math.min(absSwipe / REVEAL_THRESHOLD, 1);
-  const fullSwipeProgress = Math.max(0, (absSwipe - REVEAL_THRESHOLD) / (FULL_SWIPE_THRESHOLD - REVEAL_THRESHOLD));
+  const isFullSwipe = absSwipe >= 200;
   
-  // Circle sizes - grow from 32 to 44
-  const circleSize = 32 + (revealProgress * 12);
-  const iconSize = 16 + (revealProgress * 2);
-  
-  // More button fades out during full swipe
-  const moreOpacity = isFullSwipe ? Math.max(0, 1 - fullSwipeProgress * 2) : Math.min(revealProgress * 1.5, 1);
-  
-  // Delete button stretches into orb during full swipe
+  // Delete orb stretches on full swipe
   const deleteWidth = isFullSwipe 
-    ? circleSize + (fullSwipeProgress * 80) // Stretch to orb
-    : circleSize;
+    ? 52 + Math.min((absSwipe - 200) * 1.5, 120)
+    : 52;
 
   return (
-    <div 
-      ref={containerRef}
-      className="relative overflow-hidden w-full"
-      data-testid={`email-item-${emailId}`}
-    >
-      {/* Action area behind email */}
+    <div className="relative overflow-hidden w-full" data-testid={`email-item-${emailId}`}>
+      {/* Background action area */}
       <div 
-        className="absolute inset-y-0 right-0 flex items-center justify-end gap-2 pr-3"
-        style={{ width: Math.max(absSwipe + 20, 0) }}
+        className="absolute inset-y-0 right-0 flex items-center justify-end pr-3 gap-2"
+        style={{ width: Math.max(absSwipe + 16, 0) }}
       >
-        {absSwipe > 15 && (
+        {absSwipe > 20 && (
           <>
-            {/* More button - fades out on full swipe */}
-            {moreOpacity > 0.05 && (
+            {/* More button - hides on full swipe */}
+            {!isFullSwipe && (
               <DropdownMenu open={moreMenuOpen} onOpenChange={(open) => {
                 setMoreMenuOpen(open);
                 if (!open) closeReveal();
@@ -311,93 +289,86 @@ export function SwipeableEmailItem({
                 <DropdownMenuTrigger asChild>
                   <button
                     onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                    className="flex items-center justify-center rounded-full transition-all duration-150 backdrop-blur-sm"
-                    style={{ 
-                      width: circleSize,
-                      height: circleSize,
-                      opacity: moreOpacity,
-                      transform: `scale(${0.6 + revealProgress * 0.4})`,
-                      background: 'rgba(120, 120, 128, 0.36)',
+                    className="w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all duration-200"
+                    style={{
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+                      opacity: Math.min(absSwipe / 60, 1),
+                      transform: `scale(${Math.min(absSwipe / 80, 1)})`,
                     }}
                     data-testid={`swipe-more-${emailId}`}
                   >
-                    <MoreHorizontal 
-                      className="text-white/90" 
-                      style={{ width: iconSize, height: iconSize }}
-                    />
+                    <MoreHorizontal className="w-5 h-5 text-white" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44 bg-popover/95 backdrop-blur-xl border-border/30 shadow-xl">
-                  <DropdownMenuItem onClick={() => handleMenuAction(onReply)} className="text-xs gap-2.5 py-2">
-                    <Reply className="w-3.5 h-3.5 text-muted-foreground" />
-                    Reply
+                <DropdownMenuContent align="end" className="w-48 bg-popover/95 backdrop-blur-xl border-border/30 shadow-2xl">
+                  <DropdownMenuItem onClick={() => handleMenuAction(onReply)} className="gap-3 py-2.5">
+                    <Reply className="w-4 h-4 text-muted-foreground" />
+                    <span>Reply</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleMenuAction(onReplyAll)} className="text-xs gap-2.5 py-2">
-                    <ReplyAll className="w-3.5 h-3.5 text-muted-foreground" />
-                    Reply All
+                  <DropdownMenuItem onClick={() => handleMenuAction(onReplyAll)} className="gap-3 py-2.5">
+                    <ReplyAll className="w-4 h-4 text-muted-foreground" />
+                    <span>Reply All</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleMenuAction(onForward)} className="text-xs gap-2.5 py-2">
-                    <Forward className="w-3.5 h-3.5 text-muted-foreground" />
-                    Forward
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-border/20" />
-                  <DropdownMenuItem onClick={() => handleMenuAction(onToggleStar)} className="text-xs gap-2.5 py-2">
-                    <Star className={`w-3.5 h-3.5 ${isStarred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
-                    {isStarred ? "Unstar" : "Star"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleMenuAction(onToggleFlag)} className="text-xs gap-2.5 py-2">
-                    <Flag className={`w-3.5 h-3.5 ${isFlagged ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
-                    {isFlagged ? "Unflag" : "Flag"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleMenuAction(onMarkUnread)} className="text-xs gap-2.5 py-2">
-                    <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                    Mark Unread
+                  <DropdownMenuItem onClick={() => handleMenuAction(onForward)} className="gap-3 py-2.5">
+                    <Forward className="w-4 h-4 text-muted-foreground" />
+                    <span>Forward</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border/20" />
-                  <DropdownMenuItem onClick={() => handleMenuAction(onMove)} className="text-xs gap-2.5 py-2">
-                    <FolderInput className="w-3.5 h-3.5 text-muted-foreground" />
-                    Move
+                  <DropdownMenuItem onClick={() => handleMenuAction(onToggleStar)} className="gap-3 py-2.5">
+                    <Star className={`w-4 h-4 ${isStarred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
+                    <span>{isStarred ? "Unstar" : "Star"}</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleMenuAction(onArchive)} className="text-xs gap-2.5 py-2">
-                    <Archive className="w-3.5 h-3.5 text-muted-foreground" />
-                    Archive
+                  <DropdownMenuItem onClick={() => handleMenuAction(onToggleFlag)} className="gap-3 py-2.5">
+                    <Flag className={`w-4 h-4 ${isFlagged ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
+                    <span>{isFlagged ? "Unflag" : "Flag"}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleMenuAction(onMarkUnread)} className="gap-3 py-2.5">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <span>Mark Unread</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border/20" />
-                  <DropdownMenuItem onClick={() => handleMenuAction(onBlock)} className="text-xs gap-2.5 py-2 text-red-400 focus:text-red-400">
-                    <Ban className="w-3.5 h-3.5" />
-                    Block
+                  <DropdownMenuItem onClick={() => handleMenuAction(onMove)} className="gap-3 py-2.5">
+                    <FolderInput className="w-4 h-4 text-muted-foreground" />
+                    <span>Move</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleMenuAction(onDelete)} className="text-xs gap-2.5 py-2 text-red-400 focus:text-red-400">
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Trash
+                  <DropdownMenuItem onClick={() => handleMenuAction(onArchive)} className="gap-3 py-2.5">
+                    <Archive className="w-4 h-4 text-muted-foreground" />
+                    <span>Archive</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border/20" />
+                  <DropdownMenuItem onClick={() => handleMenuAction(onBlock)} className="gap-3 py-2.5 text-red-400 focus:text-red-400">
+                    <Ban className="w-4 h-4" />
+                    <span>Block</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleMenuAction(onDelete)} className="gap-3 py-2.5 text-red-400 focus:text-red-400">
+                    <Trash2 className="w-4 h-4" />
+                    <span>Trash</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
 
-            {/* Delete button - stretches into orb on full swipe */}
+            {/* Delete button - stretches into pill on full swipe */}
             <button
               onClick={handleDeleteClick}
-              className="flex items-center justify-center transition-all duration-150"
-              style={{ 
+              className="h-[52px] rounded-full flex items-center justify-center gap-2 transition-all duration-200"
+              style={{
                 width: deleteWidth,
-                height: circleSize,
-                borderRadius: circleSize / 2,
-                opacity: Math.min(revealProgress * 1.5, 1),
-                transform: `scale(${0.6 + revealProgress * 0.4})`,
                 background: isFullSwipe 
-                  ? 'linear-gradient(90deg, rgba(239,68,68,0.9) 0%, rgba(220,38,38,1) 100%)'
-                  : 'rgba(239, 68, 68, 0.9)',
-                boxShadow: isFullSwipe ? '0 4px 20px rgba(239,68,68,0.4)' : 'none',
+                  ? 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)'
+                  : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                boxShadow: isFullSwipe 
+                  ? '0 6px 20px rgba(239, 68, 68, 0.5)'
+                  : '0 4px 14px rgba(239, 68, 68, 0.4)',
+                opacity: Math.min(absSwipe / 60, 1),
+                transform: `scale(${Math.min(absSwipe / 80, 1)})`,
               }}
               data-testid={`swipe-delete-${emailId}`}
             >
-              <Trash2 
-                className="text-white" 
-                style={{ width: iconSize, height: iconSize }}
-              />
-              {isFullSwipe && fullSwipeProgress > 0.5 && (
-                <span className="ml-1 text-[11px] font-medium text-white/90 whitespace-nowrap">
+              <Trash2 className="w-5 h-5 text-white flex-shrink-0" />
+              {isFullSwipe && deleteWidth > 100 && (
+                <span className="text-sm font-medium text-white whitespace-nowrap pr-1">
                   Delete
                 </span>
               )}
@@ -418,29 +389,17 @@ export function SwipeableEmailItem({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={`
-          relative py-3 px-4 cursor-pointer bg-background
-          transition-transform select-none
-          ${!isSwiping ? "duration-200 ease-out" : "duration-0"}
-          ${isSelectionMode && isChecked
-            ? "bg-muted/50"
-            : isSelected 
-              ? "bg-muted/30" 
-              : "hover:bg-muted/20"
-          }
+          relative py-3 px-4 cursor-pointer bg-background select-none
+          ${!isSwiping ? "transition-transform duration-200 ease-out" : ""}
+          ${isSelectionMode && isChecked ? "bg-muted/50" : isSelected ? "bg-muted/30" : "hover:bg-muted/20"}
         `}
         style={{ transform: `translateX(${swipeX}px)` }}
       >
         <div className="flex items-start gap-3">
           <div className="relative flex-shrink-0">
             <Avatar className="w-10 h-10">
-              <AvatarImage 
-                src={getAvatarUrl(senderEmail, sender)} 
-                alt={sender}
-              />
-              <AvatarFallback 
-                style={{ backgroundColor: avatarColor }}
-                className="text-white text-xs font-medium"
-              >
+              <AvatarImage src={getAvatarUrl(senderEmail, sender)} alt={sender} />
+              <AvatarFallback style={{ backgroundColor: avatarColor }} className="text-white text-xs font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
@@ -460,10 +419,7 @@ export function SwipeableEmailItem({
                 {sender}
               </span>
               {threadCount > 1 && (
-                <span 
-                  className="flex-shrink-0 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium rounded bg-muted/60 text-muted-foreground"
-                  data-testid={`thread-count-badge-${threadCount}`}
-                >
+                <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium rounded bg-muted/60 text-muted-foreground">
                   {threadCount}
                 </span>
               )}
@@ -473,11 +429,7 @@ export function SwipeableEmailItem({
                   {formatTime(new Date(receivedAt))}
                 </span>
                 {isStarred && (
-                  <button
-                    onClick={handleStarClick}
-                    className="p-1 rounded-md text-yellow-500"
-                    data-testid={`starred-icon-${emailId}`}
-                  >
+                  <button onClick={handleStarClick} className="p-1 rounded-md text-yellow-500">
                     <Star className="w-4 h-4 fill-current" />
                   </button>
                 )}
