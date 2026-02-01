@@ -41,6 +41,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getAvatarUrl } from "@/lib/avatar";
+import { formatEmailBody } from "@/lib/email-formatter";
 import type { Email, Draft } from "@shared/schema";
 
 interface EmailAttachment {
@@ -198,32 +199,12 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
     setShowTranslated(false);
   }, [email?.id]);
 
-  const formatMutation = useMutation({
-    mutationFn: async ({ emailId, body }: { emailId: string | number; body: string }) => {
-      const response = await apiRequest("POST", `/api/emails/${emailId}/format`, { body });
-      const data = await response.json();
-      return { ...data, emailId };
-    },
-    onSuccess: (data) => {
-      const currentEmailId = email ? ((email as any).nylasId || email.id) : null;
-      if (data.emailId === currentEmailId) {
-        setFormattedBody(data.formattedBody);
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Formatting failed",
-        description: "Could not format this email. Showing original.",
-        variant: "destructive",
-      });
-      setShowFormatted(false);
-    },
-  });
-
+  // Instant client-side formatting (no API call needed)
   useEffect(() => {
-    if (email && showFormatted && !formattedBody && !formatMutation.isPending) {
-      const emailId = (email as any).nylasId || email.id;
-      formatMutation.mutate({ emailId, body: email.body });
+    if (email && showFormatted && !formattedBody) {
+      // Format instantly on client side
+      const formatted = formatEmailBody(email.body);
+      setFormattedBody(formatted);
     }
   }, [email?.id, showFormatted, formattedBody]);
 
@@ -768,12 +749,6 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
               />
             ) : (
               <>
-                {formatMutation.isPending && (
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs mb-3">
-                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span>Formatting...</span>
-                  </div>
-                )}
                 {email.body.includes('<') ? (
                   <div 
                     className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px]"
