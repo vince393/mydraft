@@ -553,6 +553,31 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     restoreEmailMutation.mutate({ emailId, folder: "inbox" });
   };
 
+  const handleReplyEmail = (email: EmailWithNylasId) => {
+    handleSelectEmail(email);
+  };
+
+  const handleForwardEmail = (email: EmailWithNylasId) => {
+    handleSelectEmail(email);
+  };
+
+  const handleMoveToFolder = (emailId: string | number) => {
+    // Select the email so user can use move to folder in email detail
+    const email = emails.find(e => getEmailId(e) === emailId);
+    if (email) {
+      handleSelectEmail(email);
+    }
+  };
+
+  const handleToggleFlag = (emailId: string | number) => {
+    // Flag feature - coming soon
+    toast({
+      title: "Coming soon",
+      description: "Email flagging will be available soon",
+      duration: 2000,
+    });
+  };
+
   const handlePermanentDeleteSingleEmail = async (emailId: string | number) => {
     // Optimistically remove from list
     setOptimisticRemovals(prev => new Set(prev).add(emailId));
@@ -719,10 +744,14 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             onTrashMultipleEmails={handleTrashMultipleEmails}
             onArchiveMultipleEmails={handleArchiveMultipleEmails}
             onToggleStar={handleToggleStar}
+            onToggleFlag={handleToggleFlag}
             onTrashSingleEmail={handleTrashSingleEmail}
             onArchiveSingleEmail={handleArchiveSingleEmail}
             onRestoreSingleEmail={handleRestoreSingleEmail}
             onPermanentDeleteSingleEmail={handlePermanentDeleteSingleEmail}
+            onMoveToFolder={handleMoveToFolder}
+            onReplyEmail={handleReplyEmail}
+            onForwardEmail={handleForwardEmail}
             isAiLoading={false}
             isMoving={moveEmailMutation.isPending}
             isLoading={isLoadingEmails || isLoadingCustomFolder}

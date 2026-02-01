@@ -1,6 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Archive, Trash2, Star, Check, RotateCcw } from "lucide-react";
+import { Archive, Trash2, Star, Check, RotateCcw, MoreHorizontal, Reply, ReplyAll, Forward, FolderInput, Flag } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SwipeableEmailItemProps {
   emailId: string | number;
@@ -11,6 +18,7 @@ interface SwipeableEmailItemProps {
   receivedAt: string;
   isRead: boolean;
   isStarred: boolean;
+  isFlagged?: boolean;
   isSelected: boolean;
   isChecked: boolean;
   isSelectionMode: boolean;
@@ -24,6 +32,11 @@ interface SwipeableEmailItemProps {
   onPermanentDelete?: () => void;
   onRestore?: () => void;
   onToggleStar: () => void;
+  onToggleFlag?: () => void;
+  onReply?: () => void;
+  onReplyAll?: () => void;
+  onForward?: () => void;
+  onMoveToFolder?: () => void;
   onLongPressStart: () => void;
   onLongPressEnd: () => void;
   onMouseEnterWhileDragging: () => void;
@@ -45,6 +58,7 @@ export function SwipeableEmailItem({
   receivedAt,
   isRead,
   isStarred,
+  isFlagged = false,
   isSelected,
   isChecked,
   isSelectionMode,
@@ -58,13 +72,18 @@ export function SwipeableEmailItem({
   onPermanentDelete,
   onRestore,
   onToggleStar,
+  onToggleFlag,
+  onReply,
+  onReplyAll,
+  onForward,
+  onMoveToFolder,
   onLongPressStart,
   onLongPressEnd,
   onMouseEnterWhileDragging,
   formatTime,
   getAvatarUrl,
 }: SwipeableEmailItemProps) {
-  const isArchiveFolder = folder === "archive";
+  const isArchiveFolder = folder === "archived";
   const [swipeX, setSwipeX] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
@@ -311,20 +330,66 @@ export function SwipeableEmailItem({
               )}
             </button>
           ) : (
-            <button
-              onClick={handleArchiveClick}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-sky-500/90 hover:bg-sky-500 backdrop-blur-sm transition-all duration-200 shadow-lg shadow-sky-500/25"
-              style={{ 
-                opacity: Math.min((Math.abs(swipeX) - 50) / 30, 1),
-                transform: `scale(${Math.min((Math.abs(swipeX) - 50) / 40 + 0.8, 1)})`
-              }}
-              data-testid={`swipe-archive-${emailId}`}
-            >
-              <Archive className="w-4 h-4 text-white" />
-              {Math.abs(swipeX) > 90 && (
-                <span className="text-xs font-medium text-white whitespace-nowrap">Archive</span>
-              )}
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-slate-600/90 hover:bg-slate-600 backdrop-blur-sm transition-all duration-200 shadow-lg shadow-slate-600/25"
+                  style={{ 
+                    opacity: Math.min((Math.abs(swipeX) - 50) / 30, 1),
+                    transform: `scale(${Math.min((Math.abs(swipeX) - 50) / 40 + 0.8, 1)})`
+                  }}
+                  data-testid={`swipe-more-${emailId}`}
+                >
+                  <MoreHorizontal className="w-4 h-4 text-white" />
+                  {Math.abs(swipeX) > 90 && (
+                    <span className="text-xs font-medium text-white whitespace-nowrap">More</span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {onReply && (
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReply(); setSwipeX(0); }} data-testid={`menu-reply-${emailId}`}>
+                    <Reply className="w-4 h-4 mr-2" />
+                    Reply
+                  </DropdownMenuItem>
+                )}
+                {onReplyAll && (
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReplyAll(); setSwipeX(0); }} data-testid={`menu-reply-all-${emailId}`}>
+                    <ReplyAll className="w-4 h-4 mr-2" />
+                    Reply All
+                  </DropdownMenuItem>
+                )}
+                {onForward && (
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onForward(); setSwipeX(0); }} data-testid={`menu-forward-${emailId}`}>
+                    <Forward className="w-4 h-4 mr-2" />
+                    Forward
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                {onMoveToFolder && (
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToFolder(); setSwipeX(0); }} data-testid={`menu-move-${emailId}`}>
+                    <FolderInput className="w-4 h-4 mr-2" />
+                    Move to Folder
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive(); setSwipeX(0); }} data-testid={`menu-archive-${emailId}`}>
+                  <Archive className="w-4 h-4 mr-2" />
+                  Archive
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStar(); setSwipeX(0); }} data-testid={`menu-star-${emailId}`}>
+                  <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
+                  {isStarred ? "Unstar" : "Star"}
+                </DropdownMenuItem>
+                {onToggleFlag && (
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFlag(); setSwipeX(0); }} data-testid={`menu-flag-${emailId}`}>
+                    <Flag className={`w-4 h-4 mr-2 ${isFlagged ? "fill-red-400 text-red-400" : ""}`} />
+                    {isFlagged ? "Unflag" : "Flag"}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )
         )}
         {Math.abs(swipeX) > 30 && (

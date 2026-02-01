@@ -46,10 +46,14 @@ interface EmailListProps {
   onTrashMultipleEmails: (emailIds: (string | number)[]) => void;
   onArchiveMultipleEmails: (emailIds: (string | number)[]) => void;
   onToggleStar: (emailId: string | number) => void;
+  onToggleFlag?: (emailId: string | number) => void;
   onTrashSingleEmail: (emailId: string | number) => void;
   onArchiveSingleEmail: (emailId: string | number) => void;
   onRestoreSingleEmail?: (emailId: string | number) => void;
   onPermanentDeleteSingleEmail?: (emailId: string | number) => void;
+  onMoveToFolder?: (emailId: string | number) => void;
+  onReplyEmail?: (email: EmailWithNylasId) => void;
+  onForwardEmail?: (email: EmailWithNylasId) => void;
   isAiLoading?: boolean;
   isMoving?: boolean;
   isLoading?: boolean;
@@ -135,7 +139,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing }: EmailListProps) {
   const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -732,6 +736,12 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 onPermanentDelete={onPermanentDeleteSingleEmail ? () => onPermanentDeleteSingleEmail(emailId) : undefined}
                 onRestore={onRestoreSingleEmail ? () => onRestoreSingleEmail(emailId) : undefined}
                 onToggleStar={() => onToggleStar(emailId)}
+                isFlagged={email.isFlagged || false}
+                onToggleFlag={onToggleFlag ? () => onToggleFlag(emailId) : undefined}
+                onReply={onReplyEmail ? () => onReplyEmail(email) : undefined}
+                onReplyAll={onReplyEmail ? () => onReplyEmail(email) : undefined}
+                onForward={onForwardEmail ? () => onForwardEmail(email) : undefined}
+                onMoveToFolder={onMoveToFolder ? () => onMoveToFolder(emailId) : undefined}
                 onLongPressStart={() => handleLongPressStart(emailId)}
                 onLongPressEnd={handleLongPressEnd}
                 onMouseEnterWhileDragging={() => handleMouseEnterWhileDragging(emailId)}
