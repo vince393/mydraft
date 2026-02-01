@@ -173,16 +173,15 @@ export function SwipeableEmailItem({
     if (isSelectionMode) return;
     setIsSwiping(false);
     
+    // If swiped past delete threshold, trigger delete on release
     if (swipeX <= -deleteThreshold) {
-      setSwipeX(-maxSwipe);
-      setTimeout(() => {
-        onDelete();
-        setSwipeX(0);
-        setIsRevealed(false);
-      }, 150);
+      onDelete();
+      setSwipeX(0);
+      setIsRevealed(false);
       return;
     }
 
+    // If swiped past half the reveal threshold, keep buttons visible
     if (swipeX <= -revealThreshold / 2) {
       setSwipeX(-revealThreshold);
       setIsRevealed(true);
@@ -190,7 +189,7 @@ export function SwipeableEmailItem({
       setSwipeX(0);
       setIsRevealed(false);
     }
-  }, [swipeX, onDelete, isSelectionMode, onLongPressEnd]);
+  }, [swipeX, onDelete, isSelectionMode, onLongPressEnd, deleteThreshold, revealThreshold]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // Always trigger long press start for potential selection mode entry
