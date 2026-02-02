@@ -373,8 +373,8 @@ export async function registerRoutes(
     }
   });
 
-  // Resend verification code
-  app.post("/api/auth/resend-verification", authLimiter, async (req, res) => {
+  // Resend verification code (supports both endpoint names)
+  const resendCodeHandler = async (req: any, res: any) => {
     try {
       const { email, type } = req.body;
       
@@ -400,7 +400,10 @@ export async function registerRoutes(
       console.error("Resend verification error:", error);
       res.status(500).json({ error: "Failed to resend verification code" });
     }
-  });
+  };
+  
+  app.post("/api/auth/resend-code", authLimiter, resendCodeHandler);
+  app.post("/api/auth/resend-verification", authLimiter, resendCodeHandler);
 
   app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
