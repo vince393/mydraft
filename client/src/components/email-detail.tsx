@@ -537,13 +537,13 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
 
           {/* Summary section - button transforms into glossy card */}
           <div 
-            className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] rounded-2xl ${
+            className={`transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] rounded-2xl origin-top-left ${
               showSummary && (summaryData?.summary || isSummaryLoading) 
-                ? 'bg-gradient-to-br from-background/80 via-background/60 to-muted/40 border border-border/50 shadow-lg shadow-black/5 backdrop-blur-sm' 
-                : ''
+                ? 'bg-gradient-to-br from-background/90 via-background/70 to-muted/50 border border-border/40 shadow-xl shadow-black/10 backdrop-blur-md scale-100 opacity-100' 
+                : 'scale-95 opacity-100'
             }`}
             style={{
-              transform: showSummary && (summaryData?.summary || isSummaryLoading) ? 'scale(1)' : 'scale(1)',
+              transformOrigin: 'top left',
             }}
           >
             {/* Header row - either button or expanded title */}
