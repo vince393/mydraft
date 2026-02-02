@@ -6688,7 +6688,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
     next();
   }
-
+  
   // Get all campaigns for the current user
   app.get("/api/campaigns", requireAuth, requireBusinessPlan, async (req, res) => {
     try {
