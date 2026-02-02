@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Archive, Trash2, Star, Check, RotateCcw, MoreHorizontal, Reply, ReplyAll, Forward, FolderInput, Flag } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SmartAvatar } from "@/components/smart-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +41,6 @@ interface SwipeableEmailItemProps {
   onLongPressEnd: () => void;
   onMouseEnterWhileDragging: () => void;
   formatTime: (date: Date) => string;
-  getAvatarUrl: (email: string, name: string) => string;
 }
 
 // Percentage-based thresholds
@@ -81,7 +80,6 @@ export function SwipeableEmailItem({
   onLongPressEnd,
   onMouseEnterWhileDragging,
   formatTime,
-  getAvatarUrl,
 }: SwipeableEmailItemProps) {
   const isArchiveFolder = folder === "archived";
   const [swipeX, setSwipeX] = useState(0);
@@ -440,18 +438,12 @@ export function SwipeableEmailItem({
       >
         <div className="flex items-start gap-3">
           <div className="relative flex-shrink-0">
-            <Avatar className="w-10 h-10">
-              <AvatarImage 
-                src={getAvatarUrl(senderEmail, sender)} 
-                alt={sender}
-              />
-              <AvatarFallback 
-                style={{ backgroundColor: avatarColor }}
-                className="text-white text-xs font-medium"
-              >
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <SmartAvatar 
+              email={senderEmail}
+              name={sender}
+              className="w-10 h-10"
+              fallbackClassName="text-white text-xs font-medium"
+            />
             {!isRead && !isSelectionMode && (
               <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-background" />
             )}

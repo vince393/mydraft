@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { SwipeableEmailItem } from "@/components/swipeable-email-item";
 import { AiInboxRefreshButton } from "@/components/ai-inbox-refresh";
-import { getAvatarUrl } from "@/lib/avatar";
 import type { Email } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -750,7 +749,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 onLongPressEnd={handleLongPressEnd}
                 onMouseEnterWhileDragging={() => handleMouseEnterWhileDragging(emailId)}
                 formatTime={formatEmailTime}
-                getAvatarUrl={getAvatarUrl}
               />
             </div>
           );

@@ -1,5 +1,3 @@
-// Simple MD5 implementation for Gravatar
-// Based on Joseph Myers' implementation
 function md5(string: string): string {
   function rotateLeft(value: number, shift: number): number {
     return (value << shift) | (value >>> (32 - shift));
@@ -160,27 +158,63 @@ function md5(string: string): string {
   return (wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d)).toLowerCase();
 }
 
-/**
- * Get avatar URL for an email address
- * Uses Gravatar for real profile pictures with DiceBear as fallback
- */
+const freeEmailDomains = new Set([
+  'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
+  'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com',
+  'gmx.com', 'fastmail.com', 'tutanota.com', 'live.com', 'msn.com',
+  'me.com', 'mac.com', 'googlemail.com'
+]);
+
+function getDomain(email: string): string | null {
+  if (!email || !email.includes('@')) return null;
+  return email.split('@')[1]?.toLowerCase() || null;
+}
+
+function isBusinessEmail(email: string): boolean {
+  if (!email || !email.includes('@')) return false;
+  const domain = getDomain(email);
+  return domain ? !freeEmailDomains.has(domain) : false;
+}
+
+export function getInitialsUrl(name: string): string {
+  const seed = encodeURIComponent(name);
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=3b82f6,8b5cf6,ec4899,f97316,84cc16,06b6d4,10b981`;
+}
+
+export function getGravatarUrl(email: string): string {
+  const emailHash = md5(email.toLowerCase().trim());
+  return `https://www.gravatar.com/avatar/${emailHash}?s=80&d=404`;
+}
+
+export function getCompanyLogoUrl(email: string): string | null {
+  const domain = getDomain(email);
+  if (!domain || !isBusinessEmail(email)) return null;
+  return `https://logo.clearbit.com/${domain}`;
+}
+
+export interface AvatarSources {
+  gravatar: string | null;
+  companyLogo: string | null;
+  initials: string;
+}
+
+export function getAvatarSources(email: string, name: string): AvatarSources {
+  return {
+    gravatar: email ? getGravatarUrl(email) : null,
+    companyLogo: email ? getCompanyLogoUrl(email) : null,
+    initials: getInitialsUrl(name || email || 'Unknown'),
+  };
+}
+
 export function getAvatarUrl(email: string, name: string): string {
   if (!email) {
-    // If no email, use DiceBear with name
-    const seed = encodeURIComponent(name);
-    return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=3b82f6,8b5cf6,ec4899,f97316,84cc16,06b6d4,10b981`;
+    return getInitialsUrl(name);
   }
 
-  // Generate MD5 hash of lowercase trimmed email for Gravatar
   const emailHash = md5(email.toLowerCase().trim());
+  const seed = encodeURIComponent(name || email);
+  const initialsUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=3b82f6,8b5cf6,ec4899,f97316,84cc16,06b6d4,10b981`;
+  const fallbackUrl = encodeURIComponent(initialsUrl);
   
-  // Create DiceBear fallback URL
-  const seed = encodeURIComponent(email || name);
-  const fallbackUrl = encodeURIComponent(
-    `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=3b82f6,8b5cf6,ec4899,f97316,84cc16,06b6d4,10b981`
-  );
-
-  // Gravatar URL with DiceBear fallback
-  // Size 80 is good for most avatars, and we use 'd=' for default fallback
   return `https://www.gravatar.com/avatar/${emailHash}?s=80&d=${fallbackUrl}`;
 }

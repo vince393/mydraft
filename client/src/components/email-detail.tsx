@@ -40,7 +40,7 @@ import { Input } from "@/components/ui/input";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { getAvatarUrl } from "@/lib/avatar";
+import { SmartAvatar } from "@/components/smart-avatar";
 import { formatEmailBody } from "@/lib/email-formatter";
 import type { Email, Draft } from "@shared/schema";
 
@@ -710,18 +710,12 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                   data-testid={`thread-email-${firstOlderEmail.nylasId || firstOlderEmail.id}`}
                 >
                   <div className="flex items-start gap-3 mb-3">
-                    <Avatar className="w-8 h-8 ring-1 ring-border/30">
-                      <AvatarImage 
-                        src={getAvatarUrl(firstOlderEmail.senderEmail, firstOlderEmail.sender)} 
-                        alt={firstOlderEmail.sender}
-                      />
-                      <AvatarFallback 
-                        style={{ backgroundColor: firstOlderEmail.avatarColor }}
-                        className="text-white font-medium text-xs"
-                      >
-                        {firstInitials}
-                      </AvatarFallback>
-                    </Avatar>
+                    <SmartAvatar 
+                      email={firstOlderEmail.senderEmail}
+                      name={firstOlderEmail.sender}
+                      className="w-8 h-8 ring-1 ring-border/30"
+                      fallbackClassName="text-white font-medium text-xs"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">{firstOlderEmail.sender}</span>
@@ -783,18 +777,12 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                                 data-testid={`thread-email-${threadEmailId}`}
                               >
                                 <div className="flex items-start gap-3 mb-3">
-                                  <Avatar className="w-8 h-8 ring-1 ring-border/30">
-                                    <AvatarImage 
-                                      src={getAvatarUrl(threadEmail.senderEmail, threadEmail.sender)} 
-                                      alt={threadEmail.sender}
-                                    />
-                                    <AvatarFallback 
-                                      style={{ backgroundColor: threadEmail.avatarColor }}
-                                      className="text-white font-medium text-xs"
-                                    >
-                                      {threadInitials}
-                                    </AvatarFallback>
-                                  </Avatar>
+                                  <SmartAvatar 
+                                    email={threadEmail.senderEmail}
+                                    name={threadEmail.sender}
+                                    className="w-8 h-8 ring-1 ring-border/30"
+                                    fallbackClassName="text-white font-medium text-xs"
+                                  />
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium text-sm">{threadEmail.sender}</span>
@@ -830,18 +818,12 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
           
           {/* Current/Latest email */}
           <div className="flex items-start gap-3 mb-5">
-            <Avatar className="w-10 h-10 ring-2 ring-border/30">
-              <AvatarImage 
-                src={getAvatarUrl(email.senderEmail, email.sender)} 
-                alt={email.sender}
-              />
-              <AvatarFallback 
-                style={{ backgroundColor: email.avatarColor }}
-                className="text-white font-medium text-sm"
-              >
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <SmartAvatar 
+              email={email.senderEmail}
+              name={email.sender}
+              className="w-10 h-10 ring-2 ring-border/30"
+              fallbackClassName="text-white font-medium text-sm"
+            />
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
