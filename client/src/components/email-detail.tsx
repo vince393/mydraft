@@ -335,13 +335,14 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
     onClearDraft?.();
   };
 
-  const handleRefine = async () => {
-    if (!refineInput.trim() || !draftContent.trim()) return;
+  const handleRefine = async (instruction?: string) => {
+    const refineText = instruction || refineInput.trim();
+    if (!refineText || !draftContent.trim()) return;
     setIsRefining(true);
     try {
       const response = await apiRequest("POST", "/api/ai/refine", {
         text: draftContent,
-        instruction: refineInput,
+        instruction: refineText,
         originalEmail: email ? {
           sender: email.sender,
           senderEmail: (email as any).senderEmail || email.sender,
@@ -364,6 +365,47 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
       });
     } finally {
       setIsRefining(false);
+    }
+  };
+
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+  const handleGenerateImage = async () => {
+    if (!hasPro) {
+      onUpgradeNeeded?.();
+      return;
+    }
+    if (!draftContent.trim()) {
+      toast({
+        title: "No content",
+        description: "Write some content first to generate a related image.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsGeneratingImage(true);
+    try {
+      const response = await apiRequest("POST", "/api/ai/generate-image", {
+        context: draftContent,
+        emailSubject: email?.subject || "",
+      });
+      const data = await response.json();
+      if (data.imageUrl) {
+        // Append image markdown to draft
+        setDraftContent(prev => prev + `\n\n![Generated Image](${data.imageUrl})`);
+        toast({
+          title: "Image generated",
+          description: "Image has been added to your draft.",
+        });
+      }
+    } catch {
+      toast({
+        title: "Image generation failed",
+        description: "Could not generate an image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImage(false);
     }
   };
 
@@ -918,35 +960,96 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                 data-testid="textarea-draft"
               />
               {generatedDraft.status !== "scheduled" && draftContent.trim() && (
-                <div className="flex items-center gap-2 mt-3 p-2 bg-background/30 rounded-lg border border-border/20" data-testid="refine-bar">
-                  <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
-                  <Input
-                    value={refineInput}
-                    onChange={(e) => setRefineInput(e.target.value)}
-                    placeholder="Tell AI how to modify this draft..."
-                    className="flex-1 h-8 border-0 bg-transparent focus-visible:ring-0 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleRefine();
-                      }
-                    }}
-                    disabled={isRefining}
-                    data-testid="input-refine"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleRefine}
-                    disabled={!refineInput.trim() || isRefining}
-                    className="h-7 px-3 text-xs"
-                    data-testid="button-refine"
-                  >
-                    {isRefining ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      "Refine"
-                    )}
-                  </Button>
+                <div className="mt-3 space-y-2">
+                  {/* Quick action buttons */}
+                  <div className="flex flex-wrap gap-1.5" data-testid="quick-actions">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRefine("Make this response shorter and more concise")}
+                      disabled={isRefining}
+                      className="h-7 px-2.5 text-xs"
+                      data-testid="button-shorter"
+                    >
+                      Shorter
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRefine("Make this response longer with more detail")}
+                      disabled={isRefining}
+                      className="h-7 px-2.5 text-xs"
+                      data-testid="button-longer"
+                    >
+                      Longer
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRefine("Make this more formal and professional")}
+                      disabled={isRefining}
+                      className="h-7 px-2.5 text-xs"
+                      data-testid="button-formal"
+                    >
+                      More Formal
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRefine("Make this more casual and friendly")}
+                      disabled={isRefining}
+                      className="h-7 px-2.5 text-xs"
+                      data-testid="button-casual"
+                    >
+                      More Casual
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleGenerateImage}
+                      disabled={isRefining || isGeneratingImage}
+                      className="h-7 px-2.5 text-xs gap-1"
+                      data-testid="button-generate-image"
+                    >
+                      {isGeneratingImage ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <ImageIcon className="w-3 h-3" />
+                      )}
+                      Add Image
+                    </Button>
+                  </div>
+                  {/* Custom refine input */}
+                  <div className="flex items-center gap-2 p-2 bg-background/30 rounded-lg border border-border/20" data-testid="refine-bar">
+                    <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                    <Input
+                      value={refineInput}
+                      onChange={(e) => setRefineInput(e.target.value)}
+                      placeholder="Or type custom instructions..."
+                      className="flex-1 h-8 border-0 bg-transparent focus-visible:ring-0 text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleRefine();
+                        }
+                      }}
+                      disabled={isRefining}
+                      data-testid="input-refine"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleRefine()}
+                      disabled={!refineInput.trim() || isRefining}
+                      className="h-7 px-3 text-xs"
+                      data-testid="button-refine"
+                    >
+                      {isRefining ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        "Refine"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
               <div className="flex items-center gap-2 mt-4">
