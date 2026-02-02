@@ -4,10 +4,10 @@ import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft, Sparkles, Zap, Shield, Clock } from "lucide-react";
+import logoPath from "@assets/image_1768612031318.png";
 
 interface AuthResponse {
   user: { id: string; email: string; plan?: string; onboardingCompleted?: boolean; emailVerified?: boolean; twoFactorEnabled?: boolean } | null;
@@ -151,29 +151,31 @@ export default function LoginPage() {
   });
 
   const resendCodeMutation = useMutation({
-    mutationFn: async (data: { email: string; type: string }) => {
-      const response = await apiRequest("POST", "/api/auth/resend-verification", data);
+    mutationFn: async (data: { email: string; type: "signup" | "login" }) => {
+      const response = await apiRequest("POST", "/api/auth/resend-code", data);
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Code sent",
+        title: "Code sent!",
         description: "A new verification code has been sent to your email.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to resend code",
-        description: error.message || "Could not send verification code",
+        title: "Failed to resend",
+        description: error.message || "Could not resend code",
         variant: "destructive",
       });
     },
   });
 
   const navigateAfterAuth = (user: AuthResponse["user"]) => {
-    if (!user?.plan || user.plan === "free") {
+    if (!user) return;
+    
+    if (!user.plan) {
       setLocation("/select-plan");
-    } else if (!user?.onboardingCompleted) {
+    } else if (!user.onboardingCompleted) {
       setLocation("/onboarding");
     } else {
       setLocation("/inbox");
@@ -185,14 +187,14 @@ export default function LoginPage() {
     
     if (!email) {
       newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = "Please enter a valid email";
     }
     
     if (!password) {
       newErrors.password = "Password is required";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else if (isRegister && password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
     }
     
     if (isRegister && password !== confirmPassword) {
@@ -256,82 +258,178 @@ export default function LoginPage() {
   const isPending = loginMutation.isPending || registerMutation.isPending;
   const isVerifying = verifyRegistrationMutation.isPending || verify2FAMutation.isPending;
 
+  const features = [
+    {
+      icon: Sparkles,
+      title: "AI-Powered Replies",
+      description: "Draft perfect responses in seconds with intelligent AI assistance"
+    },
+    {
+      icon: Zap,
+      title: "Lightning Fast",
+      description: "Process your inbox 10x faster with smart automation"
+    },
+    {
+      icon: Shield,
+      title: "Enterprise Security",
+      description: "Bank-level encryption keeps your emails safe and private"
+    },
+    {
+      icon: Clock,
+      title: "Save 2+ Hours Daily",
+      description: "Reclaim your time with automated inbox management"
+    }
+  ];
+
+  // Hero section component
+  const HeroSection = () => (
+    <div className="hidden lg:flex lg:flex-1 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Animated background elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+      
+      {/* Grid pattern overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
+      
+      <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
+        {/* Logo */}
+        <div className="mb-12">
+          <img src={logoPath} alt="MyDraft" className="h-10 w-auto" />
+        </div>
+        
+        {/* Main headline */}
+        <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight mb-6">
+          Your inbox,{" "}
+          <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
+            reimagined
+          </span>
+        </h1>
+        
+        <p className="text-lg xl:text-xl text-slate-300 mb-12 max-w-lg leading-relaxed">
+          Stop drowning in emails. Let AI handle the heavy lifting while you focus on what matters most.
+        </p>
+        
+        {/* Feature list */}
+        <div className="space-y-6">
+          {features.map((feature, index) => (
+            <div 
+              key={index} 
+              className="flex items-start gap-4 group"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:border-white/20 transition-all duration-300">
+                <feature.icon className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-white font-medium mb-1">{feature.title}</h3>
+                <p className="text-slate-400 text-sm">{feature.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Social proof */}
+        <div className="mt-16 pt-8 border-t border-white/10">
+          <p className="text-slate-400 text-sm mb-4">Trusted by professionals at</p>
+          <div className="flex items-center gap-6 text-slate-500">
+            <span className="text-sm font-medium">Google</span>
+            <span className="text-slate-700">•</span>
+            <span className="text-sm font-medium">Microsoft</span>
+            <span className="text-slate-700">•</span>
+            <span className="text-sm font-medium">Apple</span>
+            <span className="text-slate-700">•</span>
+            <span className="text-sm font-medium">Meta</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isLoggedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 sm:py-12">
-        <Card className="w-full max-w-md overflow-hidden">
-          <CardHeader className="text-center p-4 sm:p-6">
-            <CardTitle className="text-xl sm:text-2xl">Welcome back!</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              You're signed in as {authData?.user?.email}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
-            <Link href="/inbox">
-              <Button className="w-full gap-2" data-testid="button-go-to-inbox">
-                Go to Inbox
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-              data-testid="button-sign-out"
-            >
-              {logoutMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <LogOut className="w-4 h-4" />
-              )}
-              Sign out to use a different account
-            </Button>
-            <div className="text-center pt-2">
-              <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Back to home
-              </Link>
+      <div className="min-h-screen flex">
+        <HeroSection />
+        <div className="flex-1 flex items-center justify-center bg-background px-6 py-12">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <div className="lg:hidden mb-8">
+                <img src={logoPath} alt="MyDraft" className="h-8 w-auto mx-auto" />
+              </div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">Welcome back!</h2>
+              <p className="text-muted-foreground">
+                You're signed in as {authData?.user?.email}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="space-y-4">
+              <Link href="/inbox">
+                <Button className="w-full gap-2 h-12 text-base" data-testid="button-go-to-inbox">
+                  Go to Inbox
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                className="w-full gap-2 h-12"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+                data-testid="button-sign-out"
+              >
+                {logoutMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )}
+                Sign out
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (authStep === "verify-registration" || authStep === "verify-2fa") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 sm:py-12">
-        <Card className="w-full max-w-md overflow-hidden">
-          <CardHeader className="text-center p-4 sm:p-6">
-            <div className="mx-auto mb-3 sm:mb-4 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+      <div className="min-h-screen flex">
+        <HeroSection />
+        <div className="flex-1 flex items-center justify-center bg-background px-6 py-12">
+          <div className="w-full max-w-md">
+            <div className="lg:hidden mb-8 text-center">
+              <img src={logoPath} alt="MyDraft" className="h-8 w-auto mx-auto" />
             </div>
-            <CardTitle className="text-xl sm:text-2xl">
-              {authStep === "verify-registration" ? "Verify Your Email" : "Two-Factor Authentication"}
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              We've sent a 6-digit verification code to<br />
-              <span className="font-medium text-foreground">{pendingEmail}</span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-            <form onSubmit={handleVerifyCode} className="space-y-4">
+            
+            <div className="text-center mb-8">
+              <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Mail className="w-7 h-7 text-primary" />
+              </div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">
+                {authStep === "verify-registration" ? "Verify Your Email" : "Two-Factor Authentication"}
+              </h2>
+              <p className="text-muted-foreground">
+                We've sent a 6-digit code to<br />
+                <span className="font-medium text-foreground">{pendingEmail}</span>
+              </p>
+            </div>
+            
+            <form onSubmit={handleVerifyCode} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="code">Verification Code</Label>
+                <Label htmlFor="code" className="text-sm font-medium">Verification Code</Label>
                 <Input
                   id="code"
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={6}
-                  placeholder="Enter 6-digit code"
+                  placeholder="000000"
                   value={verificationCode}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, "");
                     setVerificationCode(value);
                     if (errors.code) setErrors({});
                   }}
-                  className="text-center text-2xl tracking-widest"
+                  className="text-center text-2xl tracking-[0.5em] h-14 font-mono"
                   autoFocus
                   data-testid="input-verification-code"
                 />
@@ -340,16 +438,16 @@ export default function LoginPage() {
               
               <Button 
                 type="submit" 
-                className="w-full"
+                className="w-full h-12 text-base"
                 disabled={isVerifying || verificationCode.length !== 6}
                 data-testid="button-verify-code"
               >
                 {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Verify
+                Verify Email
               </Button>
             </form>
 
-            <div className="mt-6 space-y-4">
+            <div className="mt-8 space-y-4">
               <div className="text-center">
                 <button
                   type="button"
@@ -374,48 +472,66 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 sm:py-12">
-      <Card className="w-full max-w-md overflow-hidden">
-        <CardHeader className="text-center p-4 sm:p-6">
-          <CardTitle className="text-xl sm:text-2xl">Welcome</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
-            {isRegister ? "Create your account to get started" : "Sign in to your account"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="min-h-screen flex">
+      <HeroSection />
+      
+      <div className="flex-1 flex items-center justify-center bg-background px-6 py-12">
+        <div className="w-full max-w-md">
+          {/* Mobile logo */}
+          <div className="lg:hidden mb-8 text-center">
+            <img src={logoPath} alt="MyDraft" className="h-8 w-auto mx-auto mb-6" />
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              {isRegister ? "Start your free trial" : "Welcome back"}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {isRegister ? "No credit card required" : "Sign in to continue to your inbox"}
+            </p>
+          </div>
+          
+          {/* Desktop header */}
+          <div className="hidden lg:block mb-8">
+            <h2 className="text-2xl font-semibold text-foreground mb-2">
+              {isRegister ? "Create your account" : "Welcome back"}
+            </h2>
+            <p className="text-muted-foreground">
+              {isRegister ? "Start your 14-day free trial. No credit card required." : "Sign in to continue to your inbox"}
+            </p>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete={isRegister ? "email" : "email"}
+                className="h-12"
                 data-testid={isRegister ? "input-register-email" : "input-login-email"}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
               <div className="relative flex items-center">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder={isRegister ? "Create a password" : "Enter your password"}
+                  placeholder={isRegister ? "Create a strong password" : "Enter your password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete={isRegister ? "new-password" : "current-password"}
-                  className="pr-10"
+                  className="pr-10 h-12"
                   data-testid={isRegister ? "input-register-password" : "input-login-password"}
                 />
                 <button
@@ -436,7 +552,7 @@ export default function LoginPage() {
             
             {isRegister && (
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm password</Label>
                 <div className="relative flex items-center">
                   <Input
                     id="confirmPassword"
@@ -445,7 +561,7 @@ export default function LoginPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     autoComplete="new-password"
-                    className="pr-10"
+                    className="pr-10 h-12"
                     data-testid="input-register-confirm-password"
                   />
                   <button
@@ -467,43 +583,57 @@ export default function LoginPage() {
             
             <Button 
               type="submit" 
-              className="w-full"
+              className="w-full h-12 text-base font-medium"
               disabled={isPending}
               data-testid={isRegister ? "button-register-submit" : "button-login-submit"}
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isRegister ? "Create Account" : "Sign In"}
+              {isRegister ? "Start Free Trial" : "Sign In"}
+              {!isPending && <ArrowRight className="ml-2 w-4 h-4" />}
             </Button>
           </form>
 
-          <div className="mt-4 text-center">
+          <div className="mt-6 text-center">
             <button
               type="button"
               onClick={handleToggleMode}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               data-testid="button-toggle-auth-mode"
             >
-              {isRegister ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+              {isRegister ? (
+                <>Already have an account? <span className="text-primary font-medium">Sign in</span></>
+              ) : (
+                <>Don't have an account? <span className="text-primary font-medium">Start free trial</span></>
+              )}
             </button>
           </div>
 
-          <p className="mt-4 text-xs text-center text-muted-foreground leading-relaxed">
+          <p className="mt-8 text-xs text-center text-muted-foreground leading-relaxed">
             By {isRegister ? "creating an account" : "signing in"}, you agree to our{" "}
             <Link href="/terms" className="underline hover:text-foreground transition-colors">
               Terms of Service
             </Link>
-            ,{" "}
+            {" "}and{" "}
             <Link href="/privacy" className="underline hover:text-foreground transition-colors">
               Privacy Policy
             </Link>
-            , and{" "}
-            <Link href="/acceptable-use" className="underline hover:text-foreground transition-colors">
-              Acceptable Use Policy
-            </Link>
             .
           </p>
-        </CardContent>
-      </Card>
+          
+          {/* Mobile features preview */}
+          <div className="lg:hidden mt-12 pt-8 border-t border-border">
+            <p className="text-xs text-muted-foreground text-center mb-4">Why professionals choose MyDraft</p>
+            <div className="grid grid-cols-2 gap-4">
+              {features.slice(0, 4).map((feature, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <feature.icon className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-xs text-muted-foreground">{feature.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
