@@ -1581,13 +1581,24 @@ Business Development`,
 
   // 2FA Verification codes methods
   async createVerificationCode(email: string, type: string): Promise<VerificationCode> {
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    // Invalidate any existing unused codes for this email+type to prevent conflicts
+    await db.update(verificationCodes)
+      .set({ used: true })
+      .where(and(
+        eq(verificationCodes.email, normalizedEmail),
+        eq(verificationCodes.type, type),
+        eq(verificationCodes.used, false)
+      ));
+    
     // Generate a 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     // Code expires in 10 minutes
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     
     const [result] = await db.insert(verificationCodes).values({
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       code,
       type,
       expiresAt,
