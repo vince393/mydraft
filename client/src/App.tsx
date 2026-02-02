@@ -167,9 +167,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   const user = authData.user;
 
-  // New flow: Login → Onboarding → Pricing → Connect Email
-  // Step 1: Complete onboarding first
-  if (!user.onboardingCompleted && location !== "/onboarding") {
+  // New flow: Login → Onboarding → Checkout → Connect Email
+  // Step 1: Complete onboarding first (but allow checkout since it's part of onboarding)
+  if (!user.onboardingCompleted && location !== "/onboarding" && !location.startsWith("/checkout")) {
     return <Redirect to="/onboarding" />;
   }
 
