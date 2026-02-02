@@ -156,11 +156,29 @@ interface Testimonial {
   createdAt: string;
 }
 
+interface OwnerNote {
+  id: number;
+  content: string;
+  category: string;
+  isPinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const EXPENSE_CATEGORIES = [
   { value: "replit", label: "Replit", color: "#3B82F6" },
   { value: "nylas", label: "Nylas", color: "#8B5CF6" },
   { value: "openai", label: "OpenAI", color: "#10B981" },
   { value: "stripe", label: "Stripe", color: "#F59E0B" },
+  { value: "google", label: "Google Cloud", color: "#4285F4" },
+  { value: "aws", label: "AWS", color: "#FF9900" },
+  { value: "cloudflare", label: "Cloudflare", color: "#F38020" },
+  { value: "vercel", label: "Vercel", color: "#000000" },
+  { value: "domain", label: "Domain & DNS", color: "#0EA5E9" },
+  { value: "analytics", label: "Analytics", color: "#6366F1" },
+  { value: "marketing", label: "Marketing", color: "#EC4899" },
+  { value: "design", label: "Design Tools", color: "#A855F7" },
+  { value: "legal", label: "Legal & Compliance", color: "#64748B" },
   { value: "other", label: "Other", color: "#6B7280" },
 ];
 
@@ -187,6 +205,15 @@ export default function OwnerPanel() {
     description: "",
     billingPeriod: "monthly",
     isRecurring: false,
+  });
+  
+  // Notes state
+  const [showAddNoteForm, setShowAddNoteForm] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [newNote, setNewNote] = useState({
+    content: "",
+    category: "general",
+    isPinned: false,
   });
 
   const { data: isOwnerData, isLoading: checkingOwner } = useQuery<{ isOwner: boolean }>({
@@ -248,6 +275,12 @@ export default function OwnerPanel() {
   const { data: testimonialsList = [], isLoading: testimonialsLoading } = useQuery<Testimonial[]>({
     queryKey: ["/api/owner/testimonials"],
     enabled: isOwnerData?.isOwner === true && activeTab === "testimonials",
+  });
+
+  // Notes query
+  const { data: notesList = [], isLoading: notesLoading } = useQuery<OwnerNote[]>({
+    queryKey: ["/api/owner/notes"],
+    enabled: isOwnerData?.isOwner === true && activeTab === "notes",
   });
 
   const updateFeedbackMutation = useMutation({
@@ -387,6 +420,49 @@ export default function OwnerPanel() {
     },
     onError: () => {
       toast({ title: "Failed to delete testimonial", variant: "destructive" });
+    },
+  });
+
+  // Notes mutations
+  const createNoteMutation = useMutation({
+    mutationFn: async (note: typeof newNote) => {
+      return apiRequest("POST", "/api/owner/notes", note);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/notes"] });
+      toast({ title: "Note created" });
+      setShowAddNoteForm(false);
+      setNewNote({ content: "", category: "general", isPinned: false });
+    },
+    onError: () => {
+      toast({ title: "Failed to create note", variant: "destructive" });
+    },
+  });
+
+  const updateNoteMutation = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: number; content?: string; category?: string; isPinned?: boolean }) => {
+      return apiRequest("PATCH", `/api/owner/notes/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/notes"] });
+      toast({ title: "Note updated" });
+      setEditingNoteId(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update note", variant: "destructive" });
+    },
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/owner/notes/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/notes"] });
+      toast({ title: "Note deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete note", variant: "destructive" });
     },
   });
 
@@ -549,6 +625,10 @@ export default function OwnerPanel() {
             <TabsTrigger value="testimonials" data-testid="tab-testimonials">
               <Star className="w-4 h-4 mr-2" />
               Testimonials
+            </TabsTrigger>
+            <TabsTrigger value="notes" data-testid="tab-notes">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Notes
             </TabsTrigger>
           </TabsList>
 
@@ -1647,6 +1727,183 @@ export default function OwnerPanel() {
                       ))}
                     </div>
                   </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="notes">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Owner Notes</CardTitle>
+                    <CardDescription>Personal notes and reminders</CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setShowAddNoteForm(!showAddNoteForm)}
+                    data-testid="button-add-note"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Note
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {showAddNoteForm && (
+                  <div className="mb-6 p-4 border rounded-lg bg-muted/50 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium" data-testid="label-note-content">Note Content</label>
+                      <Textarea
+                        placeholder="Write your note here..."
+                        value={newNote.content}
+                        onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+                        className="min-h-[120px]"
+                        data-testid="input-note-content"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium" data-testid="label-note-category">Category</label>
+                        <Select
+                          value={newNote.category}
+                          onValueChange={(value) => setNewNote({ ...newNote, category: value })}
+                        >
+                          <SelectTrigger data-testid="select-note-category">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="general" data-testid="option-note-category-general">General</SelectItem>
+                            <SelectItem value="todo" data-testid="option-note-category-todo">To-Do</SelectItem>
+                            <SelectItem value="ideas" data-testid="option-note-category-ideas">Ideas</SelectItem>
+                            <SelectItem value="important" data-testid="option-note-category-important">Important</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2 pt-6">
+                        <Switch
+                          checked={newNote.isPinned}
+                          onCheckedChange={(checked) => setNewNote({ ...newNote, isPinned: checked })}
+                          data-testid="toggle-note-pinned"
+                        />
+                        <label className="text-sm" data-testid="label-note-pinned">Pin this note</label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => createNoteMutation.mutate(newNote)}
+                        disabled={!newNote.content.trim() || createNoteMutation.isPending}
+                        data-testid="button-save-note"
+                      >
+                        {createNoteMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Save Note
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowAddNoteForm(false);
+                          setNewNote({ content: "", category: "general", isPinned: false });
+                        }}
+                        data-testid="button-cancel-note"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {notesLoading ? (
+                  <div className="flex items-center justify-center py-12" data-testid="notes-loading">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : notesList.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground" data-testid="notes-empty-state">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p data-testid="text-notes-empty-title">No notes yet</p>
+                    <p className="text-sm mt-2" data-testid="text-notes-empty-hint">Click "Add Note" to create your first note</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4" data-testid="notes-list">
+                    {notesList.map((note) => {
+                      const categoryColors: Record<string, string> = {
+                        general: "bg-muted-foreground/70 dark:bg-muted-foreground/50",
+                        todo: "bg-blue-500 dark:bg-blue-400",
+                        ideas: "bg-purple-500 dark:bg-purple-400",
+                        important: "bg-destructive dark:bg-destructive",
+                      };
+                      return (
+                        <div
+                          key={note.id}
+                          className={`p-4 border rounded-lg ${note.isPinned ? "border-primary bg-primary/5" : ""}`}
+                          data-testid={`note-${note.id}`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className={`w-2 h-2 rounded-full ${categoryColors[note.category] || "bg-muted-foreground/70 dark:bg-muted-foreground/50"}`}
+                                  data-testid={`note-category-dot-${note.id}`}
+                                />
+                                <Badge variant="outline" className="text-xs" data-testid={`badge-note-category-${note.id}`}>
+                                  {note.category.charAt(0).toUpperCase() + note.category.slice(1)}
+                                </Badge>
+                                {note.isPinned && (
+                                  <Badge variant="secondary" className="text-xs" data-testid={`badge-note-pinned-${note.id}`}>Pinned</Badge>
+                                )}
+                              </div>
+                              {editingNoteId === note.id ? (
+                                <Textarea
+                                  defaultValue={note.content}
+                                  className="min-h-[100px]"
+                                  onBlur={(e) => {
+                                    if (e.target.value.trim() !== note.content) {
+                                      updateNoteMutation.mutate({ id: note.id, content: e.target.value.trim() });
+                                    } else {
+                                      setEditingNoteId(null);
+                                    }
+                                  }}
+                                  autoFocus
+                                  data-testid={`edit-note-${note.id}`}
+                                />
+                              ) : (
+                                <p 
+                                  className="text-sm whitespace-pre-wrap cursor-pointer p-2 rounded hover-elevate"
+                                  data-testid={`text-note-content-${note.id}`}
+                                  onClick={() => setEditingNoteId(note.id)}
+                                >
+                                  {note.content}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground" data-testid={`text-note-timestamp-${note.id}`}>
+                                Updated {format(new Date(note.updatedAt), "MMM d, yyyy h:mm a")}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => updateNoteMutation.mutate({ id: note.id, isPinned: !note.isPinned })}
+                                disabled={updateNoteMutation.isPending}
+                                data-testid={`pin-note-${note.id}`}
+                              >
+                                {note.isPinned ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => deleteNoteMutation.mutate(note.id)}
+                                disabled={deleteNoteMutation.isPending}
+                                className="text-destructive"
+                                data-testid={`delete-note-${note.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>

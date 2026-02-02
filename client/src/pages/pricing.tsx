@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Loader2, Star, ExternalLink, Sparkles, Zap, Users, ChevronDown, GraduationCap } from "lucide-react";
+import { Check, Loader2, Star, ExternalLink, Sparkles, Zap, Users, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AIPreferences {
@@ -33,7 +33,6 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
   
   // Score-based recommendation for more accuracy
   let freeScore = 0;
-  let studentScore = 0;
   let proScore = 0;
   let businessScore = 0;
   
@@ -45,11 +44,9 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
     businessScore += 2;
     proScore += 3;
   } else if (emailVolume === "medium") {
-    proScore += 2;
-    studentScore += 2;
+    proScore += 3;
   } else if (emailVolume === "low") {
     freeScore += 3;
-    studentScore += 1;
   }
   
   // Automation level scoring
@@ -58,7 +55,6 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
     proScore += 2;
   } else if (automationLevel === "medium") {
     proScore += 2;
-    studentScore += 1;
   } else if (automationLevel === "low") {
     freeScore += 2;
   }
@@ -68,8 +64,7 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
     businessScore += 2;
     proScore += 2;
   } else if (primaryUse === "personal") {
-    studentScore += 2;
-    freeScore += 1;
+    freeScore += 2;
   } else if (primaryUse === "both") {
     proScore += 2;
   }
@@ -81,9 +76,7 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
     proScore += 1;
   } else if (featureCount >= 2) {
     proScore += 2;
-    studentScore += 1;
   } else if (featureCount === 1) {
-    studentScore += 1;
     freeScore += 1;
   }
   
@@ -92,15 +85,9 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
     businessScore += 2;
   }
   
-  // Referral source hint for students
-  if (referralSource === "school" || referralSource === "university") {
-    studentScore += 3;
-  }
-  
   // Find the plan with highest score
   const scores = [
     { plan: "free", score: freeScore },
-    { plan: "student", score: studentScore },
     { plan: "pro", score: proScore },
     { plan: "business", score: businessScore },
   ];
@@ -111,8 +98,7 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
   
   // Default to pro if scores are tied or too close
   if (recommended.score === 0 || 
-      (recommended.plan === "free" && proScore >= freeScore - 1) ||
-      (recommended.plan === "student" && proScore >= studentScore)) {
+      (recommended.plan === "free" && proScore >= freeScore - 1)) {
     return "pro";
   }
   
@@ -141,23 +127,6 @@ function getRecommendationReasons(planId: string, aiPreferences: AIPreferences |
         "No commitment required",
         "Core inbox management features",
         "Upgrade anytime when you need more"
-      ]
-    };
-  }
-
-  if (planId === "student") {
-    return {
-      title: "Perfect for students",
-      reasons: [
-        "50% discount on Pro features",
-        "Email humanizer makes AI-written text sound natural",
-        "Great for essays, applications, and academic emails"
-      ],
-      benefits: [
-        "Make AI-generated emails sound like you wrote them",
-        "Unlimited AI replies for all your correspondence",
-        "Customize tone for professors, peers, or employers",
-        "Priority support when deadlines are tight"
       ]
     };
   }
@@ -249,26 +218,6 @@ const basePlans = [
       "Connect 1 email account",
       "Basic inbox management",
       "Standard support",
-    ],
-  },
-  {
-    id: "student",
-    name: "Student",
-    monthlyPrice: 5,
-    annualPrice: 45,
-    annualSavings: 15,
-    description: "50% student discount",
-    icon: GraduationCap,
-    color: "text-emerald-500",
-    stripeName: "MyDraft Student",
-    badge: "Student Discount",
-    features: [
-      "Connect 1 email account",
-      "Unlimited AI replies",
-      "Email humanizer",
-      "Make AI text sound natural",
-      "Tone customization",
-      "Priority support",
     ],
   },
   {
@@ -678,15 +627,7 @@ export default function PricingPage() {
                     </Badge>
                   </div>
                 )}
-                {!isRecommended && !isCurrentPlan && (plan as any).badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-emerald-500 text-white">
-                      <GraduationCap className="w-3 h-3 mr-1" />
-                      {(plan as any).badge}
-                    </Badge>
-                  </div>
-                )}
-                <CardHeader>
+                                <CardHeader>
                   <div className="flex items-center gap-2 mb-1">
                     <PlanIcon className={`w-5 h-5 ${plan.color}`} />
                     <CardTitle className="text-lg">{plan.name}</CardTitle>

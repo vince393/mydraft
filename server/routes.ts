@@ -2,7 +2,8 @@
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, desc, eq } from "drizzle-orm";
+import { ownerNotes } from "@shared/schema";
 import OpenAI from "openai";
 import { GoogleGenAI } from "@google/genai";
 import * as nylas from "./nylas";
@@ -6086,6 +6087,81 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  // ==================== OWNER NOTES ROUTES ====================
+  
+  // Get all owner notes
+  app.get("/api/owner/notes", requireOwner, async (req, res) => {
+    try {
+      const notes = await db.select().from(ownerNotes).orderBy(desc(ownerNotes.isPinned), desc(ownerNotes.updatedAt));
+      res.json(notes);
+    } catch (error) {
+      console.error("Error fetching owner notes:", error);
+      res.status(500).json({ error: "Failed to fetch notes" });
+    }
+  });
+  
+  // Create a new owner note
+  app.post("/api/owner/notes", requireOwner, async (req, res) => {
+    try {
+      const { content, category = "general", isPinned = false } = req.body;
+      
+      if (!content || content.trim() === "") {
+        return res.status(400).json({ error: "Note content is required" });
+      }
+      
+      const [note] = await db.insert(ownerNotes).values({
+        content: content.trim(),
+        category,
+        isPinned,
+      }).returning();
+      
+      res.json(note);
+    } catch (error) {
+      console.error("Error creating owner note:", error);
+      res.status(500).json({ error: "Failed to create note" });
+    }
+  });
+  
+  // Update an owner note
+  app.patch("/api/owner/notes/:id", requireOwner, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { content, category, isPinned } = req.body;
+      
+      const updates: any = { updatedAt: new Date() };
+      if (content !== undefined) updates.content = content.trim();
+      if (category !== undefined) updates.category = category;
+      if (isPinned !== undefined) updates.isPinned = isPinned;
+      
+      const [note] = await db.update(ownerNotes)
+        .set(updates)
+        .where(eq(ownerNotes.id, parseInt(id)))
+        .returning();
+      
+      if (!note) {
+        return res.status(404).json({ error: "Note not found" });
+      }
+      
+      res.json(note);
+    } catch (error) {
+      console.error("Error updating owner note:", error);
+      res.status(500).json({ error: "Failed to update note" });
+    }
+  });
+  
+  // Delete an owner note
+  app.delete("/api/owner/notes/:id", requireOwner, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      await db.delete(ownerNotes).where(eq(ownerNotes.id, parseInt(id)));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting owner note:", error);
+      res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+
   // ==================== STRIPE PAYMENT ROUTES ====================
   
   // Get Stripe publishable key for frontend
@@ -6159,7 +6235,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const { plan, interval } = req.body;
       
-      if (!plan || !["pro", "business", "student"].includes(plan)) {
+      if (!plan || !["pro", "business"].includes(plan)) {
         return res.status(400).json({ error: "Valid plan is required" });
       }
       
@@ -6212,7 +6288,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const { plan, interval, paymentMethodId } = req.body;
       
-      if (!plan || !["pro", "business", "student"].includes(plan)) {
+      if (!plan || !["pro", "business"].includes(plan)) {
         return res.status(400).json({ error: "Valid plan is required" });
       }
       
@@ -6251,10 +6327,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       
       // Define pricing
       const pricing: Record<string, Record<string, number>> = {
-        student: {
-          monthly: 500,   // $5.00 in cents
-          annual: 4500,   // $45.00 in cents
-        },
         pro: {
           monthly: 1000,  // $10.00 in cents
           annual: 9900,   // $99.00 in cents
@@ -6267,7 +6339,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       
       const amount = pricing[plan][interval];
       const recurringInterval = interval === "annual" ? "year" : "month";
-      const productName = plan === "student" ? "MyDraft Student" : plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
+      const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
       
       // Attach payment method to customer
       await stripe.paymentMethods.attach(paymentMethodId, {
@@ -6341,8 +6413,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const { plan, interval } = req.body;
       
-      if (!plan || !["student", "pro", "business"].includes(plan)) {
-        return res.status(400).json({ error: "Valid plan (student, pro, or business) is required" });
+      if (!plan || !["pro", "business"].includes(plan)) {
+        return res.status(400).json({ error: "Valid plan (pro or business) is required" });
       }
       
       if (!interval || !["annual", "monthly"].includes(interval)) {
@@ -6359,10 +6431,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       
       // Define pricing (in cents)
       const pricing: Record<string, Record<string, number>> = {
-        student: {
-          monthly: 500,   // $5.00 in cents
-          annual: 4500,   // $45.00 in cents
-        },
         pro: {
           monthly: 1000,  // $10.00 in cents
           annual: 9900,   // $99.00 in cents
@@ -6376,7 +6444,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const amount = pricing[plan][interval];
       const recurringInterval = interval === "annual" ? "year" : "month";
       const productNames: Record<string, string> = {
-        student: "MyDraft Student",
         pro: "MyDraft Pro",
         business: "MyDraft Business",
       };

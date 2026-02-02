@@ -909,3 +909,22 @@ export const insertCampaignRecipientSchema = createInsertSchema(campaignRecipien
 
 export type CampaignRecipient = typeof campaignRecipients.$inferSelect;
 export type InsertCampaignRecipient = z.infer<typeof insertCampaignRecipientSchema>;
+
+// Owner Notes - personal notes for the owner panel
+export const ownerNotes = pgTable("owner_notes", {
+  id: serial("id").primaryKey(),
+  content: text("content").notNull(),
+  category: text("category").default("general").notNull(), // "general", "todo", "ideas", "important"
+  isPinned: boolean("is_pinned").default(false).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertOwnerNoteSchema = createInsertSchema(ownerNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type OwnerNote = typeof ownerNotes.$inferSelect;
+export type InsertOwnerNote = z.infer<typeof insertOwnerNoteSchema>;
