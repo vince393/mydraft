@@ -6341,8 +6341,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const { plan, interval } = req.body;
       
-      if (!plan || !["pro", "business"].includes(plan)) {
-        return res.status(400).json({ error: "Valid plan (pro or business) is required" });
+      if (!plan || !["student", "pro", "business"].includes(plan)) {
+        return res.status(400).json({ error: "Valid plan (student, pro, or business) is required" });
       }
       
       if (!interval || !["annual", "monthly"].includes(interval)) {
@@ -6357,21 +6357,30 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
       
-      // Define pricing
+      // Define pricing (in cents)
       const pricing: Record<string, Record<string, number>> = {
+        student: {
+          monthly: 500,   // $5.00 in cents
+          annual: 4500,   // $45.00 in cents
+        },
         pro: {
-          monthly: 1900,  // $19.00 in cents
-          annual: 19900,  // $199.00 in cents
+          monthly: 1000,  // $10.00 in cents
+          annual: 9900,   // $99.00 in cents
         },
         business: {
-          monthly: 4900,  // $49.00 in cents
+          monthly: 2900,  // $29.00 in cents
           annual: 29900,  // $299.00 in cents
         },
       };
       
       const amount = pricing[plan][interval];
       const recurringInterval = interval === "annual" ? "year" : "month";
-      const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
+      const productNames: Record<string, string> = {
+        student: "MyDraft Student",
+        pro: "MyDraft Pro",
+        business: "MyDraft Business",
+      };
+      const productName = productNames[plan];
       
       // Create or get customer
       let customerId = user.stripeCustomerId;
