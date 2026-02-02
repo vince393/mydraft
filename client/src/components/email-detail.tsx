@@ -509,125 +509,163 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
         </div>
       </div>
 
-      {/* AI Action Bar with inline expandable summary */}
+      {/* AI Action Bar - buttons transform into expanded panels */}
       <div className="border-b border-border/20 bg-muted/20">
-        <div className="flex items-center gap-2 px-4 sm:px-6 py-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            className={`h-8 gap-1.5 text-xs transition-all duration-200 ${showSummary ? 'bg-foreground/10 rounded-b-none' : ''}`}
-            onClick={handleSummarize}
-            disabled={isSummaryLoading}
-            data-testid="button-summarize"
-          >
-            {isSummaryLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <FileText className="w-3.5 h-3.5" />
-            )}
-            Summarize
-            {!hasPro && (
-              <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
-                Pro
-              </span>
-            )}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 gap-1.5 text-xs"
-            onClick={handleAiDraftClick}
-            data-testid="button-ai-draft"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Draft Reply
-            {!hasPro && (
-              <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
-                Pro
-              </span>
-            )}
-          </Button>
-        </div>
-        
-        {/* Inline Summary - expands from button */}
-        <div 
-          className={`overflow-hidden transition-all duration-300 ease-out ${
+        <div className="flex flex-col">
+          {/* Draft Reply button - moves to top when summary is open */}
+          <div className={`flex items-center gap-2 px-4 sm:px-6 transition-all duration-300 ${
+            showSummary && (summaryData?.summary || isSummaryLoading) ? 'py-2 order-first' : 'py-0 h-0 overflow-hidden opacity-0'
+          }`}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1.5 text-xs"
+              onClick={handleAiDraftClick}
+              data-testid="button-ai-draft-top"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Draft Reply
+              {!hasPro && (
+                <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
+                  Pro
+                </span>
+              )}
+            </Button>
+          </div>
+
+          {/* Summary section - button transforms into header */}
+          <div className={`transition-all duration-300 ease-out ${
             showSummary && (summaryData?.summary || isSummaryLoading) 
-              ? 'max-h-[500px] opacity-100' 
-              : 'max-h-0 opacity-0'
-          }`}
-          data-testid="ai-summary-section"
-        >
-          <div className="mx-4 sm:mx-6 mb-3 p-3 bg-foreground/5 rounded-lg border border-border/30">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-foreground/80">AI Summary</span>
-                {isTyping && (
-                  <span className="flex items-center gap-0.5">
-                    <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" />
-                    <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0.15s' }} />
-                    <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0.3s' }} />
-                  </span>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 hover:bg-foreground/10"
-                onClick={() => setShowSummary(false)}
-                data-testid="button-hide-summary"
-              >
-                <X className="w-3 h-3" />
-              </Button>
+              ? 'bg-foreground/5' 
+              : ''
+          }`}>
+            {/* Header row - either button or expanded title */}
+            <div className="flex items-center gap-2 px-4 sm:px-6 py-2">
+              {showSummary && (summaryData?.summary || isSummaryLoading) ? (
+                /* Expanded state - title with close button */
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5 text-foreground/70" />
+                    <span className="text-xs font-medium text-foreground/80">Summarize</span>
+                    {(isTyping || isSummaryLoading) && (
+                      <span className="flex items-center gap-0.5 ml-1">
+                        <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" />
+                        <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0.15s' }} />
+                        <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0.3s' }} />
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-foreground/10"
+                    onClick={() => setShowSummary(false)}
+                    data-testid="button-hide-summary"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                /* Collapsed state - normal buttons */
+                <>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 gap-1.5 text-xs"
+                    onClick={handleSummarize}
+                    disabled={isSummaryLoading}
+                    data-testid="button-summarize"
+                  >
+                    {isSummaryLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <FileText className="w-3.5 h-3.5" />
+                    )}
+                    Summarize
+                    {!hasPro && (
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
+                        Pro
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 gap-1.5 text-xs"
+                    onClick={handleAiDraftClick}
+                    data-testid="button-ai-draft"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Draft Reply
+                    {!hasPro && (
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
+                        Pro
+                      </span>
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
-            {isSummaryLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground text-xs py-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Analyzing email...</span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-foreground/85 leading-relaxed" data-testid="summary-text">
-                  {displayedSummary || summaryData?.summary}
-                  {isTyping && <span className="inline-block w-0.5 h-3 bg-foreground/50 ml-0.5 animate-pulse" />}
-                </p>
-                {!isTyping && summaryData?.keyPoints && summaryData.keyPoints.length > 0 && (
-                  <div className="pt-1">
-                    <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">Key Points</p>
-                    <ul className="space-y-0.5">
-                      {summaryData.keyPoints.map((point, i) => (
-                        <li 
-                          key={i} 
-                          className="text-xs text-foreground/75 flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1"
-                          style={{ animationDelay: `${i * 50}ms`, animationDuration: '200ms' }}
-                        >
-                          <Circle className="w-1 h-1 text-foreground/40 mt-1.5 fill-foreground/40 flex-shrink-0" />
-                          <span>{point}</span>
-                        </li>
-                      ))}
-                    </ul>
+
+            {/* Summary content - expands below the header */}
+            <div 
+              className={`overflow-hidden transition-all duration-300 ease-out ${
+                showSummary && (summaryData?.summary || isSummaryLoading) 
+                  ? 'max-h-[500px] opacity-100 pb-3' 
+                  : 'max-h-0 opacity-0'
+              }`}
+              data-testid="ai-summary-section"
+            >
+              <div className="px-4 sm:px-6">
+                {isSummaryLoading ? (
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs py-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Analyzing email...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-foreground/85 leading-relaxed" data-testid="summary-text">
+                      {displayedSummary || summaryData?.summary}
+                      {isTyping && <span className="inline-block w-0.5 h-3 bg-foreground/50 ml-0.5 animate-pulse" />}
+                    </p>
+                    {!isTyping && summaryData?.keyPoints && summaryData.keyPoints.length > 0 && (
+                      <div className="pt-1">
+                        <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">Key Points</p>
+                        <ul className="space-y-0.5">
+                          {summaryData.keyPoints.map((point, i) => (
+                            <li 
+                              key={i} 
+                              className="text-xs text-foreground/75 flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1"
+                              style={{ animationDelay: `${i * 50}ms`, animationDuration: '200ms' }}
+                            >
+                              <Circle className="w-1 h-1 text-foreground/40 mt-1.5 fill-foreground/40 flex-shrink-0" />
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {!isTyping && summaryData?.actionItems && summaryData.actionItems.length > 0 && (
+                      <div className="pt-1">
+                        <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">Action Items</p>
+                        <ul className="space-y-0.5">
+                          {summaryData.actionItems.map((item, i) => (
+                            <li 
+                              key={i} 
+                              className="text-xs text-foreground/75 flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1"
+                              style={{ animationDelay: `${100 + i * 50}ms`, animationDuration: '200ms' }}
+                            >
+                              <ArrowRight className="w-2.5 h-2.5 text-foreground/40 mt-0.5 flex-shrink-0" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
-                {!isTyping && summaryData?.actionItems && summaryData.actionItems.length > 0 && (
-                  <div className="pt-1">
-                    <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">Action Items</p>
-                    <ul className="space-y-0.5">
-                      {summaryData.actionItems.map((item, i) => (
-                        <li 
-                          key={i} 
-                          className="text-xs text-foreground/75 flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1"
-                          style={{ animationDelay: `${100 + i * 50}ms`, animationDuration: '200ms' }}
-                        >
-                          <ArrowRight className="w-2.5 h-2.5 text-foreground/40 mt-0.5 flex-shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
