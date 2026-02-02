@@ -14,6 +14,7 @@ interface AIPreferences {
   primaryUse?: string;
   aiFeatures?: string[];
   replyTone?: string;
+  referralSource?: string;
 }
 
 interface UserData {
@@ -28,14 +29,94 @@ interface UserData {
 function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): string {
   if (!aiPreferences) return "pro";
   
-  const { emailVolume, automationLevel, primaryUse } = aiPreferences;
+  const { emailVolume, automationLevel, primaryUse, aiFeatures, referralSource } = aiPreferences;
   
-  if (emailVolume === "very-high") return "business";
-  if (automationLevel === "high" && primaryUse === "work") return "business";
-  if (emailVolume === "high" && automationLevel === "high") return "business";
-  if (emailVolume === "low" && automationLevel === "low") return "free";
+  // Score-based recommendation for more accuracy
+  let freeScore = 0;
+  let studentScore = 0;
+  let proScore = 0;
+  let businessScore = 0;
   
-  return "pro";
+  // Email volume scoring
+  if (emailVolume === "very-high") {
+    businessScore += 4;
+    proScore += 2;
+  } else if (emailVolume === "high") {
+    businessScore += 2;
+    proScore += 3;
+  } else if (emailVolume === "medium") {
+    proScore += 2;
+    studentScore += 2;
+  } else if (emailVolume === "low") {
+    freeScore += 3;
+    studentScore += 1;
+  }
+  
+  // Automation level scoring
+  if (automationLevel === "high") {
+    businessScore += 3;
+    proScore += 2;
+  } else if (automationLevel === "medium") {
+    proScore += 2;
+    studentScore += 1;
+  } else if (automationLevel === "low") {
+    freeScore += 2;
+  }
+  
+  // Primary use scoring
+  if (primaryUse === "work") {
+    businessScore += 2;
+    proScore += 2;
+  } else if (primaryUse === "personal") {
+    studentScore += 2;
+    freeScore += 1;
+  } else if (primaryUse === "both") {
+    proScore += 2;
+  }
+  
+  // AI features scoring - more features = higher plan
+  const featureCount = aiFeatures?.length || 0;
+  if (featureCount >= 4) {
+    businessScore += 2;
+    proScore += 1;
+  } else if (featureCount >= 2) {
+    proScore += 2;
+    studentScore += 1;
+  } else if (featureCount === 1) {
+    studentScore += 1;
+    freeScore += 1;
+  }
+  
+  // Check for specific high-end features
+  if (aiFeatures?.includes("voice") || aiFeatures?.includes("training")) {
+    businessScore += 2;
+  }
+  
+  // Referral source hint for students
+  if (referralSource === "school" || referralSource === "university") {
+    studentScore += 3;
+  }
+  
+  // Find the plan with highest score
+  const scores = [
+    { plan: "free", score: freeScore },
+    { plan: "student", score: studentScore },
+    { plan: "pro", score: proScore },
+    { plan: "business", score: businessScore },
+  ];
+  
+  const recommended = scores.reduce((max, current) => 
+    current.score > max.score ? current : max
+  );
+  
+  // Default to pro if scores are tied or too close
+  if (recommended.score === 0 || 
+      (recommended.plan === "free" && proScore >= freeScore - 1) ||
+      (recommended.plan === "student" && proScore >= studentScore)) {
+    return "pro";
+  }
+  
+  return recommended.plan;
 }
 
 function getRecommendationReasons(planId: string, aiPreferences: AIPreferences | null | undefined): { title: string; reasons: string[]; benefits: string[] } {
