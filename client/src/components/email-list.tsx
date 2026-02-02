@@ -821,11 +821,11 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         <div className="absolute bottom-4 right-4">
           <Button 
             size="lg"
-            className="rounded-full w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-lg"
+            className="rounded-full w-14 h-14 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:bg-white/20 dark:hover:bg-white/10 hover:scale-105 transition-all duration-200"
             onClick={onCompose}
             data-testid="button-compose"
           >
-            <PenSquare className="w-5 h-5" />
+            <PenSquare className="w-5 h-5 text-foreground" />
           </Button>
         </div>
       )}
