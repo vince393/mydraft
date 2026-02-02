@@ -509,43 +509,127 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
         </div>
       </div>
 
-      {/* AI Action Bar */}
-      <div className="flex items-center gap-2 px-4 sm:px-6 py-2 border-b border-border/20 bg-muted/20">
-        <Button
-          size="sm"
-          variant="ghost"
-          className={`h-8 gap-1.5 text-xs transition-all duration-200 ${showSummary ? 'bg-foreground/10' : ''}`}
-          onClick={handleSummarize}
-          disabled={isSummaryLoading}
-          data-testid="button-summarize"
+      {/* AI Action Bar with inline expandable summary */}
+      <div className="border-b border-border/20 bg-muted/20">
+        <div className="flex items-center gap-2 px-4 sm:px-6 py-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className={`h-8 gap-1.5 text-xs transition-all duration-200 ${showSummary ? 'bg-foreground/10 rounded-b-none' : ''}`}
+            onClick={handleSummarize}
+            disabled={isSummaryLoading}
+            data-testid="button-summarize"
+          >
+            {isSummaryLoading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <FileText className="w-3.5 h-3.5" />
+            )}
+            Summarize
+            {!hasPro && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
+                Pro
+              </span>
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 gap-1.5 text-xs"
+            onClick={handleAiDraftClick}
+            data-testid="button-ai-draft"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Draft Reply
+            {!hasPro && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
+                Pro
+              </span>
+            )}
+          </Button>
+        </div>
+        
+        {/* Inline Summary - expands from button */}
+        <div 
+          className={`overflow-hidden transition-all duration-300 ease-out ${
+            showSummary && (summaryData?.summary || isSummaryLoading) 
+              ? 'max-h-[500px] opacity-100' 
+              : 'max-h-0 opacity-0'
+          }`}
+          data-testid="ai-summary-section"
         >
-          {isSummaryLoading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <FileText className="w-3.5 h-3.5" />
-          )}
-          Summarize
-          {!hasPro && (
-            <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
-              Pro
-            </span>
-          )}
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 gap-1.5 text-xs"
-          onClick={handleAiDraftClick}
-          data-testid="button-ai-draft"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          Draft Reply
-          {!hasPro && (
-            <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
-              Pro
-            </span>
-          )}
-        </Button>
+          <div className="mx-4 sm:mx-6 mb-3 p-3 bg-foreground/5 rounded-lg border border-border/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-foreground/80">AI Summary</span>
+                {isTyping && (
+                  <span className="flex items-center gap-0.5">
+                    <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" />
+                    <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0.15s' }} />
+                    <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0.3s' }} />
+                  </span>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-foreground/10"
+                onClick={() => setShowSummary(false)}
+                data-testid="button-hide-summary"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+            {isSummaryLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground text-xs py-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Analyzing email...</span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-foreground/85 leading-relaxed" data-testid="summary-text">
+                  {displayedSummary || summaryData?.summary}
+                  {isTyping && <span className="inline-block w-0.5 h-3 bg-foreground/50 ml-0.5 animate-pulse" />}
+                </p>
+                {!isTyping && summaryData?.keyPoints && summaryData.keyPoints.length > 0 && (
+                  <div className="pt-1">
+                    <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">Key Points</p>
+                    <ul className="space-y-0.5">
+                      {summaryData.keyPoints.map((point, i) => (
+                        <li 
+                          key={i} 
+                          className="text-xs text-foreground/75 flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1"
+                          style={{ animationDelay: `${i * 50}ms`, animationDuration: '200ms' }}
+                        >
+                          <Circle className="w-1 h-1 text-foreground/40 mt-1.5 fill-foreground/40 flex-shrink-0" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {!isTyping && summaryData?.actionItems && summaryData.actionItems.length > 0 && (
+                  <div className="pt-1">
+                    <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">Action Items</p>
+                    <ul className="space-y-0.5">
+                      {summaryData.actionItems.map((item, i) => (
+                        <li 
+                          key={i} 
+                          className="text-xs text-foreground/75 flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1"
+                          style={{ animationDelay: `${100 + i * 50}ms`, animationDuration: '200ms' }}
+                        >
+                          <ArrowRight className="w-2.5 h-2.5 text-foreground/40 mt-0.5 flex-shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <ScrollArea className="flex-1 scrollbar-thin">
@@ -889,95 +973,6 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
               </div>
             </div>
           )}
-
-          {/* AI Summary Section - Animated */}
-          <div 
-            className={`mb-6 overflow-hidden transition-all duration-500 ease-out ${
-              showSummary && (summaryData?.summary || isSummaryLoading) 
-                ? 'max-h-[600px] opacity-100' 
-                : 'max-h-0 opacity-0'
-            }`}
-            data-testid="ai-summary-section"
-          >
-            <div className="p-4 bg-gradient-to-br from-muted/40 to-muted/60 rounded-xl border border-border/40 backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-foreground/10 flex items-center justify-center">
-                    <FileText className="w-3.5 h-3.5 text-foreground/70" />
-                  </div>
-                  <span className="text-sm font-medium text-foreground/90">AI Summary</span>
-                  {isTyping && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <span className="w-1 h-1 rounded-full bg-foreground/50 animate-pulse" />
-                      <span className="w-1 h-1 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0.2s' }} />
-                      <span className="w-1 h-1 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0.4s' }} />
-                    </span>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 hover:bg-foreground/10"
-                  onClick={() => setShowSummary(false)}
-                  data-testid="button-hide-summary"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-              {isSummaryLoading ? (
-                <div className="flex items-center gap-3 text-muted-foreground text-sm py-4">
-                  <div className="relative">
-                    <div className="w-8 h-8 rounded-full border-2 border-foreground/10 border-t-foreground/40 animate-spin" />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="block text-foreground/70">Analyzing email content...</span>
-                    <span className="block text-xs text-muted-foreground">Extracting key points and action items</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-sm text-foreground/85 leading-relaxed" data-testid="summary-text">
-                    {displayedSummary || summaryData?.summary}
-                    {isTyping && <span className="inline-block w-0.5 h-4 bg-foreground/60 ml-0.5 animate-pulse" />}
-                  </p>
-                  {!isTyping && summaryData?.keyPoints && summaryData.keyPoints.length > 0 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Key Points</p>
-                      <ul className="space-y-1.5">
-                        {summaryData.keyPoints.map((point, i) => (
-                          <li 
-                            key={i} 
-                            className="text-sm text-foreground/80 flex items-start gap-2 animate-in fade-in slide-in-from-left-2"
-                            style={{ animationDelay: `${i * 100}ms` }}
-                          >
-                            <Circle className="w-1.5 h-1.5 text-foreground/50 mt-2 fill-foreground/50 flex-shrink-0" />
-                            <span>{point}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {!isTyping && summaryData?.actionItems && summaryData.actionItems.length > 0 && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: '200ms' }}>
-                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Action Items</p>
-                      <ul className="space-y-1.5">
-                        {summaryData.actionItems.map((item, i) => (
-                          <li 
-                            key={i} 
-                            className="text-sm text-foreground/80 flex items-start gap-2 animate-in fade-in slide-in-from-left-2"
-                            style={{ animationDelay: `${300 + i * 100}ms` }}
-                          >
-                            <ArrowRight className="w-3 h-3 text-foreground/50 mt-1 flex-shrink-0" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Sticky Note for this email */}
           <div className="mb-6">
