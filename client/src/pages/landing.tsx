@@ -557,11 +557,11 @@ function BenefitsSection() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const positions = [
-    { x: '15%', y: '20%', delay: 0 },
-    { x: '75%', y: '15%', delay: 100 },
-    { x: '5%', y: '55%', delay: 200 },
-    { x: '85%', y: '50%', delay: 300 },
-    { x: '25%', y: '80%', delay: 400 },
+    { x: '20%', y: '20%', delay: 0 },
+    { x: '70%', y: '15%', delay: 100 },
+    { x: '15%', y: '55%', delay: 200 },
+    { x: '80%', y: '50%', delay: 300 },
+    { x: '30%', y: '80%', delay: 400 },
     { x: '65%', y: '85%', delay: 500 },
   ];
 
@@ -635,12 +635,12 @@ function BenefitsSection() {
                 <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
               </linearGradient>
             </defs>
-            <line x1="15%" y1="20%" x2="75%" y2="15%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '600ms' }} />
-            <line x1="15%" y1="20%" x2="5%" y2="55%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '700ms' }} />
-            <line x1="75%" y1="15%" x2="85%" y2="50%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '800ms' }} />
-            <line x1="5%" y1="55%" x2="25%" y2="80%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '900ms' }} />
-            <line x1="85%" y1="50%" x2="65%" y2="85%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '1000ms' }} />
-            <line x1="25%" y1="80%" x2="65%" y2="85%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '1100ms' }} />
+            <line x1="20%" y1="20%" x2="70%" y2="15%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '600ms' }} />
+            <line x1="20%" y1="20%" x2="15%" y2="55%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '700ms' }} />
+            <line x1="70%" y1="15%" x2="80%" y2="50%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '800ms' }} />
+            <line x1="15%" y1="55%" x2="30%" y2="80%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '900ms' }} />
+            <line x1="80%" y1="50%" x2="65%" y2="85%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '1000ms' }} />
+            <line x1="30%" y1="80%" x2="65%" y2="85%" stroke="url(#lineGradient)" strokeWidth="1" className={`transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`} style={{ transitionDelay: '1100ms' }} />
           </svg>
         </div>
 
