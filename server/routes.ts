@@ -6426,23 +6426,27 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       // Create checkout session with trial: 14 days for yearly, 7 days for monthly
       const trialDays = interval === "annual" ? 14 : 7;
       const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      
+      console.log("Creating checkout session for user:", user.id, "plan:", plan, "interval:", interval, "price:", price.id);
+      
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
-        payment_method_types: ['card'],
         line_items: [{ price: price.id, quantity: 1 }],
         mode: 'subscription',
         subscription_data: {
           trial_period_days: trialDays,
+          metadata: { userId: String(user.id), plan: plan === "business" ? "premium" : plan },
         },
-        success_url: `${baseUrl}/pricing?success=true`,
-        cancel_url: `${baseUrl}/pricing?canceled=true`,
-        metadata: { userId: user.id, plan: plan === "business" ? "premium" : plan },
+        success_url: `${baseUrl}/select-plan?success=true`,
+        cancel_url: `${baseUrl}/select-plan?canceled=true`,
+        metadata: { userId: String(user.id), plan: plan === "business" ? "premium" : plan },
       });
       
       res.json({ url: session.url });
-    } catch (error) {
-      console.error("Error creating checkout session:", error);
-      res.status(500).json({ error: "Failed to create checkout session" });
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error?.message || error);
+      console.error("Full error:", JSON.stringify(error, null, 2));
+      res.status(500).json({ error: "Failed to create checkout session", details: error?.message });
     }
   });
 
