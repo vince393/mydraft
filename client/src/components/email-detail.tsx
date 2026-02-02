@@ -107,6 +107,8 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
   const [refineInput, setRefineInput] = useState("");
   const [isRefining, setIsRefining] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [displayedSummary, setDisplayedSummary] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const { toast } = useToast();
 
   const emailId = email ? ((email as any).nylasId || email.id) : null;
@@ -122,7 +124,38 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
   useEffect(() => {
     summaryMutation.reset();
     setShowSummary(false);
+    setDisplayedSummary("");
+    setIsTyping(false);
   }, [emailId]);
+
+  const summaryData = summaryMutation.data as { summary: string; keyPoints: string[]; actionItems: string[] } | undefined;
+  const isSummaryLoading = summaryMutation.isPending;
+
+  // Typewriter effect for summary
+  useEffect(() => {
+    if (summaryData?.summary && showSummary) {
+      const fullText = summaryData.summary;
+      if (displayedSummary === fullText) return; // Already typed
+      
+      setIsTyping(true);
+      setDisplayedSummary("");
+      
+      let index = 0;
+      const speed = 8; // ms per character (fast but visible)
+      
+      const typeInterval = setInterval(() => {
+        if (index < fullText.length) {
+          setDisplayedSummary(fullText.slice(0, index + 1));
+          index++;
+        } else {
+          clearInterval(typeInterval);
+          setIsTyping(false);
+        }
+      }, speed);
+      
+      return () => clearInterval(typeInterval);
+    }
+  }, [summaryData?.summary, showSummary]);
 
   const handleSummarize = () => {
     if (!hasPro) {
@@ -142,9 +175,6 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
     }
     onAiDraft?.();
   };
-
-  const summaryData = summaryMutation.data as { summary: string; keyPoints: string[]; actionItems: string[] } | undefined;
-  const isSummaryLoading = summaryMutation.isPending;
   
   // Get the selected email's ID and date for comparison
   const selectedEmailId = email ? ((email as any).nylasId || email.id) : null;
@@ -483,8 +513,8 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
       <div className="flex items-center gap-2 px-4 sm:px-6 py-2 border-b border-border/20 bg-muted/20">
         <Button
           size="sm"
-          variant={showSummary ? "secondary" : "ghost"}
-          className="h-8 gap-1.5 text-xs"
+          variant="ghost"
+          className={`h-8 gap-1.5 text-xs transition-all duration-200 ${showSummary ? 'bg-foreground/10' : ''}`}
           onClick={handleSummarize}
           disabled={isSummaryLoading}
           data-testid="button-summarize"
@@ -860,53 +890,84 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
             </div>
           )}
 
-          {/* AI Summary Section */}
-          {showSummary && (summaryData?.summary || isSummaryLoading) && (
-            <div className="mb-6 p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20" data-testid="ai-summary-section">
+          {/* AI Summary Section - Animated */}
+          <div 
+            className={`mb-6 overflow-hidden transition-all duration-500 ease-out ${
+              showSummary && (summaryData?.summary || isSummaryLoading) 
+                ? 'max-h-[600px] opacity-100' 
+                : 'max-h-0 opacity-0'
+            }`}
+            data-testid="ai-summary-section"
+          >
+            <div className="p-4 bg-gradient-to-br from-muted/40 to-muted/60 rounded-xl border border-border/40 backdrop-blur-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium">AI Summary</span>
+                  <div className="w-6 h-6 rounded-full bg-foreground/10 flex items-center justify-center">
+                    <FileText className="w-3.5 h-3.5 text-foreground/70" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground/90">AI Summary</span>
+                  {isTyping && (
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="w-1 h-1 rounded-full bg-foreground/50 animate-pulse" />
+                      <span className="w-1 h-1 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                      <span className="w-1 h-1 rounded-full bg-foreground/50 animate-pulse" style={{ animationDelay: '0.4s' }} />
+                    </span>
+                  )}
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="h-7 w-7 p-0 hover:bg-foreground/10"
                   onClick={() => setShowSummary(false)}
                   data-testid="button-hide-summary"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </Button>
               </div>
               {isSummaryLoading ? (
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Generating summary...</span>
+                <div className="flex items-center gap-3 text-muted-foreground text-sm py-4">
+                  <div className="relative">
+                    <div className="w-8 h-8 rounded-full border-2 border-foreground/10 border-t-foreground/40 animate-spin" />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="block text-foreground/70">Analyzing email content...</span>
+                    <span className="block text-xs text-muted-foreground">Extracting key points and action items</span>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-foreground/90 leading-relaxed" data-testid="summary-text">
-                    {summaryData?.summary}
+                <div className="space-y-4">
+                  <p className="text-sm text-foreground/85 leading-relaxed" data-testid="summary-text">
+                    {displayedSummary || summaryData?.summary}
+                    {isTyping && <span className="inline-block w-0.5 h-4 bg-foreground/60 ml-0.5 animate-pulse" />}
                   </p>
-                  {summaryData?.keyPoints && summaryData.keyPoints.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Key Points</p>
-                      <ul className="space-y-1">
+                  {!isTyping && summaryData?.keyPoints && summaryData.keyPoints.length > 0 && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Key Points</p>
+                      <ul className="space-y-1.5">
                         {summaryData.keyPoints.map((point, i) => (
-                          <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
-                            <Circle className="w-2 h-2 text-primary mt-1.5 fill-primary" />
+                          <li 
+                            key={i} 
+                            className="text-sm text-foreground/80 flex items-start gap-2 animate-in fade-in slide-in-from-left-2"
+                            style={{ animationDelay: `${i * 100}ms` }}
+                          >
+                            <Circle className="w-1.5 h-1.5 text-foreground/50 mt-2 fill-foreground/50 flex-shrink-0" />
                             <span>{point}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
-                  {summaryData?.actionItems && summaryData.actionItems.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Action Items</p>
-                      <ul className="space-y-1">
+                  {!isTyping && summaryData?.actionItems && summaryData.actionItems.length > 0 && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: '200ms' }}>
+                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Action Items</p>
+                      <ul className="space-y-1.5">
                         {summaryData.actionItems.map((item, i) => (
-                          <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
-                            <ArrowRight className="w-3 h-3 text-orange-500 mt-1" />
+                          <li 
+                            key={i} 
+                            className="text-sm text-foreground/80 flex items-start gap-2 animate-in fade-in slide-in-from-left-2"
+                            style={{ animationDelay: `${300 + i * 100}ms` }}
+                          >
+                            <ArrowRight className="w-3 h-3 text-foreground/50 mt-1 flex-shrink-0" />
                             <span>{item}</span>
                           </li>
                         ))}
@@ -916,7 +977,7 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                 </div>
               )}
             </div>
-          )}
+          </div>
 
           {/* Sticky Note for this email */}
           <div className="mb-6">
