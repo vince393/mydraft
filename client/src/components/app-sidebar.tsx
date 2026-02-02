@@ -46,7 +46,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { AssistantModal } from "./assistant-modal";
 
 // Icon map for custom folder icons
 const iconMap: Record<string, LucideIcon> = {
@@ -134,8 +133,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [newFolderAiDescription, setNewFolderAiDescription] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHoverExpanded, setIsHoverExpanded] = useState(false);
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
   // Rename/Delete/Icon folder state
   const [isRenameOpen, setIsRenameOpen] = useState(false);
@@ -351,15 +348,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     onFolderChange(folderId);
   }, [onFolderChange]);
   
-  const handleOpenAssistant = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!hasPro) {
-      setShowUpgradeModal(true);
-    } else {
-      setIsAssistantOpen(true);
-    }
-  };
-
   const handleCreateFolder = async () => {
     if (newFolderName.trim()) {
       const folderName = newFolderName.trim();
@@ -729,62 +717,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         </SidebarContent>
 
         <SidebarFooter className={`${isExpanded ? "p-3" : "p-2"} transition-all duration-300 space-y-2`}>
-          {/* Assistant Button - Plan gated */}
-          {showText ? (
-            <button
-              onClick={handleOpenAssistant}
-              className={`w-full flex items-center gap-3 px-3 h-10 rounded-xl transition-colors ${
-                hasPro 
-                  ? "bg-muted/40 hover:bg-muted/60" 
-                  : "bg-muted/20 opacity-60"
-              }`}
-              data-testid="button-open-assistant"
-            >
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                hasPro 
-                  ? "bg-gradient-to-br from-blue-500 to-purple-600" 
-                  : "bg-muted"
-              }`}>
-                {hasPro ? (
-                  <User className="w-3 h-3 text-white" />
-                ) : (
-                  <Lock className="w-3 h-3 text-muted-foreground" />
-                )}
-              </div>
-              <span className="text-sm text-muted-foreground">
-                {hasPro ? "Vince" : "Vince (Pro)"}
-              </span>
-            </button>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleOpenAssistant}
-                  className={`w-10 h-10 mx-auto flex items-center justify-center rounded-xl transition-colors ${
-                    hasPro 
-                      ? "bg-muted/40 hover:bg-muted/60" 
-                      : "bg-muted/20 opacity-60"
-                  }`}
-                  data-testid="button-open-assistant"
-                >
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                    hasPro 
-                      ? "bg-gradient-to-br from-blue-500 to-purple-600" 
-                      : "bg-muted"
-                  }`}>
-                    {hasPro ? (
-                      <User className="w-3 h-3 text-white" />
-                    ) : (
-                      <Lock className="w-3 h-3 text-muted-foreground" />
-                    )}
-                  </div>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                {hasPro ? "Vince - Assistant" : "Vince (Upgrade to Pro)"}
-              </TooltipContent>
-            </Tooltip>
-          )}
           {showText ? (
             <Button 
               size="lg"
@@ -1056,14 +988,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         </DialogContent>
       </Dialog>
 
-      <AssistantModal open={isAssistantOpen} onOpenChange={setIsAssistantOpen} />
-      
-      <UpgradeModal
-        open={showUpgradeModal}
-        onOpenChange={setShowUpgradeModal}
-        requiredPlan="pro"
-        feature="AI Assistant (Vince)"
-      />
     </>
   );
 }

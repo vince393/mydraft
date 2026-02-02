@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Sparkles } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,13 +41,14 @@ interface InboxProps {
   setShowComposeDialog: (show: boolean) => void;
   composeMode: "new" | "reply" | "replyAll" | "forward";
   setComposeMode: (mode: "new" | "reply" | "replyAll" | "forward") => void;
+  onOpenAssistant?: () => void;
 }
 
 function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
 }
 
-export default function Inbox({ activeFolder, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode }: InboxProps) {
+export default function Inbox({ activeFolder, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode, onOpenAssistant }: InboxProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
   const [selectedThreadEmails, setSelectedThreadEmails] = useState<EmailWithNylasId[]>([]);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
@@ -807,6 +808,19 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                 >
                   <Megaphone className="w-4 h-4" />
                   <span className="hidden lg:inline">Campaigns</span>
+                </Button>
+              )}
+              {!screen.isMobile && onOpenAssistant && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onOpenAssistant}
+                  className="relative"
+                  data-testid="button-vince-header"
+                >
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                    <Sparkles className="w-3.5 h-3.5 text-white" />
+                  </div>
                 </Button>
               )}
               {!screen.isMobile && <NotificationBell />}

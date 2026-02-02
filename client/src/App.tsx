@@ -110,6 +110,7 @@ function AuthenticatedApp() {
             setShowComposeDialog={setShowComposeDialog}
             composeMode={composeMode}
             setComposeMode={setComposeMode}
+            onOpenAssistant={handleOpenAssistant}
           />
         </SidebarInset>
         {screen.isMobile && (
