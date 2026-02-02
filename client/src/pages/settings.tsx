@@ -1101,7 +1101,7 @@ function BillingTab({ settings }: { settings: Settings }) {
           <CardDescription>Change or cancel your plan</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button onClick={() => setLocation("/select-plan")} data-testid="button-change-plan">
+          <Button onClick={() => setLocation("/select-plan?change=true")} data-testid="button-change-plan">
             Change Plan
           </Button>
           {settings.plan && settings.plan !== "free" && (

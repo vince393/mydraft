@@ -263,10 +263,10 @@ export default function PricingPage() {
     }
   }, [toast, setLocation]);
 
-  // Redirect users who already have a plan to the next step
+  // Redirect users who already have a plan to the next step (unless they're changing their plan)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("success") || params.get("canceled")) return;
+    if (params.get("success") || params.get("canceled") || params.get("change")) return;
     
     if (userData?.user?.plan) {
       setLocation("/connect-email");
