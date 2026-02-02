@@ -320,7 +320,7 @@ export default function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<"annual" | "monthly">("annual");
   const [showAllPlans, setShowAllPlans] = useState(false);
 
-  const { data: userData } = useQuery<UserData>({
+  const { data: userData, isLoading: isLoadingUser } = useQuery<UserData>({
     queryKey: ["/api/auth/me"],
   });
 
@@ -360,11 +360,6 @@ export default function PricingPage() {
       setShowAllPlans(true);
     }
   }, [userData]);
-
-  const recommendedPlan = getRecommendedPlan(userData?.user?.aiPreferences);
-  const currentPlan = userData?.user?.plan || "free";
-  const recommendedPlanData = basePlans.find(p => p.id === recommendedPlan)!;
-  const recommendation = getRecommendationReasons(recommendedPlan, userData?.user?.aiPreferences);
 
   // Free plan selection (no payment)
   const selectFreePlanMutation = useMutation({
@@ -444,6 +439,20 @@ export default function PricingPage() {
     if (plan.id === "free") return "forever";
     return billingInterval === "annual" ? "year" : "month";
   };
+
+  // Show loading state while fetching user data
+  if (isLoadingUser) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const recommendedPlan = getRecommendedPlan(userData?.user?.aiPreferences);
+  const currentPlan = userData?.user?.plan || "free";
+  const recommendedPlanData = basePlans.find(p => p.id === recommendedPlan) || basePlans[2]; // Default to Pro
+  const recommendation = getRecommendationReasons(recommendedPlan, userData?.user?.aiPreferences);
 
   // Recommended Plan View (Single Plan)
   if (!showAllPlans && userData?.user?.onboardingCompleted) {
