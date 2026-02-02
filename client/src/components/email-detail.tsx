@@ -510,11 +510,13 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
       </div>
 
       {/* AI Action Bar - buttons transform into expanded panels */}
-      <div className="border-b border-border/20 bg-muted/20">
-        <div className="flex flex-col">
+      <div className="border-b border-border/20 bg-muted/20 px-4 sm:px-6 py-2">
+        <div className="flex flex-col gap-2">
           {/* Draft Reply button - moves to top when summary is open */}
-          <div className={`flex items-center gap-2 px-4 sm:px-6 transition-all duration-300 ${
-            showSummary && (summaryData?.summary || isSummaryLoading) ? 'py-2 order-first' : 'py-0 h-0 overflow-hidden opacity-0'
+          <div className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+            showSummary && (summaryData?.summary || isSummaryLoading) 
+              ? 'opacity-100 max-h-10' 
+              : 'opacity-0 max-h-0 overflow-hidden'
           }`}>
             <Button
               size="sm"
@@ -533,36 +535,45 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
             </Button>
           </div>
 
-          {/* Summary section - button transforms into header */}
-          <div className={`transition-all duration-300 ease-out ${
-            showSummary && (summaryData?.summary || isSummaryLoading) 
-              ? 'bg-foreground/5' 
-              : ''
-          }`}>
+          {/* Summary section - button transforms into glossy card */}
+          <div 
+            className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] rounded-2xl ${
+              showSummary && (summaryData?.summary || isSummaryLoading) 
+                ? 'bg-gradient-to-br from-background/80 via-background/60 to-muted/40 border border-border/50 shadow-lg shadow-black/5 backdrop-blur-sm' 
+                : ''
+            }`}
+            style={{
+              transform: showSummary && (summaryData?.summary || isSummaryLoading) ? 'scale(1)' : 'scale(1)',
+            }}
+          >
             {/* Header row - either button or expanded title */}
-            <div className="flex items-center gap-2 px-4 sm:px-6 py-2">
+            <div className={`flex items-center gap-2 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+              showSummary && (summaryData?.summary || isSummaryLoading) ? 'px-4 py-3' : ''
+            }`}>
               {showSummary && (summaryData?.summary || isSummaryLoading) ? (
-                /* Expanded state - title with close button */
+                /* Expanded state - glossy header */
                 <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-3.5 h-3.5 text-foreground/70" />
-                    <span className="text-xs font-medium text-foreground/80">Summarize</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-foreground/10 to-foreground/5 border border-foreground/10 flex items-center justify-center shadow-inner">
+                      <FileText className="w-3.5 h-3.5 text-foreground/60" />
+                    </div>
+                    <span className="text-sm font-medium text-foreground/90">Summary</span>
                     {(isTyping || isSummaryLoading) && (
-                      <span className="flex items-center gap-0.5 ml-1">
-                        <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" />
-                        <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0.15s' }} />
-                        <span className="w-1 h-1 rounded-full bg-foreground/40 animate-pulse" style={{ animationDelay: '0.3s' }} />
+                      <span className="flex items-center gap-1 ml-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.4s' }} />
                       </span>
                     )}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0 hover:bg-foreground/10"
+                    className="h-7 w-7 p-0 rounded-full hover:bg-foreground/10 transition-all duration-200"
                     onClick={() => setShowSummary(false)}
                     data-testid="button-hide-summary"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               ) : (
@@ -571,7 +582,7 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 gap-1.5 text-xs"
+                    className="h-8 gap-1.5 text-xs rounded-full"
                     onClick={handleSummarize}
                     disabled={isSummaryLoading}
                     data-testid="button-summarize"
@@ -591,7 +602,7 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 gap-1.5 text-xs"
+                    className="h-8 gap-1.5 text-xs rounded-full"
                     onClick={handleAiDraftClick}
                     data-testid="button-ai-draft"
                   >
@@ -607,38 +618,38 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
               )}
             </div>
 
-            {/* Summary content - expands below the header */}
+            {/* Summary content - expands with smooth animation */}
             <div 
-              className={`overflow-hidden transition-all duration-300 ease-out ${
+              className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
                 showSummary && (summaryData?.summary || isSummaryLoading) 
-                  ? 'max-h-[500px] opacity-100 pb-3' 
+                  ? 'max-h-[500px] opacity-100' 
                   : 'max-h-0 opacity-0'
               }`}
               data-testid="ai-summary-section"
             >
-              <div className="px-4 sm:px-6">
+              <div className="px-4 pb-4">
                 {isSummaryLoading ? (
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs py-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Analyzing email...</span>
+                  <div className="flex items-center gap-3 text-muted-foreground text-sm py-3">
+                    <div className="w-5 h-5 rounded-full border-2 border-foreground/10 border-t-foreground/30 animate-spin" />
+                    <span className="text-foreground/60">Analyzing email...</span>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-foreground/85 leading-relaxed" data-testid="summary-text">
+                  <div className="space-y-3">
+                    <p className="text-sm text-foreground/85 leading-relaxed" data-testid="summary-text">
                       {displayedSummary || summaryData?.summary}
-                      {isTyping && <span className="inline-block w-0.5 h-3 bg-foreground/50 ml-0.5 animate-pulse" />}
+                      {isTyping && <span className="inline-block w-0.5 h-4 bg-foreground/50 ml-0.5 animate-pulse" />}
                     </p>
                     {!isTyping && summaryData?.keyPoints && summaryData.keyPoints.length > 0 && (
-                      <div className="pt-1">
-                        <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">Key Points</p>
-                        <ul className="space-y-0.5">
+                      <div className="pt-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Key Points</p>
+                        <ul className="space-y-1.5">
                           {summaryData.keyPoints.map((point, i) => (
                             <li 
                               key={i} 
-                              className="text-xs text-foreground/75 flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1"
-                              style={{ animationDelay: `${i * 50}ms`, animationDuration: '200ms' }}
+                              className="text-sm text-foreground/75 flex items-start gap-2 animate-in fade-in slide-in-from-left-2"
+                              style={{ animationDelay: `${i * 80}ms`, animationDuration: '300ms' }}
                             >
-                              <Circle className="w-1 h-1 text-foreground/40 mt-1.5 fill-foreground/40 flex-shrink-0" />
+                              <div className="w-1.5 h-1.5 rounded-full bg-foreground/30 mt-2 flex-shrink-0" />
                               <span>{point}</span>
                             </li>
                           ))}
@@ -646,16 +657,16 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                       </div>
                     )}
                     {!isTyping && summaryData?.actionItems && summaryData.actionItems.length > 0 && (
-                      <div className="pt-1">
-                        <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">Action Items</p>
-                        <ul className="space-y-0.5">
+                      <div className="pt-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Action Items</p>
+                        <ul className="space-y-1.5">
                           {summaryData.actionItems.map((item, i) => (
                             <li 
                               key={i} 
-                              className="text-xs text-foreground/75 flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1"
-                              style={{ animationDelay: `${100 + i * 50}ms`, animationDuration: '200ms' }}
+                              className="text-sm text-foreground/75 flex items-start gap-2 animate-in fade-in slide-in-from-left-2"
+                              style={{ animationDelay: `${150 + i * 80}ms`, animationDuration: '300ms' }}
                             >
-                              <ArrowRight className="w-2.5 h-2.5 text-foreground/40 mt-0.5 flex-shrink-0" />
+                              <ArrowRight className="w-3 h-3 text-foreground/40 mt-1 flex-shrink-0" />
                               <span>{item}</span>
                             </li>
                           ))}
