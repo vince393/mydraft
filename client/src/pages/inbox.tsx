@@ -198,8 +198,9 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   // Show updating indicator when we have cached data and are fetching fresh
   const isUpdating = isFetchingFresh && cachedEmails.length > 0;
   
-  // Show loading if we have NO data and are still fetching
-  const isLoadingEmails = cachedEmails.length === 0 && !freshEmails && isFetchingFresh;
+  // Show loading if we have NO data and fresh data hasn't loaded yet
+  // Also show loading if we're actively fetching fresh data with no cached data
+  const isLoadingEmails = cachedEmails.length === 0 && !hasFreshData;
   
   // Legacy syncing indicator (keep for compatibility but use isUpdating for new UI)
   const isSyncing = isUpdating && !isLoadingEmails;
