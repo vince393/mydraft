@@ -329,20 +329,6 @@ export default function LoginPage() {
             </div>
           ))}
         </div>
-        
-        {/* Social proof */}
-        <div className="mt-16 pt-8 border-t border-white/10">
-          <p className="text-slate-400 text-sm mb-4">Trusted by professionals at</p>
-          <div className="flex items-center gap-6 text-slate-500">
-            <span className="text-sm font-medium">Google</span>
-            <span className="text-slate-700">•</span>
-            <span className="text-sm font-medium">Microsoft</span>
-            <span className="text-slate-700">•</span>
-            <span className="text-sm font-medium">Apple</span>
-            <span className="text-slate-700">•</span>
-            <span className="text-sm font-medium">Meta</span>
-          </div>
-        </div>
       </div>
     </div>
   );
