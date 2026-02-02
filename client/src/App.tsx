@@ -111,6 +111,7 @@ function AuthenticatedApp() {
             composeMode={composeMode}
             setComposeMode={setComposeMode}
             onOpenAssistant={handleOpenAssistant}
+            onCompose={handleCompose}
           />
         </SidebarInset>
         {screen.isMobile && (

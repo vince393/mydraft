@@ -42,13 +42,14 @@ interface InboxProps {
   composeMode: "new" | "reply" | "replyAll" | "forward";
   setComposeMode: (mode: "new" | "reply" | "replyAll" | "forward") => void;
   onOpenAssistant?: () => void;
+  onCompose?: () => void;
 }
 
 function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
 }
 
-export default function Inbox({ activeFolder, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode, onOpenAssistant }: InboxProps) {
+export default function Inbox({ activeFolder, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode, onOpenAssistant, onCompose }: InboxProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
   const [selectedThreadEmails, setSelectedThreadEmails] = useState<EmailWithNylasId[]>([]);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
@@ -765,6 +766,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
               queryClient.invalidateQueries({ queryKey: ["/api/emails", "fresh"] });
             }}
             isRefreshing={isFetchingFresh}
+            onCompose={onCompose}
           />
         )}
       </div>

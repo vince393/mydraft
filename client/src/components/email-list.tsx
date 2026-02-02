@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2 } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,7 @@ interface EmailListProps {
   onInboxRefresh?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  onCompose?: () => void;
 }
 
 interface ResponseTimeEstimate {
@@ -139,7 +140,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose }: EmailListProps) {
   const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -480,7 +481,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   }
 
   return (
-    <div className="flex flex-col h-full overflow-x-hidden">
+    <div className="flex flex-col h-full overflow-x-hidden relative">
       <div className="p-3 border-b border-border/20">
         <div className="relative flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-0">
@@ -764,84 +765,70 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         )}
       </div>
 
-      <div className="px-3 py-2">
-        {isSelectionMode ? (
-          <div className="flex flex-wrap items-center gap-2">
+      {isSelectionMode ? (
+        <div className="px-3 py-2 flex flex-wrap items-center gap-2">
+          <Button 
+            size="icon"
+            variant="ghost"
+            onClick={handleCancelSelection}
+            data-testid="button-cancel-selection"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {selectedIds.size}
+          </span>
+          <span className="flex-1" />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleSelectAll}
+            data-testid="button-select-all"
+          >
+            {allSelected ? "Deselect" : "All"}
+          </Button>
+          <div className="flex flex-wrap items-center">
             <Button 
               size="icon"
               variant="ghost"
-              onClick={handleCancelSelection}
-              data-testid="button-cancel-selection"
+              onClick={handleArchiveSelected}
+              disabled={selectedIds.size === 0 || isMoving}
+              data-testid="button-archive-selected"
             >
-              <X className="w-4 h-4" />
+              {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
             </Button>
-            <span className="text-sm text-muted-foreground">
-              {selectedIds.size}
-            </span>
-            <span className="flex-1" />
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleSelectAll}
-              data-testid="button-select-all"
-            >
-              {allSelected ? "Deselect" : "All"}
-            </Button>
-            <div className="flex flex-wrap items-center">
-              <Button 
-                size="icon"
-                variant="ghost"
-                onClick={handleArchiveSelected}
-                disabled={selectedIds.size === 0 || isMoving}
-                data-testid="button-archive-selected"
-              >
-                {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
-              </Button>
-              <Button 
-                size="icon"
-                variant="destructive"
-                onClick={handleTrashSelected}
-                disabled={selectedIds.size === 0 || isMoving}
-                data-testid="button-delete-selected"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
             <Button 
               size="icon"
-              variant="default"
-              disabled={selectedIds.size === 0}
-              onClick={handleAiSelected}
-              data-testid="button-ai-selected"
+              variant="destructive"
+              onClick={handleTrashSelected}
+              disabled={selectedIds.size === 0 || isMoving}
+              data-testid="button-delete-selected"
             >
-              <Sparkles className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
-        ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap items-center">
-              <Button 
-                size="icon"
-                variant="ghost"
-                disabled={!selectedEmailId || isMoving}
-                onClick={onArchiveEmail}
-                data-testid="button-archive"
-              >
-                {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
-              </Button>
-              <Button 
-                size="icon"
-                variant="ghost"
-                disabled={!selectedEmailId || isMoving}
-                onClick={onTrashEmail}
-                data-testid="button-trash"
-              >
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+          <Button 
+            size="icon"
+            variant="default"
+            disabled={selectedIds.size === 0}
+            onClick={handleAiSelected}
+            data-testid="button-ai-selected"
+          >
+            <Sparkles className="w-4 h-4" />
+          </Button>
+        </div>
+      ) : (
+        <div className="absolute bottom-4 right-4">
+          <Button 
+            size="lg"
+            className="rounded-full w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-lg"
+            onClick={onCompose}
+            data-testid="button-compose"
+          >
+            <PenSquare className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

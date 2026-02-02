@@ -716,32 +716,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className={`${isExpanded ? "p-3" : "p-2"} transition-all duration-300 space-y-2`}>
-          {showText ? (
-            <Button 
-              size="lg"
-              className="w-full justify-center gap-2 rounded-xl font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
-              data-testid="button-compose"
-              onClick={onCompose}
-            >
-              <PenSquare className="w-4 h-4" />
-              Compose
-            </Button>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  size="icon"
-                  className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
-                  data-testid="button-compose"
-                  onClick={onCompose}
-                >
-                  <PenSquare className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Compose</TooltipContent>
-            </Tooltip>
-          )}
+        <SidebarFooter className={`${isExpanded ? "p-3" : "p-2"} transition-all duration-300`}>
         </SidebarFooter>
         </Sidebar>
       </div>
