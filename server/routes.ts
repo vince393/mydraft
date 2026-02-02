@@ -2283,27 +2283,36 @@ Respond with valid JSON only:
         try {
           switch (suggestion.actionType) {
             case "spam":
-              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                folders: ["spam"],
-              });
+              // Use local storage for folder changes - faster and more reliable
+              await storage.setLocalEmailFolder(userId, suggestion.messageId, "junk");
               break;
             case "archive":
-              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                folders: ["archive"],
-              });
+              // Use local storage for folder changes - faster and more reliable
+              await storage.setLocalEmailFolder(userId, suggestion.messageId, "archived");
               break;
             case "delete":
-              await nylas.deleteMessage(grant.grantId, suggestion.messageId);
+              // Use local storage for folder changes - faster and more reliable
+              await storage.setLocalEmailFolder(userId, suggestion.messageId, "trash");
               break;
             case "star":
-              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                starred: true,
-              });
+              // Star is a message property, try Nylas but don't fail if it errors
+              try {
+                await nylas.updateMessage(grant.grantId, suggestion.messageId, {
+                  starred: true,
+                });
+              } catch (nylasErr) {
+                console.log("Star via Nylas failed, continuing:", nylasErr);
+              }
               break;
             case "mark_read":
-              await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                unread: false,
-              });
+              // Mark read is a message property, try Nylas but don't fail if it errors
+              try {
+                await nylas.updateMessage(grant.grantId, suggestion.messageId, {
+                  unread: false,
+                });
+              } catch (nylasErr) {
+                console.log("Mark read via Nylas failed, continuing:", nylasErr);
+              }
               break;
             case "move_to_folder":
               // Move email to custom folder by assigning it in our database
