@@ -6433,6 +6433,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         customer: customerId,
         line_items: [{ price: price.id, quantity: 1 }],
         mode: 'subscription',
+        billing_address_collection: 'required',
         subscription_data: {
           trial_period_days: trialDays,
           metadata: { userId: String(user.id), plan: plan === "business" ? "premium" : plan },
