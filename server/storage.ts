@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -82,6 +82,12 @@ export interface IStorage {
   // Security audit log methods (CASA Q52)
   createSecurityAuditLog(log: InsertSecurityAuditLog): Promise<SecurityAuditLogRecord>;
   getSecurityAuditLogs(userId?: string, limit?: number): Promise<SecurityAuditLogRecord[]>;
+
+  // Linked accounts methods (account switching)
+  getLinkedAccounts(primaryUserId: string): Promise<LinkedAccount[]>;
+  addLinkedAccount(primaryUserId: string, linkedUserId: string, linkedEmail: string, linkedDisplayName?: string, linkedPlan?: string): Promise<LinkedAccount>;
+  removeLinkedAccount(primaryUserId: string, linkedUserId: string): Promise<boolean>;
+  isAccountLinked(primaryUserId: string, linkedUserId: string): Promise<boolean>;
 
   // Pending sends methods (undo send)
   createPendingSend(send: InsertPendingSend): Promise<PendingSend>;
@@ -1160,6 +1166,49 @@ Business Development`,
       .from(securityAuditLog)
       .orderBy(desc(securityAuditLog.createdAt))
       .limit(limit);
+  }
+
+  // Linked accounts methods (account switching)
+  async getLinkedAccounts(primaryUserId: string): Promise<LinkedAccount[]> {
+    return db.select()
+      .from(linkedAccounts)
+      .where(eq(linkedAccounts.primaryUserId, primaryUserId))
+      .orderBy(desc(linkedAccounts.createdAt));
+  }
+
+  async addLinkedAccount(primaryUserId: string, linkedUserId: string, linkedEmail: string, linkedDisplayName?: string, linkedPlan?: string): Promise<LinkedAccount> {
+    const [created] = await db.insert(linkedAccounts).values({
+      primaryUserId,
+      linkedUserId,
+      linkedEmail,
+      linkedDisplayName: linkedDisplayName || null,
+      linkedAvatarUrl: null,
+      linkedPlan: linkedPlan || null,
+      skip2FA: true,
+    }).returning();
+    return created;
+  }
+
+  async removeLinkedAccount(primaryUserId: string, linkedUserId: string): Promise<boolean> {
+    const result = await db.delete(linkedAccounts).where(
+      and(
+        eq(linkedAccounts.primaryUserId, primaryUserId),
+        eq(linkedAccounts.linkedUserId, linkedUserId)
+      )
+    );
+    return true;
+  }
+
+  async isAccountLinked(primaryUserId: string, linkedUserId: string): Promise<boolean> {
+    const [existing] = await db.select()
+      .from(linkedAccounts)
+      .where(
+        and(
+          eq(linkedAccounts.primaryUserId, primaryUserId),
+          eq(linkedAccounts.linkedUserId, linkedUserId)
+        )
+      );
+    return !!existing;
   }
 
   // Pending sends methods (undo send)

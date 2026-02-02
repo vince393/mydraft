@@ -604,6 +604,166 @@ export async function registerRoutes(
     });
   });
 
+  // Linked accounts API (account switching)
+  app.get("/api/auth/linked-accounts", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const linkedAccounts = await storage.getLinkedAccounts(userId);
+      
+      // Also get current user info
+      const currentUser = await storage.getUser(userId);
+      
+      res.json({ 
+        linkedAccounts,
+        currentUser: currentUser ? {
+          id: currentUser.id,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          plan: currentUser.plan,
+        } : null
+      });
+    } catch (error) {
+      console.error("Failed to get linked accounts:", error);
+      res.status(500).json({ error: "Failed to get linked accounts" });
+    }
+  });
+
+  app.post("/api/auth/link-account", requireAuth, async (req, res) => {
+    try {
+      const primaryUserId = req.session.userId!;
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      // Find the account to link
+      const linkedUser = await storage.getUserByEmail(normalizedEmail);
+      if (!linkedUser) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+      
+      // Verify password
+      const isValid = await verifyPassword(linkedUser.password, password);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
+      
+      // Check if already linked
+      const alreadyLinked = await storage.isAccountLinked(primaryUserId, linkedUser.id);
+      if (alreadyLinked) {
+        return res.status(400).json({ error: "Account already linked" });
+      }
+      
+      // Can't link to self
+      if (linkedUser.id === primaryUserId) {
+        return res.status(400).json({ error: "Cannot link to your own account" });
+      }
+      
+      // Add linked account
+      const linkedAccount = await storage.addLinkedAccount(
+        primaryUserId,
+        linkedUser.id,
+        linkedUser.email,
+        linkedUser.displayName || undefined,
+        linkedUser.plan || undefined
+      );
+      
+      res.json({ success: true, linkedAccount });
+    } catch (error) {
+      console.error("Failed to link account:", error);
+      res.status(500).json({ error: "Failed to link account" });
+    }
+  });
+
+  app.post("/api/auth/switch-account", requireAuth, async (req, res) => {
+    try {
+      const currentUserId = req.session.userId!;
+      const { targetUserId } = req.body;
+      
+      if (!targetUserId) {
+        return res.status(400).json({ error: "Target user ID required" });
+      }
+      
+      // Check if this account is linked (from either direction)
+      const isLinkedFromCurrent = await storage.isAccountLinked(currentUserId, targetUserId);
+      const isLinkedFromTarget = await storage.isAccountLinked(targetUserId, currentUserId);
+      
+      if (!isLinkedFromCurrent && !isLinkedFromTarget) {
+        return res.status(403).json({ error: "Account not linked" });
+      }
+      
+      // Get target user
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ error: "Target account not found" });
+      }
+      
+      // Switch session to target user (skip 2FA for linked accounts)
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ error: "Session error" });
+        }
+        
+        req.session.userId = targetUser.id;
+        
+        // Create login session record
+        const clientIp = getClientIp(req);
+        const userAgent = req.headers['user-agent'] || null;
+        
+        storage.createLoginSession({
+          userId: targetUser.id,
+          sessionId: req.sessionID,
+          ipAddress: clientIp,
+          userAgent,
+          city: null,
+          region: null,
+          country: null,
+        }).catch(err => console.error("Failed to create login session:", err));
+        
+        // Log account switch
+        storage.createSecurityAuditLog({
+          userId: targetUser.id,
+          eventType: "account_switch",
+          ipAddress: clientIp,
+          userAgent,
+          outcome: "success",
+          details: `Switched from account ${currentUserId}`
+        }).catch(err => console.warn("Failed to log security event:", err));
+        
+        res.json({
+          success: true,
+          user: {
+            id: targetUser.id,
+            email: targetUser.email,
+            displayName: targetUser.displayName,
+            plan: targetUser.plan,
+            onboardingCompleted: targetUser.onboardingCompleted,
+          }
+        });
+      });
+    } catch (error) {
+      console.error("Failed to switch account:", error);
+      res.status(500).json({ error: "Failed to switch account" });
+    }
+  });
+
+  app.delete("/api/auth/linked-accounts/:linkedUserId", requireAuth, async (req, res) => {
+    try {
+      const primaryUserId = req.session.userId!;
+      const { linkedUserId } = req.params;
+      
+      await storage.removeLinkedAccount(primaryUserId, linkedUserId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to remove linked account:", error);
+      res.status(500).json({ error: "Failed to remove linked account" });
+    }
+  });
+
   app.post("/api/support/contact", async (req, res) => {
     try {
       const { name, email, message } = req.body;

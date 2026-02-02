@@ -140,6 +140,27 @@ export const insertNylasGrantSchema = createInsertSchema(nylasGrants).omit({
 export type NylasGrant = typeof nylasGrants.$inferSelect;
 export type InsertNylasGrant = z.infer<typeof insertNylasGrantSchema>;
 
+// Linked accounts for account switching without re-authentication
+export const linkedAccounts = pgTable("linked_accounts", {
+  id: serial("id").primaryKey(),
+  primaryUserId: varchar("primary_user_id").notNull(), // The main user's ID who linked accounts
+  linkedUserId: varchar("linked_user_id").notNull(), // The linked account's user ID
+  linkedEmail: text("linked_email").notNull(),
+  linkedDisplayName: text("linked_display_name"),
+  linkedAvatarUrl: text("linked_avatar_url"),
+  linkedPlan: text("linked_plan"),
+  skip2FA: boolean("skip_2fa").default(true).notNull(), // Whether to skip 2FA when switching
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertLinkedAccountSchema = createInsertSchema(linkedAccounts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type LinkedAccount = typeof linkedAccounts.$inferSelect;
+export type InsertLinkedAccount = z.infer<typeof insertLinkedAccountSchema>;
+
 // Custom folders for organizing emails
 export const customFolders = pgTable("custom_folders", {
   id: serial("id").primaryKey(),

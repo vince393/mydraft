@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePlan } from "@/hooks/use-plan";
 import { useScreenSize } from "@/hooks/use-screen-size";
 import { NotificationBell } from "@/components/notification-bell";
+import { AccountSwitcher } from "@/components/account-switcher";
 import type { Email, Draft } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -57,6 +58,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const [showMultiEmailModal, setShowMultiEmailModal] = useState(false);
   const [multiEmailSelection, setMultiEmailSelection] = useState<EmailWithNylasId[]>([]);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
   const [optimisticStars, setOptimisticStars] = useState<Map<string | number, boolean>>(new Map());
   const [optimisticRemovals, setOptimisticRemovals] = useState<Set<string | number>>(new Set());
@@ -709,9 +711,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2" onClick={() => {
-                    logoutMutation.mutate();
-                  }} data-testid="menu-switch-account-mobile">
+                  <DropdownMenuItem className="gap-2" onClick={() => setShowAccountSwitcher(true)} data-testid="menu-switch-account-mobile">
                     <RefreshCw className="w-4 h-4" />
                     Switch Account
                   </DropdownMenuItem>
@@ -880,7 +880,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                     <DropdownMenuItem 
                       className="gap-2" 
                       data-testid="menu-switch-account"
-                      onClick={() => logoutMutation.mutate()}
+                      onClick={() => setShowAccountSwitcher(true)}
                     >
                       <RefreshCw className="w-4 h-4" />
                       <span>Switch Account</span>
@@ -955,6 +955,11 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           setMultiEmailSelection([]);
           queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
         }}
+      />
+
+      <AccountSwitcher
+        open={showAccountSwitcher}
+        onOpenChange={setShowAccountSwitcher}
       />
     </div>
   );
