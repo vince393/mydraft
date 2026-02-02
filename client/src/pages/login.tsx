@@ -397,6 +397,9 @@ export default function LoginPage() {
                 We've sent a 6-digit code to<br />
                 <span className="font-medium text-foreground">{pendingEmail}</span>
               </p>
+              <p className="text-sm text-muted-foreground/70 mt-2">
+                It may take a few minutes to arrive. Check your spam folder if you don't see it.
+              </p>
             </div>
             
             <form onSubmit={handleVerifyCode} className="space-y-6">
