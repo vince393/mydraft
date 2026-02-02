@@ -820,14 +820,14 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       ) : (
         <div className="absolute bottom-4 right-4">
           <button 
-            className="rounded-full w-14 h-14 flex items-center justify-center backdrop-blur-2xl border-2 border-white/40 dark:border-white/20 shadow-[0_4px_24px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:scale-105 hover:shadow-[0_6px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-1px_0_rgba(0,0,0,0.1)] transition-all duration-200 cursor-pointer"
+            className="rounded-full w-14 h-14 flex items-center justify-center backdrop-blur-xl border border-white/20 dark:border-white/15 shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:scale-105 transition-all duration-200 cursor-pointer"
             style={{
-              background: 'linear-gradient(145deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.15) 100%)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%)',
             }}
             onClick={onCompose}
             data-testid="button-compose"
           >
-            <PenSquare className="w-5 h-5 text-foreground/80" />
+            <PenSquare className="w-5 h-5 text-foreground/70" />
           </button>
         </div>
       )}
