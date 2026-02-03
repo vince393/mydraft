@@ -111,14 +111,55 @@ function stripHtml(html: string): string {
 
 function sanitizeEmailHtml(html: string): string {
   return sanitizeHtml(html, {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'style']),
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+      'img', 'center', 'font', 'hr'
+    ]),
     allowedAttributes: {
       ...sanitizeHtml.defaults.allowedAttributes,
-      '*': ['style', 'class'],
       'a': ['href', 'target', 'rel'],
       'img': ['src', 'alt', 'width', 'height'],
+      'font': ['color', 'face', 'size'],
+      'table': ['width', 'border', 'cellpadding', 'cellspacing', 'align', 'bgcolor'],
+      'td': ['width', 'align', 'valign', 'colspan', 'rowspan', 'bgcolor'],
+      'th': ['width', 'align', 'valign', 'colspan', 'rowspan', 'bgcolor'],
+      'tr': ['align', 'valign', 'bgcolor'],
+      'div': ['align', 'class', 'dir'],
+      'p': ['align', 'dir'],
+      'span': ['class', 'dir'],
+      'blockquote': ['type', 'cite', 'class'],
     },
     allowedSchemes: ['http', 'https', 'mailto'],
+    allowedClasses: {
+      'div': ['gmail_quote', 'gmail_attr', 'moz-cite-prefix', 'yahoo_quoted', 'WordSection1', 'MsoNormal'],
+      'blockquote': ['gmail_quote', 'moz-cite-prefix'],
+      'span': ['gmail_default', 'MsoHyperlink'],
+      'p': ['MsoNormal'],
+    },
+    allowedStyles: {
+      'div': {
+        'border-left': [/^\d+(?:\.\d+)?(?:px|pt)\s+solid\s+[#a-zA-Z0-9]+$/],
+        'margin-left': [/^\d+(?:\.\d+)?(?:px|pt|em)$/],
+        'padding-left': [/^\d+(?:\.\d+)?(?:px|pt|em)$/],
+      },
+      'blockquote': {
+        'border-left': [/^\d+(?:\.\d+)?(?:px|pt)\s+solid\s+[#a-zA-Z0-9]+$/],
+        'margin': [/^\d+(?:\.\d+)?(?:px|pt|em)(?:\s+\d+(?:\.\d+)?(?:px|pt|em))*$/],
+        'margin-left': [/^\d+(?:\.\d+)?(?:px|pt|em)$/],
+        'padding-left': [/^\d+(?:\.\d+)?(?:px|pt|em)$/],
+      },
+      'span': {
+        'color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(\d+,\s*\d+,\s*\d+\)$/, /^[a-z]+$/i],
+        'font-size': [/^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/],
+        'font-family': [/^[a-zA-Z\s,'-]+$/],
+        'font-weight': [/^(?:normal|bold|\d{3})$/],
+      },
+      'p': {
+        'margin': [/^\d+(?:\.\d+)?(?:px|pt|em)(?:\s+\d+(?:\.\d+)?(?:px|pt|em))*$/],
+      },
+      'font': {
+        'color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(\d+,\s*\d+,\s*\d+\)$/, /^[a-z]+$/i],
+      },
+    },
   });
 }
 

@@ -916,7 +916,7 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                 </div>
                 {translatedContent.body.includes('<') ? (
                   <div 
-                    className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline"
+                    className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline [&_.gmail_quote]:border-l-2 [&_.gmail_quote]:border-muted-foreground/30 [&_.gmail_quote]:pl-4 [&_.gmail_quote]:ml-0 [&_.gmail_quote]:mt-4 [&_.gmail_quote]:text-muted-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-4 [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_blockquote]:not-italic"
                     dangerouslySetInnerHTML={{ __html: translatedContent.body }} 
                   />
                 ) : (
@@ -931,14 +931,14 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
               </>
             ) : showFormatted && formattedBody ? (
               <div 
-                className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline"
+                className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline [&_.gmail_quote]:border-l-2 [&_.gmail_quote]:border-muted-foreground/30 [&_.gmail_quote]:pl-4 [&_.gmail_quote]:ml-0 [&_.gmail_quote]:mt-4 [&_.gmail_quote]:text-muted-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-4 [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_blockquote]:italic-none [&_blockquote]:not-italic"
                 dangerouslySetInnerHTML={{ __html: formattedBody }} 
               />
             ) : (
               <>
                 {email.body.includes('<') ? (
                   <div 
-                    className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px]"
+                    className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_.gmail_quote]:border-l-2 [&_.gmail_quote]:border-muted-foreground/30 [&_.gmail_quote]:pl-4 [&_.gmail_quote]:ml-0 [&_.gmail_quote]:mt-4 [&_.gmail_quote]:text-muted-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-4 [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_blockquote]:not-italic"
                     dangerouslySetInnerHTML={{ __html: email.body }} 
                   />
                 ) : (
