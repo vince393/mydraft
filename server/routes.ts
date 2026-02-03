@@ -4065,7 +4065,7 @@ Return only the improved text, nothing else.`;
       res.status(500).json({ error: "Failed to delete chat session" });
     }
   });
-
+  
   // Rename a chat session
   app.patch("/api/assistant/sessions/:sessionId", requireAuth, async (req, res) => {
     try {
