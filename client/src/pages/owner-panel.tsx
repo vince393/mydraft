@@ -277,10 +277,12 @@ export default function OwnerPanel() {
     enabled: isOwnerData?.isOwner === true && activeTab === "testimonials",
   });
 
-  // Notes query
+  // Notes query - refetch on focus to sync across devices
   const { data: notesList = [], isLoading: notesLoading } = useQuery<OwnerNote[]>({
     queryKey: ["/api/owner/notes"],
     enabled: isOwnerData?.isOwner === true && activeTab === "notes",
+    staleTime: 0, // Always refetch when tab becomes active
+    refetchOnWindowFocus: true, // Refetch when window regains focus (for cross-device sync)
   });
 
   const updateFeedbackMutation = useMutation({
