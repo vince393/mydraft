@@ -370,6 +370,37 @@ export interface SendAttachment {
   contentType: string;
 }
 
+function isHtmlContent(body: string): boolean {
+  // Check for common HTML tags that indicate the content is already formatted HTML
+  // This is more specific than checking for any < character to avoid false positives
+  // with plain text containing mathematical expressions like "2 < 3"
+  const htmlTagPattern = /<(?:html|head|body|div|p|br|span|a|img|table|tr|td|th|ul|ol|li|h[1-6]|strong|em|b|i|u|blockquote|pre|code|style|script|meta|link|!DOCTYPE)[^>]*>/i;
+  return htmlTagPattern.test(body);
+}
+
+function formatEmailBody(body: string): string {
+  // If body already contains HTML tags, assume it's formatted
+  if (isHtmlContent(body)) {
+    return body;
+  }
+  
+  // Normalize all line endings to \n (handle Windows \r\n and old Mac \r)
+  const normalized = body.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  // Convert plain text to HTML:
+  // 1. Escape HTML entities
+  // 2. Convert newlines to <br> tags
+  // 3. Wrap in basic HTML structure for proper rendering
+  const escaped = normalized
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  const withBreaks = escaped.replace(/\n/g, '<br>');
+  
+  return `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #1a1a1a;">${withBreaks}</div>`;
+}
+
 export async function sendMessage(
   grantId: string, 
   to: string[], 
@@ -380,10 +411,13 @@ export async function sendMessage(
   bcc?: string[],
   attachments?: SendAttachment[]
 ): Promise<void> {
+  // Format the body to preserve line breaks and formatting
+  const formattedBody = formatEmailBody(body);
+  
   const payload: Record<string, unknown> = {
     to: to.map(email => ({ email })),
     subject,
-    body,
+    body: formattedBody,
   };
 
   if (cc && cc.length > 0) {
