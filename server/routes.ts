@@ -1745,37 +1745,42 @@ Return ONLY valid JSON, no other text.`;
         // Use local storage only - don't sync folder changes to Nylas
         await storage.setLocalEmailFolder(userId, id, folder);
         
-        // Record action for AI learning (only for trash/archive)
+        // Return immediately for faster UX - record action asynchronously
+        res.json({ success: true, folder });
+        
+        // Record action for AI learning in background (only for trash/archive)
         if (folder === "trash" || folder === "archived") {
-          try {
-            // Get email details from Nylas for better pattern learning
-            const grant = await storage.getNylasGrant(userId);
-            if (grant) {
-              const message = await nylas.getMessage(grant.grantId, id);
-              const senderEmail = message?.from?.[0]?.email;
-              const subject = message?.subject || "";
-              // Extract keywords from subject
-              const keywords = subject.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3).slice(0, 5);
-              // Detect newsletter patterns
-              const isNewsletter = /unsubscribe|newsletter|digest|weekly|monthly/i.test(subject) || 
-                                   /@.*mail\.|noreply|no-reply|notifications?@/i.test(senderEmail || "");
-              const isPromotion = /sale|discount|offer|promo|deal|off|save|free/i.test(subject);
-              
-              await storage.recordEmailAction(userId, {
-                messageId: id,
-                actionType: folder === "trash" ? "delete" : "archive",
-                senderEmail,
-                subjectKeywords: keywords,
-                isNewsletter,
-                isPromotion,
-              });
+          (async () => {
+            try {
+              // Get email details from Nylas for better pattern learning
+              const grant = await storage.getNylasGrant(userId);
+              if (grant) {
+                const message = await nylas.getMessage(grant.grantId, id);
+                const senderEmail = message?.from?.[0]?.email;
+                const subject = message?.subject || "";
+                // Extract keywords from subject
+                const keywords = subject.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3).slice(0, 5);
+                // Detect newsletter patterns
+                const isNewsletter = /unsubscribe|newsletter|digest|weekly|monthly/i.test(subject) || 
+                                     /@.*mail\.|noreply|no-reply|notifications?@/i.test(senderEmail || "");
+                const isPromotion = /sale|discount|offer|promo|deal|off|save|free/i.test(subject);
+                
+                await storage.recordEmailAction(userId, {
+                  messageId: id,
+                  actionType: folder === "trash" ? "delete" : "archive",
+                  senderEmail,
+                  subjectKeywords: keywords,
+                  isNewsletter,
+                  isPromotion,
+                });
+              }
+            } catch (e) {
+              console.log("[Action Recording] Failed to record action:", e);
             }
-          } catch (e) {
-            console.log("[Action Recording] Failed to record action:", e);
-          }
+          })();
         }
         
-        return res.json({ success: true, folder });
+        return;
       } else {
         // Local email storage for demo/test emails
         const numericId = parseInt(id);
