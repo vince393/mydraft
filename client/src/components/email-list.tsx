@@ -671,21 +671,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             className="flex items-center justify-center py-3 transition-all"
             style={{ height: isRefreshing ? 48 : pullDistance * 0.6 }}
           >
-            <div className="flex items-center gap-2">
-              <Loader2 
-                className={`w-4 h-4 text-muted-foreground ${isRefreshing || pullDistance >= pullThreshold ? 'animate-spin' : ''}`}
-                style={{ 
-                  transform: isRefreshing ? 'none' : `rotate(${pullDistance * 3.6}deg)`,
-                  opacity: Math.min(1, pullDistance / pullThreshold)
-                }}
-              />
-              {isRefreshing && (
-                <span className="text-xs text-muted-foreground">Refreshing...</span>
-              )}
-              {!isRefreshing && pullDistance >= pullThreshold && (
-                <span className="text-xs text-muted-foreground">Release to refresh</span>
-              )}
-            </div>
+            <Loader2 
+              className={`w-5 h-5 text-primary ${isRefreshing || pullDistance >= pullThreshold ? 'animate-spin' : ''}`}
+              style={{ 
+                transform: isRefreshing ? 'none' : `rotate(${pullDistance * 3.6}deg)`,
+                opacity: Math.min(1, pullDistance / pullThreshold)
+              }}
+            />
           </div>
         )}
         {filteredEmails.length === 0 ? (
