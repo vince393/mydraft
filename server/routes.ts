@@ -3109,12 +3109,13 @@ Please write a reply that:
 3. Uses a ${tone} tone throughout
 4. Is concise (2-4 paragraphs)
 5. Do NOT include greeting like "Dear" or sign-off - just the body content
+6. IMPORTANT: Do NOT include the subject line, "Re:", or any subject prefix in your reply - write only the body content
 
 Reply:`;
 
       const systemPrompt = learnedStyle && learnedStyle.samplesAnalyzed > 0
-        ? `You are an email assistant that writes replies matching the user's personal writing style. The user tends to write in a ${learnedStyle.toneDescription || tone} manner with ${learnedStyle.avgSentenceLength || "medium"} sentences. Mimic their natural voice while maintaining the requested ${tone} tone. Write only the email body without greetings or sign-offs.`
-        : `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings or sign-offs.`;
+        ? `You are an email assistant that writes replies matching the user's personal writing style. The user tends to write in a ${learnedStyle.toneDescription || tone} manner with ${learnedStyle.avgSentenceLength || "medium"} sentences. Mimic their natural voice while maintaining the requested ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`
+        : `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -3139,6 +3140,25 @@ Reply:`;
           reason: "The email format or content could not be processed. This may be due to unusual formatting, empty content, or unsupported characters.",
           canRetry: true
         });
+      }
+
+      // Clean body - remove any subject-like prefixes the AI may have incorrectly included
+      const subjectPrefixes = [
+        /^Re:\s*/i,
+        /^Fwd:\s*/i,
+        /^Subject:\s*/i,
+      ];
+      for (const regex of subjectPrefixes) {
+        generatedContent = generatedContent.replace(regex, '');
+      }
+      
+      // If the content starts with the subject text, remove it
+      const originalSubject = emailData.subject || "";
+      if (originalSubject && generatedContent.toLowerCase().startsWith(originalSubject.toLowerCase())) {
+        generatedContent = generatedContent.substring(originalSubject.length).replace(/^[\s\n:,-]+/, '');
+      }
+      if (originalSubject && generatedContent.toLowerCase().startsWith(`re: ${originalSubject.toLowerCase()}`)) {
+        generatedContent = generatedContent.substring(originalSubject.length + 4).replace(/^[\s\n:,-]+/, '');
       }
 
       // Append email signature if enabled
@@ -3376,7 +3396,7 @@ Please modify the response according to the instruction.`
       let systemMessage: string;
 
       if (mode === "reply" || mode === "replyAll") {
-        systemMessage = `You are an email assistant that writes clear, concise email replies. Always respond in JSON format with "subject" and "body" fields.`;
+        systemMessage = `You are an email assistant that writes clear, concise email replies. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Re:", or any subject prefix in the body.`;
         
         // If there's existing body content, user wants to refine/tweak it
         const existingContent = existingBody?.trim() || "";
@@ -3399,8 +3419,9 @@ Provide an improved version that:
 1. Maintains the user's intended message
 2. Uses a ${tone} tone throughout
 3. Is clear and well-structured
+4. IMPORTANT: The body should contain ONLY the email content - do NOT include "Re:", subject line text, or any subject prefix in the body
 
-Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ''}", "body": "Your improved reply text here..."}`;
+Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ''}", "body": "Your improved reply text here (no subject line in body)..."}`;
         } else {
           prompt = `Generate a reply to this email with a ${toneDesc} tone.
 
@@ -3417,11 +3438,12 @@ Write a reply that:
 2. Addresses any questions or action items
 3. Uses a ${tone} tone throughout
 4. Is concise (2-3 paragraphs max)
+5. IMPORTANT: The body should contain ONLY the email content - do NOT include "Re:", subject line text, or any subject prefix in the body
 
-Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ''}", "body": "Your reply text here..."}`;
+Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ''}", "body": "Your reply text here (no subject line in body)..."}`;
         }
       } else if (mode === "forward") {
-        systemMessage = `You are an email assistant. Always respond in JSON format with "subject" and "body" fields.`;
+        systemMessage = `You are an email assistant. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Fwd:", or any subject prefix in the body.`;
         
         const existingContent = existingBody?.trim() || "";
         
@@ -3451,7 +3473,7 @@ Respond with JSON only: {"subject": "Fwd: ${originalEmail?.subject || ''}", "bod
         }
       } else {
         // New email
-        systemMessage = `You are an email assistant that helps compose professional emails. Always respond in JSON format with "subject" and "body" fields.`;
+        systemMessage = `You are an email assistant that helps compose professional emails. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line or any subject prefix in the body.`;
         
         const existingContent = existingBody?.trim() || "";
         
@@ -3520,8 +3542,29 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
       try {
         const parsed = JSON.parse(content);
         
-        // Append email signature if enabled
+        // Clean body - remove any subject-like prefixes the AI may have incorrectly included
         let body = parsed.body || "";
+        const originalSubject = originalEmail?.subject || "";
+        
+        // Remove common subject-like prefixes from body start
+        const subjectPrefixes = [
+          /^Re:\s*/i,
+          /^Fwd:\s*/i,
+          /^Subject:\s*/i,
+        ];
+        for (const regex of subjectPrefixes) {
+          body = body.replace(regex, '');
+        }
+        
+        // If the body starts with the subject text, remove it
+        if (originalSubject && body.toLowerCase().startsWith(originalSubject.toLowerCase())) {
+          body = body.substring(originalSubject.length).replace(/^[\s\n:,-]+/, '');
+        }
+        if (originalSubject && body.toLowerCase().startsWith(`re: ${originalSubject.toLowerCase()}`)) {
+          body = body.substring(originalSubject.length + 4).replace(/^[\s\n:,-]+/, '');
+        }
+        
+        // Append email signature if enabled
         if (user?.signatureEnabled && user?.emailSignature) {
           body = `${body}\n\n${user.emailSignature}`;
         }

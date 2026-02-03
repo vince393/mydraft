@@ -138,3 +138,11 @@ Each protection level has defined requirements:
 - `server/antivirus.ts`: Malware scanning and SVG sanitization
 - `server/storage.ts`: Security audit log storage
 - `shared/data-classification.ts`: Data classification schema and protection requirements
+
+## Recent Changes
+
+### February 2026
+- **AI Subject-in-Body Bug Fix**: Fixed issue where AI regeneration would put subject line text in the email body. Added explicit instructions to AI prompts and post-processing to strip subject-like prefixes
+- **Email Signature Feature**: Signature is automatically appended to all AI-generated drafts when enabled in Settings > Email Settings
+- **Email Formatting**: Implemented `formatEmailBody()` function that converts plain text newlines to HTML breaks for proper email rendering
+- **Legal Pages**: All 7 legal policy pages rewritten with professional business language, 18+ age requirement, mydraft.io domains, and 2026 copyright
