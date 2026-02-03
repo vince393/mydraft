@@ -111,7 +111,10 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
         description: `${data.executed} actions completed${data.failed > 0 ? `, ${data.failed} failed` : ""}`,
       });
       refetchSuggestions();
+      // Invalidate all email-related queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/inbox-suggestions"] });
       onRefreshComplete?.();
       setIsOpen(false);
     },
