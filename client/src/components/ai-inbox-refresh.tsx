@@ -178,16 +178,17 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
+      <button
         onClick={() => setIsOpen(true)}
-        className="text-purple-500"
+        className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border border-white/20 dark:border-white/10 hover:bg-white/8 dark:hover:bg-white/5 hover:border-white/30 dark:hover:border-white/15 hover:scale-110 active:scale-95 transition-all duration-150 cursor-pointer"
+        style={{
+          boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1)"
+        }}
         title="AI Inbox Refresh"
         data-testid="button-ai-inbox-refresh"
       >
-        <Wand2 className="w-4 h-4" />
-      </Button>
+        <Wand2 className="w-4 h-4 text-purple-400/70 group-hover:text-purple-400 transition-colors" />
+      </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col p-0 gap-0 border-border/50">
