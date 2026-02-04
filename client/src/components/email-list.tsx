@@ -484,20 +484,23 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       <div className="p-3 border-b border-border/20">
         <div className="relative flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none z-10" />
             <Input 
               type="search"
               placeholder="Search emails..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`pl-9 ${searchQuery ? 'pr-8' : 'pr-3'} bg-muted/20 border-border/30 h-9 rounded-lg text-sm focus:bg-muted/30 transition-colors`}
+              className={`pl-9 ${searchQuery ? 'pr-8' : 'pr-3'} backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border-white/20 dark:border-white/10 h-9 rounded-lg text-sm placeholder:text-muted-foreground/50 focus:bg-white/8 dark:focus:bg-white/5 focus:border-white/30 dark:focus:border-white/15 transition-all`}
+              style={{
+                boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1)"
+              }}
               data-testid="input-search"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all z-10"
                 data-testid="button-clear-search"
               >
                 <X className="w-3 h-3" />
