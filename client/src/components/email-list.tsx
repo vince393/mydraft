@@ -482,15 +482,18 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   return (
     <div className="flex flex-col h-full overflow-x-hidden relative">
       <div className="p-3 border-b border-border/20">
-        <div className="relative flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-0">
+        <div className="relative flex flex-wrap items-center justify-center gap-2">
+          {hasConnectedAccount && activeFolder === "inbox" && (
+            <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
+          )}
+          <div className="relative flex-1 min-w-0 max-w-md mx-auto">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none z-10" />
             <Input 
               type="search"
               placeholder="Search emails..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`pl-9 ${searchQuery ? 'pr-8' : 'pr-3'} backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border-white/20 dark:border-white/10 h-9 rounded-lg text-sm placeholder:text-muted-foreground/50 focus:bg-white/8 dark:focus:bg-white/5 focus:border-white/30 dark:focus:border-white/15 transition-all`}
+              className={`pl-9 ${searchQuery ? 'pr-8' : 'pr-3'} backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border-white/20 dark:border-white/10 h-9 rounded-full text-sm placeholder:text-muted-foreground/50 focus:bg-white/8 dark:focus:bg-white/5 focus:border-white/30 dark:focus:border-white/15 transition-all`}
               style={{
                 boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1)"
               }}
@@ -507,9 +510,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               </button>
             )}
           </div>
-          {hasConnectedAccount && activeFolder === "inbox" && (
-            <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
-          )}
           <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
             <PopoverTrigger asChild>
               <Button 
