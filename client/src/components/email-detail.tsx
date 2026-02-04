@@ -905,50 +905,50 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
           </div>
 
           <div 
-            className="mb-8"
+            className="mb-8 email-body-container"
             data-testid="email-body"
           >
             {showTranslated && translatedContent ? (
               <>
-                <div className="text-xs text-blue-500 mb-2 flex items-center gap-1">
+                <div className="text-xs text-blue-500 mb-3 flex items-center gap-1">
                   <Languages className="w-3 h-3" />
                   Translated from {detectedLanguage?.name || "original language"}
                 </div>
                 {translatedContent.body.includes('<') ? (
                   <div 
-                    className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline [&_.gmail_quote]:border-l-2 [&_.gmail_quote]:border-muted-foreground/30 [&_.gmail_quote]:pl-4 [&_.gmail_quote]:ml-0 [&_.gmail_quote]:mt-4 [&_.gmail_quote]:text-muted-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-4 [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_blockquote]:not-italic"
+                    className="email-content"
                     dangerouslySetInnerHTML={{ __html: translatedContent.body }} 
                   />
                 ) : (
-                  translatedContent.body.split("\n").map((paragraph, i) => (
-                    paragraph.trim() ? (
-                      <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
-                        {paragraph}
-                      </p>
-                    ) : null
-                  ))
+                  <div className="email-content-plain">
+                    {translatedContent.body.split("\n").map((paragraph, i) => (
+                      paragraph.trim() ? (
+                        <p key={i}>{paragraph}</p>
+                      ) : <br key={i} />
+                    ))}
+                  </div>
                 )}
               </>
             ) : showFormatted && formattedBody ? (
               <div 
-                className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_a]:text-blue-500 [&_a]:underline [&_.gmail_quote]:border-l-2 [&_.gmail_quote]:border-muted-foreground/30 [&_.gmail_quote]:pl-4 [&_.gmail_quote]:ml-0 [&_.gmail_quote]:mt-4 [&_.gmail_quote]:text-muted-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-4 [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_blockquote]:italic-none [&_blockquote]:not-italic"
+                className="email-content"
                 dangerouslySetInnerHTML={{ __html: formattedBody }} 
               />
             ) : (
               <>
                 {email.body.includes('<') ? (
                   <div 
-                    className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-[15px] [&_.gmail_quote]:border-l-2 [&_.gmail_quote]:border-muted-foreground/30 [&_.gmail_quote]:pl-4 [&_.gmail_quote]:ml-0 [&_.gmail_quote]:mt-4 [&_.gmail_quote]:text-muted-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-4 [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_blockquote]:not-italic"
+                    className="email-content"
                     dangerouslySetInnerHTML={{ __html: email.body }} 
                   />
                 ) : (
-                  email.body.split("\n").map((paragraph, i) => (
-                    paragraph.trim() ? (
-                      <p key={i} className="text-foreground/90 leading-relaxed text-[15px] mb-4">
-                        {paragraph}
-                      </p>
-                    ) : null
-                  ))
+                  <div className="email-content-plain">
+                    {email.body.split("\n").map((paragraph, i) => (
+                      paragraph.trim() ? (
+                        <p key={i}>{paragraph}</p>
+                      ) : <br key={i} />
+                    ))}
+                  </div>
                 )}
               </>
             )}

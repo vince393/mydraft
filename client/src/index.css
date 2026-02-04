@@ -446,3 +446,218 @@
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+/* Professional Email Content Styling - Apple Mail / Gmail look */
+.email-body-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.email-content,
+.email-content-plain {
+  font-size: 15px;
+  line-height: 1.6;
+  color: hsl(var(--foreground) / 0.92);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.email-content-plain p {
+  margin: 0 0 1em 0;
+}
+
+.email-content-plain p:last-child {
+  margin-bottom: 0;
+}
+
+/* HTML Email Content */
+.email-content {
+  max-width: 100%;
+}
+
+.email-content p {
+  margin: 0 0 1em 0;
+}
+
+.email-content p:last-child {
+  margin-bottom: 0;
+}
+
+.email-content div {
+  margin: 0;
+}
+
+/* Links */
+.email-content a {
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.email-content a:hover {
+  text-decoration: underline;
+}
+
+.dark .email-content a {
+  color: #8ab4f8;
+}
+
+/* Images */
+.email-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* Lists */
+.email-content ul,
+.email-content ol {
+  margin: 0 0 1em 0;
+  padding-left: 1.5em;
+}
+
+.email-content li {
+  margin: 0.25em 0;
+}
+
+/* Tables - common in email */
+.email-content table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.5em 0;
+}
+
+.email-content td,
+.email-content th {
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+/* Headings */
+.email-content h1,
+.email-content h2,
+.email-content h3,
+.email-content h4,
+.email-content h5,
+.email-content h6 {
+  margin: 1.25em 0 0.5em 0;
+  font-weight: 600;
+  line-height: 1.3;
+  color: hsl(var(--foreground));
+}
+
+.email-content h1:first-child,
+.email-content h2:first-child,
+.email-content h3:first-child {
+  margin-top: 0;
+}
+
+.email-content h1 { font-size: 1.5em; }
+.email-content h2 { font-size: 1.3em; }
+.email-content h3 { font-size: 1.15em; }
+.email-content h4 { font-size: 1.05em; }
+
+/* Blockquotes / Replies - Gmail style */
+.email-content blockquote,
+.email-content .gmail_quote,
+.email-content .moz-cite-prefix,
+.email-content .yahoo_quoted,
+.email-content .WordSection1 blockquote {
+  margin: 1em 0;
+  padding: 0 0 0 12px;
+  border-left: 2px solid hsl(var(--muted-foreground) / 0.25);
+  color: hsl(var(--muted-foreground));
+  font-style: normal;
+}
+
+.email-content blockquote blockquote {
+  border-left-color: hsl(var(--muted-foreground) / 0.15);
+}
+
+/* Signature styling */
+.email-content .gmail_signature,
+.email-content .signature {
+  margin-top: 1.5em;
+  padding-top: 1em;
+  border-top: 1px solid hsl(var(--border) / 0.5);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.9em;
+}
+
+/* Pre/Code blocks */
+.email-content pre,
+.email-content code {
+  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo, monospace;
+  font-size: 0.9em;
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 4px;
+}
+
+.email-content pre {
+  padding: 12px 16px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.email-content code {
+  padding: 2px 6px;
+}
+
+.email-content pre code {
+  padding: 0;
+  background: none;
+}
+
+/* Horizontal rules */
+.email-content hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border) / 0.5);
+  margin: 1.5em 0;
+}
+
+/* Strong/Bold */
+.email-content strong,
+.email-content b {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+/* Italic */
+.email-content em,
+.email-content i {
+  font-style: italic;
+}
+
+/* Remove extra spacing from nested elements */
+.email-content > :first-child {
+  margin-top: 0;
+}
+
+.email-content > :last-child {
+  margin-bottom: 0;
+}
+
+/* Fix common email formatting issues */
+.email-content font {
+  font-family: inherit !important;
+}
+
+.email-content [style*="font-family"] {
+  font-family: inherit !important;
+}
+
+/* Ensure proper line breaks */
+.email-content br {
+  display: block;
+  content: "";
+  margin-top: 0.25em;
+}
+
+/* Collapsed quoted text styling */
+.email-content .gmail_extra,
+.email-content .moz-signature {
+  margin-top: 1em;
+  color: hsl(var(--muted-foreground));
+}
