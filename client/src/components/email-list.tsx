@@ -481,147 +481,148 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
 
   return (
     <div className="flex flex-col h-full overflow-x-hidden relative">
-      <div className="p-3 border-b border-border/20">
-        <div className="relative flex flex-wrap items-center justify-center gap-2">
-          {hasConnectedAccount && activeFolder === "inbox" && (
-            <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
+      {/* Floating search bar overlay */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+        {hasConnectedAccount && activeFolder === "inbox" && (
+          <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
+        )}
+        <div className="relative w-64">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none z-10" />
+          <Input 
+            type="search"
+            placeholder="Search emails..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`pl-9 ${searchQuery ? 'pr-8' : 'pr-3'} backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 h-9 rounded-full text-sm placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
+            style={{
+              boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.1)"
+            }}
+            data-testid="input-search"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all z-10"
+              data-testid="button-clear-search"
+            >
+              <X className="w-3 h-3" />
+            </button>
           )}
-          <div className="relative flex-1 min-w-0 max-w-md mx-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none z-10" />
-            <Input 
-              type="search"
-              placeholder="Search emails..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={`pl-9 ${searchQuery ? 'pr-8' : 'pr-3'} backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border-white/20 dark:border-white/10 h-9 rounded-full text-sm placeholder:text-muted-foreground/50 focus:bg-white/8 dark:focus:bg-white/5 focus:border-white/30 dark:focus:border-white/15 transition-all`}
+        </div>
+        <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+          <PopoverTrigger asChild>
+            <button 
+              className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border border-white/20 dark:border-white/10 hover:bg-white/8 dark:hover:bg-white/5 hover:border-white/30 dark:hover:border-white/15 hover:scale-110 active:scale-95 transition-all duration-150 cursor-pointer"
               style={{
                 boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1)"
               }}
-              data-testid="input-search"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all z-10"
-                data-testid="button-clear-search"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-          <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-            <PopoverTrigger asChild>
-              <Button 
-                size="icon" 
-                variant={hasActiveFilters ? "secondary" : "ghost"}
-                data-testid="button-filter"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 p-4" align="end">
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="font-medium text-sm">Filters</h4>
-                  {hasActiveFilters && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={clearFilters}
-                      data-testid="button-clear-filters"
-                    >
-                      Clear all
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="flex flex-wrap items-center space-x-2">
-                  <Checkbox 
-                    id="unread-only" 
-                    checked={filters.unreadOnly}
-                    onCheckedChange={(checked) => setFilters(f => ({ ...f, unreadOnly: !!checked }))}
-                    data-testid="checkbox-unread-only"
-                  />
-                  <Label htmlFor="unread-only" className="text-sm flex flex-wrap items-center gap-2 cursor-pointer">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    Unread only
-                  </Label>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm flex flex-wrap items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    Date range
-                  </Label>
-                  <Select 
-                    value={filters.dateRange} 
-                    onValueChange={(value: "all" | "today" | "week" | "month") => setFilters(f => ({ ...f, dateRange: value }))}
-                  >
-                    <SelectTrigger className="w-full h-9" data-testid="select-date-range">
-                      <SelectValue placeholder="Select date range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All time</SelectItem>
-                      <SelectItem value="today">Today</SelectItem>
-                      <SelectItem value="week">Last 7 days</SelectItem>
-                      <SelectItem value="month">Last 30 days</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm flex flex-wrap items-center gap-2">
-                    <User className="w-4 h-4 text-muted-foreground" />
-                    Sender
-                  </Label>
-                  <Input
-                    placeholder="Filter by sender..."
-                    value={filters.sender}
-                    onChange={(e) => setFilters(f => ({ ...f, sender: e.target.value }))}
-                    className="h-9"
-                    data-testid="input-filter-sender"
-                  />
-                  {uniqueSenders.length > 0 && !filters.sender && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {uniqueSenders.slice(0, 5).map(([email, name]) => (
-                        <Badge
-                          key={email}
-                          variant="secondary"
-                          onClick={() => setFilters(f => ({ ...f, sender: name }))}
-                          className="cursor-pointer text-xs truncate max-w-[120px]"
-                          data-testid={`button-sender-${email}`}
-                        >
-                          {name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-        {(hasActiveFilters || searchQuery) && (
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span className="text-xs text-muted-foreground">
-              {filteredEmails.length} result{filteredEmails.length !== 1 ? "s" : ""}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              data-testid="button-clear-all-filters"
+              data-testid="button-filter"
             >
-              <X className="w-3 h-3 mr-1" />
-              Clear
-            </Button>
-          </div>
-        )}
+              <SlidersHorizontal className={`w-4 h-4 ${hasActiveFilters ? 'text-primary' : 'text-foreground/60 group-hover:text-foreground/80'} transition-colors`} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-4" align="end">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="font-medium text-sm">Filters</h4>
+                {hasActiveFilters && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearFilters}
+                    data-testid="button-clear-filters"
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap items-center space-x-2">
+                <Checkbox 
+                  id="unread-only" 
+                  checked={filters.unreadOnly}
+                  onCheckedChange={(checked) => setFilters(f => ({ ...f, unreadOnly: !!checked }))}
+                  data-testid="checkbox-unread-only"
+                />
+                <Label htmlFor="unread-only" className="text-sm flex flex-wrap items-center gap-2 cursor-pointer">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  Unread only
+                </Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm flex flex-wrap items-center gap-2">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  Date range
+                </Label>
+                <Select 
+                  value={filters.dateRange} 
+                  onValueChange={(value: "all" | "today" | "week" | "month") => setFilters(f => ({ ...f, dateRange: value }))}
+                >
+                  <SelectTrigger className="w-full h-9" data-testid="select-date-range">
+                    <SelectValue placeholder="Select date range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All time</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">Last 7 days</SelectItem>
+                    <SelectItem value="month">Last 30 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm flex flex-wrap items-center gap-2">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  Sender
+                </Label>
+                <Input
+                  placeholder="Filter by sender..."
+                  value={filters.sender}
+                  onChange={(e) => setFilters(f => ({ ...f, sender: e.target.value }))}
+                  className="h-9"
+                  data-testid="input-filter-sender"
+                />
+                {uniqueSenders.length > 0 && !filters.sender && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {uniqueSenders.slice(0, 5).map(([email, name]) => (
+                      <Badge
+                        key={email}
+                        variant="secondary"
+                        onClick={() => setFilters(f => ({ ...f, sender: name }))}
+                        className="cursor-pointer text-xs truncate max-w-[120px]"
+                        data-testid={`button-sender-${email}`}
+                      >
+                        {name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
+      {/* Filter results indicator */}
+      {(hasActiveFilters || searchQuery) && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border border-white/15 dark:border-white/10 rounded-full">
+          <span className="text-xs text-muted-foreground/70">
+            {filteredEmails.length} result{filteredEmails.length !== 1 ? "s" : ""}
+          </span>
+          <button
+            onClick={clearFilters}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center"
+            data-testid="button-clear-all-filters"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+      {/* Email list with top padding for floating search */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative"
+        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative pt-16"
         onTouchStart={(e) => {
           if (scrollContainerRef.current?.scrollTop === 0) {
             setIsPulling(true);
