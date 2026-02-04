@@ -1690,6 +1690,7 @@ Return ONLY valid JSON, no other text.`;
           avatarColor: "#3B82F6",
           to: message.to,
           cc: message.cc,
+          attachments: message.attachments,
         });
       }
       
@@ -5278,7 +5279,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         inviteeId: invitee.id,
         status: "pending"
       });
-
+      
       // Create notification for invitee
       await storage.createNotification({
         userId: invitee.id,
