@@ -618,26 +618,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </Button>
           </div>
         )}
-        {activeFolder.toLowerCase() !== "sent" && activeFolder.toLowerCase() !== "trash" && (
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-2 px-3 py-1.5 backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border border-white/15 dark:border-white/10 rounded-full mx-auto w-fit">
-            <Clock className="w-3 h-3 text-muted-foreground/50" />
-            <span className="text-[11px] text-muted-foreground/70">
-              {isLoadingTime ? (
-                "Calculating..."
-              ) : responseTime?.message ? (
-                responseTime.message
-              ) : responseTime?.estimatedMinutes ? (
-                `Est. ${
-                  responseTime.estimatedMinutes >= 60
-                    ? `${Math.floor(responseTime.estimatedMinutes / 60)}h ${responseTime.estimatedMinutes % 60}m`
-                    : `${responseTime.estimatedMinutes} min`
-                } to reply`
-              ) : (
-                "Est. -- to reply"
-              )}
-            </span>
-          </div>
-        )}
       </div>
       <div 
         ref={scrollContainerRef}
