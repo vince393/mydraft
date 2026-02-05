@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -89,6 +89,12 @@ export interface IStorage {
   addLinkedAccount(primaryUserId: string, linkedUserId: string, linkedEmail: string, linkedDisplayName?: string, linkedPlan?: string): Promise<LinkedAccount>;
   removeLinkedAccount(primaryUserId: string, linkedUserId: string): Promise<boolean>;
   isAccountLinked(primaryUserId: string, linkedUserId: string): Promise<boolean>;
+
+  // Contacts methods (email autocomplete)
+  getContacts(userId: string): Promise<Contact[]>;
+  searchContacts(userId: string, query: string): Promise<Contact[]>;
+  saveContact(userId: string, email: string, name?: string): Promise<Contact>;
+  incrementContactUse(userId: string, email: string): Promise<void>;
 
   // Pending sends methods (undo send)
   createPendingSend(send: InsertPendingSend): Promise<PendingSend>;
@@ -1246,6 +1252,71 @@ Business Development`,
         )
       );
     return !!existing;
+  }
+
+  // Contacts methods (email autocomplete)
+  async getContacts(userId: string): Promise<Contact[]> {
+    return db.select()
+      .from(contacts)
+      .where(eq(contacts.userId, userId))
+      .orderBy(desc(contacts.useCount), desc(contacts.lastUsed))
+      .limit(100);
+  }
+
+  async searchContacts(userId: string, query: string): Promise<Contact[]> {
+    const lowerQuery = query.toLowerCase();
+    const allContacts = await db.select()
+      .from(contacts)
+      .where(eq(contacts.userId, userId))
+      .orderBy(desc(contacts.useCount), desc(contacts.lastUsed));
+    
+    return allContacts.filter(c => 
+      c.email.toLowerCase().includes(lowerQuery) ||
+      (c.name && c.name.toLowerCase().includes(lowerQuery))
+    ).slice(0, 10);
+  }
+
+  async saveContact(userId: string, email: string, name?: string): Promise<Contact> {
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    // Check if contact already exists
+    const [existing] = await db.select()
+      .from(contacts)
+      .where(and(eq(contacts.userId, userId), eq(contacts.email, normalizedEmail)));
+    
+    if (existing) {
+      // Update name if provided and different, increment use count
+      const updates: Partial<Contact> = {
+        lastUsed: new Date(),
+        useCount: existing.useCount + 1,
+      };
+      if (name && name !== existing.name) {
+        updates.name = name;
+      }
+      const [updated] = await db.update(contacts)
+        .set(updates)
+        .where(eq(contacts.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    // Create new contact
+    const [created] = await db.insert(contacts).values({
+      userId,
+      email: normalizedEmail,
+      name: name || null,
+    }).returning();
+    return created;
+  }
+
+  async incrementContactUse(userId: string, email: string): Promise<void> {
+    const normalizedEmail = email.toLowerCase().trim();
+    await db.update(contacts)
+      .set({ 
+        useCount: sql`${contacts.useCount} + 1`,
+        lastUsed: new Date(),
+      })
+      .where(and(eq(contacts.userId, userId), eq(contacts.email, normalizedEmail)));
   }
 
   // Pending sends methods (undo send)
