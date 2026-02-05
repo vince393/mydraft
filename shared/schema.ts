@@ -928,3 +928,21 @@ export const insertOwnerNoteSchema = createInsertSchema(ownerNotes).omit({
 
 export type OwnerNote = typeof ownerNotes.$inferSelect;
 export type InsertOwnerNote = z.infer<typeof insertOwnerNoteSchema>;
+
+// Feature Flags - global app feature toggles controlled by owner
+export const featureFlags = pgTable("feature_flags", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  enabled: boolean("enabled").default(true).notNull(),
+  allowedEmails: text("allowed_emails").array().default([]),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertFeatureFlagSchema = createInsertSchema(featureFlags).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type FeatureFlag = typeof featureFlags.$inferSelect;
+export type InsertFeatureFlag = z.infer<typeof insertFeatureFlagSchema>;
