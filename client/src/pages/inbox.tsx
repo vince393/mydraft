@@ -106,6 +106,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     const badgeClass = "cursor-pointer hover:opacity-80 transition-opacity";
     switch (userPlan) {
       case "business":
+      case "premium":
         return (
           <Badge 
             className={`bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 text-[10px] px-1.5 py-0 ${badgeClass}`}
