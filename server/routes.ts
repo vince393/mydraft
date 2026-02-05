@@ -665,7 +665,7 @@ export async function registerRoutes(
       if (linkedUser.id === primaryUserId) {
         return res.status(400).json({ error: "Cannot link to your own account" });
       }
-      
+    
       // Add linked account
       const linkedAccount = await storage.addLinkedAccount(
         primaryUserId,
@@ -4989,7 +4989,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       const grant = await storage.getNylasGrant(userId);
       if (!grant) {
-        return res.status(400).json({ error: "No email account connected" });
+        return res.status(400).json({ error: "No email account 
+      onnected" });
       }
 
       // Check user's email permissions from settings

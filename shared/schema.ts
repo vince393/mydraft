@@ -140,6 +140,27 @@ export const insertNylasGrantSchema = createInsertSchema(nylasGrants).omit({
 export type NylasGrant = typeof nylasGrants.$inferSelect;
 export type InsertNylasGrant = z.infer<typeof insertNylasGrantSchema>;
 
+// Contacts for email autocomplete
+export const contacts = pgTable("contacts", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  email: text("email").notNull(),
+  name: text("name"),
+  lastUsed: timestamp("last_used").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  useCount: integer("use_count").default(1).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertContactSchema = createInsertSchema(contacts).omit({
+  id: true,
+  lastUsed: true,
+  useCount: true,
+  createdAt: true,
+});
+
+export type Contact = typeof contacts.$inferSelect;
+export type InsertContact = z.infer<typeof insertContactSchema>;
+
 // Linked accounts for account switching without re-authentication
 export const linkedAccounts = pgTable("linked_accounts", {
   id: serial("id").primaryKey(),
