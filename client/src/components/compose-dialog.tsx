@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, ChangeEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2, Image, FileImage, Loader2 } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2, Image, FileImage, Loader2, Paperclip, File } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -96,6 +96,10 @@ export function ComposeDialog({
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [attachedImages, setAttachedImages] = useState<{data: string, name: string}[]>([]);
+  
+  // File attachments state
+  const [fileAttachments, setFileAttachments] = useState<{name: string, size: number, type: string, data: string}[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Get user plan for feature gating
   const { data: userData } = useQuery<UserData>({
@@ -314,13 +318,29 @@ export function ComposeDialog({
         delaySeconds: options?.scheduledFor ? 0 : 5,
       };
       
-      // Include AI-generated images as base64 attachments
-      if (attachedImages.length > 0) {
-        payload.attachments = attachedImages.map(img => ({
+      // Combine file attachments and AI-generated images
+      const allAttachments: {filename: string, content: string, contentType: string}[] = [];
+      
+      // Add user-selected file attachments
+      fileAttachments.forEach(file => {
+        allAttachments.push({
+          filename: file.name,
+          content: file.data,
+          contentType: file.type,
+        });
+      });
+      
+      // Add AI-generated images
+      attachedImages.forEach(img => {
+        allAttachments.push({
           filename: img.name,
           content: img.data.split(',')[1], // Remove data:image/png;base64, prefix
           contentType: 'image/png',
-        }));
+        });
+      });
+      
+      if (allAttachments.length > 0) {
+        payload.attachments = allAttachments;
       }
       
       if (options?.scheduledFor) {
@@ -376,8 +396,100 @@ export function ComposeDialog({
     setShowAiOptions(false);
     setAiTone("professional");
     setAiInstructions("");
+    setFileAttachments([]);
+    setAttachedImages([]);
+    setGeneratedImages([]);
     initializedRef.current = false;
     lastEmailIdRef.current = undefined;
+  };
+
+  // File attachment handlers
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const maxFileSize = 25 * 1024 * 1024; // 25MB max per file
+    const maxTotalSize = 50 * 1024 * 1024; // 50MB total
+    
+    // Blocked file types for security
+    const blockedExtensions = ['.exe', '.bat', '.cmd', '.scr', '.pif', '.com', '.dll', '.vbs', '.js', '.jar', '.msi', '.ps1', '.sh'];
+    
+    // Calculate current total and new files total
+    const currentTotalSize = fileAttachments.reduce((sum, f) => sum + f.size, 0);
+    const newFilesArray = Array.from(files);
+    const newFilesTotalSize = newFilesArray.reduce((sum, f) => sum + f.size, 0);
+    
+    // Check if batch would exceed total limit
+    if (currentTotalSize + newFilesTotalSize > maxTotalSize) {
+      toast({
+        title: "Total size exceeded",
+        description: "Maximum total attachment size is 50MB",
+        variant: "destructive",
+      });
+      e.target.value = '';
+      return;
+    }
+    
+    // Track running total for individual files
+    let runningTotal = currentTotalSize;
+    
+    newFilesArray.forEach(file => {
+      // Check file extension
+      const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+      if (blockedExtensions.includes(ext)) {
+        toast({
+          title: "File type not allowed",
+          description: `${file.name} - this file type is blocked for security`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (file.size > maxFileSize) {
+        toast({
+          title: "File too large",
+          description: `${file.name} exceeds 25MB limit`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (runningTotal + file.size > maxTotalSize) {
+        toast({
+          title: "Total size exceeded",
+          description: `Cannot add ${file.name} - would exceed 50MB total`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      runningTotal += file.size;
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        setFileAttachments(prev => [...prev, {
+          name: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream',
+          data: base64.split(',')[1] // Remove data URL prefix
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset input to allow re-selecting same file
+    e.target.value = '';
+  };
+  
+  const removeFileAttachment = (index: number) => {
+    setFileAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
   
   const handleScheduleSend = () => {
@@ -881,10 +993,79 @@ export function ComposeDialog({
           </div>
         </div>
         
+        {/* Attachments Preview */}
+        {(fileAttachments.length > 0 || attachedImages.length > 0) && (
+          <div className="flex-shrink-0 px-6 py-2 border-t border-border/30 bg-muted/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">
+                {fileAttachments.length + attachedImages.length} attachment{fileAttachments.length + attachedImages.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {fileAttachments.map((file, idx) => {
+                const isImage = file.type.startsWith('image/');
+                return (
+                  <div
+                    key={`file-${idx}`}
+                    className="flex items-center gap-2 px-2.5 py-1.5 bg-background rounded-lg border border-border/50 text-xs group"
+                    data-testid={`attachment-file-${idx}`}
+                  >
+                    {isImage ? (
+                      <Image className="w-3.5 h-3.5 text-blue-500" />
+                    ) : (
+                      <File className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                    <span className="max-w-[120px] truncate">{file.name}</span>
+                    <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFileAttachment(idx)}
+                      className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                      data-testid={`button-remove-file-${idx}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              })}
+              {attachedImages.map((img, idx) => (
+                <div
+                  key={`ai-img-${idx}`}
+                  className="flex items-center gap-2 px-2.5 py-1.5 bg-background rounded-lg border border-primary/30 text-xs"
+                  data-testid={`attachment-ai-image-${idx}`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <span className="max-w-[120px] truncate">{img.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAttachedImages(prev => prev.filter((_, i) => i !== idx))}
+                    className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                    data-testid={`button-remove-ai-image-${idx}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Footer Actions - Minimalist */}
         <div className="flex-shrink-0 px-6 py-3 border-t border-border/50">
           <div className="flex items-center justify-between gap-3">
-            {/* Left - Discard + AI Menu */}
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="*/*"
+              data-testid="input-file-attachment"
+            />
+            
+            {/* Left - Discard + Attach + AI Menu */}
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -895,6 +1076,19 @@ export function ComposeDialog({
               >
                 <X className="w-4 h-4 mr-1.5" />
                 Discard
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sendMutation.isPending}
+                className="h-9 gap-1.5"
+                data-testid="button-attach-file"
+                title="Attach files"
+              >
+                <Paperclip className="w-4 h-4" />
+                <span className="hidden sm:inline">Attach</span>
               </Button>
               
               <DropdownMenu>
