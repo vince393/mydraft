@@ -5646,14 +5646,25 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   // Get feature flags
   app.get("/api/owner/feature-flags", requireOwner, async (req, res) => {
     try {
-      // TODO: Implement feature flags table
-      const flags = [
-        { id: "ai_draft", name: "AI Draft", enabled: true, plans: ["free", "pro", "premium"] },
-        { id: "ai_polish", name: "AI Polish", enabled: true, plans: ["pro", "premium"] },
-        { id: "schedule_send", name: "Schedule Send", enabled: true, plans: ["pro", "premium"] },
-        { id: "voice_assistant", name: "Voice Assistant", enabled: true, plans: ["premium"] },
-        { id: "multi_email_reply", name: "Multi-Email Reply", enabled: true, plans: ["pro", "premium"] },
-      ];
+      const flags = await storage.getAllFeatureFlags();
+      
+      // If no flags exist yet, initialize defaults
+      if (flags.length === 0) {
+        const defaults = [
+          { key: "ai_chat", description: "AI Chat & Voice Assistant", enabled: true, allowedEmails: [] },
+          { key: "ai_draft", description: "AI Draft Generation", enabled: true, allowedEmails: [] },
+          { key: "ai_polish", description: "AI Polish Feature", enabled: true, allowedEmails: [] },
+          { key: "voice_assistant", description: "Voice Assistant", enabled: true, allowedEmails: [] },
+        ];
+        
+        for (const flag of defaults) {
+          await storage.setFeatureFlag(flag.key, flag.enabled, flag.allowedEmails, flag.description);
+        }
+        
+        const newFlags = await storage.getAllFeatureFlags();
+        return res.json(newFlags);
+      }
+      
       res.json(flags);
     } catch (error) {
       console.error("Error fetching feature flags:", error);
@@ -5662,15 +5673,35 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   });
 
   // Toggle feature flag
-  app.patch("/api/owner/feature-flags/:flagId", requireOwner, async (req, res) => {
+  app.patch("/api/owner/feature-flags/:key", requireOwner, async (req, res) => {
     try {
-      const { flagId } = req.params;
-      const { enabled, plans } = req.body;
-      // TODO: Persist to database
-      res.json({ success: true, flagId, enabled, plans });
+      const { key } = req.params;
+      const { enabled, allowedEmails, description } = req.body;
+      
+      const updated = await storage.setFeatureFlag(key, enabled, allowedEmails, description);
+      res.json(updated);
     } catch (error) {
       console.error("Error updating feature flag:", error);
       res.status(500).json({ error: "Failed to update flag" });
+    }
+  });
+
+  // Check if feature is enabled for current user (public endpoint for app to check)
+  app.get("/api/feature-enabled/:key", requireAuth, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const enabled = await storage.isFeatureEnabled(key, user.email);
+      res.json({ key, enabled });
+    } catch (error) {
+      console.error("Error checking feature flag:", error);
+      res.status(500).json({ error: "Failed to check feature" });
     }
   });
 
