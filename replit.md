@@ -155,6 +155,7 @@ This ensures that even database administrators cannot read user email content, m
 ## Recent Changes
 
 ### February 2026
+- **Contact Autocomplete**: Added email autocomplete for To, Cc, Bcc fields in compose dialog. Contacts are automatically saved when emails are sent and appear as suggestions when composing new emails. Uses `contacts` table with deduplication by (userId, email)
 - **AI Subject-in-Body Bug Fix**: Fixed issue where AI regeneration would put subject line text in the email body. Added explicit instructions to AI prompts and post-processing to strip subject-like prefixes
 - **Email Signature Feature**: Signature is automatically appended to all AI-generated drafts when enabled in Settings > Email Settings
 - **Email Formatting**: Implemented `formatEmailBody()` function that converts plain text newlines to HTML breaks for proper email rendering

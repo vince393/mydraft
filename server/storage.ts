@@ -1279,6 +1279,11 @@ Business Development`,
   async saveContact(userId: string, email: string, name?: string): Promise<Contact> {
     const normalizedEmail = email.toLowerCase().trim();
     
+    // Basic email validation
+    if (!normalizedEmail || !normalizedEmail.includes("@") || normalizedEmail.length < 5) {
+      throw new Error("Invalid email address");
+    }
+    
     // Check if contact already exists
     const [existing] = await db.select()
       .from(contacts)

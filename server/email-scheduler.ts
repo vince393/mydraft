@@ -127,6 +127,20 @@ async function processPendingSends() {
         await storage.markPendingSendSent(claimed.id);
         console.log(`[EmailScheduler] Successfully sent email ${claimed.id} to ${to.join(", ")}`);
 
+        // Save contacts for autocomplete
+        const allRecipients = [
+          ...(to || []),
+          ...(cc || []),
+          ...(bcc || [])
+        ];
+        for (const email of allRecipients) {
+          if (email) {
+            storage.saveContact(claimed.userId, email).catch(err => 
+              console.warn("[EmailScheduler] Failed to save contact:", err)
+            );
+          }
+        }
+
         await captureWritingSample(claimed.userId, subject, body);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";

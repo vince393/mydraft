@@ -37,6 +37,11 @@ export function EmailAutocomplete({
 
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["/api/contacts/search", lastEmail],
+    queryFn: async () => {
+      const res = await fetch(`/api/contacts/search?q=${encodeURIComponent(lastEmail)}`);
+      if (!res.ok) throw new Error("Failed to fetch contacts");
+      return res.json();
+    },
     enabled: lastEmail.length > 0 && showSuggestions,
   });
 

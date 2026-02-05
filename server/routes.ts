@@ -2904,6 +2904,20 @@ Rules:
         // Increment daily send count for Free plan users
         await storage.incrementDailySendCount(req.session.userId!);
         
+        // Save contacts for autocomplete
+        const allRecipients = [
+          ...(Array.isArray(to) ? to : [to]),
+          ...(Array.isArray(cc) ? cc : (cc ? [cc] : [])),
+          ...(Array.isArray(bcc) ? bcc : (bcc ? [bcc] : []))
+        ];
+        for (const email of allRecipients) {
+          if (email) {
+            storage.saveContact(req.session.userId!, email).catch(err => 
+              console.warn("Failed to save contact:", err)
+            );
+          }
+        }
+        
         // Log email send for security audit (CASA Q52)
         storage.createSecurityAuditLog({
           userId: req.session.userId!,
@@ -5071,6 +5085,21 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
                 finalMetadata.bcc as string[] | undefined
               );
               nylas.invalidateMessagesCache(grant.grantId);
+              
+              // Save contacts for autocomplete
+              const allRecipients = [
+                ...(Array.isArray(finalMetadata.to) ? finalMetadata.to : [finalMetadata.to]),
+                ...(Array.isArray(finalMetadata.cc) ? finalMetadata.cc : (finalMetadata.cc ? [finalMetadata.cc] : [])),
+                ...(Array.isArray(finalMetadata.bcc) ? finalMetadata.bcc : (finalMetadata.bcc ? [finalMetadata.bcc] : []))
+              ];
+              for (const email of allRecipients) {
+                if (email) {
+                  storage.saveContact(userId, String(email)).catch(err => 
+                    console.warn("Failed to save contact:", err)
+                  );
+                }
+              }
+              
               result = { success: true, message: "Email sent successfully" };
             } else {
               result = { success: false, error: "Missing recipient or body" };
@@ -7099,6 +7128,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
               [recipient.email],
               campaign.subject,
               campaign.body
+            );
+            
+            // Save contact for autocomplete
+            storage.saveContact(req.session.userId!, recipient.email, recipient.name || undefined).catch(err => 
+              console.warn("Failed to save contact:", err)
             );
             
             await storage.updateCampaignRecipientStatus(recipient.id, "sent");
