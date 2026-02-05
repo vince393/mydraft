@@ -452,20 +452,26 @@
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 15px;
+  line-height: 1.6;
+  color: hsl(var(--foreground));
 }
 
 .email-content,
 .email-content-plain {
-  font-size: 14px;
-  line-height: 1.65;
-  color: hsl(var(--foreground) / 0.95);
+  font-size: 15px;
+  line-height: 1.6;
+  color: hsl(var(--foreground));
   word-wrap: break-word;
   overflow-wrap: break-word;
-  letter-spacing: -0.011em;
+}
+
+.email-content-plain {
+  white-space: pre-wrap;
 }
 
 .email-content-plain p {
-  margin: 0 0 0.85em 0;
+  margin: 0 0 1em 0;
 }
 
 .email-content-plain p:last-child {
@@ -477,25 +483,28 @@
   max-width: 100%;
 }
 
-/* Reset all common elements to look consistent */
+/* Reset common elements */
 .email-content * {
   box-sizing: border-box;
 }
 
+/* Paragraphs - key for proper spacing */
 .email-content p {
-  margin: 0 0 0.85em 0;
+  margin: 0 0 1em 0;
 }
 
 .email-content p:last-child {
   margin-bottom: 0;
 }
 
-/* Empty paragraphs should be smaller spacing */
-.email-content p:empty {
+/* Empty paragraphs act as line breaks */
+.email-content p:empty,
+.email-content p:has(br:only-child) {
   margin: 0;
-  height: 0.5em;
+  min-height: 1em;
 }
 
+/* Divs should not add margins */
 .email-content div {
   margin: 0;
 }
@@ -704,9 +713,28 @@
 
 /* CRITICAL: Override inline font-family to normalize appearance */
 .email-content font,
-.email-content span,
-.email-content div {
+.email-content span:not([class]),
+.email-content div:not([class]) {
   font-family: inherit !important;
+}
+
+/* Reset font element's size attribute - often causes issues */
+.email-content font[size] {
+  font-size: inherit !important;
+}
+
+/* Normalize common weird font sizes */
+.email-content [style*="font-size: 0"],
+.email-content [style*="font-size:0"] {
+  font-size: inherit !important;
+}
+
+/* Fix tiny or huge text from inline styles */
+.email-content [style*="font-size: 1px"],
+.email-content [style*="font-size:1px"],
+.email-content [style*="font-size: 2px"],
+.email-content [style*="font-size:2px"] {
+  font-size: inherit !important;
 }
 
 /* Allow inline colors but normalize text colors for readability */

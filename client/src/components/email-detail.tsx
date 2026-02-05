@@ -726,14 +726,18 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                       <p className="text-xs text-muted-foreground">{firstOlderEmail.senderEmail}</p>
                     </div>
                   </div>
-                  <div className="text-sm text-foreground/80 leading-relaxed">
+                  <div className="email-body-container">
                     {(firstOlderEmail.body || firstOlderEmail.preview || "").includes('<') ? (
                       <div 
-                        className="prose prose-sm dark:prose-invert max-w-none"
-                        dangerouslySetInnerHTML={{ __html: firstOlderEmail.body || firstOlderEmail.preview || "" }}
+                        className="email-content"
+                        dangerouslySetInnerHTML={{ __html: formatEmailBody(firstOlderEmail.body || firstOlderEmail.preview || "") }}
                       />
                     ) : (
-                      <p className="whitespace-pre-wrap">{firstOlderEmail.body || firstOlderEmail.preview || ""}</p>
+                      <div className="email-content-plain">
+                        {(firstOlderEmail.body || firstOlderEmail.preview || "").split("\n").map((p, i) => (
+                          p.trim() ? <p key={i}>{p}</p> : <br key={i} />
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -793,14 +797,18 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                                     <p className="text-xs text-muted-foreground">{threadEmail.senderEmail}</p>
                                   </div>
                                 </div>
-                                <div className="text-sm text-foreground/80 leading-relaxed">
+                                <div className="email-body-container">
                                   {(threadEmail.body || threadEmail.preview || "").includes('<') ? (
                                     <div 
-                                      className="prose prose-sm dark:prose-invert max-w-none"
-                                      dangerouslySetInnerHTML={{ __html: threadEmail.body || threadEmail.preview || "" }}
+                                      className="email-content"
+                                      dangerouslySetInnerHTML={{ __html: formatEmailBody(threadEmail.body || threadEmail.preview || "") }}
                                     />
                                   ) : (
-                                    <p className="whitespace-pre-wrap">{threadEmail.body || threadEmail.preview || ""}</p>
+                                    <div className="email-content-plain">
+                                      {(threadEmail.body || threadEmail.preview || "").split("\n").map((p, i) => (
+                                        p.trim() ? <p key={i}>{p}</p> : <br key={i} />
+                                      ))}
+                                    </div>
                                   )}
                                 </div>
                               </div>
