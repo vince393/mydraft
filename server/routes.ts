@@ -2375,7 +2375,7 @@ Respond with valid JSON only:
           batchId,
           messageId: suggestion.messageId,
           messageSubject: emailInfo.subject,
-          messageSender: emailInfo.from,
+          messageSender: emailInfo.fromName || emailInfo.from,
           actionType: suggestion.action,
           actionData,
           confidence: Math.min(100, Math.max(0, suggestion.confidence || 50)),
