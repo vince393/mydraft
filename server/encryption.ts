@@ -4,10 +4,10 @@ const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 
-function getEncryptionKey(): Buffer {
+function getEncryptionKey(): Buffer | null {
   const key = process.env.EMAIL_ENCRYPTION_KEY;
   if (!key) {
-    throw new Error("EMAIL_ENCRYPTION_KEY environment variable is not set");
+    return null;
   }
   return crypto.scryptSync(key, "email-encryption-salt", 32);
 }
@@ -17,6 +17,10 @@ export function encryptEmailContent(plaintext: string | null | undefined): strin
   
   try {
     const key = getEncryptionKey();
+    if (!key) {
+      return plaintext;
+    }
+    
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
     
@@ -47,6 +51,11 @@ export function decryptEmailContent(ciphertext: string | null | undefined): stri
   
   try {
     const key = getEncryptionKey();
+    if (!key) {
+      console.warn("Cannot decrypt: EMAIL_ENCRYPTION_KEY not set");
+      return "[Encrypted content - key not available]";
+    }
+    
     const combined = Buffer.from(ciphertext.slice(4), "base64");
     
     const iv = combined.subarray(0, IV_LENGTH);

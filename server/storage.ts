@@ -2,6 +2,7 @@ import { type User, type InsertUser, type Email, type InsertEmail, type Draft, t
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
+import { encryptEmailContent, decryptEmailContent } from "./encryption";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -2254,8 +2255,8 @@ Business Development`,
       sender: email.sender,
       senderEmail: email.senderEmail,
       subject: email.subject,
-      preview: email.preview,
-      body: email.body || "",
+      preview: decryptEmailContent(email.preview) || "",
+      body: decryptEmailContent(email.body) || "",
       receivedAt: email.receivedAt,
       isRead: email.isRead,
       isStarred: false,
@@ -2269,7 +2270,7 @@ Business Development`,
     // Clear existing cache for user
     await db.delete(cachedEmails).where(eq(cachedEmails.userId, userId));
     
-    // Insert new emails
+    // Insert new emails with encrypted body and preview
     if (emails.length > 0) {
       const toInsert = emails.map(email => ({
         nylasId: email.nylasId,
@@ -2277,8 +2278,8 @@ Business Development`,
         sender: email.sender,
         senderEmail: email.senderEmail,
         subject: email.subject,
-        preview: email.preview,
-        body: email.body || "",
+        preview: encryptEmailContent(email.preview) || "",
+        body: encryptEmailContent(email.body || ""),
         receivedAt: email.receivedAt ? new Date(email.receivedAt) : new Date(),
         isRead: email.isRead ?? false,
         folder: email.folder || "inbox",
