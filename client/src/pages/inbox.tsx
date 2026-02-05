@@ -44,13 +44,14 @@ interface InboxProps {
   setComposeMode: (mode: "new" | "reply" | "replyAll" | "forward") => void;
   onOpenAssistant?: () => void;
   onCompose?: () => void;
+  isAIChatEnabled?: boolean;
 }
 
 function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
 }
 
-export default function Inbox({ activeFolder, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode, onOpenAssistant, onCompose }: InboxProps) {
+export default function Inbox({ activeFolder, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode, onOpenAssistant, onCompose, isAIChatEnabled = true }: InboxProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
   const [selectedThreadEmails, setSelectedThreadEmails] = useState<EmailWithNylasId[]>([]);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
@@ -812,7 +813,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                   <span className="hidden lg:inline">Campaigns</span>
                 </Button>
               )}
-              {!screen.isMobile && onOpenAssistant && (
+              {!screen.isMobile && onOpenAssistant && isAIChatEnabled && (
                 <Button
                   variant="ghost"
                   size="icon"

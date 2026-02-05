@@ -71,6 +71,21 @@ function AuthenticatedApp() {
     refetchOnWindowFocus: true,
   });
 
+  // Check if AI chat feature is enabled for this user
+  const { data: aiChatEnabled, isLoading: aiChatLoading } = useQuery<{ key: string; enabled: boolean }>({
+    queryKey: ["/api/feature-enabled", "ai_chat"],
+    queryFn: async () => {
+      const res = await fetch("/api/feature-enabled/ai_chat", { credentials: "include" });
+      if (!res.ok) return { key: "ai_chat", enabled: false }; // Default to disabled if check fails
+      return res.json();
+    },
+    staleTime: 60000, // Cache for 1 minute
+    retry: 1, // Only retry once to avoid long delays
+  });
+
+  // Default to disabled while loading or on error to prevent unauthorized access
+  const isAIChatEnabled = !aiChatLoading && aiChatEnabled?.enabled === true;
+
   const unreadCount = unreadCounts?.inbox || emails.filter((e) => !e.isRead).length;
 
   const handleCompose = () => {
@@ -79,6 +94,9 @@ function AuthenticatedApp() {
   };
 
   const handleOpenAssistant = () => {
+    if (!isAIChatEnabled) {
+      return; // Feature is disabled for this user
+    }
     if (!hasPro) {
       setShowUpgradeModal(true);
     } else {
@@ -112,6 +130,7 @@ function AuthenticatedApp() {
             setComposeMode={setComposeMode}
             onOpenAssistant={handleOpenAssistant}
             onCompose={handleCompose}
+            isAIChatEnabled={isAIChatEnabled}
           />
         </SidebarInset>
         {screen.isMobile && (
@@ -122,13 +141,15 @@ function AuthenticatedApp() {
               unreadCounts={unreadCounts}
               onCompose={handleCompose}
             />
-            <button
-              onClick={handleOpenAssistant}
-              className="fixed bottom-[72px] right-3 z-40 w-11 h-11 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center shadow-md active:scale-95 transition-transform"
-              data-testid="mobile-ai-assistant-button"
-            >
-              <Sparkles className="w-5 h-5 text-white" />
-            </button>
+            {isAIChatEnabled && (
+              <button
+                onClick={handleOpenAssistant}
+                className="fixed bottom-[72px] right-3 z-40 w-11 h-11 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center shadow-md active:scale-95 transition-transform"
+                data-testid="mobile-ai-assistant-button"
+              >
+                <Sparkles className="w-5 h-5 text-white" />
+              </button>
+            )}
           </>
         )}
       </div>

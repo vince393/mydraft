@@ -3014,6 +3014,15 @@ Rules:
       const user = await storage.getUser(req.session.userId!);
       const userPlan = user?.plan || "free";
       
+      // Feature flag check: is AI draft enabled for this user?
+      const aiDraftEnabled = await storage.isFeatureEnabled("ai_draft", user?.email || "");
+      if (!aiDraftEnabled) {
+        return res.status(403).json({ 
+          error: "AI Draft feature is currently disabled",
+          featureDisabled: true
+        });
+      }
+      
       // Check free plan daily limit
       const FREE_DAILY_LIMIT = 5;
       if (userPlan === "free") {
@@ -3232,6 +3241,15 @@ Reply:`;
     try {
       const user = await storage.getUser(req.session.userId!);
       const userPlan = user?.plan || "free";
+      
+      // Feature flag check: is AI polish enabled for this user?
+      const aiPolishEnabled = await storage.isFeatureEnabled("ai_polish", user?.email || "");
+      if (!aiPolishEnabled) {
+        return res.status(403).json({ 
+          error: "AI Polish feature is currently disabled",
+          featureDisabled: true
+        });
+      }
       
       const { text, mode = "basic" } = req.body;
       
@@ -4691,6 +4709,16 @@ Respond with ONLY a brief suggestion, like:
   app.post("/api/ai/draft", requireAuth, aiGenerationLimiter, async (req, res) => {
     try {
       const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      // Feature flag check: is AI draft enabled for this user?
+      const aiDraftEnabled = await storage.isFeatureEnabled("ai_draft", user?.email || "");
+      if (!aiDraftEnabled) {
+        return res.status(403).json({ 
+          error: "AI Draft feature is currently disabled",
+          featureDisabled: true
+        });
+      }
       
       // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
@@ -4708,7 +4736,7 @@ Respond with ONLY a brief suggestion, like:
         return res.status(400).json({ error: "Valid actionType required: compose, reply, reply-all, forward" });
       }
 
-      const user = await storage.getUser(userId);
+      // user already fetched above for feature flag check
       const grant = await storage.getNylasGrant(userId);
       const styleProfile = await storage.getUserStyleProfile(userId);
       
