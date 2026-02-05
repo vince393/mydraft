@@ -1183,6 +1183,10 @@ Business Development`,
   }
 
   async addLinkedAccount(primaryUserId: string, linkedUserId: string, linkedEmail: string, linkedDisplayName?: string, linkedPlan?: string): Promise<LinkedAccount> {
+    // Get the primary user's info for the reverse link
+    const primaryUser = await this.getUser(primaryUserId);
+    
+    // Create bidirectional links - save to BOTH accounts so they can switch from any device
     const [created] = await db.insert(linkedAccounts).values({
       primaryUserId,
       linkedUserId,
@@ -1192,16 +1196,42 @@ Business Development`,
       linkedPlan: linkedPlan || null,
       skip2FA: true,
     }).returning();
+    
+    // Create the reverse link (B -> A) so the other account can also switch back
+    // Check if reverse link already exists first
+    const reverseExists = await this.isAccountLinked(linkedUserId, primaryUserId);
+    if (!reverseExists && primaryUser) {
+      await db.insert(linkedAccounts).values({
+        primaryUserId: linkedUserId,
+        linkedUserId: primaryUserId,
+        linkedEmail: primaryUser.email,
+        linkedDisplayName: primaryUser.displayName || null,
+        linkedAvatarUrl: null,
+        linkedPlan: primaryUser.plan || null,
+        skip2FA: true,
+      });
+    }
+    
     return created;
   }
 
   async removeLinkedAccount(primaryUserId: string, linkedUserId: string): Promise<boolean> {
-    const result = await db.delete(linkedAccounts).where(
+    // Remove both directions of the link
+    await db.delete(linkedAccounts).where(
       and(
         eq(linkedAccounts.primaryUserId, primaryUserId),
         eq(linkedAccounts.linkedUserId, linkedUserId)
       )
     );
+    
+    // Also remove the reverse direction so both accounts are unlinked
+    await db.delete(linkedAccounts).where(
+      and(
+        eq(linkedAccounts.primaryUserId, linkedUserId),
+        eq(linkedAccounts.linkedUserId, primaryUserId)
+      )
+    );
+    
     return true;
   }
 
