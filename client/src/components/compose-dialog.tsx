@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format } from "date-fns";
+import { EmailAutocomplete } from "@/components/email-autocomplete";
 
 interface ComposeDialogProps {
   open: boolean;
@@ -860,9 +861,9 @@ export function ComposeDialog({
                 <User className="w-4 h-4" />
               </div>
               <div className="flex-1 relative">
-                <Input
+                <EmailAutocomplete
                   value={to}
-                  onChange={(e) => setTo(e.target.value)}
+                  onChange={setTo}
                   placeholder="Recipients"
                   className="border-0 bg-transparent px-0 h-9 text-base placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                   data-testid="input-compose-to"
@@ -884,9 +885,9 @@ export function ComposeDialog({
             <div className={`space-y-3 overflow-hidden transition-all duration-200 ${showCcBcc ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
               <div className="flex items-center gap-3 pl-11">
                 <span className="text-xs text-muted-foreground w-6">Cc</span>
-                <Input
+                <EmailAutocomplete
                   value={cc}
-                  onChange={(e) => setCc(e.target.value)}
+                  onChange={setCc}
                   placeholder="Carbon copy recipients"
                   className="border-0 bg-transparent px-0 h-8 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                   data-testid="input-compose-cc"
@@ -894,9 +895,9 @@ export function ComposeDialog({
               </div>
               <div className="flex items-center gap-3 pl-11">
                 <span className="text-xs text-muted-foreground w-6">Bcc</span>
-                <Input
+                <EmailAutocomplete
                   value={bcc}
-                  onChange={(e) => setBcc(e.target.value)}
+                  onChange={setBcc}
                   placeholder="Blind carbon copy"
                   className="border-0 bg-transparent px-0 h-8 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
                   data-testid="input-compose-bcc"
