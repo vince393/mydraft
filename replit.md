@@ -132,11 +132,24 @@ Each protection level has defined requirements:
 - **XSS Prevention**: SVG sanitization on upload and download (DOMPurify)
 - **Audit Logging**: Login attempts, password changes, email sends, attachment downloads
 - **Malware Scanning**: File type blocking, ClamAV integration for attachments
+- **Email Content Encryption**: AES-256-GCM encryption for email body and preview stored in database
+
+### Email Content Encryption (CASA Q5 Compliance)
+Email content stored in the `cached_emails` table is encrypted at rest using AES-256-GCM:
+- **Algorithm**: AES-256-GCM (authenticated encryption with associated data)
+- **Key Derivation**: scrypt with salt from `EMAIL_ENCRYPTION_KEY` environment variable
+- **Implementation**: `server/encryption.ts` provides `encryptEmailContent()` and `decryptEmailContent()` functions
+- **Storage**: Encrypted content is prefixed with `ENC:` for identification
+- **Transparency**: Decryption happens automatically in storage layer - AI features receive decrypted content
+- **Startup Validation**: Server validates encryption key on startup and logs status
+
+This ensures that even database administrators cannot read user email content, meeting CASA Tier 2 data protection requirements.
 
 ### Security Files
 - `server/rate-limiter.ts`: Rate limiting middleware
 - `server/antivirus.ts`: Malware scanning and SVG sanitization
 - `server/storage.ts`: Security audit log storage
+- `server/encryption.ts`: AES-256-GCM email content encryption
 - `shared/data-classification.ts`: Data classification schema and protection requirements
 
 ## Recent Changes

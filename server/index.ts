@@ -9,9 +9,13 @@ import { startEmailScheduler } from "./email-scheduler";
 import { runMigrations } from "stripe-replit-sync";
 import { getStripeSync } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
+import { validateEncryptionKey } from "./encryption";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Validate email encryption key on startup
+validateEncryptionKey();
 
 // Trust proxy for production (required for secure cookies behind reverse proxy)
 if (process.env.NODE_ENV === "production") {

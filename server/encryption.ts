@@ -4,12 +4,30 @@ const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 
+let cachedKey: Buffer | null = null;
+
 function getEncryptionKey(): Buffer | null {
+  if (cachedKey) return cachedKey;
+  
   const key = process.env.EMAIL_ENCRYPTION_KEY;
   if (!key) {
     return null;
   }
-  return crypto.scryptSync(key, "email-encryption-salt", 32);
+  cachedKey = crypto.scryptSync(key, "email-encryption-salt", 32);
+  return cachedKey;
+}
+
+export function validateEncryptionKey(): boolean {
+  const key = process.env.EMAIL_ENCRYPTION_KEY;
+  if (!key) {
+    console.warn("WARNING: EMAIL_ENCRYPTION_KEY not set - email content will NOT be encrypted at rest!");
+    return false;
+  }
+  if (key.length < 32) {
+    console.warn("WARNING: EMAIL_ENCRYPTION_KEY should be at least 32 characters for security");
+  }
+  console.log("Email encryption enabled with AES-256-GCM");
+  return true;
 }
 
 export function encryptEmailContent(plaintext: string | null | undefined): string | null {
