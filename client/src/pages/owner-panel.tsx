@@ -106,10 +106,12 @@ interface SystemStatus {
 }
 
 interface FeatureFlag {
-  id: string;
-  name: string;
+  id: number;
+  key: string;
   enabled: boolean;
-  plans: string[];
+  allowedEmails: string[] | null;
+  description: string | null;
+  updatedAt: string;
 }
 
 interface FinancialSummary {
@@ -345,8 +347,8 @@ export default function OwnerPanel() {
   });
 
   const toggleFeatureFlagMutation = useMutation({
-    mutationFn: async ({ flagId, enabled }: { flagId: string; enabled: boolean }) => {
-      return apiRequest("PATCH", `/api/owner/feature-flags/${flagId}`, { enabled });
+    mutationFn: async ({ key, enabled, allowedEmails }: { key: string; enabled: boolean; allowedEmails?: string[] }) => {
+      return apiRequest("PATCH", `/api/owner/feature-flags/${key}`, { enabled, allowedEmails });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/owner/feature-flags"] });
@@ -1120,54 +1122,135 @@ export default function OwnerPanel() {
           </TabsContent>
 
           <TabsContent value="features">
-            <Card>
-              <CardHeader>
-                <CardTitle>Feature Flags</CardTitle>
-                <CardDescription>Toggle features on/off across the platform</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {flagsLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {featureFlags.map((flag) => (
-                      <div
-                        key={flag.id}
-                        className="flex items-center justify-between p-4 rounded-lg border"
-                        data-testid={`feature-flag-${flag.id}`}
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{flag.name}</span>
-                            {flag.enabled ? (
-                              <Badge variant="secondary" className="text-xs">Enabled</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">Disabled</Badge>
-                            )}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-500" />
+                    AI Features Control
+                  </CardTitle>
+                  <CardDescription>
+                    Toggle AI Chat, Voice Assistant, and other AI features. When disabled globally, 
+                    only allowed emails can access the feature.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {flagsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {featureFlags.map((flag) => (
+                        <div
+                          key={flag.id}
+                          className="p-4 rounded-lg border bg-card"
+                          data-testid={`feature-flag-${flag.key}`}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium capitalize">
+                                  {flag.description || flag.key.replace(/_/g, " ")}
+                                </span>
+                                {flag.enabled ? (
+                                  <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-600">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Enabled for All
+                                  </Badge>
+                                ) : flag.allowedEmails && flag.allowedEmails.length > 0 ? (
+                                  <Badge variant="secondary" className="text-xs bg-yellow-500/20 text-yellow-600">
+                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                    Limited Access
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-red-500/20 text-red-600">
+                                    <XCircle className="w-3 h-3 mr-1" />
+                                    Disabled
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Key: <code className="bg-muted px-1 rounded">{flag.key}</code>
+                              </p>
+                            </div>
+                            <Switch
+                              checked={flag.enabled}
+                              onCheckedChange={(checked) =>
+                                toggleFeatureFlagMutation.mutate({ 
+                                  key: flag.key, 
+                                  enabled: checked,
+                                  allowedEmails: flag.allowedEmails || []
+                                })
+                              }
+                              data-testid={`toggle-feature-${flag.key}`}
+                            />
                           </div>
-                          <div className="flex gap-1">
-                            {flag.plans.map((plan) => (
-                              <Badge key={plan} variant="outline" className="text-xs">
-                                {plan === "premium" ? "Business" : plan.charAt(0).toUpperCase() + plan.slice(1)}
-                              </Badge>
-                            ))}
-                          </div>
+                          
+                          {!flag.enabled && (
+                            <div className="mt-3 pt-3 border-t">
+                              <label className="text-sm font-medium mb-2 block">
+                                Allowed Emails (can still access when disabled)
+                              </label>
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="email@example.com"
+                                  className="flex-1"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      const input = e.target as HTMLInputElement;
+                                      const email = input.value.trim();
+                                      if (email && email.includes("@")) {
+                                        const currentEmails = flag.allowedEmails || [];
+                                        if (!currentEmails.includes(email)) {
+                                          toggleFeatureFlagMutation.mutate({
+                                            key: flag.key,
+                                            enabled: false,
+                                            allowedEmails: [...currentEmails, email]
+                                          });
+                                        }
+                                        input.value = "";
+                                      }
+                                    }
+                                  }}
+                                  data-testid={`allowed-email-input-${flag.key}`}
+                                />
+                              </div>
+                              {flag.allowedEmails && flag.allowedEmails.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {flag.allowedEmails.map((email) => (
+                                    <Badge 
+                                      key={email} 
+                                      variant="secondary" 
+                                      className="text-xs flex items-center gap-1"
+                                    >
+                                      {email}
+                                      <button
+                                        onClick={() => {
+                                          toggleFeatureFlagMutation.mutate({
+                                            key: flag.key,
+                                            enabled: false,
+                                            allowedEmails: (flag.allowedEmails || []).filter(e => e !== email)
+                                          });
+                                        }}
+                                        className="ml-1 hover:text-destructive"
+                                        data-testid={`remove-email-${flag.key}-${email}`}
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <Switch
-                          checked={flag.enabled}
-                          onCheckedChange={(checked) =>
-                            toggleFeatureFlagMutation.mutate({ flagId: flag.id, enabled: checked })
-                          }
-                          data-testid={`toggle-feature-${flag.id}`}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="activity">
