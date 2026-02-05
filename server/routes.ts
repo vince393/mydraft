@@ -3983,6 +3983,51 @@ Return only the improved text, nothing else.`;
     }
   });
 
+  // ============ CONTACTS ENDPOINTS (Email Autocomplete) ============
+
+  // Get all contacts for autocomplete
+  app.get("/api/contacts", requireAuth, async (req, res) => {
+    try {
+      const contacts = await storage.getContacts(req.session.userId!);
+      res.json(contacts);
+    } catch (error) {
+      console.error("Error fetching contacts:", error);
+      res.status(500).json({ error: "Failed to fetch contacts" });
+    }
+  });
+
+  // Search contacts
+  app.get("/api/contacts/search", requireAuth, async (req, res) => {
+    try {
+      const query = String(req.query.q || "");
+      if (!query) {
+        const contacts = await storage.getContacts(req.session.userId!);
+        res.json(contacts.slice(0, 10));
+        return;
+      }
+      const contacts = await storage.searchContacts(req.session.userId!, query);
+      res.json(contacts);
+    } catch (error) {
+      console.error("Error searching contacts:", error);
+      res.status(500).json({ error: "Failed to search contacts" });
+    }
+  });
+
+  // Save a contact
+  app.post("/api/contacts", requireAuth, async (req, res) => {
+    try {
+      const { email, name } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      const contact = await storage.saveContact(req.session.userId!, email, name);
+      res.json(contact);
+    } catch (error) {
+      console.error("Error saving contact:", error);
+      res.status(500).json({ error: "Failed to save contact" });
+    }
+  });
+
   // ============ ASSISTANT ENDPOINTS ============
 
   // Get assistant settings
@@ -4989,8 +5034,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       const grant = await storage.getNylasGrant(userId);
       if (!grant) {
-        return res.status(400).json({ error: "No email account 
-      onnected" });
+        return res.status(400).json({ error: "No email account connected" });
       }
 
       // Check user's email permissions from settings
