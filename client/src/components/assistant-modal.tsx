@@ -4,32 +4,14 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { 
   Mic, 
   Send,
-  User,
   Loader2,
   X,
   ThumbsUp,
@@ -41,15 +23,13 @@ import {
   Archive,
   Forward,
   Reply,
-  ChevronDown,
   Plus,
   History,
-  MessageSquare,
   Settings,
+  Sparkles,
   Eye,
-  FileEdit,
+  PenLine,
   SendHorizonal,
-  Shield
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -90,7 +70,6 @@ const ACTION_ICONS: Record<string, typeof Mail> = {
   archive: Archive,
 };
 
-
 const ASSISTANT_VOICES = [
   { id: "vince", name: "Vince", description: "Professional and calm" },
   { id: "alex", name: "Alex", description: "Friendly and helpful" },
@@ -112,8 +91,10 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   const [editingAction, setEditingAction] = useState<ProposedAction | null>(null);
   const [editedBody, setEditedBody] = useState("");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { hasPremium } = usePlan();
   
   const handleOpenVoiceChat = () => {
@@ -182,6 +163,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/assistant/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/assistant/messages"] });
+      setShowHistory(false);
     },
   });
 
@@ -196,6 +178,9 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     },
   });
 
+  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+
   const renameSessionMutation = useMutation({
     mutationFn: async ({ sessionId, title }: { sessionId: number; title: string }) => {
       const response = await apiRequest("PATCH", `/api/assistant/sessions/${sessionId}`, { title });
@@ -207,9 +192,6 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
       setEditingTitle("");
     },
   });
-
-  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
-  const [editingTitle, setEditingTitle] = useState("");
 
   const activeSession = sessions.find(s => s.isActive);
 
@@ -303,6 +285,10 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
     if (open && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
+    if (!open) {
+      setShowSettings(false);
+      setShowHistory(false);
+    }
   }, [open]);
 
   const handleSendMessage = () => {
@@ -324,125 +310,86 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-md md:max-w-lg max-h-[85vh] flex flex-col p-0 gap-0"
+        className="sm:max-w-md md:max-w-lg max-h-[85vh] flex flex-col p-0 gap-0 border-0 shadow-2xl shadow-black/40"
+        style={{
+          background: "rgba(18, 18, 24, 0.82)",
+          backdropFilter: "blur(40px) saturate(1.6)",
+          WebkitBackdropFilter: "blur(40px) saturate(1.6)",
+          borderRadius: "20px",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+        }}
         data-testid="modal-assistant"
         hideCloseButton
       >
-        <DialogHeader className="px-4 py-3 border-b border-white/[0.06] shrink-0">
-          <div className="flex items-center justify-between gap-2">
+        {/* Header */}
+        <div 
+          className="px-5 py-4 shrink-0"
+          style={{
+            borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-white" />
+              <div 
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{
+                  background: "linear-gradient(135deg, rgba(99, 102, 241, 0.7), rgba(139, 92, 246, 0.7))",
+                  boxShadow: "0 0 20px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+                }}
+              >
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <DialogTitle className="text-base font-semibold">
-                {currentVoiceName}
-              </DialogTitle>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-white leading-tight">{currentVoiceName}</h2>
+                <p className="text-[11px] text-white/40 leading-tight">AI Assistant</p>
+              </div>
             </div>
             
             <div className="flex items-center gap-1 shrink-0">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    data-testid="button-assistant-menu"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem
-                    onClick={() => createSessionMutation.mutate()}
-                    disabled={createSessionMutation.isPending}
-                    data-testid="menu-new-chat"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    New conversation
-                  </DropdownMenuItem>
-                  
-                  {sessions.length > 0 && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                          <History className="w-4 h-4 mr-2" />
-                          Chat history
-                          <ChevronDown className="w-3 h-3 ml-auto" />
-                        </DropdownMenuItem>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent side="left" className="w-64">
-                        {sessions.slice(0, 8).map((session) => (
-                          <DropdownMenuItem
-                            key={session.id}
-                            onClick={() => switchSessionMutation.mutate(session.id)}
-                            className="flex items-center justify-between"
-                            data-testid={`session-${session.id}`}
-                          >
-                            <span className="truncate">{session.title}</span>
-                            {session.isActive && <Check className="w-3 h-3 text-primary shrink-0" />}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  
-                  <div className="h-px bg-border my-1" />
-                  
-                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                    Assistant Voice
-                  </div>
-                  {ASSISTANT_VOICES.map((voice) => (
-                    <DropdownMenuItem
-                      key={voice.id}
-                      onClick={() => updateSettingsMutation.mutate({ selectedVoice: voice.id })}
-                      data-testid={`voice-option-${voice.id}`}
-                    >
-                      {voice.name}
-                      {selectedVoice === voice.id && <Check className="w-3 h-3 ml-auto text-primary" />}
-                    </DropdownMenuItem>
-                  ))}
-                  
-                  <div className="h-px bg-border my-1" />
-                  
-                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                    Permissions
-                  </div>
-                  <div className="px-2 py-1.5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="perm-read" className="text-sm cursor-pointer">Read emails</Label>
-                      <Switch
-                        id="perm-read"
-                        checked={canReadEmails}
-                        onCheckedChange={(checked) => updateSettingsMutation.mutate({ canReadEmails: checked })}
-                        data-testid="switch-permission-read"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="perm-draft" className="text-sm cursor-pointer">Draft emails</Label>
-                      <Switch
-                        id="perm-draft"
-                        checked={canDraftEmails}
-                        onCheckedChange={(checked) => updateSettingsMutation.mutate({ canDraftEmails: checked })}
-                        data-testid="switch-permission-draft"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="perm-send" className="text-sm cursor-pointer">Send emails</Label>
-                      <Switch
-                        id="perm-send"
-                        checked={canSendEmails}
-                        onCheckedChange={(checked) => updateSettingsMutation.mutate({ canSendEmails: checked })}
-                        data-testid="switch-permission-send"
-                      />
-                    </div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8"
+                className="h-8 w-8 text-white/50 hover:text-white/80"
+                onClick={() => createSessionMutation.mutate()}
+                disabled={createSessionMutation.isPending}
+                data-testid="button-new-chat"
+                title="New conversation"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+
+              <Button
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  "h-8 w-8 text-white/50 hover:text-white/80",
+                  showHistory && "text-white/90"
+                )}
+                onClick={() => { setShowHistory(!showHistory); setShowSettings(false); }}
+                data-testid="button-history"
+                title="Chat history"
+              >
+                <History className="w-4 h-4" />
+              </Button>
+
+              <Button
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  "h-8 w-8 text-white/50 hover:text-white/80",
+                  showSettings && "text-white/90"
+                )}
+                onClick={() => { setShowSettings(!showSettings); setShowHistory(false); }}
+                data-testid="button-settings"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-white/50 hover:text-white/80"
                 onClick={() => onOpenChange(false)}
                 data-testid="button-close-assistant"
               >
@@ -450,86 +397,221 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
               </Button>
             </div>
           </div>
-        </DialogHeader>
+        </div>
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <div 
+            className="px-5 py-4 shrink-0 space-y-4"
+            style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}
+          >
+            <div>
+              <p className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-3">Voice</p>
+              <div className="grid grid-cols-2 gap-2">
+                {ASSISTANT_VOICES.map((voice) => (
+                  <button
+                    key={voice.id}
+                    onClick={() => updateSettingsMutation.mutate({ selectedVoice: voice.id })}
+                    className={cn(
+                      "px-3 py-2 rounded-xl text-left transition-all duration-200",
+                      selectedVoice === voice.id
+                        ? "text-white"
+                        : "text-white/50 hover:text-white/70"
+                    )}
+                    style={{
+                      background: selectedVoice === voice.id 
+                        ? "rgba(99, 102, 241, 0.2)" 
+                        : "rgba(255, 255, 255, 0.03)",
+                      border: selectedVoice === voice.id 
+                        ? "1px solid rgba(99, 102, 241, 0.3)" 
+                        : "1px solid rgba(255, 255, 255, 0.06)",
+                    }}
+                    data-testid={`voice-option-${voice.id}`}
+                  >
+                    <span className="text-xs font-medium">{voice.name}</span>
+                    <span className="text-[10px] block text-white/30 mt-0.5">{voice.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-3">Permissions</p>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-3.5 h-3.5 text-white/40" />
+                    <Label htmlFor="perm-read" className="text-xs text-white/60 cursor-pointer">Read emails</Label>
+                  </div>
+                  <Switch
+                    id="perm-read"
+                    checked={canReadEmails}
+                    onCheckedChange={(checked) => updateSettingsMutation.mutate({ canReadEmails: checked })}
+                    data-testid="switch-permission-read"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <PenLine className="w-3.5 h-3.5 text-white/40" />
+                    <Label htmlFor="perm-draft" className="text-xs text-white/60 cursor-pointer">Draft emails</Label>
+                  </div>
+                  <Switch
+                    id="perm-draft"
+                    checked={canDraftEmails}
+                    onCheckedChange={(checked) => updateSettingsMutation.mutate({ canDraftEmails: checked })}
+                    data-testid="switch-permission-draft"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <SendHorizonal className="w-3.5 h-3.5 text-white/40" />
+                    <Label htmlFor="perm-send" className="text-xs text-white/60 cursor-pointer">Send emails</Label>
+                  </div>
+                  <Switch
+                    id="perm-send"
+                    checked={canSendEmails}
+                    onCheckedChange={(checked) => updateSettingsMutation.mutate({ canSendEmails: checked })}
+                    data-testid="switch-permission-send"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* History Panel */}
+        {showHistory && sessions.length > 0 && (
+          <div 
+            className="px-5 py-3 shrink-0 max-h-[200px] overflow-y-auto scrollbar-thin"
+            style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}
+          >
+            <p className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2">History</p>
+            <div className="space-y-1">
+              {sessions.slice(0, 10).map((session) => (
+                <div 
+                  key={session.id}
+                  className={cn(
+                    "group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all duration-150",
+                    session.isActive ? "text-white" : "text-white/50 hover:text-white/70"
+                  )}
+                  style={{
+                    background: session.isActive ? "rgba(99, 102, 241, 0.15)" : "transparent",
+                  }}
+                  onClick={() => switchSessionMutation.mutate(session.id)}
+                  data-testid={`session-${session.id}`}
+                >
+                  <span className="text-xs truncate flex-1 min-w-0">{session.title}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {session.isActive && <Check className="w-3 h-3 text-indigo-400" />}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 invisible group-hover:visible text-white/30 hover:text-white/60"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteSessionMutation.mutate(session.id);
+                      }}
+                      data-testid={`delete-session-${session.id}`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
+        {/* Messages Area */}
         <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-          <div className="p-4 space-y-3 h-full">
+          <div className="px-5 py-4 space-y-4 h-full">
             {isLoadingMessages ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-5 h-5 animate-spin text-white/30" />
               </div>
             ) : messages.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center">
-                  <User className="w-8 h-8 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-16">
+                <div 
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15))",
+                    border: "1px solid rgba(99, 102, 241, 0.15)",
+                  }}
+                >
+                  <Sparkles className="w-7 h-7 text-indigo-400/70" />
                 </div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  Hi, I'm {currentVoiceName}!
+                <p className="text-sm text-white/60 font-medium mb-1">
+                  Hi, I'm {currentVoiceName}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Ask me about your emails, account, or how to use the app.
+                <p className="text-xs text-white/30 text-center max-w-[240px]">
+                  Ask me about your emails, draft replies, or manage your inbox.
                 </p>
               </div>
             ) : (
               messages.map((msg) => (
-                <div key={msg.id} className={cn("flex flex-col gap-1", msg.role === "user" && "items-end")}>
+                <div key={msg.id} className={cn("flex flex-col gap-1.5", msg.role === "user" && "items-end")}>
                   <div
                     className={cn(
-                      "text-sm rounded-xl px-4 py-3 max-w-[85%]",
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted/60 border border-white/[0.06]"
+                      "text-[13px] leading-relaxed rounded-2xl px-4 py-3 max-w-[85%] break-words",
                     )}
+                    style={
+                      msg.role === "user"
+                        ? {
+                            background: "linear-gradient(135deg, rgba(99, 102, 241, 0.45), rgba(79, 70, 229, 0.55))",
+                            color: "rgba(255, 255, 255, 0.95)",
+                            border: "1px solid rgba(129, 140, 248, 0.2)",
+                          }
+                        : {
+                            background: "rgba(255, 255, 255, 0.04)",
+                            color: "rgba(255, 255, 255, 0.8)",
+                            border: "1px solid rgba(255, 255, 255, 0.06)",
+                          }
+                    }
                     data-testid={`message-${msg.role}-${msg.id}`}
                   >
-                    {msg.content}
+                    <div className="whitespace-pre-wrap">{msg.content}</div>
                   </div>
+
+                  {/* Feedback row for assistant messages */}
                   {msg.role === "assistant" && (
-                    <div className="flex items-center gap-1 px-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    <div className="flex items-center gap-0.5 px-1">
+                      <button
+                        className="p-1 rounded-md text-white/20 hover:text-white/50 transition-colors"
                         onClick={() => feedbackMutation.mutate({ messageId: msg.id, rating: "positive" })}
                         disabled={feedbackMutation.isPending}
                         data-testid={`button-feedback-up-${msg.id}`}
                       >
                         <ThumbsUp className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                      </button>
+                      <button
+                        className="p-1 rounded-md text-white/20 hover:text-white/50 transition-colors"
                         onClick={() => setFeedbackMessageId(feedbackMessageId === msg.id ? null : msg.id)}
                         disabled={feedbackMutation.isPending}
                         data-testid={`button-feedback-down-${msg.id}`}
                       >
                         <ThumbsDown className="w-3 h-3" />
-                      </Button>
+                      </button>
                       {feedbackMessageId === msg.id && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline" className="h-6 text-xs gap-1">
-                              What's wrong?
-                              <ChevronDown className="w-3 h-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                            {FEEDBACK_TAGS.filter(t => t.id !== "great").map((tag) => (
-                              <DropdownMenuItem
-                                key={tag.id}
-                                onClick={() => feedbackMutation.mutate({ 
-                                  messageId: msg.id, 
-                                  rating: "negative", 
-                                  tags: [tag.id] 
-                                })}
-                                data-testid={`feedback-tag-${tag.id}`}
-                              >
-                                {tag.label}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center gap-1 ml-1">
+                          {FEEDBACK_TAGS.filter(t => t.id !== "great").map((tag) => (
+                            <button
+                              key={tag.id}
+                              onClick={() => feedbackMutation.mutate({ 
+                                messageId: msg.id, 
+                                rating: "negative", 
+                                tags: [tag.id] 
+                              })}
+                              className="text-[10px] px-2 py-0.5 rounded-full text-white/40 hover:text-white/70 transition-colors"
+                              style={{
+                                background: "rgba(255, 255, 255, 0.05)",
+                                border: "1px solid rgba(255, 255, 255, 0.08)",
+                              }}
+                              data-testid={`feedback-tag-${tag.id}`}
+                            >
+                              {tag.label}
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
@@ -537,45 +619,66 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
               ))
             )}
             
+            {/* Typing indicator */}
             {sendMessageMutation.isPending && (
               <div className="flex flex-col gap-1">
-                <div className="text-sm rounded-xl px-4 py-3 max-w-[85%] bg-muted/60 border border-white/[0.06]">
+                <div 
+                  className="rounded-2xl px-4 py-3 max-w-[85%]"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.04)",
+                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                  }}
+                >
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      <span className="w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                     </div>
-                    <span className="text-xs text-muted-foreground">{currentVoiceName} is thinking...</span>
+                    <span className="text-[11px] text-white/30">{currentVoiceName} is thinking...</span>
                   </div>
                 </div>
               </div>
             )}
             
+            {/* Pending Actions */}
             {pendingActions.length > 0 && (
               <div className="space-y-3 pt-2">
-                <p className="text-xs text-muted-foreground font-medium">Pending Actions</p>
+                <p className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Pending Actions</p>
                 {pendingActions.map((action) => {
                   const ActionIcon = ACTION_ICONS[action.actionType] || Mail;
                   const isEditing = editingAction?.id === action.id;
                   
                   return (
-                    <Card key={action.id} className="p-3 border-primary/30" data-testid={`action-card-${action.id}`}>
-                      <div className="flex items-start gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <ActionIcon className="w-4 h-4 text-primary" />
+                    <div 
+                      key={action.id} 
+                      className="rounded-xl p-3.5"
+                      style={{
+                        background: "rgba(99, 102, 241, 0.08)",
+                        border: "1px solid rgba(99, 102, 241, 0.15)",
+                      }}
+                      data-testid={`action-card-${action.id}`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <div 
+                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                          style={{
+                            background: "rgba(99, 102, 241, 0.15)",
+                          }}
+                        >
+                          <ActionIcon className="w-4 h-4 text-indigo-400" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-medium capitalize">{action.actionType}</span>
+                            <span className="text-xs font-medium text-white/80 capitalize">{action.actionType}</span>
                             {action.metadata?.to && (
-                              <span className="text-xs text-muted-foreground truncate">
+                              <span className="text-[10px] text-white/30 truncate">
                                 to {action.metadata.to.join(", ")}
                               </span>
                             )}
                           </div>
                           {action.metadata?.subject && (
-                            <p className="text-xs text-muted-foreground mb-2">
+                            <p className="text-[11px] text-white/40 mb-2">
                               Subject: {action.metadata.subject}
                             </p>
                           )}
@@ -583,12 +686,12 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                             <Textarea
                               value={editedBody}
                               onChange={(e) => setEditedBody(e.target.value)}
-                              className="text-xs min-h-[100px] mb-2"
+                              className="text-xs min-h-[100px] mb-2 bg-black/20 border-white/10 text-white/80 rounded-lg"
                               data-testid="textarea-edit-draft"
                             />
                           ) : (
                             action.metadata?.body && (
-                              <p className="text-xs text-muted-foreground line-clamp-3 mb-2 whitespace-pre-wrap">
+                              <p className="text-[11px] text-white/50 line-clamp-3 mb-2 whitespace-pre-wrap">
                                 {action.metadata.body}
                               </p>
                             )
@@ -598,7 +701,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                               <>
                                 <Button
                                   size="sm"
-                                  className="h-7 text-xs gap-1"
+                                  className="h-7 text-xs gap-1 rounded-lg"
                                   onClick={() => confirmActionMutation.mutate({ 
                                     actionId: action.id, 
                                     modifications: { body: editedBody } 
@@ -611,8 +714,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                                 </Button>
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs"
+                                  variant="ghost"
+                                  className="h-7 text-xs text-white/50 rounded-lg"
                                   onClick={() => {
                                     setEditingAction(null);
                                     setEditedBody("");
@@ -626,7 +729,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                               <>
                                 <Button
                                   size="sm"
-                                  className="h-7 text-xs gap-1"
+                                  className="h-7 text-xs gap-1 rounded-lg"
                                   onClick={() => confirmActionMutation.mutate({ actionId: action.id })}
                                   disabled={confirmActionMutation.isPending}
                                   data-testid={`button-confirm-action-${action.id}`}
@@ -640,8 +743,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                                 </Button>
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs gap-1"
+                                  variant="ghost"
+                                  className="h-7 text-xs gap-1 text-white/50 rounded-lg"
                                   onClick={() => {
                                     setEditingAction(action);
                                     setEditedBody(action.metadata?.body || "");
@@ -651,22 +754,20 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                                   <Pencil className="w-3 h-3" />
                                   Edit
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 text-xs text-destructive hover:text-destructive"
+                                <button
+                                  className="h-7 px-2 text-xs text-red-400/60 hover:text-red-400 transition-colors"
                                   onClick={() => cancelActionMutation.mutate(action.id)}
                                   disabled={cancelActionMutation.isPending}
                                   data-testid={`button-cancel-action-${action.id}`}
                                 >
                                   <X className="w-3 h-3" />
-                                </Button>
+                                </button>
                               </>
                             )}
                           </div>
                         </div>
                       </div>
-                    </Card>
+                    </div>
                   );
                 })}
               </div>
@@ -675,14 +776,24 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
           </div>
         </div>
 
-        <div className="p-4 border-t border-white/[0.06] shrink-0">
-          <div className="flex items-center gap-2">
+        {/* Input Area */}
+        <div 
+          className="px-4 py-3 shrink-0"
+          style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}
+        >
+          <div 
+            className="flex items-end gap-2 rounded-2xl px-3 py-2"
+            style={{
+              background: "rgba(255, 255, 255, 0.04)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+            }}
+          >
             <Button
               size="icon"
-              variant="outline"
+              variant="ghost"
               className={cn(
-                "h-10 w-10 shrink-0 rounded-xl",
-                !hasPremium && "opacity-60"
+                "h-8 w-8 shrink-0 rounded-xl text-white/30 hover:text-white/60",
+                !hasPremium && "opacity-40"
               )}
               onClick={handleOpenVoiceChat}
               data-testid="button-voice-input"
@@ -690,19 +801,33 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
             >
               <Mic className="w-4 h-4" />
             </Button>
-            <Input
+            <textarea
               ref={inputRef}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+              }}
               onKeyDown={handleKeyDown}
-              placeholder={`Ask ${currentVoiceName}...`}
-              className="h-10 rounded-xl"
+              placeholder={`Message ${currentVoiceName}...`}
+              className="flex-1 bg-transparent text-[13px] text-white/80 placeholder:text-white/25 resize-none outline-none min-h-[32px] max-h-[120px] py-1.5 leading-relaxed"
               disabled={sendMessageMutation.isPending}
+              rows={1}
               data-testid="input-assistant-message"
             />
-            <Button
-              size="icon"
-              className="h-10 w-10 shrink-0 rounded-xl"
+            <button
+              className={cn(
+                "h-8 w-8 shrink-0 rounded-xl flex items-center justify-center transition-all duration-200",
+                message.trim() && !sendMessageMutation.isPending
+                  ? "text-white"
+                  : "text-white/20"
+              )}
+              style={{
+                background: message.trim() && !sendMessageMutation.isPending
+                  ? "linear-gradient(135deg, rgba(99, 102, 241, 0.7), rgba(79, 70, 229, 0.8))"
+                  : "transparent",
+              }}
               onClick={handleSendMessage}
               disabled={!message.trim() || sendMessageMutation.isPending}
               data-testid="button-send-message"
@@ -712,7 +837,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
               ) : (
                 <Send className="w-4 h-4" />
               )}
-            </Button>
+            </button>
           </div>
         </div>
       </DialogContent>

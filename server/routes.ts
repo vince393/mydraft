@@ -5,7 +5,7 @@ import { db } from "./db";
 import { sql, desc, eq } from "drizzle-orm";
 import { ownerNotes } from "@shared/schema";
 import OpenAI from "openai";
-import { GoogleGenAI } from "@google/genai";
+
 import * as nylas from "./nylas";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -68,12 +68,9 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const gemini = new GoogleGenAI({
+const geminiAI = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  httpOptions: {
-    apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-  },
+  baseURL: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
 });
 
 async function hashPassword(password: string): Promise<string> {
@@ -1294,8 +1291,8 @@ ${sampleTexts}
 
 Return ONLY valid JSON, no other text.`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const response = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -1303,7 +1300,7 @@ Return ONLY valid JSON, no other text.`;
           },
           { role: "user", content: prompt }
         ],
-        max_tokens: 1000,
+        max_completion_tokens: 1000,
         temperature: 0.3,
       });
 
@@ -2132,8 +2129,8 @@ Return ONLY valid JSON, no other text.`;
         preview: e.snippet || ""
       }));
 
-      const aiResponse = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const aiResponse = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -2346,14 +2343,14 @@ Respond with valid JSON only:
 
       const userPrompt = `Analyze these emails and suggest inbox actions:\n\n${JSON.stringify(emailSummaries, null, 2)}`;
       
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         temperature: 0.1,
-        max_tokens: 2000,
+        max_completion_tokens: 2000,
       });
       
       const responseText = completion.choices[0]?.message?.content || "{}";
@@ -2576,8 +2573,8 @@ Respond with valid JSON only:
         return res.json({ summary: cached.summary, keyPoints: cached.keyPoints, actionItems: cached.actionItems });
       }
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -2606,7 +2603,7 @@ Rules:
           }
         ],
         temperature: 0.3,
-        max_tokens: 500,
+        max_completion_tokens: 500,
       });
 
       const responseText = completion.choices[0]?.message?.content || "{}";
@@ -2643,8 +2640,8 @@ Rules:
         return res.json({ formattedBody: cached.body });
       }
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -2672,7 +2669,7 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
             content: `Please clean up and format this email content:\n\n${body}`
           }
         ],
-        max_tokens: 2000,
+        max_completion_tokens: 2000,
         temperature: 0.3,
       });
 
@@ -2701,8 +2698,8 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
 
       const sampleText = (subject ? subject + "\n\n" : "") + body.slice(0, 1000);
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -2719,7 +2716,7 @@ Return ONLY valid JSON, no other text.`
             content: sampleText
           }
         ],
-        max_tokens: 100,
+        max_completion_tokens: 100,
         temperature: 0,
       });
 
@@ -2817,8 +2814,8 @@ Return ONLY valid JSON, no other text.`
         ? "Use a balanced, professional but approachable tone."
         : `Adapt the formality to match ${culturalContext.culture} business norms: ${culturalContext.formality}`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -2846,7 +2843,7 @@ Translation Rules:
             content: JSON.stringify({ subject: subject || "", body })
           }
         ],
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
         temperature: 0.3,
       });
 
@@ -3258,8 +3255,8 @@ Reply:`;
         ? `You are an email assistant that writes replies matching the user's personal writing style. The user tends to write in a ${learnedStyle.toneDescription || tone} manner with ${learnedStyle.avgSentenceLength || "medium"} sentences. Mimic their natural voice while maintaining the requested ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`
         : `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const response = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -3405,8 +3402,8 @@ Reply:`;
 
       const instruction = modeInstructions[mode] || modeInstructions.basic;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const response = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -3457,8 +3454,8 @@ ${originalEmail.body || originalEmail.preview || ""}
 `;
       }
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const response = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -3664,8 +3661,8 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
         }
       }
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const response = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemMessage },
           { role: "user", content: prompt }
@@ -3858,8 +3855,8 @@ ${subject ? `Context - Email subject: ${subject}` : ""}
 Return only the improved text, nothing else.`;
       }
       
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const response = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemMessage },
           { role: "user", content: prompt }
@@ -4411,14 +4408,14 @@ RESPONSE STYLE:
       const thinkingDelay = 800 + Math.random() * 700;
       await new Promise(resolve => setTimeout(resolve, thinkingDelay));
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           ...conversationHistory,
           { role: "user", content: message }
         ],
-        max_tokens: 800,
+        max_completion_tokens: 800,
         temperature: 0.8,
       });
 
@@ -4859,11 +4856,10 @@ Respond with ONLY a brief suggestion, like:
 - "Politely decline and suggest an alternative date"
 - "Request more details about the project requirements"`;
 
-      const openai = (await import("./replit_integrations/ai/openai.js")).default;
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 100,
+        max_completion_tokens: 100,
         temperature: 0.7,
       });
 
@@ -5007,13 +5003,13 @@ ${originalBody.substring(0, 1500)}
 ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note explaining why you're forwarding this."}`;
       }
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
-        max_tokens: 800,
+        max_completion_tokens: 800,
         temperature: 0.7,
       });
 
@@ -5095,8 +5091,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       const instruction = improvementPrompts[improvementType] || improvementPrompts.clearer;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const completion = await geminiAI.chat.completions.create({
+        model: "gemini-3-flash-preview",
         messages: [
           { 
             role: "system", 
@@ -5107,7 +5103,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             content: `${instruction}\n\nOriginal draft:\n${draft}` 
           }
         ],
-        max_tokens: 800,
+        max_completion_tokens: 800,
         temperature: 0.7,
       });
 
