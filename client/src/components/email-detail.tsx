@@ -24,7 +24,8 @@ import {
   Paperclip,
   Download,
   Image as ImageIcon,
-  File
+  File,
+  Send
 } from "lucide-react";
 import { EmailNotePanel } from "./email-note";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -1070,82 +1071,74 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
           </div>
 
           {showDraft && (
-            <div className="mb-8 p-5 bg-muted/30 rounded-xl border border-border/40" data-testid="ai-draft-container">
+            <div 
+              className="mb-8 p-5 rounded-2xl border border-white/15 dark:border-white/10 backdrop-blur-2xl" 
+              style={{
+                background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+                boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 24px rgba(0,0,0,0.12)"
+              }}
+              data-testid="ai-draft-container"
+            >
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium">
-                    {generatedDraft.status === "scheduled" ? "Scheduled Reply" : "AI Generated Reply"}
+                <div className="flex items-center gap-2.5">
+                  <div 
+                    className="w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm border border-primary/20"
+                    style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.15))" }}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground/90">
+                    {generatedDraft.status === "scheduled" ? "Scheduled Reply" : "AI Draft"}
                   </span>
                   {generatedDraft.status === "scheduled" && generatedDraft.scheduledAt && (
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    <span 
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10 backdrop-blur-sm text-foreground/60"
+                      style={{ background: "rgba(255,255,255,0.05)" }}
+                    >
                       <Clock className="w-3 h-3 inline mr-1" />
                       {format(new Date(generatedDraft.scheduledAt), "MMM d 'at' h:mm a")}
                     </span>
                   )}
                 </div>
-                <Button size="icon" variant="ghost" onClick={handleCloseDraft} data-testid="button-close-draft">
-                  <X className="w-4 h-4" />
-                </Button>
+                <button 
+                  className="w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
+                  onClick={handleCloseDraft} 
+                  data-testid="button-close-draft"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
               <Textarea
                 value={draftContent}
                 onChange={(e) => setDraftContent(e.target.value)}
-                className="min-h-[150px] bg-background/50 border-border/30 rounded-lg resize-none"
+                className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-xl resize-none text-sm focus:border-white/20 focus:bg-white/[0.05] transition-colors"
                 placeholder="AI generated reply will appear here..."
                 disabled={generatedDraft.status === "scheduled"}
                 data-testid="textarea-draft"
               />
               {generatedDraft.status !== "scheduled" && draftContent.trim() && (
-                <div className="mt-3 space-y-2">
-                  {/* Quick action buttons */}
+                <div className="mt-3 space-y-2.5">
                   <div className="flex flex-wrap gap-1.5" data-testid="quick-actions">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRefine("Make this response shorter and more concise")}
-                      disabled={isRefining}
-                      className="h-7 px-2.5 text-xs"
-                      data-testid="button-shorter"
-                    >
-                      Shorter
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRefine("Make this response longer with more detail")}
-                      disabled={isRefining}
-                      className="h-7 px-2.5 text-xs"
-                      data-testid="button-longer"
-                    >
-                      Longer
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRefine("Make this more formal and professional")}
-                      disabled={isRefining}
-                      className="h-7 px-2.5 text-xs"
-                      data-testid="button-formal"
-                    >
-                      More Formal
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRefine("Make this more casual and friendly")}
-                      disabled={isRefining}
-                      className="h-7 px-2.5 text-xs"
-                      data-testid="button-casual"
-                    >
-                      More Casual
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
+                    {[
+                      { label: "Shorter", instruction: "Make this response shorter and more concise", testId: "button-shorter" },
+                      { label: "Longer", instruction: "Make this response longer with more detail", testId: "button-longer" },
+                      { label: "More Formal", instruction: "Make this more formal and professional", testId: "button-formal" },
+                      { label: "More Casual", instruction: "Make this more casual and friendly", testId: "button-casual" },
+                    ].map((action) => (
+                      <button
+                        key={action.testId}
+                        onClick={() => handleRefine(action.instruction)}
+                        disabled={isRefining}
+                        className="h-7 px-3 rounded-full text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer"
+                        data-testid={action.testId}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                    <button
                       onClick={handleGenerateImage}
                       disabled={isRefining || isGeneratingImage}
-                      className="h-7 px-2.5 text-xs gap-1"
+                      className="h-7 px-3 rounded-full text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1"
                       data-testid="button-generate-image"
                     >
                       {isGeneratingImage ? (
@@ -1154,16 +1147,19 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                         <ImageIcon className="w-3 h-3" />
                       )}
                       Add Image
-                    </Button>
+                    </button>
                   </div>
-                  {/* Custom refine input */}
-                  <div className="flex items-center gap-2 p-2 bg-background/30 rounded-lg border border-border/20" data-testid="refine-bar">
-                    <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                  <div 
+                    className="flex items-center gap-2 px-3 py-2 rounded-full border border-white/10 backdrop-blur-sm"
+                    style={{ background: "rgba(255,255,255,0.03)" }}
+                    data-testid="refine-bar"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
                     <Input
                       value={refineInput}
                       onChange={(e) => setRefineInput(e.target.value)}
-                      placeholder="Or type custom instructions..."
-                      className="flex-1 h-8 border-0 bg-transparent focus-visible:ring-0 text-sm"
+                      placeholder="Tell AI how to adjust..."
+                      className="flex-1 h-7 border-0 bg-transparent focus-visible:ring-0 text-xs placeholder:text-foreground/30"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
@@ -1173,11 +1169,10 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       disabled={isRefining}
                       data-testid="input-refine"
                     />
-                    <Button
-                      size="sm"
+                    <button
                       onClick={() => handleRefine()}
                       disabled={!refineInput.trim() || isRefining}
-                      className="h-7 px-3 text-xs"
+                      className="h-7 px-3 rounded-full text-[11px] font-medium backdrop-blur-sm bg-primary/15 border border-primary/20 text-primary hover:bg-primary/25 transition-all disabled:opacity-40 cursor-pointer"
                       data-testid="button-refine"
                     >
                       {isRefining ? (
@@ -1185,34 +1180,41 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       ) : (
                         "Refine"
                       )}
-                    </Button>
+                    </button>
                   </div>
                 </div>
               )}
               <div className="flex items-center gap-2 mt-4">
                 {generatedDraft.status === "scheduled" ? (
-                  <Button 
-                    variant="outline" 
-                    className="gap-2" 
+                  <button 
+                    className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/70 hover:bg-white/10 hover:text-foreground transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40"
                     onClick={() => cancelScheduleMutation.mutate(generatedDraft.id)}
                     disabled={cancelScheduleMutation.isPending}
                     data-testid="button-cancel-schedule"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                     Cancel Schedule
-                  </Button>
+                  </button>
                 ) : (
                   <>
-                    <Button variant="default" className="gap-2" data-testid="button-send-draft">
+                    <button 
+                      className="h-9 px-5 rounded-full text-xs font-medium backdrop-blur-sm border border-primary/25 text-white hover:border-primary/40 transition-all cursor-pointer flex items-center gap-2"
+                      style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(147,51,234,0.3))" }}
+                      data-testid="button-send-draft"
+                    >
+                      <Send className="w-3.5 h-3.5" />
                       Send Reply
-                    </Button>
+                    </button>
                     <Popover open={showSchedulePicker} onOpenChange={setShowSchedulePicker}>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="gap-2" data-testid="button-send-later">
-                          <Clock className="w-4 h-4" />
+                        <button 
+                          className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/70 hover:bg-white/10 hover:text-foreground hover:border-white/20 transition-all cursor-pointer flex items-center gap-2"
+                          data-testid="button-send-later"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
                           Send Later
                           <ChevronDown className="w-3 h-3" />
-                        </Button>
+                        </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-72 p-0" align="start">
                         <div className="p-3 border-b border-border/50">

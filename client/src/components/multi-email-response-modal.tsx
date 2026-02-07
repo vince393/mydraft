@@ -1,15 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { 
   Sparkles, RefreshCw, Loader2, ChevronLeft, ChevronRight, 
-  ChevronDown, ChevronUp, Send, AlertCircle, Wand2
+  ChevronDown, ChevronUp, Send, AlertCircle, Wand2, X
 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -348,204 +345,242 @@ export function MultiEmailResponseModal({
 
   if (!currentEmail) return null;
 
+  const glassStyle = {
+    background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+    boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 24px rgba(0,0,0,0.12)"
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600/20 to-purple-600/20">
-              <Sparkles className="w-5 h-5 text-primary" />
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 border-white/15 dark:border-white/10 backdrop-blur-3xl bg-background/80 rounded-2xl overflow-hidden">
+        
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm border border-primary/20 flex-shrink-0"
+              style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.15))" }}
+            >
+              <Sparkles className="w-4 h-4 text-primary" />
             </div>
-            AI Batch Response
-          </DialogTitle>
-          <div className="flex items-center gap-4 mt-3">
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <span className="text-foreground font-medium">{currentIndex + 1}</span>
-              <span>/</span>
-              <span>{emails.length}</span>
-              <span className="ml-2">emails</span>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm font-semibold text-foreground/90">AI Batch Response</h2>
+              <p className="text-xs text-foreground/40 mt-0.5">{emails.length} emails selected</p>
             </div>
+            <button
+              onClick={() => onOpenChange(false)}
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
+              data-testid="button-close-batch"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Navigation + Status pills */}
+          <div className="flex items-center gap-3 mt-3">
             <div className="flex items-center gap-1">
-              <Button
-                size="icon"
-                variant="ghost"
+              <button
                 onClick={handlePrevious}
                 disabled={currentIndex === 0}
-                className="h-8 w-8"
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
                 data-testid="button-previous-email"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-xs font-medium text-foreground/50 tabular-nums px-1">
+                {currentIndex + 1} / {emails.length}
+              </span>
+              <button
                 onClick={handleNext}
                 disabled={currentIndex === emails.length - 1}
-                className="h-8 w-8"
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
                 data-testid="button-next-email"
               >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
             <div className="flex-1" />
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-1.5">
               {sentCount > 0 && (
-                <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400">
+                <span 
+                  className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 backdrop-blur-sm"
+                  style={{ background: "rgba(16,185,129,0.1)" }}
+                >
                   {sentCount} sent
                 </span>
               )}
               {loadingCount > 0 && (
-                <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
+                <span 
+                  className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-blue-500/20 text-blue-400 backdrop-blur-sm"
+                  style={{ background: "rgba(59,130,246,0.1)" }}
+                >
                   {loadingCount} generating
                 </span>
               )}
               {readyCount > 0 && (
-                <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                <span 
+                  className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10 text-foreground/50 backdrop-blur-sm"
+                  style={{ background: "rgba(255,255,255,0.05)" }}
+                >
                   {readyCount} ready
                 </span>
               )}
             </div>
           </div>
-        </DialogHeader>
+        </div>
 
+        {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <ScrollArea className="flex-1 px-6 py-4">
+          <ScrollArea className="flex-1 px-5 py-4">
             <div className="space-y-4">
+              {/* Original email toggle */}
               <button
                 onClick={() => setIsOriginalExpanded(!isOriginalExpanded)}
-                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-left"
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-white/10 backdrop-blur-sm text-left transition-all hover:border-white/15"
+                style={{ background: "rgba(255,255,255,0.03)" }}
                 data-testid="button-toggle-original"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-medium">
+                  <div className="flex items-center gap-2 text-xs font-medium text-foreground/70">
                     <span>From: {currentEmail.sender}</span>
                     {currentResponse?.sent && (
-                      <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs">
+                      <span 
+                        className="px-1.5 py-0.5 rounded-full text-[10px] font-medium border border-emerald-500/20 text-emerald-400"
+                        style={{ background: "rgba(16,185,129,0.1)" }}
+                      >
                         Sent
                       </span>
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground truncate">
+                  <div className="text-xs text-foreground/40 truncate mt-0.5">
                     {currentEmail.subject}
                   </div>
                 </div>
                 {isOriginalExpanded ? (
-                  <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <ChevronUp className="w-3.5 h-3.5 text-foreground/40 flex-shrink-0 ml-2" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <ChevronDown className="w-3.5 h-3.5 text-foreground/40 flex-shrink-0 ml-2" />
                 )}
               </button>
 
               {isOriginalExpanded && (
-                <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                  <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                <div 
+                  className="px-4 py-3 rounded-xl border border-white/8"
+                  style={{ background: "rgba(255,255,255,0.02)" }}
+                >
+                  <div className="text-xs text-foreground/50 whitespace-pre-wrap leading-relaxed">
                     {currentEmail.body || currentEmail.preview}
                   </div>
                 </div>
               )}
 
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Subject</label>
-                  <Input
-                    value={currentResponse?.subject || `Re: ${currentEmail.subject}`}
-                    onChange={(e) => updateCurrentResponse('subject', e.target.value)}
-                    disabled={currentResponse?.sent || currentResponse?.isLoading}
-                    className="bg-white/[0.03]"
-                    data-testid="input-response-subject"
-                  />
-                </div>
+              {/* Subject */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium text-foreground/40 uppercase tracking-wider">Subject</label>
+                <Input
+                  value={currentResponse?.subject || `Re: ${currentEmail.subject}`}
+                  onChange={(e) => updateCurrentResponse('subject', e.target.value)}
+                  disabled={currentResponse?.sent || currentResponse?.isLoading}
+                  className="bg-white/[0.03] border-white/10 rounded-xl text-sm focus:border-white/20 focus:bg-white/[0.05] transition-colors h-10"
+                  data-testid="input-response-subject"
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-muted-foreground">Response</label>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleRegenerateCurrent}
-                      disabled={currentResponse?.isLoading || currentResponse?.sent}
-                      className="h-7 text-xs gap-1"
-                      data-testid="button-regenerate-current"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                      Regenerate
-                    </Button>
-                  </div>
-                  
-                  {currentResponse?.isLoading ? (
-                    <div className="flex items-center justify-center h-40 bg-white/[0.03] rounded-lg border border-white/[0.06]">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Generating response...</span>
-                      </div>
-                    </div>
-                  ) : currentResponse?.error ? (
-                    <div className="flex flex-col items-center justify-center h-40 bg-red-500/10 rounded-lg border border-red-500/30">
-                      <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
-                      <p className="text-sm text-red-400">{currentResponse.error}</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleRegenerateCurrent}
-                        className="mt-3"
-                        data-testid="button-retry-generate"
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  ) : (
-                    <Textarea
-                      value={currentResponse?.content || ""}
-                      onChange={(e) => updateCurrentResponse('content', e.target.value)}
-                      disabled={currentResponse?.sent}
-                      placeholder="AI-generated response will appear here..."
-                      className="min-h-[200px] bg-white/[0.03] resize-none"
-                      data-testid="textarea-response-content"
-                    />
-                  )}
-                  
-                  {currentResponse?.content && !currentResponse?.isLoading && !currentResponse?.sent && (
-                    <div className="flex items-center gap-2 mt-3">
-                      <div className="flex-1 relative">
-                        <Input
-                          value={refineInstruction}
-                          onChange={(e) => setRefineInstruction(e.target.value)}
-                          placeholder="Ask AI to change something... e.g. 'Make it shorter' or 'Add a thank you'"
-                          className="pr-20 bg-white/[0.03]"
-                          disabled={isRefining}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && refineInstruction.trim()) {
-                              e.preventDefault();
-                              handleRefine();
-                            }
-                          }}
-                          data-testid="input-refine-instruction"
-                        />
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={handleRefine}
-                        disabled={!refineInstruction.trim() || isRefining}
-                        className="gap-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white"
-                        data-testid="button-refine"
-                      >
-                        {isRefining ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Wand2 className="w-3.5 h-3.5" />
-                        )}
-                        Refine
-                      </Button>
-                    </div>
-                  )}
+              {/* Response */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-medium text-foreground/40 uppercase tracking-wider">Response</label>
+                  <button
+                    onClick={handleRegenerateCurrent}
+                    disabled={currentResponse?.isLoading || currentResponse?.sent}
+                    className="h-6 px-2.5 rounded-full text-[10px] font-medium bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70 transition-all disabled:opacity-30 cursor-pointer flex items-center gap-1"
+                    data-testid="button-regenerate-current"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" />
+                    Regenerate
+                  </button>
                 </div>
+                
+                {currentResponse?.isLoading ? (
+                  <div 
+                    className="flex items-center justify-center h-40 rounded-xl border border-white/8"
+                    style={{ background: "rgba(255,255,255,0.02)" }}
+                  >
+                    <div className="flex items-center gap-2.5 text-foreground/40">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-xs">Generating response...</span>
+                    </div>
+                  </div>
+                ) : currentResponse?.error ? (
+                  <div 
+                    className="flex flex-col items-center justify-center h-40 rounded-xl border border-red-500/20"
+                    style={{ background: "rgba(239,68,68,0.05)" }}
+                  >
+                    <AlertCircle className="w-6 h-6 text-red-400/60 mb-2" />
+                    <p className="text-xs text-red-400/80">{currentResponse.error}</p>
+                    <button
+                      onClick={handleRegenerateCurrent}
+                      className="mt-3 h-7 px-3 rounded-full text-[11px] font-medium bg-white/5 border border-white/10 text-foreground/60 hover:bg-white/10 transition-all cursor-pointer"
+                      data-testid="button-retry-generate"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : (
+                  <Textarea
+                    value={currentResponse?.content || ""}
+                    onChange={(e) => updateCurrentResponse('content', e.target.value)}
+                    disabled={currentResponse?.sent}
+                    placeholder="AI-generated response will appear here..."
+                    className="min-h-[180px] bg-white/[0.03] border-white/10 rounded-xl resize-none text-sm focus:border-white/20 focus:bg-white/[0.05] transition-colors"
+                    data-testid="textarea-response-content"
+                  />
+                )}
+                
+                {/* Refine bar */}
+                {currentResponse?.content && !currentResponse?.isLoading && !currentResponse?.sent && (
+                  <div 
+                    className="flex items-center gap-2 px-3 py-2 rounded-full border border-white/10 backdrop-blur-sm mt-2"
+                    style={{ background: "rgba(255,255,255,0.03)" }}
+                  >
+                    <Wand2 className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
+                    <Input
+                      value={refineInstruction}
+                      onChange={(e) => setRefineInstruction(e.target.value)}
+                      placeholder="Tell AI how to adjust..."
+                      className="flex-1 h-7 border-0 bg-transparent focus-visible:ring-0 text-xs placeholder:text-foreground/30"
+                      disabled={isRefining}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && refineInstruction.trim()) {
+                          e.preventDefault();
+                          handleRefine();
+                        }
+                      }}
+                      data-testid="input-refine-instruction"
+                    />
+                    <button
+                      onClick={handleRefine}
+                      disabled={!refineInstruction.trim() || isRefining}
+                      className="h-7 px-3 rounded-full text-[11px] font-medium backdrop-blur-sm bg-primary/15 border border-primary/20 text-primary hover:bg-primary/25 transition-all disabled:opacity-40 cursor-pointer"
+                      data-testid="button-refine"
+                    >
+                      {isRefining ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        "Refine"
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </ScrollArea>
 
-          <div className="border-t px-6 py-4 space-y-3 bg-background">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-muted-foreground">Tone:</label>
+          {/* Footer */}
+          <div className="border-t border-white/10 px-5 py-4 space-y-3">
+            {/* Tone selector */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-medium text-foreground/40 uppercase tracking-wider">Tone</span>
               <div className="flex flex-wrap gap-1.5">
                 {TONE_OPTIONS.map((tone) => (
                   <button
@@ -553,13 +588,16 @@ export function MultiEmailResponseModal({
                     onClick={() => handleToneChange(tone.value)}
                     disabled={loadingCount > 0}
                     className={`
-                      px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+                      h-7 px-3 rounded-full text-[11px] font-medium transition-all cursor-pointer
                       ${selectedTone === tone.value
-                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                        : "bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+                        ? "border border-primary/25 text-white"
+                        : "bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70"
                       }
-                      ${loadingCount > 0 ? "opacity-50 cursor-not-allowed" : ""}
+                      ${loadingCount > 0 ? "opacity-40 cursor-not-allowed" : ""}
                     `}
+                    style={selectedTone === tone.value ? { 
+                      background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(147,51,234,0.3))" 
+                    } : undefined}
                     data-testid={`button-tone-${tone.value}`}
                   >
                     {tone.label}
@@ -568,20 +606,19 @@ export function MultiEmailResponseModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
+            {/* Action buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
                 onClick={handleRegenerateAll}
                 disabled={loadingCount > 0}
-                className="gap-2"
+                className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2"
                 data-testid="button-regenerate-all"
               >
-                <RefreshCw className={`w-4 h-4 ${loadingCount > 0 ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingCount > 0 ? "animate-spin" : ""}`} />
                 Regenerate All
-              </Button>
+              </button>
               <div className="flex-1" />
-              <Button
-                variant="outline"
+              <button
                 onClick={handleSendCurrent}
                 disabled={
                   !currentResponse || 
@@ -590,29 +627,30 @@ export function MultiEmailResponseModal({
                   !!currentResponse.error ||
                   sendEmailMutation.isPending
                 }
-                className="gap-2"
+                className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2"
                 data-testid="button-send-current"
               >
                 {sendEmailMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                 )}
                 Send This
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={handleSendAll}
                 disabled={readyCount === 0 || sendEmailMutation.isPending}
-                className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white"
+                className="h-9 px-5 rounded-full text-xs font-medium border border-primary/25 text-white transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2"
+                style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(147,51,234,0.3))" }}
                 data-testid="button-send-all"
               >
                 {sendEmailMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                 )}
                 Send All ({readyCount})
-              </Button>
+              </button>
             </div>
           </div>
         </div>
