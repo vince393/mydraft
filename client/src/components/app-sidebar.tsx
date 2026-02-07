@@ -134,9 +134,10 @@ interface AppSidebarProps {
   unreadCounts?: UnreadCounts;
   categoryCounts?: CategoryCounts;
   onCompose?: () => void;
+  onDropEmail?: (emailId: string, targetFolder: string, targetFolderId?: number) => void;
 }
 
-export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCounts, categoryCounts, onCompose }: AppSidebarProps) {
+export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCounts, categoryCounts, onCompose, onDropEmail }: AppSidebarProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderAiDescription, setNewFolderAiDescription] = useState("");
@@ -161,6 +162,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [suggestionFolderId, setSuggestionFolderId] = useState<number | null>(null);
   const [suggestionFolderName, setSuggestionFolderName] = useState("");
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -443,6 +446,31 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     }
   }, [updateIconMutation]);
 
+  const handleFolderDragOver = useCallback((e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverFolder(folderId);
+  }, []);
+
+  const handleFolderDragLeave = useCallback((e: React.DragEvent) => {
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!e.currentTarget.contains(relatedTarget)) {
+      setDragOverFolder(null);
+    }
+  }, []);
+
+  const handleFolderDrop = useCallback((e: React.DragEvent, targetFolder: string, targetFolderId?: number) => {
+    e.preventDefault();
+    setDragOverFolder(null);
+    try {
+      const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+      if (data.emailId && onDropEmail) {
+        onDropEmail(data.emailId, targetFolder, targetFolderId);
+      }
+    } catch {
+    }
+  }, [onDropEmail]);
+
   const handleMouseEnter = () => {
     if (isCollapsed && !justCollapsedRef.current) {
       if (hoverTimeoutRef.current) {
@@ -564,7 +592,12 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   
                   if (!showText) {
                     return (
-                      <SidebarMenuItem key={item.title}>
+                      <SidebarMenuItem 
+                        key={item.title}
+                        onDragOver={(e) => handleFolderDragOver(e, folderId)}
+                        onDragLeave={handleFolderDragLeave}
+                        onDrop={(e) => handleFolderDrop(e, item.title.toLowerCase(), item.id)}
+                      >
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <SidebarMenuButton 
@@ -574,9 +607,11 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                               }}
                               className={`
                                 w-full justify-center h-11 rounded-xl transition-all duration-200
-                                ${isActive 
-                                  ? "bg-muted/60 text-foreground" 
-                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                ${dragOverFolder === folderId
+                                  ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
+                                  : isActive 
+                                    ? "bg-muted/60 text-foreground" 
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                                 }
                               `}
                               data-testid={`nav-${item.title.toLowerCase()}`}
@@ -605,9 +640,11 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                       }}
                       className={`
                         w-full justify-between h-11 rounded-xl transition-all duration-200
-                        ${isActive 
-                          ? "bg-muted/60 text-foreground" 
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                        ${dragOverFolder === folderId
+                          ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
+                          : isActive 
+                            ? "bg-muted/60 text-foreground" 
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                         }
                       `}
                       data-testid={`nav-${item.title.toLowerCase()}`}
@@ -630,14 +667,22 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   // Custom folders get a visible menu button for rename/delete/icon
                   if (item.isCustom) {
                     return (
-                      <SidebarMenuItem key={item.title} className="group/folder">
+                      <SidebarMenuItem 
+                        key={item.title} 
+                        className="group/folder"
+                        onDragOver={(e) => handleFolderDragOver(e, folderId)}
+                        onDragLeave={handleFolderDragLeave}
+                        onDrop={(e) => handleFolderDrop(e, item.title.toLowerCase(), item.id)}
+                      >
                         <SidebarMenuButton 
                           onClick={() => handleFolderClick(folderId)}
                           className={`
                             w-full justify-between h-11 rounded-xl transition-all duration-200
-                            ${isActive 
-                              ? "bg-muted/60 text-foreground" 
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                            ${dragOverFolder === folderId
+                              ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
+                              : isActive 
+                                ? "bg-muted/60 text-foreground" 
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                             }
                           `}
                           data-testid={`nav-${item.title.toLowerCase()}`}
@@ -716,7 +761,12 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   }
                   
                   return (
-                    <SidebarMenuItem key={item.title}>
+                    <SidebarMenuItem 
+                      key={item.title}
+                      onDragOver={(e) => handleFolderDragOver(e, folderId)}
+                      onDragLeave={handleFolderDragLeave}
+                      onDrop={(e) => handleFolderDrop(e, item.title.toLowerCase(), item.id)}
+                    >
                       {folderButton}
                     </SidebarMenuItem>
                   );

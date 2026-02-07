@@ -435,11 +435,28 @@ export function SwipeableEmailItem({
     );
   };
 
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    e.dataTransfer.setData("text/plain", JSON.stringify({ emailId: String(emailId), subject, sender }));
+    e.dataTransfer.effectAllowed = "move";
+    if (containerRef.current) {
+      containerRef.current.style.opacity = "0.5";
+    }
+  }, [emailId, subject, sender]);
+
+  const handleDragEnd = useCallback(() => {
+    if (containerRef.current) {
+      containerRef.current.style.opacity = "1";
+    }
+  }, []);
+
   return (
     <div
       ref={containerRef}
       className="relative overflow-hidden rounded-xl w-full"
       data-testid={`email-item-${emailId}`}
+      draggable={!isSelectionMode && !isSwiping}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       <div
         className="absolute inset-y-0 right-0 flex items-center"

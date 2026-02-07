@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Switch, Route, useLocation, Redirect } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -111,6 +112,32 @@ function AuthenticatedApp() {
     }
   };
 
+  const { toast } = useToast();
+
+  const handleDropEmail = useCallback(async (emailId: string, targetFolder: string, targetFolderId?: number) => {
+    if (!emailId) return;
+    
+    try {
+      if (targetFolderId) {
+        await apiRequest("POST", `/api/folders/${targetFolderId}/bulk-assign`, { messageIds: [emailId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        toast({ title: "Email moved", description: "Added to folder successfully" });
+      } else {
+        const validSystemFolders = ["inbox", "archived", "trash", "sent", "drafts", "junk"];
+        if (!validSystemFolders.includes(targetFolder)) return;
+        
+        await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder: targetFolder });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
+        const folderNames: Record<string, string> = { inbox: "Inbox", archived: "Archive", trash: "Trash", sent: "Sent", drafts: "Drafts", junk: "Junk" };
+        toast({ title: "Email moved", description: `Moved to ${folderNames[targetFolder] || targetFolder}` });
+      }
+    } catch {
+      toast({ title: "Failed to move email", description: "Please try again", variant: "destructive" });
+    }
+  }, [toast]);
+
   return (
     <SidebarProvider
       defaultOpen={screen.isDesktop}
@@ -127,6 +154,7 @@ function AuthenticatedApp() {
           unreadCounts={unreadCounts}
           categoryCounts={categoryCounts}
           onCompose={handleCompose}
+          onDropEmail={handleDropEmail}
         />
         <SidebarInset className="flex flex-1 min-w-0">
           <Inbox 
