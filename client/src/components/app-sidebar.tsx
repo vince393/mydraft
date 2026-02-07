@@ -563,8 +563,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   const showCount = folderCount > 0;
                   
                   const categoryItems = item.title === "Inbox" ? [
-                    { id: "category-promotions", label: "Promotions", icon: Tag, color: "text-orange-500 dark:text-orange-400", count: categoryCounts?.promotions || 0 },
-                    { id: "category-updates", label: "Updates", icon: Bell, color: "text-blue-500 dark:text-blue-400", count: categoryCounts?.updates || 0 },
+                    { id: "category-promotions", label: "Promotions", icon: Megaphone, count: categoryCounts?.promotions || 0 },
+                    { id: "category-updates", label: "Updates", icon: Bell, count: categoryCounts?.updates || 0 },
                   ] : null;
                   
                   if (!showText) {
@@ -612,7 +612,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                                       onFolderChange(cat.id);
                                     }}
                                     className={`
-                                      w-full justify-center h-9 rounded-xl transition-all duration-200
+                                      w-full justify-center h-10 rounded-xl transition-all duration-200
                                       ${catActive
                                         ? "bg-muted/60 text-foreground"
                                         : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -620,7 +620,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                                     `}
                                     data-testid={`nav-${cat.label.toLowerCase()}`}
                                   >
-                                    <cat.icon className={`w-4 h-4 ${catActive ? cat.color : ""}`} />
+                                    <cat.icon className="w-[16px] h-[16px]" />
                                   </SidebarMenuButton>
                                 </TooltipTrigger>
                                 <TooltipContent side="right">
@@ -757,43 +757,37 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                       <SidebarMenuItem>
                         {folderButton}
                       </SidebarMenuItem>
-                      {categoryItems && (
-                        <>
-                          <div className="mx-3 my-1.5 border-t border-border/15" />
-                          {categoryItems.map(cat => {
-                            const catActive = activeFolder === cat.id;
-                            return (
-                              <SidebarMenuItem key={cat.id}>
-                                <SidebarMenuButton
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleFolderClick(cat.id);
-                                  }}
-                                  className={`
-                                    w-full justify-between h-9 rounded-xl transition-all duration-200 pl-8
-                                    ${catActive
-                                      ? "bg-muted/60 text-foreground"
-                                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                                    }
-                                  `}
-                                  data-testid={`nav-${cat.label.toLowerCase()}`}
-                                >
-                                  <div className="flex items-center gap-2.5">
-                                    <cat.icon className={`w-4 h-4 ${cat.color}`} />
-                                    <span className={`text-[13px] ${catActive ? "font-medium" : ""}`}>{cat.label}</span>
-                                  </div>
-                                  {cat.count > 0 && (
-                                    <span className="text-[10px] min-w-[20px] h-5 flex items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
-                                      {cat.count}
-                                    </span>
-                                  )}
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
-                            );
-                          })}
-                          <div className="mx-3 my-1.5 border-t border-border/15" />
-                        </>
-                      )}
+                      {categoryItems && categoryItems.map(cat => {
+                        const catActive = activeFolder === cat.id;
+                        return (
+                          <SidebarMenuItem key={cat.id}>
+                            <SidebarMenuButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFolderClick(cat.id);
+                              }}
+                              className={`
+                                w-full justify-between h-11 rounded-xl transition-all duration-200
+                                ${catActive
+                                  ? "bg-muted/60 text-foreground"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                }
+                              `}
+                              data-testid={`nav-${cat.label.toLowerCase()}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <cat.icon className="w-[18px] h-[18px]" />
+                                <span className={`text-sm ${catActive ? "font-medium" : ""}`}>{cat.label}</span>
+                              </div>
+                              {cat.count > 0 && (
+                                <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
+                                  {cat.count}
+                                </Badge>
+                              )}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
                     </span>
                   );
                 })}
