@@ -261,7 +261,11 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       dragStarted.current = true;
       setIsSelectionMode(true);
       setIsDragging(true);
-      setSelectedIds(new Set([emailId]));
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.add(emailId);
+        return next;
+      });
     }, 1000);
   }, []);
 
