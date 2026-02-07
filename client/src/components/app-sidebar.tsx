@@ -16,6 +16,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -160,6 +161,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const { hasPro, hasPremium } = usePlan();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   // Fetch custom folders from API
   const { data: customFoldersData } = useQuery<{ folders: CustomFolder[] }>({
@@ -340,13 +342,15 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   }, []);
 
   const handleFolderClick = useCallback((folderId: string) => {
-    // Don't navigate if long press was triggered or menu is open
     if (longPressTriggeredRef.current) {
       longPressTriggeredRef.current = false;
       return;
     }
     onFolderChange(folderId);
-  }, [onFolderChange]);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [onFolderChange, isMobile, setOpenMobile]);
   
   const handleCreateFolder = async () => {
     if (newFolderName.trim()) {

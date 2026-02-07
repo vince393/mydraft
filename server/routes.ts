@@ -2676,16 +2676,6 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
 
   app.post("/api/emails/:id/detect-language", requireAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.session.userId!);
-      const userPlan = user?.plan || "free";
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Pro plan required for language detection",
-          requiredPlan: "pro",
-          currentPlan: userPlan
-        });
-      }
-      
       const id = req.params.id;
       const { subject, body } = req.body;
 

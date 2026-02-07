@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Sparkles } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Sparkles, Menu } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { usePlan } from "@/hooks/use-plan";
 import { useScreenSize } from "@/hooks/use-screen-size";
 import { NotificationBell } from "@/components/notification-bell";
 import { AccountSwitcher } from "@/components/account-switcher";
+import { useSidebar } from "@/components/ui/sidebar";
 import type { Email, Draft } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -67,6 +68,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const { toast } = useToast();
   const { hasPro, hasPremium } = usePlan();
   const screen = useScreenSize();
+  const { toggleSidebar } = useSidebar();
 
   // Fetch current user info including connected email
   const { data: userData } = useQuery<{ user: { 
@@ -204,9 +206,10 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   // Show updating indicator when we have cached data and are fetching fresh
   const isUpdating = isFetchingFresh && cachedEmails.length > 0;
   
-  // Show loading if we have NO data and fresh data hasn't loaded yet
-  // Also show loading if we're actively fetching fresh data with no cached data
-  const isLoadingEmails = cachedEmails.length === 0 && !hasFreshData;
+  // Show loading if we have NO data at all and are still fetching
+  // This covers first login where cached returns empty and fresh is still loading
+  const isLoadingEmails = (cachedEmails.length === 0 && !hasFreshData) || 
+                          (allEmails.length === 0 && isFetchingFresh);
   
   // Legacy syncing indicator (keep for compatibility but use isUpdating for new UI)
   const isSyncing = isUpdating && !isLoadingEmails;
@@ -670,10 +673,20 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     <div className="email-layout">
       {/* Email List Panel - hidden on mobile when viewing detail */}
       <div className={`email-list-panel overflow-x-hidden ${screen.isMobile && showMobileDetail ? 'hidden' : ''}`}>
-        {/* Mobile header - only show on mobile in list view */}
-        {screen.isMobile && !showMobileDetail && (
+        {/* Mobile/tablet header - show on small screens in list view */}
+        {(screen.isMobile || screen.isTablet) && !showMobileDetail && (
           <header className="flex items-center justify-between gap-2 h-14 px-4 border-b border-border/20 bg-background sticky top-0 z-50 flex-shrink-0">
-            <h1 className="text-xl font-semibold capitalize tracking-tight">{activeFolder}</h1>
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={toggleSidebar}
+                data-testid="button-sidebar-toggle"
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl font-semibold capitalize tracking-tight">{activeFolder}</h1>
+            </div>
             <div className="flex items-center gap-1">
               <NotificationBell />
               <DropdownMenu>

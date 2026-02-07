@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare, Tag, Bell } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,59 @@ interface EmailWithNylasId extends Email {
 
 function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
+}
+
+type EmailCategory = "primary" | "promotions" | "updates";
+
+const PROMOTION_KEYWORDS = [
+  "unsubscribe", "opt out", "opt-out", "promotional", "sale", "discount", 
+  "offer", "deal", "coupon", "promo", "% off", "free shipping", "limited time",
+  "shop now", "buy now", "order now", "special offer", "exclusive",
+  "newsletter", "marketing", "advertisement"
+];
+
+const PROMOTION_SENDERS = [
+  "noreply", "no-reply", "marketing", "promo", "deals", "offers", "shop",
+  "store", "sales", "newsletter", "info@", "hello@", "news@"
+];
+
+const UPDATE_KEYWORDS = [
+  "your order", "order confirmation", "shipping", "delivery", "tracking",
+  "account", "password", "verify", "confirm", "notification", "alert",
+  "receipt", "invoice", "payment", "subscription", "billing", "statement",
+  "security", "update", "changed", "logged in", "signed in"
+];
+
+const UPDATE_SENDERS = [
+  "notifications", "notification", "updates", "alert", "security",
+  "support", "billing", "accounts", "service", "system"
+];
+
+function categorizeEmail(email: EmailWithNylasId): EmailCategory {
+  const senderEmail = (email.senderEmail || "").toLowerCase();
+  const subject = (email.subject || "").toLowerCase();
+  const preview = (email.preview || "").toLowerCase();
+  const body = (email.body || "").toLowerCase();
+  const content = `${subject} ${preview} ${body}`;
+
+  const senderLocal = senderEmail.split("@")[0] || "";
+
+  if (PROMOTION_SENDERS.some(s => senderLocal.includes(s)) && 
+      PROMOTION_KEYWORDS.some(k => content.includes(k))) {
+    return "promotions";
+  }
+  if (PROMOTION_KEYWORDS.filter(k => content.includes(k)).length >= 2) {
+    return "promotions";
+  }
+
+  if (UPDATE_SENDERS.some(s => senderLocal.includes(s))) {
+    return "updates";
+  }
+  if (UPDATE_KEYWORDS.filter(k => content.includes(k)).length >= 2) {
+    return "updates";
+  }
+
+  return "primary";
 }
 
 function formatEmailTime(date: Date): string {
@@ -149,6 +202,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     sender: "",
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<EmailCategory>("primary");
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const pullThreshold = 60;
@@ -227,6 +281,22 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
 
     return result;
   }, [emails, searchQuery, filters]);
+
+  const isInboxFolder = activeFolder?.toLowerCase() === "inbox";
+
+  const categoryCounts = useMemo(() => {
+    if (!isInboxFolder) return { primary: 0, promotions: 0, updates: 0 };
+    const counts = { primary: 0, promotions: 0, updates: 0 };
+    filteredEmails.forEach(email => {
+      counts[categorizeEmail(email)]++;
+    });
+    return counts;
+  }, [filteredEmails, isInboxFolder]);
+
+  const categoryFilteredEmails = useMemo(() => {
+    if (!isInboxFolder) return filteredEmails;
+    return filteredEmails.filter(email => categorizeEmail(email) === activeCategory);
+  }, [filteredEmails, activeCategory, isInboxFolder]);
 
   const clearFilters = () => {
     setFilters({ unreadOnly: false, dateRange: "all", sender: "" });
@@ -436,13 +506,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    if (selectedIds.size === filteredEmails.length) {
+    if (selectedIds.size === categoryFilteredEmails.length) {
       setSelectedIds(new Set());
       setIsSelectionMode(false);
     } else {
-      setSelectedIds(new Set(filteredEmails.map(e => getEmailId(e))));
+      setSelectedIds(new Set(categoryFilteredEmails.map(e => getEmailId(e))));
     }
-  }, [selectedIds.size, filteredEmails]);
+  }, [selectedIds.size, categoryFilteredEmails]);
 
   const handleTrashSelected = useCallback(() => {
     if (selectedIds.size > 0) {
@@ -462,14 +532,14 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
 
   const handleAiSelected = useCallback(() => {
     if (selectedIds.size > 0 && onAiReplyMultiple) {
-      const selectedEmails = filteredEmails.filter(e => selectedIds.has(getEmailId(e)));
+      const selectedEmails = categoryFilteredEmails.filter(e => selectedIds.has(getEmailId(e)));
       onAiReplyMultiple(selectedEmails);
       setIsSelectionMode(false);
       setSelectedIds(new Set());
     }
-  }, [selectedIds, filteredEmails, onAiReplyMultiple]);
+  }, [selectedIds, categoryFilteredEmails, onAiReplyMultiple]);
 
-  const allSelected = filteredEmails.length > 0 && selectedIds.size === filteredEmails.length;
+  const allSelected = categoryFilteredEmails.length > 0 && selectedIds.size === categoryFilteredEmails.length;
 
   if (isLoading) {
     return <EmailListSkeleton />;
@@ -608,7 +678,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       {(hasActiveFilters || searchQuery) && (
         <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border border-white/15 dark:border-white/10 rounded-full">
           <span className="text-xs text-muted-foreground/70">
-            {filteredEmails.length} result{filteredEmails.length !== 1 ? "s" : ""}
+            {categoryFilteredEmails.length} result{categoryFilteredEmails.length !== 1 ? "s" : ""}
           </span>
           <button
             onClick={clearFilters}
@@ -619,10 +689,41 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </button>
         </div>
       )}
+      {/* Category tabs - only show in inbox */}
+      {isInboxFolder && (
+        <div className="flex items-center border-b border-border/20 mt-14 px-2 relative z-10 bg-background">
+          {([
+            { key: "primary" as EmailCategory, label: "Primary", icon: Mail },
+            { key: "promotions" as EmailCategory, label: "Promotions", icon: Tag },
+            { key: "updates" as EmailCategory, label: "Updates", icon: Bell },
+          ]).map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveCategory(key)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2 ${
+                activeCategory === key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid={`tab-category-${key}`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+              {categoryCounts[key] > 0 && (
+                <span className={`text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full ${
+                  activeCategory === key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                }`}>
+                  {categoryCounts[key]}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
       {/* Email list with top padding for floating search */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative pt-16"
+        className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative ${isInboxFolder ? 'pt-2' : 'pt-16'}`}
         onTouchStart={(e) => {
           if (scrollContainerRef.current?.scrollTop === 0) {
             setIsPulling(true);
@@ -664,26 +765,28 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             />
           </div>
         )}
-        {filteredEmails.length === 0 ? (
+        {categoryFilteredEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center p-8">
             <Search className="w-10 h-10 text-muted-foreground/40 mb-4" />
             <h3 className="font-medium text-sm mb-1">No emails found</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              {searchQuery ? `No results for "${searchQuery}"` : "Try adjusting your filters"}
+              {searchQuery ? `No results for "${searchQuery}"` : isInboxFolder && activeCategory !== "primary" ? `No ${activeCategory} emails` : "Try adjusting your filters"}
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearFilters}
-              className="text-xs"
-              data-testid="button-clear-filters-empty"
-            >
-              Clear filters
-            </Button>
+            {(hasActiveFilters || searchQuery) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="text-xs"
+                data-testid="button-clear-filters-empty"
+              >
+                Clear filters
+              </Button>
+            )}
           </div>
         ) : (
         <div className="space-y-0.5 p-3">
-        {filteredEmails.map((email) => {
+        {categoryFilteredEmails.map((email) => {
           const emailId = getEmailId(email);
           const isSelected = getEmailId(email) === selectedEmailId;
           const isChecked = selectedIds.has(emailId);

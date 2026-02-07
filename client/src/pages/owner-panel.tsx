@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import {
@@ -212,6 +213,8 @@ export default function OwnerPanel() {
   // Notes state
   const [showAddNoteForm, setShowAddNoteForm] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [pendingDeleteNoteIds, setPendingDeleteNoteIds] = useState<Set<number>>(new Set());
+  const pendingDeleteTimers = useRef<Map<number, NodeJS.Timeout>>(new Map());
   const [newNote, setNewNote] = useState({
     content: "",
     category: "general",
@@ -463,12 +466,56 @@ export default function OwnerPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/owner/notes"] });
-      toast({ title: "Note deleted" });
     },
     onError: () => {
       toast({ title: "Failed to delete note", variant: "destructive" });
     },
   });
+
+  const handleDeleteNote = (noteId: number) => {
+    setPendingDeleteNoteIds(prev => new Set([...prev, noteId]));
+    const timer = setTimeout(() => {
+      deleteNoteMutation.mutate(noteId);
+      setPendingDeleteNoteIds(prev => {
+        const next = new Set(prev);
+        next.delete(noteId);
+        return next;
+      });
+      pendingDeleteTimers.current.delete(noteId);
+    }, 5000);
+    pendingDeleteTimers.current.set(noteId, timer);
+    toast({
+      title: "Note deleted",
+      description: "This note will be permanently removed shortly.",
+      action: (
+        <ToastAction
+          altText="Undo delete"
+          onClick={() => {
+            const existingTimer = pendingDeleteTimers.current.get(noteId);
+            if (existingTimer) {
+              clearTimeout(existingTimer);
+              pendingDeleteTimers.current.delete(noteId);
+            }
+            setPendingDeleteNoteIds(prev => {
+              const next = new Set(prev);
+              next.delete(noteId);
+              return next;
+            });
+            toast({ title: "Note restored" });
+          }}
+          data-testid="button-undo-delete-note"
+        >
+          Undo
+        </ToastAction>
+      ),
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      pendingDeleteTimers.current.forEach(timer => clearTimeout(timer));
+    };
+  }, []);
 
   // Format currency helper
   const formatCurrency = (cents: number) => {
@@ -1909,7 +1956,7 @@ export default function OwnerPanel() {
                   </div>
                 ) : (
                   <div className="space-y-4" data-testid="notes-list">
-                    {notesList.map((note) => {
+                    {notesList.filter(note => !pendingDeleteNoteIds.has(note.id)).map((note) => {
                       const categoryColors: Record<string, string> = {
                         general: "bg-muted-foreground/70 dark:bg-muted-foreground/50",
                         todo: "bg-blue-500 dark:bg-blue-400",
@@ -1976,8 +2023,8 @@ export default function OwnerPanel() {
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                onClick={() => deleteNoteMutation.mutate(note.id)}
-                                disabled={deleteNoteMutation.isPending}
+                                onClick={() => handleDeleteNote(note.id)}
+                                disabled={pendingDeleteNoteIds.has(note.id)}
                                 className="text-destructive"
                                 data-testid={`delete-note-${note.id}`}
                               >

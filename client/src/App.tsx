@@ -106,21 +106,20 @@ function AuthenticatedApp() {
 
   return (
     <SidebarProvider
+      defaultOpen={screen.isDesktop}
       style={{
-        "--sidebar-width": screen.isMobile ? "0rem" : "12%",
+        "--sidebar-width": screen.isMobile ? "18rem" : "12%",
         "--sidebar-width-icon": "0rem",
       } as React.CSSProperties}
     >
       <div className="flex h-screen w-full bg-background overflow-hidden">
-        {!screen.isMobile && (
-          <AppSidebar
-            activeFolder={activeFolder}
-            onFolderChange={setActiveFolder}
-            unreadCount={unreadCount}
-            unreadCounts={unreadCounts}
-            onCompose={handleCompose}
-          />
-        )}
+        <AppSidebar
+          activeFolder={activeFolder}
+          onFolderChange={setActiveFolder}
+          unreadCount={unreadCount}
+          unreadCounts={unreadCounts}
+          onCompose={handleCompose}
+        />
         <SidebarInset className="flex flex-1 min-w-0">
           <Inbox 
             activeFolder={activeFolder} 
