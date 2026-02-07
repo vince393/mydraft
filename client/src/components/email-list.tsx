@@ -756,56 +756,57 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       </div>
 
       {isSelectionMode ? (
-        <div className="px-3 py-2 flex flex-wrap items-center gap-2">
-          <Button 
-            size="icon"
-            variant="ghost"
+        <div 
+          className="mx-3 mb-2 px-3 py-2 flex flex-wrap items-center gap-2 rounded-full backdrop-blur-2xl border border-white/20 dark:border-white/10"
+          style={{
+            background: "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+            boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.12), 0 4px 16px rgba(0,0,0,0.15)"
+          }}
+        >
+          <button 
+            className="w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/8 dark:bg-white/5 border border-white/15 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-foreground/70 hover:text-foreground transition-all cursor-pointer"
             onClick={handleCancelSelection}
             data-testid="button-cancel-selection"
           >
             <X className="w-4 h-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground">
+          </button>
+          <span className="text-sm text-foreground/60 font-medium tabular-nums ml-1">
             {selectedIds.size}
           </span>
           <span className="flex-1" />
-          <Button
-            size="sm"
-            variant="ghost"
+          <button
+            className="h-8 px-3 rounded-full backdrop-blur-sm bg-white/8 dark:bg-white/5 border border-white/15 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-xs font-medium text-foreground/70 hover:text-foreground transition-all cursor-pointer"
             onClick={handleSelectAll}
             data-testid="button-select-all"
           >
             {allSelected ? "Deselect" : "All"}
-          </Button>
-          <div className="flex flex-wrap items-center">
-            <Button 
-              size="icon"
-              variant="ghost"
+          </button>
+          <div className="flex items-center gap-1.5">
+            <button 
+              className="w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/8 dark:bg-white/5 border border-white/15 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-foreground/70 hover:text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleArchiveSelected}
               disabled={selectedIds.size === 0 || isMoving}
               data-testid="button-archive-selected"
             >
               {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
-            </Button>
-            <Button 
-              size="icon"
-              variant="destructive"
+            </button>
+            <button 
+              className="w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-red-500/15 dark:bg-red-500/10 border border-red-500/25 dark:border-red-500/15 hover:bg-red-500/25 dark:hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleTrashSelected}
               disabled={selectedIds.size === 0 || isMoving}
               data-testid="button-delete-selected"
             >
               <Trash2 className="w-4 h-4" />
-            </Button>
+            </button>
           </div>
-          <Button 
-            size="icon"
-            variant="default"
+          <button 
+            className="w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-primary/15 dark:bg-primary/10 border border-primary/25 dark:border-primary/15 hover:bg-primary/25 dark:hover:bg-primary/20 text-primary hover:text-primary transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={selectedIds.size === 0}
             onClick={handleAiSelected}
             data-testid="button-ai-selected"
           >
             <Sparkles className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
       ) : (
         <div className="absolute bottom-4 right-4">
