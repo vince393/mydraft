@@ -877,7 +877,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                 key={name}
                 onClick={() => handleSelectIcon(name)}
                 className={`w-12 h-12 flex items-center justify-center rounded-lg transition-colors hover:bg-muted ${
-                  selectedFolder?.iconName === name ? "bg-primary/20 ring-2 ring-primary" : "bg-muted/30"
+                  selectedFolder?.iconName === name ? "bg-primary/20 ring-2 ring-primary" : "bg-white/[0.03]"
                 }`}
                 data-testid={`icon-option-${name}`}
               >
@@ -927,7 +927,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   className={`p-3 rounded-lg cursor-pointer transition-colors border ${
                     selectedSuggestions.has(email.id)
                       ? "bg-primary/10 border-primary/50"
-                      : "bg-muted/30 border-transparent hover:bg-muted/50"
+                      : "bg-white/[0.03] border-transparent hover:bg-white/[0.06]"
                   }`}
                   data-testid={`suggestion-email-${email.id}`}
                 >

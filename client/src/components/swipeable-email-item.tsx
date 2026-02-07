@@ -1,13 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Archive, Trash2, Star, Check, RotateCcw, MoreHorizontal, Reply, ReplyAll, Forward, FolderInput, Flag } from "lucide-react";
+import { Archive, Trash2, Star, Check, RotateCcw, Flag } from "lucide-react";
 import { SmartAvatar } from "@/components/smart-avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface SwipeableEmailItemProps {
   emailId: string | number;
@@ -43,10 +36,9 @@ interface SwipeableEmailItemProps {
   formatTime: (date: Date) => string;
 }
 
-// Percentage-based thresholds
-const REVEAL_PERCENT = 25;   // 25% of container width to reveal buttons
-const DELETE_PERCENT = 70;   // 70% of container width to trigger delete on release
-const MAX_SWIPE_PERCENT = 99; // 99% max swipe distance
+const REVEAL_PERCENT = 30;
+const DELETE_PERCENT = 70;
+const MAX_SWIPE_PERCENT = 99;
 
 export function SwipeableEmailItem({
   emailId,
@@ -92,12 +84,10 @@ export function SwipeableEmailItem({
   const isHorizontalSwipe = useRef<boolean | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Calculate thresholds based on container width
   const revealThreshold = (containerWidth * REVEAL_PERCENT) / 100;
   const deleteThreshold = (containerWidth * DELETE_PERCENT) / 100;
   const maxSwipe = (containerWidth * MAX_SWIPE_PERCENT) / 100;
 
-  // Measure container width on mount and resize
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
@@ -109,34 +99,23 @@ export function SwipeableEmailItem({
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
-  const initials = (sender || "?")
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "?";
-
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    // Always trigger long press start for potential selection mode entry
     onLongPressStart();
-    
     if (isSelectionMode) return;
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
     currentX.current = isRevealed ? -revealThreshold : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
-  }, [isRevealed, isSelectionMode, onLongPressStart]);
+  }, [isRevealed, isSelectionMode, onLongPressStart, revealThreshold]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (isSelectionMode || !isSwiping) return;
-    
     const touchX = e.touches[0].clientX;
     const touchY = e.touches[0].clientY;
     const deltaX = touchX - startX.current;
     const deltaY = touchY - startY.current;
 
-    // Cancel long press if user starts moving (they're swiping, not long pressing)
     if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
       onLongPressEnd();
     }
@@ -148,38 +127,30 @@ export function SwipeableEmailItem({
     }
 
     if (!isHorizontalSwipe.current) return;
-
     e.preventDefault();
 
     let newX = currentX.current + deltaX;
-    
-    if (newX > 0) {
-      newX = 0;
-    }
-    
-    if (newX < -maxSwipe) {
-      newX = -maxSwipe;
-    }
-
+    if (newX > 0) newX = 0;
+    if (newX < -maxSwipe) newX = -maxSwipe;
     setSwipeX(newX);
-  }, [isSwiping, isSelectionMode, onLongPressEnd]);
+  }, [isSwiping, isSelectionMode, onLongPressEnd, maxSwipe]);
 
   const handleTouchEnd = useCallback(() => {
-    // Always end long press timer
     onLongPressEnd();
-    
     if (isSelectionMode) return;
     setIsSwiping(false);
-    
-    // If swiped past delete threshold, trigger delete on release
+
     if (swipeX <= -deleteThreshold) {
-      onDelete();
+      if (isTrashFolder && onPermanentDelete) {
+        onPermanentDelete();
+      } else {
+        onDelete();
+      }
       setSwipeX(0);
       setIsRevealed(false);
       return;
     }
 
-    // If swiped past half the reveal threshold, keep buttons visible
     if (swipeX <= -revealThreshold / 2) {
       setSwipeX(-revealThreshold);
       setIsRevealed(true);
@@ -190,26 +161,20 @@ export function SwipeableEmailItem({
   }, [swipeX, onDelete, isSelectionMode, onLongPressEnd, deleteThreshold, revealThreshold]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Always trigger long press start for potential selection mode entry
     onLongPressStart();
-    
-    if (isSelectionMode) {
-      return;
-    }
+    if (isSelectionMode) return;
     startX.current = e.clientX;
     startY.current = e.clientY;
     currentX.current = isRevealed ? -revealThreshold : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
-  }, [isRevealed, isSelectionMode, onLongPressStart]);
+  }, [isRevealed, isSelectionMode, onLongPressStart, revealThreshold]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isSelectionMode || !isSwiping) return;
-    
     const deltaX = e.clientX - startX.current;
     const deltaY = e.clientY - startY.current;
 
-    // Cancel long press if user starts moving (they're swiping, not long pressing)
     if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
       onLongPressEnd();
     }
@@ -223,69 +188,41 @@ export function SwipeableEmailItem({
     if (!isHorizontalSwipe.current) return;
 
     let newX = currentX.current + deltaX;
-    
     if (newX > 0) newX = 0;
     if (newX < -maxSwipe) newX = -maxSwipe;
-
     setSwipeX(newX);
-  }, [isSwiping, isSelectionMode, onLongPressEnd]);
+  }, [isSwiping, isSelectionMode, onLongPressEnd, maxSwipe]);
 
   const handleMouseUp = useCallback(() => {
-    // Always end long press timer
     onLongPressEnd();
-    
-    if (isSelectionMode) {
-      return;
-    }
+    if (isSelectionMode) return;
     handleTouchEnd();
   }, [handleTouchEnd, isSelectionMode, onLongPressEnd]);
 
   const handleMouseLeave = useCallback(() => {
-    // Cancel long press timer when mouse leaves
     onLongPressEnd();
-    
     if (isSwiping && !isSelectionMode) {
       handleTouchEnd();
     }
   }, [isSwiping, handleTouchEnd, isSelectionMode, onLongPressEnd]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
-    if (Math.abs(swipeX) > 5 && !isRevealed) {
-      return;
-    }
-    
+    if (Math.abs(swipeX) > 5 && !isRevealed) return;
     if (isRevealed) {
       setSwipeX(0);
       setIsRevealed(false);
       return;
     }
-    
     onSelect();
   }, [swipeX, isRevealed, onSelect]);
 
-  const handleArchiveClick = useCallback((e: React.MouseEvent) => {
+  const handleActionClick = useCallback((action: () => void) => (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    onArchive();
+    action();
     setSwipeX(0);
     setIsRevealed(false);
-  }, [onArchive]);
-
-  const handleRestoreClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (onRestore) onRestore();
-    setSwipeX(0);
-    setIsRevealed(false);
-  }, [onRestore]);
-
-  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    onDelete();
-    setSwipeX(0);
-    setIsRevealed(false);
-  }, [onDelete]);
+  }, []);
 
   const handleStarClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -293,126 +230,73 @@ export function SwipeableEmailItem({
     onToggleStar();
   }, [onToggleStar]);
 
-  const progress = Math.min(Math.abs(swipeX) / deleteThreshold, 1);
+  const absSwipe = Math.abs(swipeX);
+  const isFullSwipe = swipeX <= -deleteThreshold;
+
+  const getActionStrips = () => {
+    if (isTrashFolder) {
+      return [
+        { icon: RotateCcw, label: "Restore", color: "bg-emerald-500", action: onRestore || (() => {}), testId: `swipe-restore-${emailId}` },
+        { icon: Trash2, label: "Delete", color: "bg-red-500", action: onPermanentDelete || onDelete, testId: `swipe-delete-${emailId}` },
+      ];
+    }
+    if (isArchiveFolder) {
+      return [
+        { icon: RotateCcw, label: "Restore", color: "bg-emerald-500", action: onRestore || (() => {}), testId: `swipe-restore-${emailId}` },
+        { icon: Trash2, label: "Delete", color: "bg-red-500", action: onDelete, testId: `swipe-delete-${emailId}` },
+      ];
+    }
+    return [
+      { icon: Flag, label: isFlagged ? "Unflag" : "Flag", color: "bg-orange-500", action: onToggleFlag || (() => {}), testId: `swipe-flag-${emailId}` },
+      { icon: Archive, label: "Archive", color: "bg-blue-500", action: onArchive, testId: `swipe-archive-${emailId}` },
+      { icon: Trash2, label: "Trash", color: "bg-red-500", action: onDelete, testId: `swipe-delete-${emailId}` },
+    ];
+  };
+
+  const strips = getActionStrips();
+  const stripWidth = absSwipe / strips.length;
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="relative overflow-hidden rounded-xl w-full"
       data-testid={`email-item-${emailId}`}
     >
-      <div 
-        className="absolute inset-y-0 right-0 flex items-center gap-2 px-3 overflow-hidden"
-        style={{ 
-          width: Math.abs(swipeX),
-          background: swipeX <= -deleteThreshold 
-            ? 'linear-gradient(90deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.3) 100%)' 
-            : 'linear-gradient(90deg, rgba(100,100,100,0.08) 0%, rgba(100,100,100,0.15) 100%)'
-        }}
-      >
-        {swipeX > -deleteThreshold && Math.abs(swipeX) > 50 && (
-          isArchiveFolder ? (
-            <button
-              onClick={handleRestoreClick}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-emerald-500/90 hover:bg-emerald-500 backdrop-blur-sm transition-all duration-200 shadow-lg shadow-emerald-500/25"
-              style={{ 
-                opacity: Math.min((Math.abs(swipeX) - 50) / 30, 1),
-                transform: `scale(${Math.min((Math.abs(swipeX) - 50) / 40 + 0.8, 1)})`
-              }}
-              data-testid={`swipe-restore-${emailId}`}
-            >
-              <RotateCcw className="w-4 h-4 text-white" />
-              {Math.abs(swipeX) > 90 && (
-                <span className="text-xs font-medium text-white whitespace-nowrap">Restore</span>
-              )}
-            </button>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-slate-600/90 hover:bg-slate-600 backdrop-blur-sm transition-all duration-200 shadow-lg shadow-slate-600/25"
-                  style={{ 
-                    opacity: Math.min((Math.abs(swipeX) - 50) / 30, 1),
-                    transform: `scale(${Math.min((Math.abs(swipeX) - 50) / 40 + 0.8, 1)})`
-                  }}
-                  data-testid={`swipe-more-${emailId}`}
-                >
-                  <MoreHorizontal className="w-4 h-4 text-white" />
-                  {Math.abs(swipeX) > 90 && (
-                    <span className="text-xs font-medium text-white whitespace-nowrap">More</span>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {onReply && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReply(); setSwipeX(0); }} data-testid={`menu-reply-${emailId}`}>
-                    <Reply className="w-4 h-4 mr-2" />
-                    Reply
-                  </DropdownMenuItem>
-                )}
-                {onReplyAll && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReplyAll(); setSwipeX(0); }} data-testid={`menu-reply-all-${emailId}`}>
-                    <ReplyAll className="w-4 h-4 mr-2" />
-                    Reply All
-                  </DropdownMenuItem>
-                )}
-                {onForward && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onForward(); setSwipeX(0); }} data-testid={`menu-forward-${emailId}`}>
-                    <Forward className="w-4 h-4 mr-2" />
-                    Forward
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                {onMoveToFolder && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToFolder(); setSwipeX(0); }} data-testid={`menu-move-${emailId}`}>
-                    <FolderInput className="w-4 h-4 mr-2" />
-                    Move to Folder
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive(); setSwipeX(0); }} data-testid={`menu-archive-${emailId}`}>
-                  <Archive className="w-4 h-4 mr-2" />
-                  Archive
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStar(); setSwipeX(0); }} data-testid={`menu-star-${emailId}`}>
-                  <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
-                  {isStarred ? "Unstar" : "Star"}
-                </DropdownMenuItem>
-                {onToggleFlag && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFlag(); setSwipeX(0); }} data-testid={`menu-flag-${emailId}`}>
-                    <Flag className={`w-4 h-4 mr-2 ${isFlagged ? "fill-red-400 text-red-400" : ""}`} />
-                    {isFlagged ? "Unflag" : "Flag"}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
-        )}
-        {Math.abs(swipeX) > 30 && (
-          <button
-            onClick={handleDeleteClick}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-sm transition-all duration-200 ${
-              swipeX <= -deleteThreshold 
-                ? 'bg-red-500 shadow-xl shadow-red-500/40 scale-110' 
-                : 'bg-red-500/90 hover:bg-red-500 shadow-lg shadow-red-500/25'
-            }`}
-            style={{ 
-              opacity: Math.min((Math.abs(swipeX) - 30) / 30, 1),
-              transform: swipeX <= -deleteThreshold ? 'scale(1.1)' : `scale(${Math.min((Math.abs(swipeX) - 30) / 40 + 0.8, 1)})`
-            }}
-            data-testid={`swipe-delete-${emailId}`}
+      {/* Action strips behind the email content */}
+      <div className="absolute inset-y-0 right-0 flex" style={{ width: absSwipe }}>
+        {isFullSwipe ? (
+          <div
+            className="flex-1 flex items-center justify-center gap-2 bg-red-500"
+            data-testid={`swipe-fulldelete-${emailId}`}
           >
-            <Trash2 className={`text-white transition-all duration-200 ${swipeX <= -deleteThreshold ? "w-5 h-5" : "w-4 h-4"}`} />
-            {(Math.abs(swipeX) > 90 || swipeX <= -deleteThreshold) && (
-              <span className="text-xs font-medium text-white whitespace-nowrap">
-                {swipeX <= -deleteThreshold ? "Release to delete" : "Delete"}
-              </span>
-            )}
-          </button>
+            <Trash2 className="w-5 h-5 text-white" />
+            <span className="text-sm font-medium text-white">Release to delete</span>
+          </div>
+        ) : (
+          strips.map((strip, idx) => {
+            const StripIcon = strip.icon;
+            const showLabel = stripWidth > 50;
+            return (
+              <button
+                key={idx}
+                onClick={handleActionClick(strip.action)}
+                className={`flex flex-col items-center justify-center gap-1 ${strip.color} transition-colors`}
+                style={{ width: stripWidth, minWidth: 0 }}
+                data-testid={strip.testId}
+              >
+                <StripIcon className="w-[18px] h-[18px] text-white" />
+                {showLabel && (
+                  <span className="text-[10px] font-medium text-white/90 leading-none">
+                    {strip.label}
+                  </span>
+                )}
+              </button>
+            );
+          })
         )}
       </div>
 
+      {/* Email content layer */}
       <div
         onClick={handleClick}
         onMouseDown={handleMouseDown}
@@ -429,8 +313,8 @@ export function SwipeableEmailItem({
           ${!isSwiping ? "duration-200 ease-out" : "duration-0"}
           ${isSelectionMode && isChecked
             ? "bg-muted/50"
-            : isSelected 
-              ? "bg-muted/30" 
+            : isSelected
+              ? "bg-muted/30"
               : "hover:bg-muted/30"
           }
         `}
@@ -438,7 +322,7 @@ export function SwipeableEmailItem({
       >
         <div className="flex items-start gap-3">
           <div className="relative flex-shrink-0">
-            <SmartAvatar 
+            <SmartAvatar
               email={senderEmail}
               name={sender}
               className="w-10 h-10"
@@ -460,7 +344,7 @@ export function SwipeableEmailItem({
                 {sender}
               </span>
               {threadCount > 1 && (
-                <span 
+                <span
                   className="flex-shrink-0 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-medium rounded bg-muted/60 text-muted-foreground"
                   data-testid={`thread-count-badge-${threadCount}`}
                 >
@@ -469,11 +353,9 @@ export function SwipeableEmailItem({
               )}
               <span className="flex-1" />
               <div className="flex-shrink-0 flex items-center gap-1">
-                {/* Date/time - visible by default, hidden on hover */}
                 <span className={`text-[11px] whitespace-nowrap group-hover:hidden ${!isRead ? "font-medium text-foreground" : "text-muted-foreground/70"}`}>
                   {formatTime(new Date(receivedAt))}
                 </span>
-                {/* Star icon - always visible when starred, placed after date */}
                 {isStarred && (
                   <button
                     onClick={handleStarClick}
@@ -483,12 +365,16 @@ export function SwipeableEmailItem({
                     <Star className="w-4 h-4 fill-current" />
                   </button>
                 )}
-                {/* Action buttons - hidden by default, visible on hover */}
+                {isFlagged && !isStarred && (
+                  <span className="p-1 text-orange-500 group-hover:hidden">
+                    <Flag className="w-3.5 h-3.5 fill-current" />
+                  </span>
+                )}
                 <div className="hidden group-hover:flex items-center gap-0.5">
                   {isTrashFolder ? (
                     <>
                       <button
-                        onClick={handleRestoreClick}
+                        onClick={handleActionClick(onRestore || (() => {}))}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-green-500 transition-colors"
                         data-testid={`hover-restore-${emailId}`}
                         title="Restore to inbox"
@@ -511,7 +397,7 @@ export function SwipeableEmailItem({
                   ) : isArchiveFolder ? (
                     <>
                       <button
-                        onClick={handleRestoreClick}
+                        onClick={handleActionClick(onRestore || (() => {}))}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-green-500 transition-colors"
                         data-testid={`hover-restore-${emailId}`}
                         title="Restore to inbox"
@@ -519,7 +405,7 @@ export function SwipeableEmailItem({
                         <RotateCcw className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={handleDeleteClick}
+                        onClick={handleActionClick(onDelete)}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
                         data-testid={`hover-delete-${emailId}`}
                       >
@@ -529,14 +415,14 @@ export function SwipeableEmailItem({
                   ) : (
                     <>
                       <button
-                        onClick={handleArchiveClick}
+                        onClick={handleActionClick(onArchive)}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
                         data-testid={`hover-archive-${emailId}`}
                       >
                         <Archive className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={handleDeleteClick}
+                        onClick={handleActionClick(onDelete)}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
                         data-testid={`hover-delete-${emailId}`}
                       >
@@ -547,8 +433,8 @@ export function SwipeableEmailItem({
                   <button
                     onClick={handleStarClick}
                     className={`p-1.5 rounded-md transition-colors ${
-                      isStarred 
-                        ? "text-yellow-500" 
+                      isStarred
+                        ? "text-yellow-500"
                         : "text-muted-foreground hover:text-yellow-500"
                     }`}
                     data-testid={`hover-star-${emailId}`}
@@ -558,11 +444,11 @@ export function SwipeableEmailItem({
                 </div>
               </div>
             </div>
-            
+
             <h4 className={`text-[13px] mb-1 truncate pr-1 ${!isRead ? "font-medium text-foreground" : "text-foreground/70"}`}>
               {subject}
             </h4>
-            
+
             <p className="text-[12px] text-muted-foreground/60 truncate pr-1 leading-relaxed">
               {preview.replace(/[\u200B-\u200D\uFEFF\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180E\u2000-\u200F\u2028-\u202F\u205F-\u206F\u3000\u3164\uFFA0]/g, '').trim()}
             </p>

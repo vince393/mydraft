@@ -120,7 +120,7 @@ export function DraftEditDialog({ draft, open, onOpenChange, onSent }: DraftEdit
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-5 py-4 border-b border-border/50 flex-shrink-0">
+        <DialogHeader className="px-5 py-4 border-b border-white/[0.06] flex-shrink-0">
           <DialogTitle className="text-base font-medium">Edit Draft</DialogTitle>
         </DialogHeader>
 
@@ -149,7 +149,7 @@ export function DraftEditDialog({ draft, open, onOpenChange, onSent }: DraftEdit
               data-testid="textarea-draft-content"
             />
 
-            <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md border border-border/50">
+            <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.03] rounded-lg border border-white/[0.08]">
               <Wand2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
               <input
                 type="text"
@@ -180,7 +180,7 @@ export function DraftEditDialog({ draft, open, onOpenChange, onSent }: DraftEdit
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-border/50 bg-muted/20 flex-shrink-0">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-white/[0.06] flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"

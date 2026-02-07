@@ -840,11 +840,11 @@ export function ComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border/50">
+      <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header */}
-        <DialogHeader className="flex-shrink-0 px-6 py-4 border-b border-border/50 bg-muted/30">
-          <DialogTitle className="flex items-center gap-3 text-lg font-semibold">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary">
+        <DialogHeader className="flex-shrink-0 px-6 py-4 border-b border-white/[0.06]">
+          <DialogTitle className="flex items-center gap-3 text-base font-medium">
+            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary">
               {getModeIcon()}
             </div>
             {getDialogTitle()}
@@ -854,10 +854,10 @@ export function ComposeDialog({
         {/* Form Content */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Recipients Section */}
-          <div className="px-6 py-4 space-y-3 border-b border-border/30">
+          <div className="px-6 py-4 space-y-3 border-b border-white/[0.06]">
             {/* To Field */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-muted/50 text-muted-foreground">
+              <div className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/60">
                 <User className="w-4 h-4" />
               </div>
               <div className="flex-1 relative">
@@ -907,7 +907,7 @@ export function ComposeDialog({
             
             {/* Subject Field */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-muted/50 text-muted-foreground">
+              <div className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/60">
                 <Mail className="w-4 h-4" />
               </div>
               <Input
@@ -932,7 +932,7 @@ export function ComposeDialog({
             
             {/* Attached Images Preview */}
             {attachedImages.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-border/30">
+              <div className="mt-3 pt-3 border-t border-white/[0.06]">
                 <div className="flex items-center gap-2 mb-2">
                   <FileImage className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">AI Generated Attachments ({attachedImages.length})</span>
@@ -961,9 +961,9 @@ export function ComposeDialog({
             
             {/* AI Refine Bar - only show when there's content */}
             {hasUserContent() && (
-              <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-border/30">
+              <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-white/[0.06]">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 flex-1 bg-muted/30 rounded-lg px-3 py-2 border border-border/40">
+                  <div className="flex items-center gap-2 flex-1 bg-white/[0.03] rounded-lg px-3 py-2 border border-white/[0.08]">
                     <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
                     <Input
                       value={refineInput}
@@ -996,7 +996,7 @@ export function ComposeDialog({
         
         {/* Attachments Preview */}
         {(fileAttachments.length > 0 || attachedImages.length > 0) && (
-          <div className="flex-shrink-0 px-6 py-2 border-t border-border/30 bg-muted/20">
+          <div className="flex-shrink-0 px-6 py-2 border-t border-white/[0.06]">
             <div className="flex items-center gap-2 mb-2">
               <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground">
@@ -1053,7 +1053,7 @@ export function ComposeDialog({
         )}
 
         {/* Footer Actions - Minimalist */}
-        <div className="flex-shrink-0 px-6 py-3 border-t border-border/50">
+        <div className="flex-shrink-0 px-6 py-3 border-t border-white/[0.06]">
           <div className="flex items-center justify-between gap-3">
             {/* Hidden file input */}
             <input

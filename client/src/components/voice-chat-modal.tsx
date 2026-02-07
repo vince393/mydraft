@@ -430,7 +430,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
               />
               <Avatar 
                 className={cn(
-                  "w-32 h-32 ring-4 ring-border/50 cursor-pointer transition-all",
+                  "w-32 h-32 ring-4 ring-white/[0.06] cursor-pointer transition-all",
                   conversationState === "listening" && "ring-green-500/50",
                   conversationState === "speaking" && "ring-blue-500/50"
                 )}
@@ -451,7 +451,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
             </div>
 
             {transcript && (
-              <div className="bg-muted/50 rounded-xl p-3 max-w-sm text-center">
+              <div className="bg-white/[0.03] rounded-xl p-3 max-w-sm text-center">
                 <p className="text-xs text-muted-foreground mb-1">You said:</p>
                 <p className="text-sm">{transcript}</p>
               </div>

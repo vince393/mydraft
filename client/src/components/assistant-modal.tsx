@@ -328,7 +328,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
         data-testid="modal-assistant"
         hideCloseButton
       >
-        <DialogHeader className="px-4 py-3 border-b border-border/50 shrink-0">
+        <DialogHeader className="px-4 py-3 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
@@ -478,7 +478,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                       "text-sm rounded-xl px-4 py-3 max-w-[85%]",
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground"
-                        : "bg-muted/60 border border-border/30"
+                        : "bg-muted/60 border border-white/[0.06]"
                     )}
                     data-testid={`message-${msg.role}-${msg.id}`}
                   >
@@ -539,7 +539,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
             
             {sendMessageMutation.isPending && (
               <div className="flex flex-col gap-1">
-                <div className="text-sm rounded-xl px-4 py-3 max-w-[85%] bg-muted/60 border border-border/30">
+                <div className="text-sm rounded-xl px-4 py-3 max-w-[85%] bg-muted/60 border border-white/[0.06]">
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -675,7 +675,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
           </div>
         </div>
 
-        <div className="p-4 border-t border-border/50 shrink-0">
+        <div className="p-4 border-t border-white/[0.06] shrink-0">
           <div className="flex items-center gap-2">
             <Button
               size="icon"

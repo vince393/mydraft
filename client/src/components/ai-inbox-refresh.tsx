@@ -191,8 +191,8 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col p-0 gap-0 border-border/50">
-          <DialogHeader className="p-5 pb-4 border-b border-border/30">
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col p-0 gap-0 border-white/[0.06]">
+          <DialogHeader className="p-5 pb-4 border-b border-white/[0.06]">
             <DialogTitle className="flex items-center gap-2 text-base font-medium">
               <Sparkles className="w-4 h-4 text-primary" />
               Smart Cleanup
@@ -234,7 +234,7 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between px-5 py-3 bg-muted/30">
+                <div className="flex items-center justify-between px-5 py-3 bg-white/[0.03]">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       checked={selectedIds.size === pendingSuggestions.length && pendingSuggestions.length > 0}
@@ -366,7 +366,7 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
                     )}
 
                     {approvedSuggestions.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-border/30">
+                      <div className="mt-3 pt-3 border-t border-white/[0.06]">
                         <h4 className="text-[11px] text-muted-foreground mb-2 flex items-center gap-1.5">
                           <Check className="w-3 h-3 text-green-500" />
                           Ready ({approvedSuggestions.length})
@@ -391,7 +391,7 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
                 </ScrollArea>
 
                 {(pendingSuggestions.length > 0 || approvedSuggestions.length > 0) && (
-                  <div className="flex items-center justify-between px-5 py-3 border-t border-border/30 bg-muted/20 gap-3">
+                  <div className="flex items-center justify-between px-5 py-3 border-t border-white/[0.06] gap-3">
                     <div className="text-xs text-muted-foreground">
                       {approvedSuggestions.length} ready
                     </div>

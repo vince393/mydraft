@@ -413,7 +413,7 @@ export function MultiEmailResponseModal({
             <div className="space-y-4">
               <button
                 onClick={() => setIsOriginalExpanded(!isOriginalExpanded)}
-                className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-left"
                 data-testid="button-toggle-original"
               >
                 <div className="flex-1 min-w-0">
@@ -437,7 +437,7 @@ export function MultiEmailResponseModal({
               </button>
 
               {isOriginalExpanded && (
-                <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
+                <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                   <div className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {currentEmail.body || currentEmail.preview}
                   </div>
@@ -451,7 +451,7 @@ export function MultiEmailResponseModal({
                     value={currentResponse?.subject || `Re: ${currentEmail.subject}`}
                     onChange={(e) => updateCurrentResponse('subject', e.target.value)}
                     disabled={currentResponse?.sent || currentResponse?.isLoading}
-                    className="bg-muted/30"
+                    className="bg-white/[0.03]"
                     data-testid="input-response-subject"
                   />
                 </div>
@@ -473,7 +473,7 @@ export function MultiEmailResponseModal({
                   </div>
                   
                   {currentResponse?.isLoading ? (
-                    <div className="flex items-center justify-center h-40 bg-muted/20 rounded-lg border border-border/30">
+                    <div className="flex items-center justify-center h-40 bg-white/[0.03] rounded-lg border border-white/[0.06]">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Loader2 className="w-5 h-5 animate-spin" />
                         <span>Generating response...</span>
@@ -499,7 +499,7 @@ export function MultiEmailResponseModal({
                       onChange={(e) => updateCurrentResponse('content', e.target.value)}
                       disabled={currentResponse?.sent}
                       placeholder="AI-generated response will appear here..."
-                      className="min-h-[200px] bg-muted/20 resize-none"
+                      className="min-h-[200px] bg-white/[0.03] resize-none"
                       data-testid="textarea-response-content"
                     />
                   )}
@@ -511,7 +511,7 @@ export function MultiEmailResponseModal({
                           value={refineInstruction}
                           onChange={(e) => setRefineInstruction(e.target.value)}
                           placeholder="Ask AI to change something... e.g. 'Make it shorter' or 'Add a thank you'"
-                          className="pr-20 bg-muted/20"
+                          className="pr-20 bg-white/[0.03]"
                           disabled={isRefining}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && refineInstruction.trim()) {
@@ -556,7 +556,7 @@ export function MultiEmailResponseModal({
                       px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                       ${selectedTone === tone.value
                         ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                        : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        : "bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
                       }
                       ${loadingCount > 0 ? "opacity-50 cursor-not-allowed" : ""}
                     `}
