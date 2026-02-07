@@ -654,6 +654,20 @@ export async function markAsRead(grantId: string, messageId: string): Promise<vo
   }
 }
 
+export async function markAsUnread(grantId: string, messageId: string): Promise<void> {
+  const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      unread: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to mark as unread: ${error}`);
+  }
+}
+
 export async function toggleStar(grantId: string, messageId: string, starred: boolean): Promise<void> {
   const response = await nylasRequest(`/v3/grants/${grantId}/messages/${messageId}`, {
     method: 'PUT',

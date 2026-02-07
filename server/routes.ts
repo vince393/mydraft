@@ -1742,6 +1742,29 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  app.patch("/api/emails/:id/unread", requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      
+      const grant = await storage.getNylasGrant(req.session.userId!);
+      if (grant && id.length > 10) {
+        await nylas.markAsUnread(grant.grantId, id);
+        nylas.invalidateMessagesCache(grant.grantId);
+        return res.json({ success: true });
+      }
+      
+      const numericId = parseInt(id);
+      const email = await storage.updateEmail(numericId, { isRead: false });
+      if (!email) {
+        return res.status(404).json({ error: "Email not found" });
+      }
+      res.json(email);
+    } catch (error) {
+      console.error("Error marking email as unread:", error);
+      res.status(500).json({ error: "Failed to mark email as unread" });
+    }
+  });
+
   app.patch("/api/emails/:id/folder", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;

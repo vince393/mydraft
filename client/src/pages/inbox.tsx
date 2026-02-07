@@ -347,6 +347,18 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   });
 
 
+  const handleMarkUnread = async (emailId: string | number) => {
+    try {
+      await apiRequest("PATCH", `/api/emails/${emailId}/unread`, {});
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
+      toast({ title: "Marked as unread" });
+    } catch (error) {
+      console.error("Failed to mark as unread:", error);
+      toast({ title: "Failed to mark as unread", variant: "destructive" });
+    }
+  };
+
   const handleToggleStar = async (emailId: string | number) => {
     // Optimistically update UI
     setOptimisticStars(prev => {
@@ -764,6 +776,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             onRestoreSingleEmail={handleRestoreSingleEmail}
             onPermanentDeleteSingleEmail={handlePermanentDeleteSingleEmail}
             onMoveToFolder={handleMoveToFolder}
+            onMarkUnread={handleMarkUnread}
             onReplyEmail={handleReplyEmail}
             onForwardEmail={handleForwardEmail}
             isAiLoading={false}

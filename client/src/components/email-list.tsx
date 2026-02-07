@@ -52,6 +52,7 @@ interface EmailListProps {
   onRestoreSingleEmail?: (emailId: string | number) => void;
   onPermanentDeleteSingleEmail?: (emailId: string | number) => void;
   onMoveToFolder?: (emailId: string | number) => void;
+  onMarkUnread?: (emailId: string | number) => void;
   onReplyEmail?: (email: EmailWithNylasId) => void;
   onForwardEmail?: (email: EmailWithNylasId) => void;
   isAiLoading?: boolean;
@@ -141,7 +142,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onOpenAssistant }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onOpenAssistant }: EmailListProps) {
   const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -735,6 +736,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 onReplyAll={onReplyEmail ? () => onReplyEmail(email) : undefined}
                 onForward={onForwardEmail ? () => onForwardEmail(email) : undefined}
                 onMoveToFolder={onMoveToFolder ? () => onMoveToFolder(emailId) : undefined}
+                onMarkUnread={onMarkUnread ? () => onMarkUnread(emailId) : undefined}
                 onLongPressStart={() => handleLongPressStart(emailId)}
                 onLongPressEnd={handleLongPressEnd}
                 onMouseEnterWhileDragging={() => handleMouseEnterWhileDragging(emailId)}

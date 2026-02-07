@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Archive, Trash2, Star, Check, RotateCcw, MoreHorizontal, Reply, ReplyAll, Forward, FolderInput, Flag } from "lucide-react";
+import { Archive, Trash2, Star, Check, RotateCcw, MoreHorizontal, Reply, ReplyAll, Forward, FolderInput, Flag, MailOpen } from "lucide-react";
 import { SmartAvatar } from "@/components/smart-avatar";
 import {
   DropdownMenu,
@@ -37,6 +37,7 @@ interface SwipeableEmailItemProps {
   onReplyAll?: () => void;
   onForward?: () => void;
   onMoveToFolder?: () => void;
+  onMarkUnread?: () => void;
   onLongPressStart: () => void;
   onLongPressEnd: () => void;
   onMouseEnterWhileDragging: () => void;
@@ -76,6 +77,7 @@ export function SwipeableEmailItem({
   onReplyAll,
   onForward,
   onMoveToFolder,
+  onMarkUnread,
   onLongPressStart,
   onLongPressEnd,
   onMouseEnterWhileDragging,
@@ -419,6 +421,12 @@ export function SwipeableEmailItem({
               <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
               {isStarred ? "Unstar" : "Star"}
             </DropdownMenuItem>
+            {isRead && onMarkUnread && (
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMarkUnread(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-mark-unread-${emailId}`}>
+                <MailOpen className="w-4 h-4 mr-2" />
+                Mark as Unread
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         {deleteButtonWidth > 0 && (
