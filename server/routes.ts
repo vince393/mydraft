@@ -7425,6 +7425,90 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  // Helper: replace personalization variables in text
+  function replaceVariables(text: string, recipient: { email: string; name?: string | null }): string {
+    const firstName = recipient.name ? recipient.name.split(' ')[0] : '';
+    const lastName = recipient.name ? recipient.name.split(' ').slice(1).join(' ') : '';
+    return text
+      .replace(/\{name\}/gi, recipient.name || '')
+      .replace(/\{first_name\}/gi, firstName)
+      .replace(/\{last_name\}/gi, lastName)
+      .replace(/\{email\}/gi, recipient.email)
+      .replace(/\{company\}/gi, recipient.email.split('@')[1]?.split('.')[0] || '');
+  }
+
+  // Send test campaign email to self
+  app.post("/api/campaigns/:id/test", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      const nylasGrant = await storage.getNylasGrant(req.session.userId!);
+      if (!nylasGrant) {
+        return res.status(400).json({ error: "Please connect your email account first" });
+      }
+      
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Use sample data for test with user's own info
+      const testRecipient = { 
+        email: user.email, 
+        name: user.email.split('@')[0].replace(/[._]/g, ' ')
+      };
+      
+      const personalizedSubject = replaceVariables(campaign.subject, testRecipient);
+      const personalizedBody = replaceVariables(campaign.body, testRecipient);
+      
+      const testSubject = `[TEST] ${personalizedSubject}`;
+      
+      await nylas.sendMessage(
+        nylasGrant.grantId,
+        [user.email],
+        testSubject,
+        personalizedBody
+      );
+      
+      res.json({ message: "Test email sent to your inbox" });
+    } catch (error) {
+      console.error("Error sending test campaign:", error);
+      res.status(500).json({ error: "Failed to send test email" });
+    }
+  });
+
+  // Preview campaign with variable replacement
+  app.post("/api/campaigns/:id/preview", requireAuth, requireBusinessPlan, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campaign = await storage.getCampaign(id);
+      
+      if (!campaign || campaign.userId !== req.session.userId) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      const { recipientEmail, recipientName } = req.body;
+      const testRecipient = { 
+        email: recipientEmail || "john@example.com", 
+        name: recipientName || "John Doe" 
+      };
+      
+      res.json({
+        subject: replaceVariables(campaign.subject, testRecipient),
+        body: replaceVariables(campaign.body, testRecipient),
+        recipient: testRecipient
+      });
+    } catch (error) {
+      console.error("Error previewing campaign:", error);
+      res.status(500).json({ error: "Failed to preview campaign" });
+    }
+  });
+
   // Send a campaign (start sending emails)
   app.post("/api/campaigns/:id/send", requireAuth, requireBusinessPlan, async (req, res) => {
     try {
@@ -7445,33 +7529,33 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         return res.status(400).json({ error: "No recipients in this campaign" });
       }
       
-      // Check if user has connected email
       const nylasGrant = await storage.getNylasGrant(req.session.userId!);
       if (!nylasGrant) {
         return res.status(400).json({ error: "Please connect your email account first" });
       }
       
-      // Update campaign status to sending
       await storage.updateCampaign(id, { 
         status: "sending", 
         startedAt: new Date() 
       });
       
-      // Send emails in the background
+      // Send emails in the background with variable replacement
       (async () => {
         let sentCount = 0;
         let failedCount = 0;
         
         for (const recipient of recipients) {
           try {
+            const personalizedSubject = replaceVariables(campaign.subject, recipient);
+            const personalizedBody = replaceVariables(campaign.body, recipient);
+            
             await nylas.sendMessage(
               nylasGrant.grantId,
               [recipient.email],
-              campaign.subject,
-              campaign.body
+              personalizedSubject,
+              personalizedBody
             );
             
-            // Save contact for autocomplete
             storage.saveContact(req.session.userId!, recipient.email, recipient.name || undefined).catch(err => 
               console.warn("Failed to save contact:", err)
             );
@@ -7488,11 +7572,9 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             failedCount++;
           }
           
-          // Small delay between emails to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 500));
         }
         
-        // Update campaign as completed
         await storage.updateCampaign(id, {
           status: "completed",
           sentCount,

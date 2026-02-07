@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { format, isToday, isYesterday, addHours, addDays, setHours, setMinutes, startOfTomorrow } from "date-fns";
 import { 
   Reply, 
@@ -385,6 +385,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     setDraftContent("");
     setShowSchedulePicker(false);
     setRefineInput("");
+    setDraftAttachments([]);
     onClearDraft?.();
   };
 
@@ -422,6 +423,63 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   };
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [draftAttachments, setDraftAttachments] = useState<{ filename: string; content: string; contentType: string; size: number }[]>([]);
+  const draftFileInputRef = useRef<HTMLInputElement>(null);
+  const [isSendingDraft, setIsSendingDraft] = useState(false);
+
+  const handleDraftFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach((file) => {
+      if (file.size > 25 * 1024 * 1024) {
+        toast({ title: "File too large", description: `${file.name} exceeds 25MB limit.`, variant: "destructive" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        setDraftAttachments((prev) => [...prev, { filename: file.name, content: base64, contentType: file.type || "application/octet-stream", size: file.size }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    if (draftFileInputRef.current) draftFileInputRef.current.value = "";
+  };
+
+  const removeDraftAttachment = (index: number) => {
+    setDraftAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSendDraftReply = async () => {
+    if (!email || !draftContent.trim()) return;
+    const nylasId = (email as any).nylasId;
+    if (!nylasId) {
+      toast({ title: "Cannot send reply", description: "This email is not connected to your email provider.", variant: "destructive" });
+      return;
+    }
+    setIsSendingDraft(true);
+    try {
+      const senderEmail = (email as any).senderEmail || email.sender;
+      await apiRequest("POST", "/api/send", {
+        to: [senderEmail],
+        subject: `Re: ${email.subject.replace(/^Re:\s*/i, "")}`,
+        body: draftContent,
+        replyToMessageId: String(nylasId),
+        immediate: true,
+        attachments: draftAttachments.length > 0 ? draftAttachments : undefined,
+      });
+      if (generatedDraft) {
+        await apiRequest("POST", `/api/drafts/${generatedDraft.id}/send`, {});
+      }
+      toast({ title: "Reply sent", description: "Your reply has been sent successfully." });
+      setDraftAttachments([]);
+      handleCloseDraft();
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+    } catch (err: any) {
+      toast({ title: "Send failed", description: err?.message || "Could not send reply. Please try again.", variant: "destructive" });
+    } finally {
+      setIsSendingDraft(false);
+    }
+  };
 
   const handleGenerateImage = async () => {
     if (!hasPro) {
@@ -1116,8 +1174,41 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                 disabled={generatedDraft.status === "scheduled"}
                 data-testid="textarea-draft"
               />
+              <input
+                ref={draftFileInputRef}
+                type="file"
+                multiple
+                onChange={handleDraftFileSelect}
+                className="hidden"
+                accept="*/*"
+                data-testid="input-draft-attachment"
+              />
               {generatedDraft.status !== "scheduled" && draftContent.trim() && (
                 <div className="mt-3 space-y-2.5">
+                  {draftAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5" data-testid="draft-attachments-list">
+                      {draftAttachments.map((att, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-1.5 h-7 pl-2.5 pr-1.5 rounded-full text-[11px] font-medium backdrop-blur-sm border border-white/10 text-foreground/60"
+                          style={{ background: "rgba(255,255,255,0.04)" }}
+                          data-testid={`draft-attachment-${i}`}
+                        >
+                          <Paperclip className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate max-w-[120px]">{att.filename}</span>
+                          <span className="text-foreground/30">({(att.size / 1024).toFixed(0)}KB)</span>
+                          <button
+                            type="button"
+                            onClick={() => removeDraftAttachment(i)}
+                            className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-white/10 text-foreground/40 hover:text-foreground/70 transition-colors cursor-pointer"
+                            data-testid={`button-remove-draft-attachment-${i}`}
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-1.5" data-testid="quick-actions">
                     {[
                       { label: "Shorter", instruction: "Make this response shorter and more concise", testId: "button-shorter" },
@@ -1135,6 +1226,14 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                         {action.label}
                       </button>
                     ))}
+                    <button
+                      onClick={() => draftFileInputRef.current?.click()}
+                      className="h-7 px-3 rounded-full text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all cursor-pointer flex items-center gap-1"
+                      data-testid="button-draft-attach"
+                    >
+                      <Paperclip className="w-3 h-3" />
+                      Attach
+                    </button>
                     <button
                       onClick={handleGenerateImage}
                       disabled={isRefining || isGeneratingImage}
@@ -1198,12 +1297,18 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                 ) : (
                   <>
                     <button 
-                      className="h-9 px-5 rounded-full text-xs font-medium backdrop-blur-sm border border-primary/25 text-white hover:border-primary/40 transition-all cursor-pointer flex items-center gap-2"
+                      className="h-9 px-5 rounded-full text-xs font-medium backdrop-blur-sm border border-primary/25 text-white hover:border-primary/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40"
                       style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(147,51,234,0.3))" }}
+                      onClick={handleSendDraftReply}
+                      disabled={isSendingDraft || !draftContent.trim()}
                       data-testid="button-send-draft"
                     >
-                      <Send className="w-3.5 h-3.5" />
-                      Send Reply
+                      {isSendingDraft ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      {isSendingDraft ? "Sending..." : draftAttachments.length > 0 ? `Send Reply (${draftAttachments.length})` : "Send Reply"}
                     </button>
                     <Popover open={showSchedulePicker} onOpenChange={setShowSchedulePicker}>
                       <PopoverTrigger asChild>

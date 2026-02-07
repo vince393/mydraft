@@ -840,102 +840,96 @@ export function ComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden border-white/10 backdrop-blur-2xl rounded-2xl" style={{ background: "rgba(var(--background-rgb, 10,10,12), 0.85)" }}>
         {/* Header */}
-        <DialogHeader className="flex-shrink-0 px-6 py-4 border-b border-white/[0.06]">
-          <DialogTitle className="flex items-center gap-3 text-base font-medium">
-            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary">
-              {getModeIcon()}
+        <DialogHeader className="flex-shrink-0 px-5 py-3.5 border-b border-white/[0.06]">
+          <DialogTitle className="flex items-center gap-2.5 text-sm font-medium">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center border border-primary/20" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.1))" }}>
+              <div className="text-primary">{getModeIcon()}</div>
             </div>
-            {getDialogTitle()}
+            <span className="text-foreground/90">{getDialogTitle()}</span>
           </DialogTitle>
         </DialogHeader>
         
         {/* Form Content */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Recipients Section */}
-          <div className="px-6 py-4 space-y-3 border-b border-white/[0.06]">
+          <div className="px-5 py-3 space-y-2.5 border-b border-white/[0.06]">
             {/* To Field */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/60">
-                <User className="w-4 h-4" />
-              </div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[11px] text-foreground/30 font-medium w-6 text-right">To</span>
               <div className="flex-1 relative">
                 <EmailAutocomplete
                   value={to}
                   onChange={setTo}
                   placeholder="Recipients"
-                  className="border-0 bg-transparent px-0 h-9 text-base placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="border-0 bg-transparent px-0 h-8 text-sm placeholder:text-foreground/25 focus-visible:ring-0 focus-visible:ring-offset-0"
                   data-testid="input-compose-to"
                 />
               </div>
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
                 onClick={() => setShowCcBcc(!showCcBcc)}
-                className="text-muted-foreground hover:text-foreground text-xs h-7 px-2 rounded-md"
+                className="text-[11px] text-foreground/30 hover:text-foreground/50 transition-colors cursor-pointer flex items-center gap-0.5"
               >
                 {showCcBcc ? "Hide" : "Cc/Bcc"}
-                {showCcBcc ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
-              </Button>
+                {showCcBcc ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
             </div>
             
             {/* Cc/Bcc Fields */}
-            <div className={`space-y-3 overflow-hidden transition-all duration-200 ${showCcBcc ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="flex items-center gap-3 pl-11">
-                <span className="text-xs text-muted-foreground w-6">Cc</span>
+            <div className={`space-y-2 overflow-hidden transition-all duration-200 ${showCcBcc ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="flex items-center gap-2.5">
+                <span className="text-[11px] text-foreground/30 font-medium w-6 text-right">Cc</span>
                 <EmailAutocomplete
                   value={cc}
                   onChange={setCc}
-                  placeholder="Carbon copy recipients"
-                  className="border-0 bg-transparent px-0 h-8 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  placeholder="Carbon copy"
+                  className="border-0 bg-transparent px-0 h-8 text-sm placeholder:text-foreground/25 focus-visible:ring-0 focus-visible:ring-offset-0"
                   data-testid="input-compose-cc"
                 />
               </div>
-              <div className="flex items-center gap-3 pl-11">
-                <span className="text-xs text-muted-foreground w-6">Bcc</span>
+              <div className="flex items-center gap-2.5">
+                <span className="text-[11px] text-foreground/30 font-medium w-6 text-right">Bcc</span>
                 <EmailAutocomplete
                   value={bcc}
                   onChange={setBcc}
-                  placeholder="Blind carbon copy"
-                  className="border-0 bg-transparent px-0 h-8 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  placeholder="Blind copy"
+                  className="border-0 bg-transparent px-0 h-8 text-sm placeholder:text-foreground/25 focus-visible:ring-0 focus-visible:ring-offset-0"
                   data-testid="input-compose-bcc"
                 />
               </div>
             </div>
             
             {/* Subject Field */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground/60">
-                <Mail className="w-4 h-4" />
-              </div>
+            <div className="flex items-center gap-2.5 pt-1 border-t border-white/[0.04]">
+              <span className="text-[11px] text-foreground/30 font-medium w-6 text-right">Sub</span>
               <Input
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Subject"
-                className="flex-1 border-0 bg-transparent px-0 h-9 text-base font-medium placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="flex-1 border-0 bg-transparent px-0 h-8 text-sm font-medium placeholder:text-foreground/25 focus-visible:ring-0 focus-visible:ring-offset-0"
                 data-testid="input-compose-subject"
               />
             </div>
           </div>
           
           {/* Message Body */}
-          <div className="flex-1 min-h-0 px-6 py-4 flex flex-col">
+          <div className="flex-1 min-h-0 px-5 py-3 flex flex-col">
             <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write your message..."
-              className="flex-1 min-h-[180px] resize-none border-0 bg-transparent px-0 text-base leading-relaxed placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="flex-1 min-h-[160px] resize-none border-0 bg-transparent px-0 text-sm leading-relaxed placeholder:text-foreground/20 focus-visible:ring-0 focus-visible:ring-offset-0"
               data-testid="textarea-compose-body"
             />
             
             {/* Attached Images Preview */}
             {attachedImages.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/[0.06]">
+              <div className="mt-3 pt-3 border-t border-white/[0.04]">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileImage className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">AI Generated Attachments ({attachedImages.length})</span>
+                  <FileImage className="w-3.5 h-3.5 text-foreground/30" />
+                  <span className="text-[11px] text-foreground/30">AI Images ({attachedImages.length})</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {attachedImages.map((img, idx) => (
@@ -943,16 +937,16 @@ export function ComposeDialog({
                       <img 
                         src={img.data} 
                         alt={img.name}
-                        className="w-16 h-16 object-cover rounded-md border border-border"
+                        className="w-14 h-14 object-cover rounded-lg border border-white/10"
                       />
                       <button
                         onClick={() => removeAttachedImage(idx)}
-                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                         data-testid={`button-remove-image-${idx}`}
                       >
                         <X className="w-3 h-3" />
                       </button>
-                      <span className="text-[10px] text-muted-foreground truncate block w-16 text-center">{img.name}</span>
+                      <span className="text-[9px] text-foreground/25 truncate block w-14 text-center mt-0.5">{img.name}</span>
                     </div>
                   ))}
                 </div>
@@ -961,33 +955,32 @@ export function ComposeDialog({
             
             {/* AI Refine Bar - only show when there's content */}
             {hasUserContent() && (
-              <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-white/[0.06]">
+              <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-white/[0.04]">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 flex-1 bg-white/[0.03] rounded-lg px-3 py-2 border border-white/[0.08]">
-                    <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                  <div className="flex items-center gap-2 flex-1 rounded-full px-3 py-1.5 border border-white/[0.06]" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <Sparkles className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
                     <Input
                       value={refineInput}
                       onChange={(e) => setRefineInput(e.target.value)}
-                      placeholder="Ask AI to change something... (e.g., make it shorter, add a thank you)"
-                      className="flex-1 border-0 bg-transparent px-0 h-7 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      placeholder="Ask AI to refine..."
+                      className="flex-1 border-0 bg-transparent px-0 h-7 text-xs placeholder:text-foreground/20 focus-visible:ring-0 focus-visible:ring-offset-0"
                       disabled={isRefining || isGenerating}
                       data-testid="input-ai-refine"
                     />
                   </div>
-                  <Button
+                  <button
                     type="submit"
-                    size="sm"
-                    variant="outline"
                     disabled={!refineInput.trim() || isRefining || isGenerating}
-                    className="h-9 px-3 border-primary/30 bg-primary/5 text-primary"
+                    className="w-8 h-8 rounded-full flex items-center justify-center border border-primary/20 text-primary disabled:opacity-30 transition-all cursor-pointer"
+                    style={{ background: "rgba(59,130,246,0.08)" }}
                     data-testid="button-ai-refine"
                   >
                     {isRefining ? (
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <Send className="w-4 h-4" />
+                      <Send className="w-3.5 h-3.5" />
                     )}
-                  </Button>
+                  </button>
                 </div>
               </form>
             )}
@@ -996,36 +989,37 @@ export function ComposeDialog({
         
         {/* Attachments Preview */}
         {(fileAttachments.length > 0 || attachedImages.length > 0) && (
-          <div className="flex-shrink-0 px-6 py-2 border-t border-white/[0.06]">
-            <div className="flex items-center gap-2 mb-2">
-              <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">
-                {fileAttachments.length + attachedImages.length} attachment{fileAttachments.length + attachedImages.length !== 1 ? 's' : ''}
+          <div className="flex-shrink-0 px-5 py-2 border-t border-white/[0.04]">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Paperclip className="w-3 h-3 text-foreground/25" />
+              <span className="text-[10px] font-medium text-foreground/30">
+                {fileAttachments.length + attachedImages.length} file{fileAttachments.length + attachedImages.length !== 1 ? 's' : ''}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {fileAttachments.map((file, idx) => {
                 const isImage = file.type.startsWith('image/');
                 return (
                   <div
                     key={`file-${idx}`}
-                    className="flex items-center gap-2 px-2.5 py-1.5 bg-background rounded-lg border border-border/50 text-xs group"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-white/[0.08] text-[11px] group"
+                    style={{ background: "rgba(255,255,255,0.03)" }}
                     data-testid={`attachment-file-${idx}`}
                   >
                     {isImage ? (
-                      <Image className="w-3.5 h-3.5 text-blue-500" />
+                      <Image className="w-3 h-3 text-blue-400/60" />
                     ) : (
-                      <File className="w-3.5 h-3.5 text-muted-foreground" />
+                      <File className="w-3 h-3 text-foreground/30" />
                     )}
-                    <span className="max-w-[120px] truncate">{file.name}</span>
-                    <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+                    <span className="max-w-[100px] truncate text-foreground/60">{file.name}</span>
+                    <span className="text-foreground/20">{formatFileSize(file.size)}</span>
                     <button
                       type="button"
                       onClick={() => removeFileAttachment(idx)}
-                      className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                      className="p-0.5 rounded-full hover:bg-red-500/20 text-foreground/20 hover:text-red-400 transition-colors cursor-pointer"
                       data-testid={`button-remove-file-${idx}`}
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-2.5 h-2.5" />
                     </button>
                   </div>
                 );
@@ -1033,18 +1027,19 @@ export function ComposeDialog({
               {attachedImages.map((img, idx) => (
                 <div
                   key={`ai-img-${idx}`}
-                  className="flex items-center gap-2 px-2.5 py-1.5 bg-background rounded-lg border border-primary/30 text-xs"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-primary/15 text-[11px]"
+                  style={{ background: "rgba(59,130,246,0.05)" }}
                   data-testid={`attachment-ai-image-${idx}`}
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span className="max-w-[120px] truncate">{img.name}</span>
+                  <Sparkles className="w-3 h-3 text-primary/50" />
+                  <span className="max-w-[100px] truncate text-foreground/60">{img.name}</span>
                   <button
                     type="button"
                     onClick={() => setAttachedImages(prev => prev.filter((_, i) => i !== idx))}
-                    className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                    className="p-0.5 rounded-full hover:bg-red-500/20 text-foreground/20 hover:text-red-400 transition-colors cursor-pointer"
                     data-testid={`button-remove-ai-image-${idx}`}
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-2.5 h-2.5" />
                   </button>
                 </div>
               ))}
@@ -1052,9 +1047,9 @@ export function ComposeDialog({
           </div>
         )}
 
-        {/* Footer Actions - Minimalist */}
-        <div className="flex-shrink-0 px-6 py-3 border-t border-white/[0.06]">
-          <div className="flex items-center justify-between gap-3">
+        {/* Footer Actions */}
+        <div className="flex-shrink-0 px-5 py-2.5 border-t border-white/[0.04]">
+          <div className="flex items-center justify-between gap-2">
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -1066,50 +1061,36 @@ export function ComposeDialog({
               data-testid="input-file-attachment"
             />
             
-            {/* Left - Discard + Attach + AI Menu */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClose}
-                className="text-muted-foreground hover:text-foreground h-9"
-                data-testid="button-compose-cancel"
-              >
-                <X className="w-4 h-4 mr-1.5" />
-                Discard
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
+            {/* Left - Attach + AI Menu */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={sendMutation.isPending}
-                className="h-9 gap-1.5"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-foreground/30 hover:text-foreground/50 hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30"
                 data-testid="button-attach-file"
                 title="Attach files"
               >
                 <Paperclip className="w-4 h-4" />
-                <span className="hidden sm:inline">Attach</span>
-              </Button>
+              </button>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
+                    type="button"
                     disabled={isGenerating || sendMutation.isPending}
-                    className="h-9 gap-2 text-primary"
+                    className="h-8 px-3 rounded-full flex items-center gap-1.5 text-primary/70 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-30 text-xs font-medium"
                     data-testid="button-ai-menu"
                     title="AI features"
                   >
                     {isGenerating ? (
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <Sparkles className="w-4 h-4" />
+                      <Sparkles className="w-3.5 h-3.5" />
                     )}
                     <span>{isGenerating ? "Writing..." : userPlan === "free" ? `AI (${aiRemaining}/5)` : "AI"}</span>
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
+                    <ChevronDown className="w-3 h-3 opacity-50" />
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
                   <DropdownMenuItem
@@ -1310,21 +1291,21 @@ export function ComposeDialog({
             )}
             
             {/* Right Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {/* Schedule Send - Pro/Business only */}
               {canScheduleSend && (
                 <Popover open={showSchedulePicker} onOpenChange={setShowSchedulePicker}>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <button
+                      type="button"
                       disabled={sendMutation.isPending || !to.trim() || isGenerating}
-                      className="h-9"
+                      className="h-8 px-3 rounded-full flex items-center gap-1.5 text-xs font-medium text-foreground/40 hover:text-foreground/60 border border-white/[0.08] hover:border-white/15 transition-all cursor-pointer disabled:opacity-30"
+                      style={{ background: "rgba(255,255,255,0.03)" }}
                       data-testid="button-schedule-send"
                     >
-                      <Clock className="w-4 h-4 mr-1.5" />
+                      <Clock className="w-3.5 h-3.5" />
                       Schedule
-                    </Button>
+                    </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-4" align="end">
                     <div className="space-y-4">
@@ -1368,19 +1349,21 @@ export function ComposeDialog({
               )}
               
               {/* Send Button */}
-              <Button
+              <button
+                type="button"
                 onClick={() => sendMutation.mutate({})}
                 disabled={sendMutation.isPending || !to.trim() || isGenerating}
-                className="h-9 px-5 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-200"
+                className="h-8 px-4 rounded-full flex items-center gap-1.5 text-xs font-medium text-white border border-primary/30 transition-all cursor-pointer disabled:opacity-30"
+                style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.4), rgba(147,51,234,0.3))" }}
                 data-testid="button-compose-send"
               >
                 {sendMutation.isPending ? (
-                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                 )}
-                <span className="font-medium">Send</span>
-              </Button>
+                <span>Send</span>
+              </button>
             </div>
           </div>
         </div>
