@@ -107,7 +107,7 @@ export default function RefundPolicyPage() {
               
               <h3 className="text-lg font-medium text-foreground mt-4 mb-2">How to Request a Refund</h3>
               <p>
-                To request a refund, please contact our billing team at billing@mydraft.io. Include your account email address and the reason for your request. We aim to respond to all refund requests within 3 business days.
+                To request a refund, please contact our support team at support@mydraft.io. Include your account email address and the reason for your request. We aim to respond to all refund requests within 3 business days.
               </p>
               
               <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Refund Processing</h3>
@@ -150,7 +150,7 @@ export default function RefundPolicyPage() {
                 For billing questions, payment issues, or refund requests, please contact our billing team:
               </p>
               <p className="mt-2">
-                <strong>Email:</strong> billing@mydraft.io<br />
+                <strong>Email:</strong> support@mydraft.io<br />
                 <strong>Support Hours:</strong> Monday through Friday, 9:00 AM — 5:00 PM EST
               </p>
             </section>

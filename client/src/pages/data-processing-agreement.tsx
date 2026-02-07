@@ -161,7 +161,7 @@ export default function DataProcessingAgreementPage() {
                 <li>Objection to processing</li>
               </ul>
               <p className="mt-4">
-                Requests from Data Subjects should be directed to privacy@mydraft.io for prompt handling.
+                Requests from Data Subjects should be directed to support@mydraft.io for prompt handling.
               </p>
             </section>
             
@@ -196,8 +196,7 @@ export default function DataProcessingAgreementPage() {
                 For questions regarding this DPA or to exercise data protection rights, please contact:
               </p>
               <p className="mt-2">
-                <strong>Email:</strong> privacy@mydraft.io<br />
-                <strong>Data Protection Inquiries:</strong> dpo@mydraft.io
+                <strong>Email:</strong> support@mydraft.io
               </p>
             </section>
           </div>

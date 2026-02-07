@@ -145,7 +145,7 @@ export default function CookiePolicyPage() {
                 If you have questions about our use of cookies, please contact us:
               </p>
               <p className="mt-2">
-                <strong>Email:</strong> privacy@mydraft.io
+                <strong>Email:</strong> support@mydraft.io
               </p>
             </section>
           </div>

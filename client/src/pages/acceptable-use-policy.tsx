@@ -117,7 +117,7 @@ export default function AcceptableUsePolicyPage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">6. Reporting Violations</h2>
               <p>
-                If you become aware of any violations of this policy or suspect abuse of our platform, please report it immediately to abuse@mydraft.io. We take all reports seriously, investigate promptly, and maintain confidentiality to the extent possible.
+                If you become aware of any violations of this policy or suspect abuse of our platform, please report it immediately to support@mydraft.io. We take all reports seriously, investigate promptly, and maintain confidentiality to the extent possible.
               </p>
             </section>
             
@@ -134,8 +134,7 @@ export default function AcceptableUsePolicyPage() {
                 For questions regarding this policy or to report violations, please contact us:
               </p>
               <p className="mt-2">
-                <strong>Abuse Reports:</strong> abuse@mydraft.io<br />
-                <strong>General Inquiries:</strong> legal@mydraft.io
+                <strong>Email:</strong> support@mydraft.io
               </p>
             </section>
           </div>

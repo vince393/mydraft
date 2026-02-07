@@ -118,7 +118,7 @@ export default function PrivacyPolicyPage() {
                 <li><strong>Objection:</strong> Object to certain types of data processing</li>
               </ul>
               <p className="mt-4">
-                To exercise any of these rights, please contact us at privacy@mydraft.io.
+                To exercise any of these rights, please contact us at support@mydraft.io.
               </p>
             </section>
             
@@ -149,8 +149,7 @@ export default function PrivacyPolicyPage() {
                 If you have questions or concerns about this Privacy Policy or our data practices, please contact us:
               </p>
               <p className="mt-2">
-                <strong>Email:</strong> privacy@mydraft.io<br />
-                <strong>Support:</strong> support@mydraft.io
+                <strong>Email:</strong> support@mydraft.io
               </p>
             </section>
           </div>

@@ -184,8 +184,7 @@ export default function TermsOfServicePage() {
                 For questions regarding these Terms, please contact us:
               </p>
               <p className="mt-2">
-                <strong>Email:</strong> legal@mydraft.io<br />
-                <strong>Support:</strong> support@mydraft.io
+                <strong>Email:</strong> support@mydraft.io
               </p>
             </section>
           </div>
