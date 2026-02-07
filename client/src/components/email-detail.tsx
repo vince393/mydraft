@@ -101,8 +101,9 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
   const [showFormatted, setShowFormatted] = useState(true);
   const [formattedBody, setFormattedBody] = useState<string | null>(null);
   const [detectedLanguage, setDetectedLanguage] = useState<{ code: string; name: string; isEnglish: boolean } | null>(null);
-  const [translatedContent, setTranslatedContent] = useState<{ subject: string; body: string } | null>(null);
+  const [translatedContent, setTranslatedContent] = useState<{ subject: string; body: string; culturalNotes?: string } | null>(null);
   const [showTranslated, setShowTranslated] = useState(false);
+  const [translationFormality, setTranslationFormality] = useState<"auto" | "formal" | "neutral" | "casual">("auto");
   const [expandedThreadEmails, setExpandedThreadEmails] = useState<Set<string | number>>(new Set());
   const [refineInput, setRefineInput] = useState("");
   const [isRefining, setIsRefining] = useState(false);
@@ -256,14 +257,15 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
   });
 
   const translateMutation = useMutation({
-    mutationFn: async ({ emailId, subject, body, sourceLanguage }: { emailId: string | number; subject: string; body: string; sourceLanguage: string }) => {
-      const response = await apiRequest("POST", `/api/emails/${emailId}/translate`, { subject, body, sourceLanguage });
+    mutationFn: async ({ emailId, subject, body, sourceLanguage, formality }: { emailId: string | number; subject: string; body: string; sourceLanguage: string; formality?: string }) => {
+      const response = await apiRequest("POST", `/api/emails/${emailId}/translate`, { subject, body, sourceLanguage, formality });
       return response.json();
     },
     onSuccess: (data) => {
       setTranslatedContent({
         subject: data.translatedSubject,
-        body: data.translatedBody
+        body: data.translatedBody,
+        culturalNotes: data.culturalNotes
       });
       setShowTranslated(true);
     },
@@ -283,14 +285,38 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
     }
   }, [email?.id, detectedLanguage]);
 
-  const handleTranslate = () => {
+  const [culturalTips, setCulturalTips] = useState<{ tips: { type: string; text: string }[]; senderRegion: string; senderCulture?: string } | null>(null);
+  const [showCulturalTips, setShowCulturalTips] = useState(false);
+
+  const culturalEtiquetteMutation = useMutation({
+    mutationFn: async ({ senderEmail, senderName }: { senderEmail: string; senderName: string }) => {
+      const response = await apiRequest("POST", "/api/cultural-etiquette", { senderEmail, senderName });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.tips && data.tips.length > 0) {
+        setCulturalTips(data);
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (email && email.senderEmail) {
+      setCulturalTips(null);
+      setShowCulturalTips(false);
+      culturalEtiquetteMutation.mutate({ senderEmail: email.senderEmail, senderName: email.sender });
+    }
+  }, [email?.id]);
+
+  const handleTranslate = (formality?: string) => {
     if (!email || !detectedLanguage) return;
     const emailId = (email as any).nylasId || email.id;
     translateMutation.mutate({ 
       emailId, 
       subject: email.subject, 
       body: email.body, 
-      sourceLanguage: detectedLanguage.name 
+      sourceLanguage: detectedLanguage.name,
+      formality: formality || translationFormality
     });
   };
 
@@ -848,69 +874,133 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
             </div>
           </div>
 
+          {culturalTips && culturalTips.tips.length > 0 && (
+            <div className="mb-4" data-testid="cultural-etiquette-banner">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCulturalTips(!showCulturalTips)}
+                className="w-full justify-start text-xs text-violet-700 dark:text-violet-400 border-violet-500/20 gap-2"
+                data-testid="button-toggle-cultural-tips"
+              >
+                <Languages className="w-3.5 h-3.5 shrink-0" />
+                <span className="flex-1 text-left">
+                  Cultural context: Sender appears to be from {culturalTips.senderCulture || "a different region"}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showCulturalTips ? "rotate-180" : ""}`} />
+              </Button>
+              {showCulturalTips && (
+                <div className="mt-2 space-y-2 px-1">
+                  {culturalTips.tips.map((tip, i) => (
+                    <div key={i} className="text-xs text-muted-foreground pl-3 border-l-2 border-violet-500/30 py-1">
+                      {tip.text}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 mb-4 flex-wrap">
-            <button
+            <Button
+              variant={showFormatted ? "default" : "secondary"}
+              size="sm"
               onClick={() => setShowFormatted(true)}
-              className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
-                showFormatted 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
+              className="text-xs rounded-full toggle-elevate"
               data-testid="button-formatted-view"
             >
-              <Sparkles className="w-3 h-3 inline mr-1" />
+              <Sparkles className="w-3 h-3 mr-1" />
               AI Formatted
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={!showFormatted ? "default" : "secondary"}
+              size="sm"
               onClick={() => setShowFormatted(false)}
-              className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
-                !showFormatted 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
+              className="text-xs rounded-full toggle-elevate"
               data-testid="button-original-view"
             >
               Original
-            </button>
+            </Button>
             
             {detectedLanguage && !detectedLanguage.isEnglish && (
               <>
                 {translatedContent ? (
-                  <button
+                  <Button
+                    variant={showTranslated ? "default" : "secondary"}
+                    size="sm"
                     onClick={() => setShowTranslated(!showTranslated)}
-                    className={`text-xs px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 ${
-                      showTranslated 
-                        ? "bg-blue-500 text-white" 
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
+                    className="text-xs rounded-full toggle-elevate"
                     data-testid="button-toggle-translation"
                   >
                     <Languages className="w-3 h-3" />
                     {showTranslated ? "Show Original" : "Show Translation"}
-                  </button>
+                  </Button>
                 ) : (
-                  <button
-                    onClick={handleTranslate}
-                    disabled={translateMutation.isPending}
-                    className="text-xs px-3 py-1.5 rounded-full transition-colors bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 flex items-center gap-1"
-                    data-testid="button-translate"
-                  >
-                    {translateMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Translating...
-                      </>
-                    ) : (
-                      <>
-                        <Languages className="w-3 h-3" />
-                        Translate from {detectedLanguage.name}
-                      </>
-                    )}
-                  </button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={translateMutation.isPending}
+                        className="text-xs rounded-full text-blue-500 border-blue-500/30"
+                        data-testid="button-translate"
+                      >
+                        {translateMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Translating...
+                          </>
+                        ) : (
+                          <>
+                            <Languages className="w-3 h-3" />
+                            Translate from {detectedLanguage.name}
+                            <ChevronDown className="w-3 h-3 ml-0.5" />
+                          </>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-2" align="start">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground px-2 py-1">Translation Style</p>
+                        {[
+                          { value: "auto", label: "Auto (match culture)" },
+                          { value: "formal", label: "Formal" },
+                          { value: "neutral", label: "Neutral" },
+                          { value: "casual", label: "Casual" },
+                        ].map((opt) => (
+                          <Button
+                            key={opt.value}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setTranslationFormality(opt.value as any);
+                              handleTranslate(opt.value);
+                            }}
+                            className={`w-full justify-start text-xs toggle-elevate ${
+                              translationFormality === opt.value ? "toggle-elevated text-blue-500" : ""
+                            }`}
+                            data-testid={`button-formality-${opt.value}`}
+                          >
+                            {opt.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 )}
               </>
             )}
           </div>
+
+          {showTranslated && translatedContent?.culturalNotes && (
+            <div 
+              className="mb-3 px-3 py-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400 flex items-start gap-2"
+              data-testid="cultural-notes"
+            >
+              <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>{translatedContent.culturalNotes}</span>
+            </div>
+          )}
 
           <div 
             className="mb-8 email-body-container"

@@ -199,7 +199,7 @@ interface ResponseTimeCache {
 const responseTimeCache: Map<string, ResponseTimeCache> = new Map();
 
 const formattedBodyCache: Map<string, { body: string; timestamp: number }> = new Map();
-const translationCache: Map<string, { detectedLanguage: string; translatedSubject: string; translatedBody: string; timestamp: number }> = new Map();
+const translationCache: Map<string, { detectedLanguage: string; translatedSubject: string; translatedBody: string; culturalNotes?: string; timestamp: number }> = new Map();
 const summaryCache: Map<string, { summary: string; keyPoints: string[]; actionItems: string[]; timestamp: number }> = new Map();
 const CACHE_MAX_SIZE = 100;
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -2728,6 +2728,32 @@ Return ONLY valid JSON, no other text.`
     }
   });
 
+  const REGION_CULTURAL_CONTEXT: Record<string, { culture: string; formality: string; tips: string }> = {
+    us: { culture: "American English", formality: "Direct and efficient. Use first names quickly.", tips: "Americans prefer concise, action-oriented emails. 'Best regards' or 'Thanks' are standard closings." },
+    gb: { culture: "British English", formality: "Polite and understated. Indirect phrasing common.", tips: "British emails often use hedging language ('I was wondering if...', 'Perhaps we could...'). Avoid being too direct." },
+    ca: { culture: "Canadian English", formality: "Friendly and polite. Similar to US but more formal.", tips: "Canadians appreciate politeness. 'Thank you' and 'Please' are important. Use both English and French greetings if appropriate." },
+    au: { culture: "Australian English", formality: "Casual and direct. Informal tone acceptable.", tips: "Australians prefer a relaxed tone. Overly formal language can seem stiff. 'Cheers' is a common closing." },
+    de: { culture: "German", formality: "Highly formal. Use titles (Herr/Frau) and last names.", tips: "German business emails start with 'Sehr geehrte/r'. Always use formal 'Sie' form. Get straight to the point." },
+    fr: { culture: "French", formality: "Very formal. Elaborate greetings and closings expected.", tips: "French emails require formal openings ('Madame/Monsieur') and lengthy closings ('Je vous prie d\\'agréer...'). Never use first names initially." },
+    es: { culture: "Spanish", formality: "Warm and personal. Relationship-building matters.", tips: "Spanish emails often include personal inquiries before business. Use 'Estimado/a' for formal, 'Hola' for casual." },
+    it: { culture: "Italian", formality: "Formal in business, warm in tone.", tips: "Italian emails use 'Gentile' or 'Egregio' for formal address. Personal warmth is valued even in business." },
+    pt: { culture: "Portuguese", formality: "Formal but friendly. Respect hierarchy.", tips: "Use 'Prezado/a' for formal address. Portuguese communication values courtesy and relationship." },
+    br: { culture: "Brazilian Portuguese", formality: "Warm and informal compared to Portugal.", tips: "Brazilians are generally more casual. 'Olá' and 'Abraços' are common. Personal connection matters." },
+    jp: { culture: "Japanese", formality: "Extremely formal. Honorifics and hierarchical language essential.", tips: "Japanese emails follow strict patterns: seasonal greeting, self-introduction, purpose, closing. Use keigo (polite form). Never be too direct." },
+    kr: { culture: "Korean", formality: "Formal and hierarchical. Age and position matter.", tips: "Korean emails use formal endings (-습니다). Address seniors with proper titles. Indirect refusals are preferred." },
+    cn: { culture: "Chinese", formality: "Formal in business. Respect for hierarchy.", tips: "Chinese emails value modesty and indirect communication. Use proper titles. Avoid saying 'no' directly." },
+    in: { culture: "Indian English", formality: "Formal and respectful. Titles important.", tips: "Indian business emails use 'Dear Sir/Madam' and 'Respected'. Be respectful of hierarchy and seniority." },
+    ae: { culture: "Arabic", formality: "Very formal. Religious and cultural phrases common.", tips: "Arabic emails often begin with 'Bismillah' or 'As-salamu alaykum'. Show respect and patience. Relationship-building is crucial." },
+    sa: { culture: "Arabic (Saudi)", formality: "Highly formal. Protocol and titles essential.", tips: "Saudi business communication is very formal. Use proper titles and show deep respect for tradition." },
+    il: { culture: "Hebrew/Israeli", formality: "Direct and informal. Get to the point.", tips: "Israeli communication is very direct. First names are used quickly. Formality is minimal." },
+    tr: { culture: "Turkish", formality: "Formal in business. Respect and warmth valued.", tips: "Turkish emails use 'Sayın' for formal address. Show respect for hierarchy while maintaining warmth." },
+    nl: { culture: "Dutch", formality: "Direct and efficient. Minimal small talk.", tips: "Dutch communication is very direct - this is cultural, not rude. Be concise and clear." },
+    se: { culture: "Swedish", formality: "Informal and egalitarian. First names common.", tips: "Swedish business culture is flat. Use first names. 'Lagom' (moderation) guides communication style." },
+    ru: { culture: "Russian", formality: "Formal in business. Patronymics used.", tips: "Russian business emails are formal. Use name + patronymic. Directness is valued but maintain respect." },
+    mx: { culture: "Mexican Spanish", formality: "Warm and personal. Relationship-focused.", tips: "Mexican communication values personal connection. Greetings and small talk before business. Use 'usted' for formal." },
+    other: { culture: "International", formality: "Professional and neutral.", tips: "Use clear, simple language. Avoid idioms and culturally specific references." }
+  };
+
   app.post("/api/emails/:id/translate", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -2741,13 +2767,20 @@ Return ONLY valid JSON, no other text.`
       }
       
       const id = req.params.id;
-      const { subject, body, sourceLanguage } = req.body;
+      const { subject, body, sourceLanguage, targetLanguage, formality } = req.body;
 
       if (!body) {
         return res.status(400).json({ error: "Email body is required" });
       }
 
-      const cacheKey = `${req.session.userId}-${id}-en`;
+      const userRegion = user?.aiPreferences?.region || "us";
+      const userLang = targetLanguage || user?.aiPreferences?.preferredLanguage || "en";
+      const userFormality = formality || user?.aiPreferences?.formalityLevel || "auto";
+
+      const targetLangName = userLang === "auto" || userLang === "en" ? "English" : userLang;
+      const culturalContext = REGION_CULTURAL_CONTEXT[userRegion] || REGION_CULTURAL_CONTEXT["other"];
+
+      const cacheKey = `${req.session.userId}-${id}-${userLang}-${userFormality}`;
       cleanupTranslationCache();
       const cached = translationCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
@@ -2755,23 +2788,41 @@ Return ONLY valid JSON, no other text.`
           translatedSubject: cached.translatedSubject,
           translatedBody: cached.translatedBody,
           detectedLanguage: cached.detectedLanguage,
+          culturalNotes: cached.culturalNotes,
           cached: true
         });
       }
+
+      const formalityInstruction = userFormality === "formal" 
+        ? "Use highly formal, professional language. Include proper honorifics and formal greetings/closings."
+        : userFormality === "casual"
+        ? "Use a relaxed, conversational tone. Keep it natural and approachable."
+        : userFormality === "neutral"
+        ? "Use a balanced, professional but approachable tone."
+        : `Adapt the formality to match ${culturalContext.culture} business norms: ${culturalContext.formality}`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: `You are a professional translator. Translate the email from ${sourceLanguage || "the source language"} to English.
+            content: `You are an expert multilingual translator specializing in culturally-aware email translation. Translate the email from ${sourceLanguage || "the source language"} to ${targetLangName}.
 
-Rules:
-- Maintain the original formatting and structure
-- Preserve HTML tags if present
-- Keep proper nouns, names, and brand names in their original form
-- Translate naturally, not word-for-word
-- Return a JSON object with two fields: "subject" (translated subject) and "body" (translated body)
+Cultural Context: You are translating for a user based in a ${culturalContext.culture}-speaking region.
+Tone: ${formalityInstruction}
+
+Translation Rules:
+- Produce natural, fluent prose that reads as if originally written in ${targetLangName} — never word-for-word
+- Adapt idioms, expressions, and cultural references to equivalents that make sense in the target culture
+- Maintain the sender's original intent, emotion, and level of urgency
+- Preserve HTML tags, formatting, links, and structure
+- Keep proper nouns, brand names, email addresses, and URLs unchanged
+- Adapt greetings and sign-offs to culturally appropriate equivalents (e.g., "Sehr geehrte/r" → "Dear" in formal English, or vice versa)
+- If the source email has a culturally specific tone (e.g., Japanese keigo, German formal Sie), reflect the equivalent level of formality in the target language
+- Return a JSON object with three fields:
+  "subject": translated subject line,
+  "body": translated body,
+  "culturalNotes": a brief note (1-2 sentences) about any cultural nuances in the original email that the reader should be aware of (or empty string if none)
 - Return ONLY valid JSON, no other text`
           },
           {
@@ -2790,7 +2841,8 @@ Rules:
         const result = {
           translatedSubject: parsed.subject || subject || "",
           translatedBody: parsed.body || body,
-          detectedLanguage: sourceLanguage || "unknown"
+          detectedLanguage: sourceLanguage || "unknown",
+          culturalNotes: parsed.culturalNotes || ""
         };
         
         translationCache.set(cacheKey, { ...result, timestamp: Date.now() });
@@ -2802,6 +2854,60 @@ Rules:
     } catch (error) {
       console.error("Error translating email:", error);
       res.status(500).json({ error: "Failed to translate email" });
+    }
+  });
+
+  app.post("/api/cultural-etiquette", requireAuth, async (req, res) => {
+    try {
+      const { senderEmail, senderName, recipientRegion } = req.body;
+      
+      const user = await storage.getUser(req.session.userId!);
+      const userRegion = recipientRegion || user?.aiPreferences?.region || "us";
+      
+      const senderDomain = senderEmail?.split("@")[1]?.toLowerCase() || "";
+      
+      const domainToRegion: Record<string, string> = {
+        "jp": "jp", "co.jp": "jp", "ne.jp": "jp",
+        "de": "de", "co.uk": "gb", "uk": "gb",
+        "fr": "fr", "co.kr": "kr", "kr": "kr",
+        "cn": "cn", "com.cn": "cn", "com.br": "br",
+        "br": "br", "in": "in", "co.in": "in",
+        "ru": "ru", "com.au": "au", "au": "au",
+        "mx": "mx", "com.mx": "mx", "es": "es",
+        "it": "it", "nl": "nl", "se": "se",
+        "ae": "ae", "sa": "sa", "il": "il", "tr": "tr",
+      };
+      
+      let detectedSenderRegion = "other";
+      for (const [tld, region] of Object.entries(domainToRegion)) {
+        if (senderDomain.endsWith(`.${tld}`)) {
+          detectedSenderRegion = region;
+          break;
+        }
+      }
+      
+      const senderCulture = REGION_CULTURAL_CONTEXT[detectedSenderRegion] || REGION_CULTURAL_CONTEXT["other"];
+      const recipientCulture = REGION_CULTURAL_CONTEXT[userRegion] || REGION_CULTURAL_CONTEXT["other"];
+      
+      if (detectedSenderRegion === userRegion || detectedSenderRegion === "other") {
+        return res.json({ tips: [], senderRegion: detectedSenderRegion });
+      }
+      
+      const tips = [
+        {
+          type: "greeting" as const,
+          text: `${senderCulture.culture} emails: ${senderCulture.tips}`
+        },
+        {
+          type: "formality" as const,
+          text: `Formality: ${senderCulture.formality}`
+        }
+      ];
+      
+      res.json({ tips, senderRegion: detectedSenderRegion, senderCulture: senderCulture.culture });
+    } catch (error) {
+      console.error("Error getting cultural etiquette:", error);
+      res.status(500).json({ error: "Failed to get cultural etiquette tips" });
     }
   });
 

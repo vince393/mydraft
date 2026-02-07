@@ -27,7 +27,9 @@ import {
   Sparkles,
   Brain,
   Search,
-  RefreshCw
+  RefreshCw,
+  Globe,
+  Languages
 } from "lucide-react";
 
 interface AuthResponse {
@@ -93,8 +95,8 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               }}
             >
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-muted-foreground text-sm mb-8">
-                <Mail className="w-3.5 h-3.5" />
-                Works with Gmail & Outlook
+                <Globe className="w-3.5 h-3.5" />
+                Global inbox for Gmail & Outlook
               </div>
             </div>
             
@@ -121,7 +123,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transitionDelay: '300ms'
               }}
             >
-              AI drafts your replies. Summarizes long threads. Keeps your focus on what matters.
+              AI drafts your replies in any language. Culturally-aware translations. Your global inbox, built for how the world actually emails.
             </p>
             
             <div 
@@ -532,9 +534,9 @@ function BenefitsSection() {
       description: "Open an email, see a draft reply. Respond in seconds."
     },
     {
-      icon: <Brain className="w-6 h-6" />,
-      title: "Threads summarized",
-      description: "Skip scrolling through 50-message threads."
+      icon: <Globe className="w-6 h-6" />,
+      title: "Global inbox, local tone",
+      description: "Culturally-aware translations that sound natural in every language."
     },
     {
       icon: <Zap className="w-6 h-6" />,
@@ -542,14 +544,14 @@ function BenefitsSection() {
       description: "Instant load. Built to match your pace."
     },
     {
+      icon: <Languages className="w-6 h-6" />,
+      title: "50+ languages, zero awkwardness",
+      description: "AI adapts formality, etiquette, and tone per country."
+    },
+    {
       icon: <Lock className="w-6 h-6" />,
       title: "Private by design",
       description: "OAuth only. Your emails stay yours."
-    },
-    {
-      icon: <Shield className="w-6 h-6" />,
-      title: "Works the way you expect",
-      description: "Star, archive, search. No bloat."
     }
   ];
 
@@ -698,6 +700,11 @@ function ComparisonSection() {
       feature: "Privacy",
       theirs: "Your emails train their AI.",
       ours: "Your data stays yours."
+    },
+    {
+      feature: "Multilingual support",
+      theirs: "Robotic Google Translate paste.",
+      ours: "Culturally-aware AI with tone and etiquette per country."
     }
   ];
 
@@ -924,6 +931,10 @@ function FAQSection() {
     {
       q: "Is there a trial for paid plans?",
       a: "Pro and Business plans include a 14-day trial. Full access, no restrictions."
+    },
+    {
+      q: "How does the multilingual translation work?",
+      a: "MyDraft uses AI that understands cultural context, not just words. It adapts tone, formality, and etiquette based on the sender's region. A Japanese business email gets properly formal treatment, while an Australian reply stays appropriately casual."
     }
   ];
 

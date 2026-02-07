@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -66,6 +67,9 @@ interface Settings {
     automationLevel?: string;
     replyTone?: string;
     customTone?: string;
+    region?: string;
+    preferredLanguage?: string;
+    formalityLevel?: string;
   } | null;
   emailSignature: string | null;
   signatureEnabled: boolean;
@@ -1121,6 +1125,38 @@ function BillingTab({ settings }: { settings: Settings }) {
   );
 }
 
+const REGION_LABELS: Record<string, string> = {
+  us: "United States", gb: "United Kingdom", ca: "Canada", au: "Australia", de: "Germany",
+  fr: "France", es: "Spain", it: "Italy", pt: "Portugal", br: "Brazil",
+  nl: "Netherlands", be: "Belgium", ch: "Switzerland", at: "Austria", se: "Sweden",
+  no: "Norway", dk: "Denmark", fi: "Finland", pl: "Poland", cz: "Czech Republic",
+  jp: "Japan", kr: "South Korea", cn: "China", tw: "Taiwan", hk: "Hong Kong",
+  in: "India", sg: "Singapore", my: "Malaysia", th: "Thailand", vn: "Vietnam",
+  ph: "Philippines", id: "Indonesia", ae: "UAE", sa: "Saudi Arabia", il: "Israel",
+  tr: "Turkey", eg: "Egypt", ng: "Nigeria", za: "South Africa", ke: "Kenya",
+  mx: "Mexico", ar: "Argentina", cl: "Chile", co: "Colombia", pe: "Peru",
+  ru: "Russia", ua: "Ukraine", ro: "Romania", gr: "Greece", hr: "Croatia",
+  other: "Other",
+};
+
+const LANGUAGE_LABELS: Record<string, string> = {
+  auto: "Auto-detect", en: "English", es: "Spanish", fr: "French", de: "German",
+  it: "Italian", pt: "Portuguese", nl: "Dutch", sv: "Swedish", no: "Norwegian",
+  da: "Danish", fi: "Finnish", pl: "Polish", cs: "Czech", ru: "Russian",
+  uk: "Ukrainian", ro: "Romanian", el: "Greek", hr: "Croatian", tr: "Turkish",
+  ar: "Arabic", he: "Hebrew", hi: "Hindi", bn: "Bengali", ja: "Japanese",
+  ko: "Korean", zh: "Chinese (Simplified)", "zh-tw": "Chinese (Traditional)",
+  th: "Thai", vi: "Vietnamese", ms: "Malay", id: "Indonesian", tl: "Filipino",
+  sw: "Swahili",
+};
+
+const FORMALITY_OPTIONS = [
+  { value: "auto", label: "Auto (adapts to context)" },
+  { value: "formal", label: "Formal" },
+  { value: "neutral", label: "Neutral" },
+  { value: "casual", label: "Casual" },
+];
+
 function AIPreferencesTab({ settings }: { settings: Settings }) {
   const { toast } = useToast();
   const [preferences, setPreferences] = useState({
@@ -1129,6 +1165,9 @@ function AIPreferencesTab({ settings }: { settings: Settings }) {
     automationLevel: settings.aiPreferences?.automationLevel || "medium",
     replyTone: settings.aiPreferences?.replyTone || "professional",
     customTone: settings.aiPreferences?.customTone || "",
+    region: settings.aiPreferences?.region || "us",
+    preferredLanguage: settings.aiPreferences?.preferredLanguage || "auto",
+    formalityLevel: settings.aiPreferences?.formalityLevel || "auto",
   });
 
   const updateMutation = useMutation({
@@ -1163,6 +1202,71 @@ function AIPreferencesTab({ settings }: { settings: Settings }) {
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="w-5 h-5" />
+            Language & Region
+          </CardTitle>
+          <CardDescription>Set your region and language preferences for culturally-aware AI translations</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="region-select">Region</Label>
+            <Select
+              value={preferences.region}
+              onValueChange={(value) => setPreferences((p) => ({ ...p, region: value }))}
+            >
+              <SelectTrigger id="region-select" data-testid="select-region">
+                <SelectValue placeholder="Select region" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(REGION_LABELS).map(([code, label]) => (
+                  <SelectItem key={code} value={code} data-testid={`select-region-${code}`}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="language-select">Preferred Language</Label>
+            <Select
+              value={preferences.preferredLanguage}
+              onValueChange={(value) => setPreferences((p) => ({ ...p, preferredLanguage: value }))}
+            >
+              <SelectTrigger id="language-select" data-testid="select-preferred-language">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(LANGUAGE_LABELS).map(([code, label]) => (
+                  <SelectItem key={code} value={code} data-testid={`select-language-${code}`}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Formality Level</Label>
+            <RadioGroup
+              value={preferences.formalityLevel}
+              onValueChange={(value) => setPreferences((p) => ({ ...p, formalityLevel: value }))}
+              className="space-y-3"
+            >
+              {FORMALITY_OPTIONS.map((option) => (
+                <div key={option.value} className="flex items-center space-x-3">
+                  <RadioGroupItem value={option.value} id={`formality-${option.value}`} data-testid={`radio-formality-${option.value}`} />
+                  <Label htmlFor={`formality-${option.value}`}>{option.label}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Primary Use</CardTitle>

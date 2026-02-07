@@ -12,6 +12,28 @@ export const userSessions = pgTable("user_sessions", {
   expire: timestamp("expire", { precision: 6 }).notNull(),
 });
 
+export const regionSchema = z.enum([
+  "us", "gb", "ca", "au", "de", "fr", "es", "it", "pt", "br",
+  "nl", "be", "ch", "at", "se", "no", "dk", "fi", "pl", "cz",
+  "jp", "kr", "cn", "tw", "hk", "in", "sg", "my", "th", "vn",
+  "ph", "id", "ae", "sa", "il", "tr", "eg", "ng", "za", "ke",
+  "mx", "ar", "cl", "co", "pe", "ru", "ua", "ro", "gr", "hr",
+  "other"
+]);
+export type Region = z.infer<typeof regionSchema>;
+
+export const preferredLanguageSchema = z.enum([
+  "en", "es", "fr", "de", "it", "pt", "nl", "sv", "no", "da",
+  "fi", "pl", "cs", "ru", "uk", "ro", "el", "hr", "tr",
+  "ar", "he", "hi", "bn", "ja", "ko", "zh", "zh-tw",
+  "th", "vi", "ms", "id", "tl", "sw",
+  "auto"
+]);
+export type PreferredLanguage = z.infer<typeof preferredLanguageSchema>;
+
+export const formalityLevelSchema = z.enum(["formal", "neutral", "casual", "auto"]);
+export type FormalityLevel = z.infer<typeof formalityLevelSchema>;
+
 export const aiPreferencesSchema = z.object({
   primaryUse: z.enum(["work", "personal", "both"]).optional(),
   emailVolume: z.enum(["low", "medium", "high", "very-high"]).optional(),
@@ -21,6 +43,9 @@ export const aiPreferencesSchema = z.object({
   customTone: z.string().optional(),
   referralSource: z.enum(["search", "social", "friend", "blog", "podcast", "ad", "other"]).optional(),
   referralOther: z.string().optional(),
+  region: regionSchema.optional(),
+  preferredLanguage: preferredLanguageSchema.optional(),
+  formalityLevel: formalityLevelSchema.optional(),
 });
 
 export type AiPreferences = z.infer<typeof aiPreferencesSchema>;

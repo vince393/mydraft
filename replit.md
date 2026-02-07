@@ -155,6 +155,14 @@ This ensures that even database administrators cannot read user email content, m
 ## Recent Changes
 
 ### February 2026
+- **Global Inbox / Multilingual Features**: 
+  - Region, preferred language, and formality level settings in AI Preferences (50+ countries, 30+ languages)
+  - Culturally-aware translation with tone adaptation per country (formal Japanese keigo, casual Australian, indirect British, etc.)
+  - Cultural etiquette suggestions banner appears when viewing emails from different regions (auto-detected from sender domain TLD)
+  - Formal/casual/neutral/auto formality toggle in translation popover
+  - Cultural notes displayed alongside translations explaining nuances
+  - REGION_CULTURAL_CONTEXT mapping for 20+ regions with culture, formality norms, and tips
+  - Landing page updated to highlight global inbox positioning
 - **Contact Autocomplete**: Added email autocomplete for To, Cc, Bcc fields in compose dialog. Contacts are automatically saved when emails are sent and appear as suggestions when composing new emails. Uses `contacts` table with deduplication by (userId, email)
 - **AI Subject-in-Body Bug Fix**: Fixed issue where AI regeneration would put subject line text in the email body. Added explicit instructions to AI prompts and post-processing to strip subject-like prefixes
 - **Email Signature Feature**: Signature is automatically appended to all AI-generated drafts when enabled in Settings > Email Settings
