@@ -62,6 +62,7 @@ interface ExtendedEmail extends Email {
 interface EmailDetailProps {
   email: Email | null;
   threadEmails?: ExtendedEmail[];
+  currentUserEmail?: string;
   generatedDraft?: Draft | null;
   onClearDraft?: () => void;
   onDraftUpdate?: (draft: Draft) => void;
@@ -93,7 +94,7 @@ function EmailDetailEmpty() {
   );
 }
 
-export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward, onAiDraft, hasPro, onUpgradeNeeded }: EmailDetailProps) {
+export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", generatedDraft, onClearDraft, onDraftUpdate, isLoading, onArchive, onTrash, onStar, onReply, onReplyAll, onForward, onAiDraft, hasPro, onUpgradeNeeded }: EmailDetailProps) {
   const [draftContent, setDraftContent] = useState("");
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
@@ -177,31 +178,26 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
     onAiDraft?.();
   };
   
-  // Get the selected email's ID and date for comparison
+  // Get the selected email's ID for highlighting
   const selectedEmailId = email ? ((email as any).nylasId || email.id) : null;
-  const selectedEmailDate = email ? new Date(email.receivedAt).getTime() : 0;
   
-  // Sort thread emails by date (oldest first for thread display)
+  // Sort ALL thread emails chronologically (oldest first)
   const sortedThreadEmails = [...threadEmails].sort((a, b) => 
     new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime()
   );
   
-  // Get emails older than the selected email
-  const olderEmails = sortedThreadEmails.filter(e => {
+  // All other thread emails except the selected one
+  const otherThreadEmails = sortedThreadEmails.filter(e => {
     const emailId = (e as any).nylasId || e.id;
-    const emailDate = new Date(e.receivedAt).getTime();
-    return emailId !== selectedEmailId && emailDate < selectedEmailDate;
-  });
-  
-  // Get emails newer than the selected email (for showing "more messages in thread")
-  const newerEmails = sortedThreadEmails.filter(e => {
-    const emailId = (e as any).nylasId || e.id;
-    const emailDate = new Date(e.receivedAt).getTime();
-    return emailId !== selectedEmailId && emailDate > selectedEmailDate;
+    return emailId !== selectedEmailId;
   });
   
   const hasThread = threadEmails.length > 1;
-  const hasNewerMessages = newerEmails.length > 0;
+  
+  const isOwnEmail = (senderEmail: string) => {
+    if (!currentUserEmail) return false;
+    return senderEmail.toLowerCase() === currentUserEmail.toLowerCase();
+  };
   
   const toggleThreadEmail = (emailId: string | number) => {
     setExpandedThreadEmails(prev => {
@@ -709,76 +705,79 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
 
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="px-4 sm:px-6 pt-4 pb-6 sm:pb-8">
-          {/* Thread indicator - Gmail-style with first message preview and expandable rest */}
-          {hasThread && olderEmails.length > 0 && (() => {
-            // Separator between thread and current email
-            const ThreadSeparator = () => (
-              <div className="flex items-center gap-3 py-3">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">Latest Reply</span>
-                <div className="flex-1 h-px bg-gradient-to-r from-border via-border to-transparent" />
-              </div>
-            );
-            const firstOlderEmail = olderEmails[0];
-            const remainingEmails = olderEmails.slice(1);
-            const firstInitials = firstOlderEmail.sender
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2);
-            
-            return (
-              <div className="mb-4 space-y-2">
-                {/* First older message - always shown as preview */}
+          {/* Full conversation thread - chronological order */}
+          {hasThread && otherThreadEmails.length > 0 && (() => {
+            const firstEmail = otherThreadEmails[0];
+            const middleEmails = otherThreadEmails.slice(1);
+            const isThreadExpanded = expandedThreadEmails.has('all');
+
+            const renderThreadMessage = (threadEmail: ExtendedEmail) => {
+              const threadEmailId = (threadEmail as any).nylasId || threadEmail.id;
+              const isSent = isOwnEmail(threadEmail.senderEmail);
+              const emailContent = threadEmail.body || threadEmail.preview || "";
+              
+              return (
                 <div 
-                  className="border border-border/40 rounded-lg p-4 bg-muted/10"
-                  data-testid={`thread-email-${firstOlderEmail.nylasId || firstOlderEmail.id}`}
+                  key={threadEmailId}
+                  className={`border rounded-lg p-4 ${
+                    isSent 
+                      ? "border-primary/20 bg-primary/5 ml-4" 
+                      : "border-border/40 bg-muted/10"
+                  }`}
+                  data-testid={`thread-email-${threadEmailId}`}
                 >
                   <div className="flex items-start gap-3 mb-3">
                     <SmartAvatar 
-                      email={firstOlderEmail.senderEmail}
-                      name={firstOlderEmail.sender}
+                      email={threadEmail.senderEmail}
+                      name={threadEmail.sender}
                       className="w-8 h-8 ring-1 ring-border/30"
                       fallbackClassName="text-white font-medium text-xs"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{firstOlderEmail.sender}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{isSent ? "You" : threadEmail.sender}</span>
+                        {isSent && (
+                          <span className="text-[10px] font-medium text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded-full">Sent</span>
+                        )}
                         <span className="text-xs text-muted-foreground">
-                          {formatSmartDate(new Date(firstOlderEmail.receivedAt))}
+                          {formatSmartDate(new Date(threadEmail.receivedAt))}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground">{firstOlderEmail.senderEmail}</p>
+                      <p className="text-xs text-muted-foreground">{threadEmail.senderEmail}</p>
                     </div>
                   </div>
                   <div className="email-body-container">
-                    {(firstOlderEmail.body || firstOlderEmail.preview || "").includes('<') ? (
+                    {emailContent.includes('<') ? (
                       <div 
                         className="email-content"
-                        dangerouslySetInnerHTML={{ __html: formatEmailBody(firstOlderEmail.body || firstOlderEmail.preview || "") }}
+                        dangerouslySetInnerHTML={{ __html: formatEmailBody(emailContent) }}
                       />
                     ) : (
                       <div className="email-content-plain">
-                        {(firstOlderEmail.body || firstOlderEmail.preview || "").split("\n").map((p, i) => (
+                        {emailContent.split("\n").map((p, i) => (
                           p.trim() ? <p key={i}>{p}</p> : <br key={i} />
                         ))}
                       </div>
                     )}
                   </div>
                 </div>
+              );
+            };
 
-                {/* Remaining messages - expandable */}
-                {remainingEmails.length > 0 && (
+            return (
+              <div className="mb-4 space-y-2">
+                {renderThreadMessage(firstEmail)}
+
+                {middleEmails.length > 0 && (
                   <>
-                    {!expandedThreadEmails.has('all') ? (
+                    {!isThreadExpanded ? (
                       <button
                         onClick={() => toggleThreadEmail('all')}
                         className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-dashed border-border/50 transition-colors"
                         data-testid="button-expand-thread"
                       >
                         <ChevronDown className="w-4 h-4" />
-                        <span>{remainingEmails.length} more {remainingEmails.length === 1 ? "message" : "messages"}</span>
+                        <span>{middleEmails.length} more {middleEmails.length === 1 ? "message" : "messages"}</span>
                       </button>
                     ) : (
                       <>
@@ -791,61 +790,20 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
                           <span>Hide messages</span>
                         </button>
                         <div className="space-y-2">
-                          {remainingEmails.map((threadEmail) => {
-                            const threadEmailId = threadEmail.nylasId || threadEmail.id;
-                            const threadInitials = threadEmail.sender
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()
-                              .slice(0, 2);
-                            
-                            return (
-                              <div 
-                                key={threadEmailId}
-                                className="border border-border/40 rounded-lg p-4 bg-muted/10"
-                                data-testid={`thread-email-${threadEmailId}`}
-                              >
-                                <div className="flex items-start gap-3 mb-3">
-                                  <SmartAvatar 
-                                    email={threadEmail.senderEmail}
-                                    name={threadEmail.sender}
-                                    className="w-8 h-8 ring-1 ring-border/30"
-                                    fallbackClassName="text-white font-medium text-xs"
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium text-sm">{threadEmail.sender}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {formatSmartDate(new Date(threadEmail.receivedAt))}
-                                      </span>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">{threadEmail.senderEmail}</p>
-                                  </div>
-                                </div>
-                                <div className="email-body-container">
-                                  {(threadEmail.body || threadEmail.preview || "").includes('<') ? (
-                                    <div 
-                                      className="email-content"
-                                      dangerouslySetInnerHTML={{ __html: formatEmailBody(threadEmail.body || threadEmail.preview || "") }}
-                                    />
-                                  ) : (
-                                    <div className="email-content-plain">
-                                      {(threadEmail.body || threadEmail.preview || "").split("\n").map((p, i) => (
-                                        p.trim() ? <p key={i}>{p}</p> : <br key={i} />
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {middleEmails.map(renderThreadMessage)}
                         </div>
                       </>
                     )}
                   </>
                 )}
-                <ThreadSeparator />
+
+                <div className="flex items-center gap-3 py-3">
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">
+                    {isOwnEmail(email.senderEmail) ? "Your Reply" : "Latest Message"}
+                  </span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-border via-border to-transparent" />
+                </div>
               </div>
             );
           })()}
@@ -860,10 +818,13 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
             />
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-medium text-sm tracking-tight" data-testid="email-sender">
-                  {email.sender}
+                  {isOwnEmail(email.senderEmail) ? "You" : email.sender}
                 </h2>
+                {isOwnEmail(email.senderEmail) && (
+                  <span className="text-[10px] font-medium text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded-full">Sent</span>
+                )}
                 <span className="text-xs text-muted-foreground" data-testid="email-date">
                   {formatSmartDate(new Date(email.receivedAt))}
                 </span>
@@ -1107,15 +1068,6 @@ export function EmailDetail({ email, threadEmails = [], generatedDraft, onClearD
           <div className="mb-6">
             <EmailNotePanel messageId={String((email as any).nylasId || email.id)} />
           </div>
-
-          {/* Show indicator for newer messages in thread */}
-          {hasNewerMessages && (
-            <div className="mt-4 mb-6 p-3 bg-muted/30 rounded-lg border border-border/40" data-testid="newer-messages-indicator">
-              <p className="text-sm text-muted-foreground">
-                {newerEmails.length} newer {newerEmails.length === 1 ? "message" : "messages"} in this conversation
-              </p>
-            </div>
-          )}
 
           {showDraft && (
             <div className="mb-8 p-5 bg-muted/30 rounded-xl border border-border/40" data-testid="ai-draft-container">

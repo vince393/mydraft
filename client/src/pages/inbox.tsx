@@ -927,6 +927,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           <EmailDetail 
             email={selectedEmail ?? null}
             threadEmails={selectedThreadEmails}
+            currentUserEmail={currentUserEmail}
             generatedDraft={generatedDraft} 
             onClearDraft={() => setGeneratedDraft(null)}
             onDraftUpdate={(draft) => setGeneratedDraft(draft)}
