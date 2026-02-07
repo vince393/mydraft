@@ -560,7 +560,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   const isActive = activeFolder === folderId || activeFolder.toLowerCase() === item.title.toLowerCase();
                   const folderKey = item.title.toLowerCase() as keyof UnreadCounts;
                   const folderCount = unreadCounts?.[folderKey] || (item.title === "Inbox" ? unreadCount : 0);
-                  const showCount = folderCount > 0;
+                  const showCount = folderCount > 0 && item.title.toLowerCase() !== "trash";
                   
                   if (!showText) {
                     return (
