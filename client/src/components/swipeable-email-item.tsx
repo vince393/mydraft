@@ -470,7 +470,7 @@ export function SwipeableEmailItem({
               <span className="flex-1" />
               <div className="flex-shrink-0 flex items-center gap-1">
                 {/* Date/time - visible by default, hidden on hover */}
-                <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap group-hover:hidden">
+                <span className={`text-[11px] whitespace-nowrap group-hover:hidden ${!isRead ? "font-medium text-foreground" : "text-muted-foreground/70"}`}>
                   {formatTime(new Date(receivedAt))}
                 </span>
                 {/* Star icon - always visible when starred, placed after date */}
