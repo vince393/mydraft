@@ -562,75 +562,38 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   const folderCount = unreadCounts?.[folderKey] || (item.title === "Inbox" ? unreadCount : 0);
                   const showCount = folderCount > 0;
                   
-                  const categoryItems = item.title === "Inbox" ? [
-                    { id: "category-promotions", label: "Promotions", icon: Megaphone, count: categoryCounts?.promotions || 0 },
-                    { id: "category-updates", label: "Updates", icon: Bell, count: categoryCounts?.updates || 0 },
-                  ] : null;
-                  
                   if (!showText) {
                     return (
-                      <span key={item.title}>
-                        <SidebarMenuItem>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <SidebarMenuButton 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onFolderChange(folderId);
-                                }}
-                                className={`
-                                  w-full justify-center h-11 rounded-xl transition-all duration-200
-                                  ${isActive 
-                                    ? "bg-muted/60 text-foreground" 
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                                  }
-                                `}
-                                data-testid={`nav-${item.title.toLowerCase()}`}
-                              >
-                                <div className="relative">
-                                  <item.icon className="w-[18px] h-[18px]" />
-                                  {showCount && (
-                                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
-                                  )}
-                                </div>
-                              </SidebarMenuButton>
-                            </TooltipTrigger>
-                            <TooltipContent side="right">
-                              {item.title}{showCount ? ` (${folderCount})` : ""}
-                            </TooltipContent>
-                          </Tooltip>
-                        </SidebarMenuItem>
-                        {categoryItems && categoryItems.map(cat => {
-                          const catActive = activeFolder === cat.id;
-                          return (
-                            <SidebarMenuItem key={cat.id}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <SidebarMenuButton
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onFolderChange(cat.id);
-                                    }}
-                                    className={`
-                                      w-full justify-center h-10 rounded-xl transition-all duration-200
-                                      ${catActive
-                                        ? "bg-muted/60 text-foreground"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                                      }
-                                    `}
-                                    data-testid={`nav-${cat.label.toLowerCase()}`}
-                                  >
-                                    <cat.icon className="w-[16px] h-[16px]" />
-                                  </SidebarMenuButton>
-                                </TooltipTrigger>
-                                <TooltipContent side="right">
-                                  {cat.label}{cat.count > 0 ? ` (${cat.count})` : ""}
-                                </TooltipContent>
-                              </Tooltip>
-                            </SidebarMenuItem>
-                          );
-                        })}
-                      </span>
+                      <SidebarMenuItem key={item.title}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SidebarMenuButton 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onFolderChange(folderId);
+                              }}
+                              className={`
+                                w-full justify-center h-11 rounded-xl transition-all duration-200
+                                ${isActive 
+                                  ? "bg-muted/60 text-foreground" 
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                }
+                              `}
+                              data-testid={`nav-${item.title.toLowerCase()}`}
+                            >
+                              <div className="relative">
+                                <item.icon className="w-[18px] h-[18px]" />
+                                {showCount && (
+                                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                                )}
+                              </div>
+                            </SidebarMenuButton>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            {item.title}{showCount ? ` (${folderCount})` : ""}
+                          </TooltipContent>
+                        </Tooltip>
+                      </SidebarMenuItem>
                     );
                   }
                   
@@ -753,42 +716,9 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   }
                   
                   return (
-                    <span key={item.title}>
-                      <SidebarMenuItem>
-                        {folderButton}
-                      </SidebarMenuItem>
-                      {categoryItems && categoryItems.map(cat => {
-                        const catActive = activeFolder === cat.id;
-                        return (
-                          <SidebarMenuItem key={cat.id}>
-                            <SidebarMenuButton
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFolderClick(cat.id);
-                              }}
-                              className={`
-                                w-full justify-between h-11 rounded-xl transition-all duration-200
-                                ${catActive
-                                  ? "bg-muted/60 text-foreground"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                                }
-                              `}
-                              data-testid={`nav-${cat.label.toLowerCase()}`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <cat.icon className="w-[18px] h-[18px]" />
-                                <span className={`text-sm ${catActive ? "font-medium" : ""}`}>{cat.label}</span>
-                              </div>
-                              {cat.count > 0 && (
-                                <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
-                                  {cat.count}
-                                </Badge>
-                              )}
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        );
-                      })}
-                    </span>
+                    <SidebarMenuItem key={item.title}>
+                      {folderButton}
+                    </SidebarMenuItem>
                   );
                 })}
 
