@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Mic, MicOff, X, Volume2, VolumeX, Loader2, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,18 +14,16 @@ interface ConversationMessage {
   content: string;
 }
 
-const VINCE = { id: "vince", name: "Vince", color: "from-blue-500 to-purple-600" };
-
 type ConversationState = "idle" | "listening" | "processing" | "speaking";
 
 export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
   const [conversationState, setConversationState] = useState<ConversationState>("idle");
   const [transcript, setTranscript] = useState("");
-  const [lastResponse, setLastResponse] = useState("");
   const [isMuted, setIsMuted] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+  const [callDuration, setCallDuration] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -42,10 +39,12 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
   const hasSpokenRef = useRef(false);
   const speechStartTimeRef = useRef<number | null>(null);
   const conversationStateRef = useRef<ConversationState>("idle");
+  const callTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   const SILENCE_THRESHOLD = 0.025;
   const SPEECH_THRESHOLD = 0.04;
-  const SILENCE_DURATION = 1000;
+  const SILENCE_DURATION = 1200;
   const MIN_SPEECH_DURATION = 150;
 
   useEffect(() => {
@@ -60,13 +59,40 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     conversationStateRef.current = conversationState;
   }, [conversationState]);
 
-  const currentVoice = VINCE;
+  useEffect(() => {
+    if (open) {
+      setCallDuration(0);
+      callTimerRef.current = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+      }
+    };
+  }, [open]);
+
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [conversationHistory, transcript]);
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
 
   const resumeListening = useCallback(() => {
     if (openRef.current) {
       setTimeout(() => {
         startListeningRef.current();
-      }, 200);
+      }, 300);
     }
   }, []);
 
@@ -145,7 +171,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
           { role: "assistant", content: data.response },
         ]);
         
-        setLastResponse(data.response);
+        setTranscript("");
         
         if (data.audio) {
           playAudioResponse(data.audio);
@@ -209,7 +235,6 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
             setTranscript(transcribedText);
             sendVoiceMessage(transcribedText);
           } else {
-            // Silently restart listening - no error message
             setConversationState("idle");
             resumeListening();
           }
@@ -218,7 +243,6 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
           if (errorData.requiredPlan) {
             setError("Voice features require a Premium plan");
           } else {
-            // Silently restart listening instead of showing error
             setConversationState("idle");
             resumeListening();
           }
@@ -265,7 +289,6 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
         silenceTimerRef.current = null;
       }
     } else {
-      // If audio drops below speech threshold and user has spoken, start silence timer
       if (hasSpokenRef.current && !silenceTimerRef.current) {
         silenceTimerRef.current = setTimeout(() => {
           stopListening();
@@ -278,7 +301,6 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
   }, [stopListening, stopAudioPlayback]);
 
   const startListening = useCallback(async () => {
-    // Use ref to check latest state, not stale closure value
     if (conversationStateRef.current !== "idle") return;
     
     setError(null);
@@ -347,8 +369,9 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     stopListening();
     setConversationState("idle");
     setTranscript("");
-    setLastResponse("");
     setConversationHistory([]);
+    setCallDuration(0);
+    setAudioLevel(0);
     onOpenChange(false);
   }, [stopListening, stopAudioPlayback, onOpenChange]);
 
@@ -363,7 +386,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
     if (open) {
       const timer = setTimeout(() => {
         startListening();
-      }, 300);
+      }, 500);
       return () => clearTimeout(timer);
     } else {
       stopListening();
@@ -384,134 +407,290 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
       case "listening":
         return "Listening...";
       case "processing":
-        return "Vince is thinking...";
+        return "Thinking...";
       case "speaking":
-        return "Vince is speaking...";
+        return "Speaking...";
       default:
-        return "Tap to speak";
+        return "Tap mic to speak";
     }
   };
 
-  const pulseScale = 1 + audioLevel * 0.5;
+  const getStatusColor = () => {
+    switch (conversationState) {
+      case "listening":
+        return "text-green-400";
+      case "processing":
+        return "text-amber-400";
+      case "speaking":
+        return "text-blue-400";
+      default:
+        return "text-white/40";
+    }
+  };
+
+  const ringScale = 1 + audioLevel * 0.6;
+  const outerRingScale = 1 + audioLevel * 1.0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-md p-0 gap-0 bg-gradient-to-b from-background to-muted/50 overflow-hidden"
+        className="sm:max-w-md p-0 gap-0 overflow-hidden border-0"
+        style={{
+          background: "rgba(10, 10, 16, 0.95)",
+          backdropFilter: "blur(40px)",
+          WebkitBackdropFilter: "blur(40px)",
+          borderRadius: "20px",
+          border: "1px solid rgba(255, 255, 255, 0.06)",
+          maxHeight: "90vh",
+        }}
         data-testid="modal-voice-chat"
         hideCloseButton
       >
-        <div className="flex flex-col items-center justify-center min-h-[500px] p-6">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="absolute top-4 right-4 h-8 w-8 rounded-full"
-            onClick={endCall}
-            data-testid="button-close-voice"
+        <div className="flex flex-col h-[600px]">
+          {/* Header */}
+          <div 
+            className="flex items-center justify-between px-5 py-3 shrink-0"
+            style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}
           >
-            <X className="w-4 h-4" />
-          </Button>
-
-          <div className="flex-1 flex flex-col items-center justify-center gap-8">
-            <div className="relative">
-              <div 
-                className={cn(
-                  "absolute inset-0 rounded-full bg-gradient-to-br opacity-30 blur-xl transition-transform duration-100",
-                  currentVoice.color
-                )}
-                style={{ transform: `scale(${pulseScale})` }}
-              />
-              <div 
-                className={cn(
-                  "absolute inset-0 rounded-full bg-gradient-to-br opacity-20 blur-md transition-transform duration-100",
-                  currentVoice.color
-                )}
-                style={{ transform: `scale(${1 + pulseScale * 0.2})` }}
-              />
-              <Avatar 
-                className={cn(
-                  "w-32 h-32 ring-4 ring-white/[0.06] cursor-pointer transition-all",
-                  conversationState === "listening" && "ring-green-500/50",
-                  conversationState === "speaking" && "ring-blue-500/50"
-                )}
-                onClick={() => conversationState === "idle" && startListening()}
-              >
-                <AvatarFallback className={cn("text-4xl font-bold text-white bg-gradient-to-br", currentVoice.color)}>
-                  {currentVoice.name[0]}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-semibold">{currentVoice.name}</h2>
-              <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-                {conversationState === "processing" && <Loader2 className="w-4 h-4 animate-spin" />}
-                {getStatusText()}
-              </p>
-            </div>
-
-            {transcript && (
-              <div className="bg-white/[0.03] rounded-xl p-3 max-w-sm text-center">
-                <p className="text-xs text-muted-foreground mb-1">You said:</p>
-                <p className="text-sm">{transcript}</p>
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <div>
+                <p className="text-sm font-medium text-white">Vince</p>
+                <p className="text-[11px] text-white/30">{formatDuration(callDuration)}</p>
               </div>
-            )}
-
-            {lastResponse && conversationState === "speaking" && (
-              <div className="bg-primary/10 rounded-xl p-4 max-w-sm text-center">
-                <p className="text-sm line-clamp-4">{lastResponse}</p>
-              </div>
-            )}
-
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-white/40 hover:text-white/70"
+              onClick={endCall}
+              data-testid="button-close-voice"
+            >
+              <X className="w-4 h-4" />
+            </Button>
           </div>
 
-          <div className="flex items-center gap-4 mt-8">
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-12 w-12 rounded-full"
-              onClick={toggleMute}
-              data-testid="button-toggle-mute"
-            >
-              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-            </Button>
+          {/* Conversation Transcript */}
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-5 py-4">
+            {conversationHistory.length === 0 && !transcript && conversationState === "idle" && (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div 
+                  className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3))",
+                    border: "1px solid rgba(99, 102, 241, 0.2)",
+                  }}
+                >
+                  <Mic className="w-7 h-7 text-indigo-300/70" />
+                </div>
+                <p className="text-sm text-white/50 mb-1">Voice Call with Vince</p>
+                <p className="text-xs text-white/25 max-w-[200px]">
+                  Just start talking. Vince will listen and respond naturally.
+                </p>
+              </div>
+            )}
 
-            <Button
-              size="icon"
-              variant={conversationState === "listening" ? "default" : "outline"}
-              className={cn(
-                "h-16 w-16 rounded-full transition-all",
-                conversationState === "listening" && "bg-green-500 hover:bg-green-600 animate-pulse"
-              )}
-              onClick={() => {
-                if (conversationState === "idle") {
-                  startListening();
-                } else if (conversationState === "listening") {
-                  stopListening();
-                }
-              }}
-              disabled={conversationState === "processing" || conversationState === "speaking"}
-              data-testid="button-mic-toggle"
-            >
-              {conversationState === "listening" ? (
-                <Mic className="w-6 h-6" />
-              ) : (
-                <MicOff className="w-6 h-6" />
-              )}
-            </Button>
+            {conversationHistory.length > 0 && (
+              <div className="space-y-4">
+                {conversationHistory.map((msg, i) => (
+                  <div key={i} className={cn("flex flex-col gap-1", msg.role === "user" && "items-end")}>
+                    <p className="text-[10px] text-white/25 px-1">
+                      {msg.role === "user" ? "You" : "Vince"}
+                    </p>
+                    <div
+                      className="text-[13px] leading-relaxed rounded-2xl px-4 py-2.5 max-w-[85%]"
+                      style={
+                        msg.role === "user"
+                          ? {
+                              background: "linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(79, 70, 229, 0.45))",
+                              color: "rgba(255, 255, 255, 0.9)",
+                              border: "1px solid rgba(129, 140, 248, 0.15)",
+                            }
+                          : {
+                              background: "rgba(255, 255, 255, 0.04)",
+                              color: "rgba(255, 255, 255, 0.75)",
+                              border: "1px solid rgba(255, 255, 255, 0.06)",
+                            }
+                      }
+                      data-testid={`voice-message-${msg.role}-${i}`}
+                    >
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            <Button
-              size="icon"
-              variant="destructive"
-              className="h-12 w-12 rounded-full"
-              onClick={endCall}
-              data-testid="button-end-call"
-            >
-              <Phone className="w-5 h-5 rotate-[135deg]" />
-            </Button>
+            {/* Live transcript of what user is saying */}
+            {transcript && (
+              <div className={cn("flex flex-col items-end gap-1", conversationHistory.length > 0 && "mt-4")}>
+                <p className="text-[10px] text-white/25 px-1">You</p>
+                <div
+                  className="text-[13px] leading-relaxed rounded-2xl px-4 py-2.5 max-w-[85%]"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.35))",
+                    color: "rgba(255, 255, 255, 0.7)",
+                    border: "1px solid rgba(129, 140, 248, 0.1)",
+                  }}
+                  data-testid="voice-transcript-live"
+                >
+                  {transcript}
+                </div>
+              </div>
+            )}
+
+            {/* Processing indicator */}
+            {conversationState === "processing" && (
+              <div className={cn("flex flex-col gap-1", conversationHistory.length > 0 && "mt-4")}>
+                <p className="text-[10px] text-white/25 px-1">Vince</p>
+                <div
+                  className="rounded-2xl px-4 py-2.5 max-w-[85%]"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.04)",
+                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <span className="w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={transcriptEndRef} />
+          </div>
+
+          {/* Status + Visualizer */}
+          <div className="shrink-0 flex flex-col items-center py-4 px-5 gap-3"
+            style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}
+          >
+            {/* Audio visualizer ring */}
+            <div className="relative w-20 h-20 flex items-center justify-center">
+              <div 
+                className="absolute inset-0 rounded-full transition-transform duration-75"
+                style={{ 
+                  transform: `scale(${outerRingScale})`,
+                  background: conversationState === "listening" 
+                    ? `radial-gradient(circle, rgba(34, 197, 94, ${0.05 + audioLevel * 0.15}) 0%, transparent 70%)`
+                    : conversationState === "speaking"
+                    ? `radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%)`
+                    : "transparent",
+                }}
+              />
+              <div 
+                className="absolute inset-2 rounded-full transition-transform duration-75"
+                style={{ 
+                  transform: `scale(${ringScale})`,
+                  border: conversationState === "listening" 
+                    ? `2px solid rgba(34, 197, 94, ${0.3 + audioLevel * 0.5})`
+                    : conversationState === "speaking"
+                    ? "2px solid rgba(99, 102, 241, 0.3)"
+                    : "2px solid rgba(255, 255, 255, 0.08)",
+                }}
+              />
+              <div 
+                className={cn(
+                  "w-14 h-14 rounded-full flex items-center justify-center cursor-pointer transition-all",
+                )}
+                style={{
+                  background: conversationState === "listening"
+                    ? "linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3))"
+                    : conversationState === "speaking"
+                    ? "linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(79, 70, 229, 0.3))"
+                    : conversationState === "processing"
+                    ? "linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.2))"
+                    : "rgba(255, 255, 255, 0.05)",
+                  border: conversationState === "listening"
+                    ? "1px solid rgba(34, 197, 94, 0.3)"
+                    : conversationState === "speaking"
+                    ? "1px solid rgba(99, 102, 241, 0.2)"
+                    : "1px solid rgba(255, 255, 255, 0.08)",
+                }}
+                onClick={() => {
+                  if (conversationState === "idle") startListening();
+                  else if (conversationState === "listening") stopListening();
+                  else if (conversationState === "speaking") {
+                    stopAudioPlayback();
+                    setConversationState("idle");
+                    resumeListening();
+                  }
+                }}
+                data-testid="button-mic-toggle"
+              >
+                {conversationState === "processing" ? (
+                  <Loader2 className="w-5 h-5 text-amber-400/70 animate-spin" />
+                ) : conversationState === "listening" ? (
+                  <Mic className="w-5 h-5 text-green-400" />
+                ) : conversationState === "speaking" ? (
+                  <Volume2 className="w-5 h-5 text-indigo-300" />
+                ) : (
+                  <Mic className="w-5 h-5 text-white/40" />
+                )}
+              </div>
+            </div>
+
+            <p className={cn("text-xs font-medium transition-colors", getStatusColor())}>
+              {getStatusText()}
+            </p>
+
+            {error && (
+              <p className="text-xs text-red-400/70">{error}</p>
+            )}
+
+            {/* Call Controls */}
+            <div className="flex items-center gap-3">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-full text-white/40 hover:text-white/70"
+                style={{
+                  background: isMuted ? "rgba(239, 68, 68, 0.15)" : "rgba(255, 255, 255, 0.05)",
+                  border: isMuted ? "1px solid rgba(239, 68, 68, 0.2)" : "1px solid rgba(255, 255, 255, 0.06)",
+                }}
+                onClick={toggleMute}
+                data-testid="button-toggle-mute"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 text-red-400/70" /> : <Volume2 className="w-4 h-4" />}
+              </Button>
+
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-12 w-12 rounded-full"
+                style={{
+                  background: "rgba(239, 68, 68, 0.2)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                }}
+                onClick={endCall}
+                data-testid="button-end-call"
+              >
+                <Phone className="w-5 h-5 text-red-400 rotate-[135deg]" />
+              </Button>
+
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-full text-white/40 hover:text-white/70"
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.06)",
+                }}
+                onClick={() => {
+                  if (conversationState === "speaking") {
+                    stopAudioPlayback();
+                    setConversationState("idle");
+                    resumeListening();
+                  }
+                }}
+                disabled={conversationState !== "speaking"}
+                data-testid="button-skip-response"
+              >
+                <MicOff className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

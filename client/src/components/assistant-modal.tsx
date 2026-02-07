@@ -93,6 +93,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [optimisticMessage, setOptimisticMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { hasPremium } = usePlan();
@@ -236,8 +237,12 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
       return response.json();
     },
     onSuccess: () => {
+      setOptimisticMessage(null);
       queryClient.invalidateQueries({ queryKey: ["/api/assistant/messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ai/context"] });
+    },
+    onError: () => {
+      setOptimisticMessage(null);
     },
   });
 
@@ -279,7 +284,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, optimisticMessage]);
 
   useEffect(() => {
     if (open && inputRef.current) {
@@ -293,7 +298,9 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
 
   const handleSendMessage = () => {
     if (!message.trim() || sendMessageMutation.isPending) return;
-    sendMessageMutation.mutate(message.trim());
+    const trimmed = message.trim();
+    setOptimisticMessage(trimmed);
+    sendMessageMutation.mutate(trimmed);
     setMessage("");
   };
 
@@ -619,6 +626,23 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
               ))
             )}
             
+            {/* Optimistic user message (shown immediately before AI responds) */}
+            {optimisticMessage && (
+              <div className="flex flex-col gap-1.5 items-end">
+                <div
+                  className="text-[13px] leading-relaxed rounded-2xl px-4 py-3 max-w-[85%] break-words"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(99, 102, 241, 0.45), rgba(79, 70, 229, 0.55))",
+                    color: "rgba(255, 255, 255, 0.95)",
+                    border: "1px solid rgba(129, 140, 248, 0.2)",
+                  }}
+                  data-testid="message-user-optimistic"
+                >
+                  <div className="whitespace-pre-wrap">{optimisticMessage}</div>
+                </div>
+              </div>
+            )}
+
             {/* Typing indicator */}
             {sendMessageMutation.isPending && (
               <div className="flex flex-col gap-1">
