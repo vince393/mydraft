@@ -352,7 +352,7 @@ export function MultiEmailResponseModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 border-white/15 dark:border-white/10 backdrop-blur-3xl bg-background/80 rounded-2xl overflow-hidden">
+      <DialogContent hideCloseButton className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 border-white/15 dark:border-white/10 backdrop-blur-3xl bg-background/80 rounded-2xl overflow-hidden">
         
         {/* Header */}
         <div className="px-5 py-4 border-b border-white/10">

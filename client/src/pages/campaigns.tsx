@@ -38,8 +38,11 @@ import {
   Clock,
   Loader2,
   Upload,
-  X,
-  FileSpreadsheet,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Lightbulb,
+  Zap,
 } from "lucide-react";
 import type { EmailCampaign, CampaignRecipient } from "@shared/schema";
 
@@ -204,20 +207,9 @@ export default function CampaignsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "draft":
-        return <Badge variant="outline" className="border-white/[0.1] text-muted-foreground">Draft</Badge>;
-      case "sending":
-        return <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">Sending</Badge>;
-      case "completed":
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Completed</Badge>;
-      case "paused":
-        return <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30">Paused</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  const totalSent = campaigns.reduce((sum, c) => sum + (c.sentCount || 0), 0);
+  const totalRecipients = campaigns.reduce((sum, c) => sum + (c.totalRecipients || 0), 0);
+  const draftCount = campaigns.filter(c => c.status === "draft").length;
 
   if (isLoading) {
     return (
@@ -231,69 +223,195 @@ export default function CampaignsPage() {
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
+            <button
               onClick={() => setLocation("/inbox")}
+              className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all cursor-pointer"
               data-testid="button-back-inbox"
             >
               <ArrowLeft className="w-4 h-4" />
-            </Button>
+            </button>
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">Campaigns</h1>
-              <p className="text-muted-foreground/60 text-xs mt-0.5">Bulk email outreach</p>
+              <h1 className="text-lg font-semibold tracking-tight">Campaigns</h1>
+              <p className="text-foreground/40 text-xs mt-0.5">Bulk email outreach</p>
             </div>
           </div>
-          <Button
+          <button
             onClick={() => setShowCreateDialog(true)}
+            className="h-9 px-4 rounded-full text-xs font-medium border border-primary/25 text-white transition-all cursor-pointer flex items-center gap-2"
+            style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(147,51,234,0.3))" }}
             data-testid="button-create-campaign"
-            className="gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
             New Campaign
-          </Button>
+          </button>
         </div>
 
+        {/* Stats row */}
+        {campaigns.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {[
+              { label: "Total Campaigns", value: campaigns.length, icon: Mail, color: "from-blue-500/15 to-blue-600/10", borderColor: "border-blue-500/15" },
+              { label: "Emails Sent", value: totalSent, icon: Send, color: "from-emerald-500/15 to-emerald-600/10", borderColor: "border-emerald-500/15" },
+              { label: "Recipients", value: totalRecipients, icon: Users, color: "from-purple-500/15 to-purple-600/10", borderColor: "border-purple-500/15" },
+              { label: "Drafts Ready", value: draftCount, icon: Clock, color: "from-amber-500/15 to-amber-600/10", borderColor: "border-amber-500/15" },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className={`rounded-xl border ${stat.borderColor} backdrop-blur-sm p-3.5`}
+                style={{ background: "rgba(255,255,255,0.02)" }}
+                data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, '-')}`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div 
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center bg-gradient-to-br ${stat.color}`}
+                  >
+                    <stat.icon className="w-3.5 h-3.5 text-foreground/60" />
+                  </div>
+                </div>
+                <div className="text-xl font-semibold tabular-nums">{stat.value}</div>
+                <div className="text-[10px] text-foreground/40 font-medium uppercase tracking-wider mt-0.5">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {campaigns.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mb-5">
-              <Mail className="w-7 h-7 text-muted-foreground/40" />
+          <div className="space-y-6">
+            {/* Empty state hero */}
+            <div 
+              className="flex flex-col items-center justify-center py-16 rounded-2xl border border-white/10 backdrop-blur-sm"
+              style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))" }}
+            >
+              <div 
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 border border-primary/15"
+                style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.1), rgba(147,51,234,0.1))" }}
+              >
+                <Mail className="w-7 h-7 text-primary/60" />
+              </div>
+              <h3 className="text-base font-medium mb-1.5">No campaigns yet</h3>
+              <p className="text-foreground/40 text-sm mb-6 text-center max-w-sm">
+                Create your first email campaign to reach your audience at scale
+              </p>
+              <button
+                onClick={() => setShowCreateDialog(true)}
+                className="h-9 px-5 rounded-full text-xs font-medium border border-primary/25 text-white transition-all cursor-pointer flex items-center gap-2"
+                style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(147,51,234,0.3))" }}
+                data-testid="button-create-first-campaign"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Create Your First Campaign
+              </button>
             </div>
-            <h3 className="text-base font-medium mb-1.5">No campaigns yet</h3>
-            <p className="text-muted-foreground/50 text-sm mb-6 text-center max-w-sm">
-              Create your first email campaign to start reaching your audience
-            </p>
-            <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-first-campaign">
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
-              Create Campaign
-            </Button>
+
+            {/* Campaign ideas */}
+            <div>
+              <h3 className="text-xs font-medium text-foreground/40 uppercase tracking-wider mb-3">Campaign Ideas</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {[
+                  { 
+                    icon: Sparkles, 
+                    title: "Welcome Series", 
+                    desc: "Onboard new subscribers with a warm introduction and key resources",
+                    color: "from-blue-500/15 to-cyan-500/10",
+                    borderColor: "border-blue-500/10"
+                  },
+                  { 
+                    icon: TrendingUp, 
+                    title: "Monthly Newsletter", 
+                    desc: "Share updates, insights, and curated content with your audience",
+                    color: "from-emerald-500/15 to-green-500/10",
+                    borderColor: "border-emerald-500/10"
+                  },
+                  { 
+                    icon: Target, 
+                    title: "Product Launch", 
+                    desc: "Build excitement and drive early adoption for new features or products",
+                    color: "from-purple-500/15 to-pink-500/10",
+                    borderColor: "border-purple-500/10"
+                  },
+                ].map((idea) => (
+                  <button
+                    key={idea.title}
+                    onClick={() => {
+                      setNewCampaign({ name: idea.title, subject: "", body: "" });
+                      setShowCreateDialog(true);
+                    }}
+                    className={`rounded-xl border ${idea.borderColor} backdrop-blur-sm p-4 text-left transition-all hover:border-white/15 cursor-pointer group`}
+                    style={{ background: "rgba(255,255,255,0.02)" }}
+                    data-testid={`idea-${idea.title.toLowerCase().replace(/\s/g, '-')}`}
+                  >
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br ${idea.color} mb-3`}>
+                      <idea.icon className="w-4 h-4 text-foreground/60" />
+                    </div>
+                    <h4 className="text-sm font-medium mb-1 group-hover:text-foreground/90 transition-colors">{idea.title}</h4>
+                    <p className="text-[11px] text-foreground/35 leading-relaxed">{idea.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tips */}
+            <div 
+              className="rounded-xl border border-white/8 backdrop-blur-sm p-4"
+              style={{ background: "rgba(255,255,255,0.02)" }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Lightbulb className="w-3.5 h-3.5 text-amber-400/60" />
+                <span className="text-xs font-medium text-foreground/50">Quick Tips</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {[
+                  "Personalize subject lines for 26% higher open rates",
+                  "Send campaigns between 9-11 AM for best engagement",
+                  "Keep emails under 200 words for better click-through",
+                  "A/B test subject lines with small batches first",
+                ].map((tip, i) => (
+                  <div key={i} className="flex items-start gap-2 text-[11px] text-foreground/35">
+                    <Zap className="w-3 h-3 text-amber-400/40 flex-shrink-0 mt-0.5" />
+                    <span>{tip}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
             {campaigns.map((campaign) => (
               <div
                 key={campaign.id}
-                className="group rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors p-4"
+                className="group rounded-xl border border-white/[0.06] backdrop-blur-sm transition-all hover:border-white/10 p-4"
+                style={{ background: "rgba(255,255,255,0.02)" }}
                 data-testid={`campaign-card-${campaign.id}`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5 mb-1">
+                    <div className="flex items-center gap-2.5 mb-1 flex-wrap">
                       <h3 className="text-sm font-medium truncate">{campaign.name}</h3>
-                      {getStatusBadge(campaign.status)}
+                      {campaign.status === "draft" && (
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10 text-foreground/40" style={{ background: "rgba(255,255,255,0.03)" }}>Draft</span>
+                      )}
+                      {campaign.status === "sending" && (
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-blue-500/20 text-blue-400" style={{ background: "rgba(59,130,246,0.1)" }}>Sending</span>
+                      )}
+                      {campaign.status === "completed" && (
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400" style={{ background: "rgba(16,185,129,0.1)" }}>Completed</span>
+                      )}
+                      {campaign.status === "paused" && (
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-amber-500/20 text-amber-400" style={{ background: "rgba(245,158,11,0.1)" }}>Paused</span>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground/50 truncate">{campaign.subject}</p>
+                    <p className="text-xs text-foreground/35 truncate">{campaign.subject}</p>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground/40">
+                  <div className="flex items-center gap-1.5 text-xs text-foreground/30">
                     <Users className="w-3.5 h-3.5" />
-                    <span>{campaign.totalRecipients}</span>
+                    <span className="tabular-nums">{campaign.totalRecipients}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.04]">
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground/40">
+                  <div className="flex items-center gap-3 text-xs text-foreground/30">
                     {campaign.status === "completed" && (
                       <>
                         <div className="flex items-center gap-1">
@@ -323,53 +441,47 @@ export default function CampaignsPage() {
                   </div>
                   {campaign.status === "draft" && (
                     <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
                         onClick={() => handleOpenRecipients(campaign)}
+                        className="h-7 px-2.5 rounded-full text-[11px] font-medium bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer flex items-center gap-1"
                         data-testid={`button-manage-recipients-${campaign.id}`}
-                        className="text-xs h-7 px-2 gap-1"
                       >
                         <Users className="w-3 h-3" />
                         Recipients
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      </button>
+                      <button
                         onClick={() => {
                           setSelectedCampaign(campaign);
                           setShowEditDialog(true);
                         }}
+                        className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer"
                         data-testid={`button-edit-campaign-${campaign.id}`}
-                        className="h-7 w-7"
                       >
                         <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      </button>
+                      <button
                         onClick={() => {
                           setSelectedCampaign(campaign);
                           setShowDeleteDialog(true);
                         }}
+                        className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-foreground/50 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all cursor-pointer"
                         data-testid={`button-delete-campaign-${campaign.id}`}
-                        className="h-7 w-7 text-muted-foreground hover:text-red-400"
                       >
                         <Trash2 className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
+                      </button>
+                      <button
                         onClick={() => {
                           setSelectedCampaign(campaign);
                           setShowSendConfirmDialog(true);
                         }}
                         disabled={campaign.totalRecipients === 0}
+                        className="h-7 px-3 rounded-full text-[11px] font-medium border border-primary/20 text-primary hover:bg-primary/10 transition-all cursor-pointer flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                        style={{ background: "rgba(59,130,246,0.08)" }}
                         data-testid={`button-send-campaign-${campaign.id}`}
-                        className="text-xs h-7 px-3 gap-1"
                       >
                         <Send className="w-3 h-3" />
                         Send
-                      </Button>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -520,7 +632,7 @@ export default function CampaignsPage() {
                   />
                   <Button
                     size="sm"
-                    className="mt-2 text-xs h-7 gap-1"
+                    className="mt-2 text-xs gap-1"
                     onClick={handleAddRecipients}
                     disabled={!newRecipients.trim() || addRecipientsMutation.isPending}
                   >
@@ -532,7 +644,7 @@ export default function CampaignsPage() {
                 <div className="border-t border-white/[0.04] pt-4">
                   <label className="text-xs font-medium text-muted-foreground/70 mb-1.5 block">Upload CSV</label>
                   <p className="text-[10px] text-muted-foreground/40 mb-2">CSV columns: email, name (optional)</p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Input
                       type="file"
                       accept=".csv"
@@ -542,7 +654,7 @@ export default function CampaignsPage() {
                     />
                     <Button
                       size="sm"
-                      className="text-xs h-7 gap-1"
+                      className="text-xs gap-1"
                       onClick={handleCsvUpload}
                       disabled={!csvFile || addRecipientsMutation.isPending}
                     >
@@ -555,7 +667,7 @@ export default function CampaignsPage() {
 
               {selectedCampaign?.recipients && selectedCampaign.recipients.length > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
                     <span className="text-xs font-medium text-muted-foreground/70">
                       Recipients ({selectedCampaign.recipients.length})
                     </span>
@@ -564,7 +676,7 @@ export default function CampaignsPage() {
                       size="sm"
                       onClick={() => selectedCampaign && clearRecipientsMutation.mutate(selectedCampaign.id)}
                       disabled={clearRecipientsMutation.isPending}
-                      className="text-xs h-6 px-2 gap-1 text-muted-foreground/50 hover:text-red-400"
+                      className="text-xs gap-1 text-muted-foreground/50 hover:text-red-400"
                     >
                       <Trash2 className="w-3 h-3" />
                       Clear All
@@ -583,7 +695,7 @@ export default function CampaignsPage() {
                             <span className="text-[10px] text-muted-foreground/40 ml-2">({recipient.name})</span>
                           )}
                         </div>
-                        <Badge variant="outline" className="text-[10px] border-white/[0.08] text-muted-foreground/50 h-5">
+                        <Badge variant="outline" className="text-[10px] border-white/[0.08] text-muted-foreground/50">
                           {recipient.status}
                         </Badge>
                       </div>

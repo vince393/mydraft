@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Sparkles, Menu } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Menu } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -835,19 +835,6 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                 >
                   <Megaphone className="w-4 h-4" />
                   <span className="hidden lg:inline">Campaigns</span>
-                </Button>
-              )}
-              {!screen.isMobile && onOpenAssistant && isAIChatEnabled && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onOpenAssistant}
-                  className="relative"
-                  data-testid="button-vince-header"
-                >
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-                    <Sparkles className="w-3.5 h-3.5 text-white" />
-                  </div>
                 </Button>
               )}
               {!screen.isMobile && <NotificationBell />}
