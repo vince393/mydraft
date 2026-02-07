@@ -266,9 +266,9 @@ export function SwipeableEmailItem({
     border: '1px solid rgba(255,255,255,0.15)',
   });
 
-  const redBg = 'linear-gradient(145deg, rgba(248,80,80,0.92) 0%, rgba(200,30,30,0.95) 50%, rgba(160,20,20,0.9) 100%)';
-  const greenBg = 'linear-gradient(145deg, rgba(52,211,110,0.9) 0%, rgba(22,163,74,0.95) 100%)';
-  const neutralBg = 'linear-gradient(145deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)';
+  const redBg = 'linear-gradient(145deg, rgba(220,50,50,0.55) 0%, rgba(160,25,25,0.6) 50%, rgba(120,15,15,0.55) 100%)';
+  const greenBg = 'linear-gradient(145deg, rgba(40,180,90,0.5) 0%, rgba(20,140,60,0.55) 100%)';
+  const neutralBg = 'linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)';
 
   const renderLeftAction = () => {
     if (isTrashFolder) {
@@ -419,12 +419,6 @@ export function SwipeableEmailItem({
               <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
               {isStarred ? "Unstar" : "Star"}
             </DropdownMenuItem>
-            {onToggleFlag && (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFlag(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-flag-${emailId}`}>
-                <Flag className={`w-4 h-4 mr-2 ${isFlagged ? "fill-orange-400 text-orange-400" : ""}`} />
-                {isFlagged ? "Unflag" : "Flag"}
-              </DropdownMenuItem>
-            )}
           </DropdownMenuContent>
         </DropdownMenu>
         {deleteButtonWidth > 0 && (
