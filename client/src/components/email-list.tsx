@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare, Tag, Bell } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { SwipeableEmailItem } from "@/components/swipeable-email-item";
 import { AiInboxRefreshButton } from "@/components/ai-inbox-refresh";
+import { categorizeEmail, getCategoryFromFolder, type EmailCategory } from "@/lib/email-categories";
 import type { Email } from "@shared/schema";
 
 interface EmailWithNylasId extends Email {
@@ -22,59 +23,6 @@ interface EmailWithNylasId extends Email {
 
 function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
-}
-
-type EmailCategory = "primary" | "promotions" | "updates";
-
-const PROMOTION_KEYWORDS = [
-  "unsubscribe", "opt out", "opt-out", "promotional", "sale", "discount", 
-  "offer", "deal", "coupon", "promo", "% off", "free shipping", "limited time",
-  "shop now", "buy now", "order now", "special offer", "exclusive",
-  "newsletter", "marketing", "advertisement"
-];
-
-const PROMOTION_SENDERS = [
-  "noreply", "no-reply", "marketing", "promo", "deals", "offers", "shop",
-  "store", "sales", "newsletter", "info@", "hello@", "news@"
-];
-
-const UPDATE_KEYWORDS = [
-  "your order", "order confirmation", "shipping", "delivery", "tracking",
-  "account", "password", "verify", "confirm", "notification", "alert",
-  "receipt", "invoice", "payment", "subscription", "billing", "statement",
-  "security", "update", "changed", "logged in", "signed in"
-];
-
-const UPDATE_SENDERS = [
-  "notifications", "notification", "updates", "alert", "security",
-  "support", "billing", "accounts", "service", "system"
-];
-
-function categorizeEmail(email: EmailWithNylasId): EmailCategory {
-  const senderEmail = (email.senderEmail || "").toLowerCase();
-  const subject = (email.subject || "").toLowerCase();
-  const preview = (email.preview || "").toLowerCase();
-  const body = (email.body || "").toLowerCase();
-  const content = `${subject} ${preview} ${body}`;
-
-  const senderLocal = senderEmail.split("@")[0] || "";
-
-  if (PROMOTION_SENDERS.some(s => senderLocal.includes(s)) && 
-      PROMOTION_KEYWORDS.some(k => content.includes(k))) {
-    return "promotions";
-  }
-  if (PROMOTION_KEYWORDS.filter(k => content.includes(k)).length >= 2) {
-    return "promotions";
-  }
-
-  if (UPDATE_SENDERS.some(s => senderLocal.includes(s))) {
-    return "updates";
-  }
-  if (UPDATE_KEYWORDS.filter(k => content.includes(k)).length >= 2) {
-    return "updates";
-  }
-
-  return "primary";
 }
 
 function formatEmailTime(date: Date): string {
@@ -202,7 +150,8 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     sender: "",
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<EmailCategory>("primary");
+  const activeCategory = getCategoryFromFolder(activeFolder || "inbox");
+  const isInCategoryView = activeCategory !== null;
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const pullThreshold = 60;
@@ -282,21 +231,10 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     return result;
   }, [emails, searchQuery, filters]);
 
-  const isInboxFolder = activeFolder?.toLowerCase() === "inbox";
-
-  const categoryCounts = useMemo(() => {
-    if (!isInboxFolder) return { primary: 0, promotions: 0, updates: 0 };
-    const counts = { primary: 0, promotions: 0, updates: 0 };
-    filteredEmails.forEach(email => {
-      counts[categorizeEmail(email)]++;
-    });
-    return counts;
-  }, [filteredEmails, isInboxFolder]);
-
   const categoryFilteredEmails = useMemo(() => {
-    if (!isInboxFolder) return filteredEmails;
+    if (!activeCategory) return filteredEmails;
     return filteredEmails.filter(email => categorizeEmail(email) === activeCategory);
-  }, [filteredEmails, activeCategory, isInboxFolder]);
+  }, [filteredEmails, activeCategory]);
 
   const clearFilters = () => {
     setFilters({ unreadOnly: false, dateRange: "all", sender: "" });
@@ -689,41 +627,10 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </button>
         </div>
       )}
-      {/* Category tabs - only show in inbox */}
-      {isInboxFolder && (
-        <div className="flex items-center border-b border-border/20 mt-14 px-2 relative z-10 bg-background">
-          {([
-            { key: "primary" as EmailCategory, label: "Primary", icon: Mail },
-            { key: "promotions" as EmailCategory, label: "Promotions", icon: Tag },
-            { key: "updates" as EmailCategory, label: "Updates", icon: Bell },
-          ]).map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setActiveCategory(key)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2 ${
-                activeCategory === key
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid={`tab-category-${key}`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-              {categoryCounts[key] > 0 && (
-                <span className={`text-[10px] min-w-[18px] h-[18px] flex items-center justify-center rounded-full ${
-                  activeCategory === key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                }`}>
-                  {categoryCounts[key]}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
       {/* Email list with top padding for floating search */}
       <div 
         ref={scrollContainerRef}
-        className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative ${isInboxFolder ? 'pt-2' : 'pt-16'}`}
+        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative pt-16"
         onTouchStart={(e) => {
           if (scrollContainerRef.current?.scrollTop === 0) {
             setIsPulling(true);
@@ -770,7 +677,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             <Search className="w-10 h-10 text-muted-foreground/40 mb-4" />
             <h3 className="font-medium text-sm mb-1">No emails found</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              {searchQuery ? `No results for "${searchQuery}"` : isInboxFolder && activeCategory !== "primary" ? `No ${activeCategory} emails` : "Try adjusting your filters"}
+              {searchQuery ? `No results for "${searchQuery}"` : activeCategory ? `No ${activeCategory} emails` : "Try adjusting your filters"}
             </p>
             {(hasActiveFilters || searchQuery) && (
               <Button

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, Megaphone, type LucideIcon } from "lucide-react";
+import type { EmailCategory } from "@/lib/email-categories";
 import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -120,15 +121,22 @@ interface UnreadCounts {
   junk: number;
 }
 
+interface CategoryCounts {
+  primary: number;
+  promotions: number;
+  updates: number;
+}
+
 interface AppSidebarProps {
   activeFolder: string;
   onFolderChange: (folder: string) => void;
   unreadCount: number;
   unreadCounts?: UnreadCounts;
+  categoryCounts?: CategoryCounts;
   onCompose?: () => void;
 }
 
-export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCounts, onCompose }: AppSidebarProps) {
+export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCounts, categoryCounts, onCompose }: AppSidebarProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderAiDescription, setNewFolderAiDescription] = useState("");
@@ -547,46 +555,82 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     )}
                   </div>
                 </SidebarMenuItem>
-                {folders.map((item) => {
-                  // For custom folders, use a special identifier like "custom-{id}"
+                {folders.map((item, itemIndex) => {
                   const folderId = item.isCustom && item.id ? `custom-${item.id}` : item.title.toLowerCase();
                   const isActive = activeFolder === folderId || activeFolder.toLowerCase() === item.title.toLowerCase();
                   const folderKey = item.title.toLowerCase() as keyof UnreadCounts;
                   const folderCount = unreadCounts?.[folderKey] || (item.title === "Inbox" ? unreadCount : 0);
                   const showCount = folderCount > 0;
                   
+                  const categoryItems = item.title === "Inbox" ? [
+                    { id: "category-promotions", label: "Promotions", icon: Tag, color: "text-orange-500 dark:text-orange-400", count: categoryCounts?.promotions || 0 },
+                    { id: "category-updates", label: "Updates", icon: Bell, color: "text-blue-500 dark:text-blue-400", count: categoryCounts?.updates || 0 },
+                  ] : null;
+                  
                   if (!showText) {
                     return (
-                      <SidebarMenuItem key={item.title}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <SidebarMenuButton 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onFolderChange(folderId);
-                              }}
-                              className={`
-                                w-full justify-center h-11 rounded-xl transition-all duration-200
-                                ${isActive 
-                                  ? "bg-muted/60 text-foreground" 
-                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                                }
-                              `}
-                              data-testid={`nav-${item.title.toLowerCase()}`}
-                            >
-                              <div className="relative">
-                                <item.icon className="w-[18px] h-[18px]" />
-                                {showCount && (
-                                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
-                                )}
-                              </div>
-                            </SidebarMenuButton>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            {item.title}{showCount ? ` (${folderCount})` : ""}
-                          </TooltipContent>
-                        </Tooltip>
-                      </SidebarMenuItem>
+                      <span key={item.title}>
+                        <SidebarMenuItem>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <SidebarMenuButton 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onFolderChange(folderId);
+                                }}
+                                className={`
+                                  w-full justify-center h-11 rounded-xl transition-all duration-200
+                                  ${isActive 
+                                    ? "bg-muted/60 text-foreground" 
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                  }
+                                `}
+                                data-testid={`nav-${item.title.toLowerCase()}`}
+                              >
+                                <div className="relative">
+                                  <item.icon className="w-[18px] h-[18px]" />
+                                  {showCount && (
+                                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                                  )}
+                                </div>
+                              </SidebarMenuButton>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              {item.title}{showCount ? ` (${folderCount})` : ""}
+                            </TooltipContent>
+                          </Tooltip>
+                        </SidebarMenuItem>
+                        {categoryItems && categoryItems.map(cat => {
+                          const catActive = activeFolder === cat.id;
+                          return (
+                            <SidebarMenuItem key={cat.id}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SidebarMenuButton
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onFolderChange(cat.id);
+                                    }}
+                                    className={`
+                                      w-full justify-center h-9 rounded-xl transition-all duration-200
+                                      ${catActive
+                                        ? "bg-muted/60 text-foreground"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                      }
+                                    `}
+                                    data-testid={`nav-${cat.label.toLowerCase()}`}
+                                  >
+                                    <cat.icon className={`w-4 h-4 ${catActive ? cat.color : ""}`} />
+                                  </SidebarMenuButton>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                  {cat.label}{cat.count > 0 ? ` (${cat.count})` : ""}
+                                </TooltipContent>
+                              </Tooltip>
+                            </SidebarMenuItem>
+                          );
+                        })}
+                      </span>
                     );
                   }
                   
@@ -709,9 +753,48 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   }
                   
                   return (
-                    <SidebarMenuItem key={item.title}>
-                      {folderButton}
-                    </SidebarMenuItem>
+                    <span key={item.title}>
+                      <SidebarMenuItem>
+                        {folderButton}
+                      </SidebarMenuItem>
+                      {categoryItems && (
+                        <>
+                          <div className="mx-3 my-1.5 border-t border-border/15" />
+                          {categoryItems.map(cat => {
+                            const catActive = activeFolder === cat.id;
+                            return (
+                              <SidebarMenuItem key={cat.id}>
+                                <SidebarMenuButton
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleFolderClick(cat.id);
+                                  }}
+                                  className={`
+                                    w-full justify-between h-9 rounded-xl transition-all duration-200 pl-8
+                                    ${catActive
+                                      ? "bg-muted/60 text-foreground"
+                                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                    }
+                                  `}
+                                  data-testid={`nav-${cat.label.toLowerCase()}`}
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <cat.icon className={`w-4 h-4 ${cat.color}`} />
+                                    <span className={`text-[13px] ${catActive ? "font-medium" : ""}`}>{cat.label}</span>
+                                  </div>
+                                  {cat.count > 0 && (
+                                    <span className="text-[10px] min-w-[20px] h-5 flex items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
+                                      {cat.count}
+                                    </span>
+                                  )}
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            );
+                          })}
+                          <div className="mx-3 my-1.5 border-t border-border/15" />
+                        </>
+                      )}
+                    </span>
                   );
                 })}
 

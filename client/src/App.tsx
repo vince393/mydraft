@@ -35,7 +35,9 @@ import RefundPolicyPage from "@/pages/refund-policy";
 import CampaignsPage from "@/pages/campaigns";
 import CheckoutPage from "@/pages/checkout";
 import type { Email, User } from "@shared/schema";
+import { getCategoryCounts, type EmailCategory } from "@/lib/email-categories";
 import { Loader2, Sparkles } from "lucide-react";
+import { useMemo } from "react";
 
 interface AuthResponse {
   user: (User & { emailConnected?: boolean }) | null;
@@ -88,6 +90,11 @@ function AuthenticatedApp() {
 
   const unreadCount = unreadCounts?.inbox || emails.filter((e) => !e.isRead).length;
 
+  const categoryCounts = useMemo(() => {
+    const inboxEmails = emails.filter(e => (e.folder || "inbox") === "inbox");
+    return getCategoryCounts(inboxEmails);
+  }, [emails]);
+
   const handleCompose = () => {
     setComposeMode("new");
     setShowComposeDialog(true);
@@ -118,6 +125,7 @@ function AuthenticatedApp() {
           onFolderChange={setActiveFolder}
           unreadCount={unreadCount}
           unreadCounts={unreadCounts}
+          categoryCounts={categoryCounts}
           onCompose={handleCompose}
         />
         <SidebarInset className="flex flex-1 min-w-0">

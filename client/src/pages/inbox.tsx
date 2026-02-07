@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { isCategoryFolder } from "@/lib/email-categories";
 import { EmailList } from "@/components/email-list";
 import { EmailDetail } from "@/components/email-detail";
 import { AIDraftDialog } from "@/components/ai-draft-dialog";
@@ -164,9 +165,11 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     },
   });
 
-  // Check if we're viewing a custom folder
+  // Check if we're viewing a custom folder or category folder
   const isCustomFolder = activeFolder.startsWith("custom-");
   const customFolderId = isCustomFolder ? parseInt(activeFolder.replace("custom-", "")) : null;
+  const isCategoryView = isCategoryFolder(activeFolder);
+  const effectiveFolder = isCategoryView ? "inbox" : activeFolder;
 
   // First, fetch cached emails for instant display (no loading state)
   const { data: cachedEmails = [], isSuccess: hasCachedData } = useQuery<EmailWithNylasId[]>({
@@ -178,12 +181,11 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     },
     enabled: !!userData?.user && !isCustomFolder,
     staleTime: Infinity,
-    gcTime: Infinity, // Keep cached data forever in memory
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
 
-  // Then fetch fresh emails from Nylas in background
   const { data: freshEmails, isFetching: isFetchingFresh, isSuccess: hasFreshData } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", "fresh"],
     queryFn: async () => {
@@ -273,10 +275,9 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     const seenThreadIds = new Set<string>();
     
     for (const email of allEmails) {
-      // Check if this email's folder matches the active folder
       const emailFolder = email.folder || "inbox";
-      const matchesFolder = emailFolder === activeFolder || 
-        (activeFolder === "inbox" && emailFolder === "inbox");
+      const matchesFolder = emailFolder === effectiveFolder || 
+        (effectiveFolder === "inbox" && emailFolder === "inbox");
       
       if (matchesFolder && email.threadId && !seenThreadIds.has(email.threadId)) {
         const threadEmails = threadMap.get(email.threadId);
@@ -287,17 +288,15 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       }
     }
     
-    // Add non-threaded emails that match the folder
     for (const email of noThreadEmails) {
       const emailFolder = email.folder || "inbox";
-      if (emailFolder === activeFolder) {
+      if (emailFolder === effectiveFolder) {
         filteredThreads.push([email]);
       }
     }
     
-    // Get representative for sorting (most recent email in active folder)
     const getRepresentative = (thread: EmailWithNylasId[]) => {
-      const folderEmails = thread.filter(e => (e.folder || "inbox") === activeFolder);
+      const folderEmails = thread.filter(e => (e.folder || "inbox") === effectiveFolder);
       if (folderEmails.length > 0) {
         return folderEmails.reduce((latest, e) => 
           new Date(e.receivedAt).getTime() > new Date(latest.receivedAt).getTime() ? e : latest
@@ -306,17 +305,12 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       return thread[0];
     };
     
-    // Sort threads by the representative email date (most recent in active folder)
     filteredThreads.sort((a, b) => 
       new Date(getRepresentative(b).receivedAt).getTime() - new Date(getRepresentative(a).receivedAt).getTime()
     );
     
-    // Create flattened email list for compatibility
-    // Use the most recent email IN THE ACTIVE FOLDER as the representative
     const flatEmails = filteredThreads.map(thread => {
-      // Find the most recent email that belongs to the active folder
-      const folderEmails = thread.filter(e => (e.folder || "inbox") === activeFolder);
-      // If we have emails in this folder, use the most recent one, otherwise fall back to thread[0]
+      const folderEmails = thread.filter(e => (e.folder || "inbox") === effectiveFolder);
       const representative = folderEmails.length > 0 
         ? folderEmails.reduce((latest, e) => 
             new Date(e.receivedAt).getTime() > new Date(latest.receivedAt).getTime() ? e : latest
@@ -331,7 +325,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     });
     
     return { threads: filteredThreads, emails: flatEmails };
-  }, [emailsSource, activeFolder, isCustomFolder]);
+  }, [emailsSource, effectiveFolder, isCustomFolder]);
 
   useEffect(() => {
     setSelectedEmailId(null);
@@ -685,7 +679,9 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
               >
                 <Menu className="w-5 h-5" />
               </Button>
-              <h1 className="text-xl font-semibold capitalize tracking-tight">{activeFolder}</h1>
+              <h1 className="text-xl font-semibold capitalize tracking-tight">
+                {isCategoryView ? activeFolder.replace("category-", "") : activeFolder}
+              </h1>
             </div>
             <div className="flex items-center gap-1">
               <NotificationBell />
