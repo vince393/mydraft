@@ -501,22 +501,29 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             placeholder="Search emails..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`pl-9 ${searchQuery ? 'pr-8' : 'pr-3'} backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 h-9 rounded-full text-sm placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
+            className={`pl-9 ${(hasActiveFilters || searchQuery) ? 'pr-20' : 'pr-3'} backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 h-9 rounded-full text-sm placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.1)"
             }}
             data-testid="input-search"
           />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all z-10"
-              data-testid="button-clear-search"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          )}
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5 z-10">
+            {(hasActiveFilters || searchQuery) && (
+              <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+                {categoryFilteredEmails.length}
+              </span>
+            )}
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="w-5 h-5 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all"
+                data-testid="button-clear-search"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
         <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
           <PopoverTrigger asChild>
@@ -612,21 +619,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </PopoverContent>
         </Popover>
       </div>
-      {/* Filter results indicator */}
-      {(hasActiveFilters || searchQuery) && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border border-white/15 dark:border-white/10 rounded-full">
-          <span className="text-xs text-muted-foreground/70">
-            {categoryFilteredEmails.length} result{categoryFilteredEmails.length !== 1 ? "s" : ""}
-          </span>
-          <button
-            onClick={clearFilters}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center"
-            data-testid="button-clear-all-filters"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      )}
       {/* Email list with top padding for floating search */}
       <div 
         ref={scrollContainerRef}
