@@ -778,6 +778,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             }}
             isRefreshing={isFetchingFresh}
             onCompose={onCompose}
+            onOpenAssistant={onOpenAssistant}
           />
         )}
       </div>
