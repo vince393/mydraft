@@ -241,87 +241,147 @@ export function SwipeableEmailItem({
   const absSwipe = Math.abs(swipeX);
   const isFullSwipe = swipeX <= -deleteThreshold;
 
-  const growFactor = Math.min(absSwipe / revealThreshold, 1);
   const iconOpacity = Math.min((absSwipe - 10) / 40, 1);
-  const circleBaseSize = 36;
-  const circleMaxSize = 46;
-  const circleSize = circleBaseSize + (circleMaxSize - circleBaseSize) * growFactor;
+  const iconScale = Math.min(absSwipe / revealThreshold, 1);
 
-  const frostedGlass = (color: string) => ({
-    width: circleSize,
-    height: circleSize,
-    borderRadius: '50%',
-    background: color,
-    backdropFilter: 'blur(20px)',
-    WebkitBackdropFilter: 'blur(20px)',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    opacity: iconOpacity,
-    transform: `scale(${growFactor})`,
+  const PILL_HEIGHT = 42;
+  const FIXED_BTN_WIDTH = 50;
+  const GAP = 6;
+  const PAD = 8;
+
+  const deleteButtonWidth = isFullSwipe
+    ? absSwipe - PAD * 2
+    : Math.max(0, absSwipe - FIXED_BTN_WIDTH - GAP - PAD * 2);
+
+  const glossyShadow = '0 2px 8px rgba(0,0,0,0.3), 0 6px 20px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.25), inset 0 -1px 1px rgba(0,0,0,0.15)';
+
+  const glossyPill = (bg: string, w: number) => ({
+    width: w,
+    height: PILL_HEIGHT,
+    borderRadius: 9999,
+    background: bg,
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    boxShadow: glossyShadow,
+    border: '1px solid rgba(255,255,255,0.15)',
   });
 
-  const redGlass = 'linear-gradient(135deg, rgba(239,68,68,0.85) 0%, rgba(185,28,28,0.9) 100%)';
-  const greenGlass = 'linear-gradient(135deg, rgba(34,197,94,0.8) 0%, rgba(22,163,74,0.85) 100%)';
-  const neutralGlass = 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%)';
+  const redBg = 'linear-gradient(145deg, rgba(248,80,80,0.92) 0%, rgba(200,30,30,0.95) 50%, rgba(160,20,20,0.9) 100%)';
+  const greenBg = 'linear-gradient(145deg, rgba(52,211,110,0.9) 0%, rgba(22,163,74,0.95) 100%)';
+  const neutralBg = 'linear-gradient(145deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)';
 
   const renderLeftAction = () => {
     if (isTrashFolder) {
+      const firstBtnW = FIXED_BTN_WIDTH;
+      const secondBtnW = Math.max(0, absSwipe - firstBtnW - GAP - PAD * 2);
+      if (isFullSwipe) {
+        return (
+          <div className="flex items-center w-full" style={{ padding: `0 ${PAD}px` }}>
+            <button
+              onClick={handleActionClick(onPermanentDelete || onDelete)}
+              className="flex items-center justify-center gap-2"
+              style={{ ...glossyPill(redBg, absSwipe - PAD * 2), opacity: iconOpacity }}
+              data-testid={`swipe-delete-${emailId}`}
+            >
+              <Trash2 className="w-5 h-5 text-white" style={{ transform: `scale(${iconScale})` }} />
+              <span className="text-xs font-semibold text-white/95">Delete</span>
+            </button>
+          </div>
+        );
+      }
       return (
-        <div className="flex items-center justify-end gap-2 px-3 w-full">
+        <div className="flex items-center justify-end w-full" style={{ padding: `0 ${PAD}px`, gap: GAP }}>
           <button
             onClick={handleActionClick(onRestore || (() => {}))}
             className="flex items-center justify-center flex-shrink-0"
-            style={frostedGlass(greenGlass)}
+            style={{ ...glossyPill(greenBg, firstBtnW), opacity: iconOpacity }}
             data-testid={`swipe-restore-${emailId}`}
           >
-            <RotateCcw className="w-4 h-4 text-white" />
+            <RotateCcw className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
           </button>
-          <button
-            onClick={handleActionClick(onPermanentDelete || onDelete)}
-            className="flex items-center justify-center flex-shrink-0"
-            style={frostedGlass(redGlass)}
-            data-testid={`swipe-delete-${emailId}`}
-          >
-            <Trash2 className="w-4 h-4 text-white" />
-          </button>
+          {secondBtnW > 0 && (
+            <button
+              onClick={handleActionClick(onPermanentDelete || onDelete)}
+              className="flex items-center justify-center"
+              style={{ ...glossyPill(redBg, secondBtnW), opacity: iconOpacity }}
+              data-testid={`swipe-delete-${emailId}`}
+            >
+              <Trash2 className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
+            </button>
+          )}
         </div>
       );
     }
 
     if (isArchiveFolder) {
+      const firstBtnW = FIXED_BTN_WIDTH;
+      const secondBtnW = Math.max(0, absSwipe - firstBtnW - GAP - PAD * 2);
+      if (isFullSwipe) {
+        return (
+          <div className="flex items-center w-full" style={{ padding: `0 ${PAD}px` }}>
+            <button
+              onClick={handleActionClick(onDelete)}
+              className="flex items-center justify-center gap-2"
+              style={{ ...glossyPill(redBg, absSwipe - PAD * 2), opacity: iconOpacity }}
+              data-testid={`swipe-delete-${emailId}`}
+            >
+              <Trash2 className="w-5 h-5 text-white" style={{ transform: `scale(${iconScale})` }} />
+              <span className="text-xs font-semibold text-white/95">Delete</span>
+            </button>
+          </div>
+        );
+      }
       return (
-        <div className="flex items-center justify-end gap-2 px-3 w-full">
+        <div className="flex items-center justify-end w-full" style={{ padding: `0 ${PAD}px`, gap: GAP }}>
           <button
             onClick={handleActionClick(onRestore || (() => {}))}
             className="flex items-center justify-center flex-shrink-0"
-            style={frostedGlass(greenGlass)}
+            style={{ ...glossyPill(greenBg, firstBtnW), opacity: iconOpacity }}
             data-testid={`swipe-restore-${emailId}`}
           >
-            <RotateCcw className="w-4 h-4 text-white" />
+            <RotateCcw className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
           </button>
+          {secondBtnW > 0 && (
+            <button
+              onClick={handleActionClick(onDelete)}
+              className="flex items-center justify-center"
+              style={{ ...glossyPill(redBg, secondBtnW), opacity: iconOpacity }}
+              data-testid={`swipe-delete-${emailId}`}
+            >
+              <Trash2 className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    if (isFullSwipe) {
+      return (
+        <div className="flex items-center w-full" style={{ padding: `0 ${PAD}px` }}>
           <button
             onClick={handleActionClick(onDelete)}
-            className="flex items-center justify-center flex-shrink-0"
-            style={frostedGlass(redGlass)}
+            className="flex items-center justify-center gap-2"
+            style={{ ...glossyPill(redBg, absSwipe - PAD * 2), opacity: iconOpacity }}
             data-testid={`swipe-delete-${emailId}`}
           >
-            <Trash2 className="w-4 h-4 text-white" />
+            <Trash2 className="w-5 h-5 text-white" style={{ transform: `scale(${iconScale})` }} />
+            <span className="text-xs font-semibold text-white/95">Delete</span>
           </button>
         </div>
       );
     }
 
     return (
-      <div className="flex items-center justify-end gap-2 px-3 w-full">
+      <div className="flex items-center justify-end w-full" style={{ padding: `0 ${PAD}px`, gap: GAP }}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               onClick={(e) => e.stopPropagation()}
               className="flex items-center justify-center flex-shrink-0"
-              style={frostedGlass(neutralGlass)}
+              style={{ ...glossyPill(neutralBg, FIXED_BTN_WIDTH), opacity: iconOpacity }}
               data-testid={`swipe-more-${emailId}`}
             >
-              <MoreHorizontal className="w-4 h-4 text-foreground/80" />
+              <MoreHorizontal className="w-4 h-4 text-foreground/80" style={{ transform: `scale(${iconScale})` }} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
@@ -367,14 +427,16 @@ export function SwipeableEmailItem({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
-        <button
-          onClick={handleActionClick(onDelete)}
-          className="flex items-center justify-center flex-shrink-0"
-          style={frostedGlass(redGlass)}
-          data-testid={`swipe-delete-${emailId}`}
-        >
-          <Trash2 className="w-4 h-4 text-white" />
-        </button>
+        {deleteButtonWidth > 0 && (
+          <button
+            onClick={handleActionClick(onDelete)}
+            className="flex items-center justify-center"
+            style={{ ...glossyPill(redBg, deleteButtonWidth), opacity: iconOpacity }}
+            data-testid={`swipe-delete-${emailId}`}
+          >
+            <Trash2 className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
+          </button>
+        )}
       </div>
     );
   };
