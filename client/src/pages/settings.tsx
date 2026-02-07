@@ -869,6 +869,8 @@ interface BillingInfo {
   planName: string | null;
   planAmount: number | null;
   planInterval: string | null;
+  cancelAtPeriodEnd?: boolean;
+  cancelAt?: string | null;
   invoices: Array<{
     id: string;
     number: string | null;
@@ -890,11 +892,12 @@ interface BillingInfo {
 function BillingTab({ settings }: { settings: Settings }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const planDetails: Record<string, { name: string; price: string; features: string[] }> = {
     free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "5 emails/day limit", "Standard support"] },
     pro: { name: "Pro", price: "$10/month or $99/year", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
-    premium: { name: "Pro", price: "$10/month or $99/year", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
+    premium: { name: "Business", price: "$29/month or $299/year", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
     business: { name: "Business", price: "$29/month or $299/year", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
   };
 
@@ -918,6 +921,29 @@ function BillingTab({ settings }: { settings: Settings }) {
     onError: (error: Error) => {
       toast({
         title: "Failed to open billing portal",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async ({ immediately }: { immediately: boolean }) => {
+      const response = await apiRequest("POST", "/api/stripe/cancel", { immediately });
+      return response.json();
+    },
+    onSuccess: (data: { message?: string; cancelAt?: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stripe/billing-info"] });
+      setShowCancelConfirm(false);
+      toast({
+        title: "Subscription canceled",
+        description: data.message || "Your subscription has been canceled.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to cancel",
         description: error.message,
         variant: "destructive",
       });
@@ -961,13 +987,28 @@ function BillingTab({ settings }: { settings: Settings }) {
               <h3 className="text-lg font-semibold text-foreground">{currentPlan.name}</h3>
               <p className="text-sm text-muted-foreground">{currentPlan.price}</p>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
-              <Check className="w-4 h-4" />
-              Active
-            </div>
+            {billingInfo?.cancelAtPeriodEnd ? (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-500 text-sm font-medium">
+                Canceling
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
+                <Check className="w-4 h-4" />
+                Active
+              </div>
+            )}
           </div>
 
-          {settings.plan && settings.plan !== "free" && billingInfo?.nextBillDate && (
+          {billingInfo?.cancelAtPeriodEnd && billingInfo?.nextBillDate && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-sm text-foreground">
+                Your subscription is set to cancel on <span className="font-medium">{formatDate(billingInfo.nextBillDate)}</span>. 
+                You'll retain access to {currentPlan.name} features until then.
+              </p>
+            </div>
+          )}
+
+          {settings.plan && settings.plan !== "free" && billingInfo?.nextBillDate && !billingInfo?.cancelAtPeriodEnd && (
             <div className="p-4 rounded-lg bg-muted/50 border">
               <p className="text-sm text-muted-foreground">Next billing date</p>
               <p className="text-lg font-medium text-foreground">{formatDate(billingInfo.nextBillDate)}</p>
@@ -1104,20 +1145,74 @@ function BillingTab({ settings }: { settings: Settings }) {
           <CardTitle>Manage Subscription</CardTitle>
           <CardDescription>Change or cancel your plan</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Button onClick={() => setLocation("/select-plan?change=true")} data-testid="button-change-plan">
-            Change Plan
-          </Button>
-          {settings.plan && settings.plan !== "free" && (
-            <Button 
-              variant="outline" 
-              onClick={() => portalMutation.mutate()}
-              disabled={portalMutation.isPending}
-              data-testid="button-cancel-subscription"
-            >
-              {portalMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Manage Billing
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={() => setLocation("/select-plan?change=true")} data-testid="button-change-plan">
+              Change Plan
             </Button>
+            {settings.plan && settings.plan !== "free" && (
+              <Button 
+                variant="outline" 
+                onClick={() => portalMutation.mutate()}
+                disabled={portalMutation.isPending}
+                data-testid="button-manage-billing"
+              >
+                {portalMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Manage Billing
+              </Button>
+            )}
+          </div>
+
+          {settings.plan && settings.plan !== "free" && !showCancelConfirm && !billingInfo?.cancelAtPeriodEnd && (
+            <div className="pt-4 border-t">
+              <Button 
+                variant="ghost" 
+                className="text-destructive"
+                onClick={() => setShowCancelConfirm(true)}
+                data-testid="button-cancel-subscription"
+              >
+                Cancel subscription
+              </Button>
+            </div>
+          )}
+
+          {showCancelConfirm && (
+            <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/5 space-y-3">
+              <h4 className="font-medium text-foreground">Are you sure you want to cancel?</h4>
+              <p className="text-sm text-muted-foreground">
+                You'll lose access to all {currentPlan.name} features. Choose how you'd like to proceed:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => cancelMutation.mutate({ immediately: false })}
+                  disabled={cancelMutation.isPending}
+                  data-testid="button-cancel-at-period-end"
+                >
+                  {cancelMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                  Cancel at end of billing period
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => cancelMutation.mutate({ immediately: true })}
+                  disabled={cancelMutation.isPending}
+                  data-testid="button-cancel-immediately"
+                >
+                  {cancelMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                  Cancel immediately
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCancelConfirm(false)}
+                  data-testid="button-cancel-nevermind"
+                >
+                  Never mind
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -329,7 +329,7 @@ export default function PricingPage() {
     },
   });
 
-  // Stripe checkout for paid plans
+  // Stripe checkout for paid plans (new subscribers)
   const checkoutMutation = useMutation({
     mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
       const response = await apiRequest("POST", "/api/stripe/checkout", { plan, interval });
@@ -343,6 +343,28 @@ export default function PricingPage() {
     onError: (error: Error) => {
       toast({
         title: "Failed to start checkout",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Change plan for existing subscribers (upgrade/downgrade between paid plans)
+  const changePlanMutation = useMutation({
+    mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
+      const response = await apiRequest("POST", "/api/stripe/change-plan", { plan, interval });
+      return response.json();
+    },
+    onSuccess: (data: { message?: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Plan updated",
+        description: data.message || "Your plan has been changed successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to change plan",
         description: error.message,
         variant: "destructive",
       });
@@ -369,15 +391,22 @@ export default function PricingPage() {
     },
   });
 
+  const hasActiveSubscription = userData?.user?.stripeSubscriptionId && userData?.user?.plan !== "free";
+
   const handlePlanSelect = (planId: string) => {
     if (planId === "free") {
       selectFreePlanMutation.mutate();
       return;
     }
-    checkoutMutation.mutate({ plan: planId, interval: billingInterval });
+    
+    if (hasActiveSubscription) {
+      changePlanMutation.mutate({ plan: planId, interval: billingInterval });
+    } else {
+      checkoutMutation.mutate({ plan: planId, interval: billingInterval });
+    }
   };
 
-  const isLoading = selectFreePlanMutation.isPending || checkoutMutation.isPending || portalMutation.isPending;
+  const isLoading = selectFreePlanMutation.isPending || checkoutMutation.isPending || portalMutation.isPending || changePlanMutation.isPending;
 
   const displayPrice = (plan: typeof basePlans[0]) => {
     if (plan.id === "free") return "$0";
@@ -684,7 +713,18 @@ export default function PricingPage() {
                       data-testid={`button-select-plan-${plan.id}`}
                     >
                       {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {plan.id === "free" ? "Get Started" : "Start Free Trial"}
+                      {(() => {
+                        if (plan.id === "free") {
+                          return hasActiveSubscription ? "Downgrade to Free" : "Get Started";
+                        }
+                        if (!hasActiveSubscription) return "Start Free Trial";
+                        const planRank: Record<string, number> = { free: 0, pro: 1, premium: 2, business: 2 };
+                        const targetRank = planRank[plan.id] || 0;
+                        const currentRank = planRank[currentPlan] || 0;
+                        if (targetRank > currentRank) return "Upgrade";
+                        if (targetRank < currentRank) return "Downgrade";
+                        return "Switch Plan";
+                      })()}
                     </Button>
                   )}
                 </CardFooter>

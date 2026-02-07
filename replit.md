@@ -168,3 +168,11 @@ This ensures that even database administrators cannot read user email content, m
 - **Email Signature Feature**: Signature is automatically appended to all AI-generated drafts when enabled in Settings > Email Settings
 - **Email Formatting**: Implemented `formatEmailBody()` function that converts plain text newlines to HTML breaks for proper email rendering
 - **Legal Pages**: All 7 legal policy pages rewritten with professional business language, 18+ age requirement, mydraft.io domains, and 2026 copyright
+- **Stripe Subscription Management**: Full subscription lifecycle with plan switching, cancellations, and upgrade/downgrade flows
+  - `/api/stripe/cancel`: Cancel immediately (downgrades to free) or at period end (keeps plan until expiry)
+  - `/api/stripe/change-plan`: Switch between Pro/Business plans with Stripe proration
+  - `/api/stripe/confirm-subscription`: Handles both new subscriptions (14-day trial) and upgrades of existing subscriptions
+  - `/api/user/plan`: Downgrade to free properly cancels Stripe subscription (fails safely if Stripe cancel fails)
+  - Pricing page shows Upgrade/Downgrade/Switch labels for existing subscribers
+  - Settings billing tab shows pending cancellation status with cancel date, cancel confirmation flow
+  - Billing info includes `cancelAtPeriodEnd` and `cancelAt` fields from Stripe

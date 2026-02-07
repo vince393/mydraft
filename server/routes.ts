@@ -931,13 +931,29 @@ export async function registerRoutes(
       
       // Only process if downgrading to free
       if (plan === "free" && oldPlan !== "free") {
-        const user = await storage.updateUser(req.session.userId!, { plan: "free" });
+        // Cancel the Stripe subscription if one exists
+        if (currentUser?.stripeSubscriptionId) {
+          try {
+            const { getUncachableStripeClient } = await import("./stripeClient");
+            const stripe = await getUncachableStripeClient();
+            await stripe.subscriptions.cancel(currentUser.stripeSubscriptionId);
+          } catch (stripeErr: any) {
+            console.error("Error canceling Stripe subscription during plan downgrade:", stripeErr);
+            // If Stripe cancel fails, don't downgrade - keep subscription consistent
+            return res.status(500).json({ error: "Failed to cancel your subscription. Please try again or contact support." });
+          }
+        }
+        
+        const user = await storage.updateUser(req.session.userId!, { 
+          plan: "free",
+          stripeSubscriptionId: null,
+        });
         
         await storage.createActivityLog(
           user!.id, 
           user!.email, 
           "plan_downgrade", 
-          `Plan cancelled: changed from ${oldPlan} to free`
+          `Plan cancelled: changed from ${oldPlan} to free, Stripe subscription canceled`
         );
         
         return res.json({ user: { id: user!.id, email: user!.email, plan: user!.plan } });
@@ -6561,7 +6577,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
-  // Confirm subscription after payment method is collected
+  // Confirm subscription after payment method is collected (handles both new subs and upgrades)
   app.post("/api/stripe/confirm-subscription", requireAuth, async (req, res) => {
     try {
       const { plan, interval, paymentMethodId } = req.body;
@@ -6586,33 +6602,12 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
       
-      // Check for existing active subscription to prevent duplicates
-      const existingSubscriptions = await stripe.subscriptions.list({
-        customer: user.stripeCustomerId,
-        status: 'all',
-        limit: 10,
-      });
-      
-      const activeSubscription = existingSubscriptions.data.find(
-        sub => ['active', 'trialing'].includes(sub.status)
-      );
-      
-      if (activeSubscription) {
-        return res.status(400).json({ 
-          error: "You already have an active subscription. Please manage it from your account settings." 
-        });
-      }
+      const internalPlan = plan === "business" ? "premium" : plan;
       
       // Define pricing
       const pricing: Record<string, Record<string, number>> = {
-        pro: {
-          monthly: 1000,  // $10.00 in cents
-          annual: 9900,   // $99.00 in cents
-        },
-        business: {
-          monthly: 2900,  // $29.00 in cents
-          annual: 29900,  // $299.00 in cents
-        },
+        pro: { monthly: 1000, annual: 9900 },
+        business: { monthly: 2900, annual: 29900 },
       };
       
       const amount = pricing[plan][interval];
@@ -6620,9 +6615,16 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
       
       // Attach payment method to customer
-      await stripe.paymentMethods.attach(paymentMethodId, {
-        customer: user.stripeCustomerId,
-      });
+      try {
+        await stripe.paymentMethods.attach(paymentMethodId, {
+          customer: user.stripeCustomerId,
+        });
+      } catch (attachErr: any) {
+        // Payment method might already be attached - that's okay
+        if (!attachErr.message?.includes('already been attached')) {
+          throw attachErr;
+        }
+      }
       
       // Set as default payment method
       await stripe.customers.update(user.stripeCustomerId, {
@@ -6637,7 +6639,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       if (!product) {
         product = await stripe.products.create({
           name: productName,
-          metadata: { plan: plan === "business" ? "premium" : plan },
+          metadata: { plan: internalPlan },
         });
       }
       
@@ -6655,23 +6657,68 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           unit_amount: amount,
           currency: 'usd',
           recurring: { interval: recurringInterval },
-          metadata: { plan: plan === "business" ? "premium" : plan },
+          metadata: { plan: internalPlan },
         });
       }
       
-      // Create subscription with 14-day trial
+      // Check for existing active subscription
+      const existingSubscriptions = await stripe.subscriptions.list({
+        customer: user.stripeCustomerId,
+        status: 'all',
+        limit: 10,
+      });
+      
+      const activeSubscription = existingSubscriptions.data.find(
+        sub => ['active', 'trialing'].includes(sub.status)
+      );
+      
+      if (activeSubscription) {
+        // UPGRADE: Update existing subscription to the new plan/price
+        const currentItem = activeSubscription.items.data[0];
+        const updateParams: any = {
+          items: [{ id: currentItem.id, price: price.id }],
+          proration_behavior: 'create_prorations',
+          default_payment_method: paymentMethodId,
+          metadata: { userId: user.id, plan: internalPlan },
+        };
+        
+        if (activeSubscription.cancel_at_period_end) {
+          updateParams.cancel_at_period_end = false;
+        }
+        
+        const updatedSub = await stripe.subscriptions.update(activeSubscription.id, updateParams);
+        
+        await storage.updateUser(user.id, { 
+          stripeSubscriptionId: updatedSub.id,
+          plan: internalPlan as any,
+          onboardingCompleted: true
+        });
+        
+        await storage.createActivityLog(
+          user.id, user.email, "plan_upgraded",
+          `Plan changed to ${internalPlan} (${interval})`
+        );
+        
+        return res.json({ 
+          success: true, 
+          subscriptionId: updatedSub.id,
+          upgraded: true,
+          message: `Plan updated to ${productName}`,
+        });
+      }
+      
+      // NEW SUBSCRIPTION: Create with 14-day trial
       const subscription = await stripe.subscriptions.create({
         customer: user.stripeCustomerId,
         items: [{ price: price.id }],
         trial_period_days: 14,
         default_payment_method: paymentMethodId,
-        metadata: { userId: user.id, plan: plan === "business" ? "premium" : plan },
+        metadata: { userId: user.id, plan: internalPlan },
       });
       
-      // Update user with subscription info
       await storage.updateUser(user.id, { 
         stripeSubscriptionId: subscription.id,
-        plan: plan === "business" ? "premium" : plan,
+        plan: internalPlan as any,
         onboardingCompleted: true
       });
       
@@ -6843,6 +6890,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       let planName = null;
       let planAmount = null;
       let planInterval = null;
+      let cancelAtPeriodEnd = false;
+      let cancelAt = null;
       
       if (user.stripeSubscriptionId) {
         try {
@@ -6851,6 +6900,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           currentPeriodEnd = subscription.current_period_end;
           nextBillDate = new Date(subscription.current_period_end * 1000).toISOString();
           subscriptionStatus = subscription.status;
+          cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
+          cancelAt = subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null;
           
           // Get plan details from subscription items
           if (subscription.items.data.length > 0) {
@@ -6917,12 +6968,187 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         planName,
         planAmount,
         planInterval,
+        cancelAtPeriodEnd,
+        cancelAt,
         invoices,
         paymentMethod,
       });
     } catch (error) {
       console.error("Error fetching billing info:", error);
       res.status(500).json({ error: "Failed to fetch billing info" });
+    }
+  });
+
+  // Cancel subscription (actually cancels on Stripe + downgrades locally)
+  app.post("/api/stripe/cancel", requireAuth, async (req, res) => {
+    try {
+      const { immediately } = req.body || {};
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      if (!user.stripeSubscriptionId || !user.stripeCustomerId) {
+        // No active subscription - just ensure plan is free
+        await storage.updateUser(user.id, { plan: "free" });
+        return res.json({ success: true, message: "Plan set to free" });
+      }
+      
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      
+      if (immediately) {
+        // Cancel immediately - downgrade locally only after Stripe succeeds
+        await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+        await storage.updateUser(user.id, {
+          plan: "free",
+          stripeSubscriptionId: null,
+        });
+        
+        await storage.createActivityLog(
+          user.id, user.email, "subscription_canceled",
+          `Subscription canceled immediately`
+        );
+        
+        res.json({ success: true, message: "Subscription canceled immediately" });
+      } else {
+        // Cancel at end of billing period - keep current plan until period ends
+        await stripe.subscriptions.update(user.stripeSubscriptionId, {
+          cancel_at_period_end: true,
+        });
+        
+        const sub = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        
+        await storage.createActivityLog(
+          user.id, user.email, "subscription_cancel_scheduled",
+          `Subscription set to cancel at period end`
+        );
+        
+        res.json({ 
+          success: true, 
+          message: "Your subscription will remain active until the end of your billing period, then it will be canceled.",
+          cancelAt: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error canceling subscription:", error);
+      res.status(500).json({ error: error.message || "Failed to cancel subscription" });
+    }
+  });
+
+  // Change plan (upgrade/downgrade between paid plans with proration)
+  app.post("/api/stripe/change-plan", requireAuth, async (req, res) => {
+    try {
+      const { plan, interval } = req.body;
+      
+      if (!plan || !["pro", "business"].includes(plan)) {
+        return res.status(400).json({ error: "Valid plan (pro or business) is required" });
+      }
+      
+      if (!interval || !["annual", "monthly"].includes(interval)) {
+        return res.status(400).json({ error: "Valid interval (annual or monthly) is required" });
+      }
+      
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      if (!user.stripeSubscriptionId || !user.stripeCustomerId) {
+        return res.status(400).json({ error: "No active subscription to change. Please subscribe first." });
+      }
+      
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      
+      // Get existing subscription
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+      if (!subscription || !['active', 'trialing'].includes(subscription.status)) {
+        return res.status(400).json({ error: "No active subscription found. Please subscribe first." });
+      }
+      
+      // Pricing
+      const pricing: Record<string, Record<string, number>> = {
+        pro: { monthly: 1000, annual: 9900 },
+        business: { monthly: 2900, annual: 29900 },
+      };
+      
+      const amount = pricing[plan][interval];
+      const recurringInterval = interval === "annual" ? "year" : "month";
+      const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
+      const internalPlan = plan === "business" ? "premium" : plan;
+      
+      // Find or create product
+      let product;
+      const existingProducts = await stripe.products.list({ limit: 100 });
+      product = existingProducts.data.find(p => p.name === productName && p.active);
+      
+      if (!product) {
+        product = await stripe.products.create({
+          name: productName,
+          metadata: { plan: internalPlan },
+        });
+      }
+      
+      // Find or create price
+      const existingPrices = await stripe.prices.list({ product: product.id, limit: 100 });
+      let price = existingPrices.data.find(p => 
+        p.active && 
+        p.unit_amount === amount && 
+        p.recurring?.interval === recurringInterval
+      );
+      
+      if (!price) {
+        price = await stripe.prices.create({
+          product: product.id,
+          unit_amount: amount,
+          currency: 'usd',
+          recurring: { interval: recurringInterval },
+          metadata: { plan: internalPlan },
+        });
+      }
+      
+      // Update the subscription's item to the new price (Stripe handles proration automatically)
+      const currentItem = subscription.items.data[0];
+      
+      // Also undo any pending cancellation
+      const updateParams: any = {
+        items: [{
+          id: currentItem.id,
+          price: price.id,
+        }],
+        proration_behavior: 'create_prorations',
+        metadata: { userId: user.id, plan: internalPlan },
+      };
+      
+      // If subscription was set to cancel at period end, undo that
+      if (subscription.cancel_at_period_end) {
+        updateParams.cancel_at_period_end = false;
+      }
+      
+      const updatedSubscription = await stripe.subscriptions.update(
+        user.stripeSubscriptionId,
+        updateParams
+      );
+      
+      // Update local plan
+      const oldPlan = user.plan;
+      await storage.updateUser(user.id, { plan: internalPlan as any });
+      
+      await storage.createActivityLog(
+        user.id, user.email, "plan_changed",
+        `Plan changed from ${oldPlan} to ${internalPlan} (${interval})`
+      );
+      
+      res.json({ 
+        success: true, 
+        plan: internalPlan,
+        subscriptionId: updatedSubscription.id,
+        message: `Plan changed to ${productName} (${interval})`,
+      });
+    } catch (error: any) {
+      console.error("Error changing plan:", error);
+      res.status(500).json({ error: error.message || "Failed to change plan" });
     }
   });
 
