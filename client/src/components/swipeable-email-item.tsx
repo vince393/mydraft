@@ -43,7 +43,7 @@ interface SwipeableEmailItemProps {
   formatTime: (date: Date) => string;
 }
 
-const REVEAL_PERCENT = 22;
+const REVEAL_PERCENT = 32;
 const DELETE_PERCENT = 70;
 const MAX_SWIPE_PERCENT = 99;
 const MORE_BUTTON_WIDTH = 72;
