@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, X, Volume2, VolumeX, Loader2, Phone } from "lucide-react";
+import { Mic, X, Volume2, VolumeX, Loader2, Phone, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VoiceChatModalProps {
@@ -462,7 +462,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 text-white/40 hover:text-white/70"
+              className="text-white/40 hover:text-white/70"
               onClick={endCall}
               data-testid="button-close-voice"
             >
@@ -642,10 +642,8 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
 
             {/* Call Controls */}
             <div className="flex items-center gap-3">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-full text-white/40 hover:text-white/70"
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-opacity"
                 style={{
                   background: isMuted ? "rgba(239, 68, 68, 0.15)" : "rgba(255, 255, 255, 0.05)",
                   border: isMuted ? "1px solid rgba(239, 68, 68, 0.2)" : "1px solid rgba(255, 255, 255, 0.06)",
@@ -653,13 +651,11 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                 onClick={toggleMute}
                 data-testid="button-toggle-mute"
               >
-                {isMuted ? <VolumeX className="w-4 h-4 text-red-400/70" /> : <Volume2 className="w-4 h-4" />}
-              </Button>
+                {isMuted ? <VolumeX className="w-4 h-4 text-red-400/70" /> : <Volume2 className="w-4 h-4 text-white/40" />}
+              </div>
 
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-12 w-12 rounded-full"
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer transition-opacity"
                 style={{
                   background: "rgba(239, 68, 68, 0.2)",
                   border: "1px solid rgba(239, 68, 68, 0.3)",
@@ -668,12 +664,13 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                 data-testid="button-end-call"
               >
                 <Phone className="w-5 h-5 text-red-400 rotate-[135deg]" />
-              </Button>
+              </div>
 
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-full text-white/40 hover:text-white/70"
+              <div
+                className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-opacity",
+                  conversationState === "speaking" ? "cursor-pointer opacity-100" : "opacity-30 cursor-not-allowed"
+                )}
                 style={{
                   background: "rgba(255, 255, 255, 0.05)",
                   border: "1px solid rgba(255, 255, 255, 0.06)",
@@ -685,11 +682,10 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                     resumeListening();
                   }
                 }}
-                disabled={conversationState !== "speaking"}
                 data-testid="button-skip-response"
               >
-                <MicOff className="w-4 h-4" />
-              </Button>
+                <SkipForward className="w-4 h-4 text-white/40" />
+              </div>
             </div>
           </div>
         </div>
