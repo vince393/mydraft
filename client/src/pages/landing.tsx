@@ -123,7 +123,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transitionDelay: '300ms'
               }}
             >
-              AI drafts your replies in any language. Culturally-aware translations. Your global inbox, built for how the world actually emails.
+              AI drafts your replies so you can focus on what matters. Less time writing, more time doing.
             </p>
             
             <div 
