@@ -46,6 +46,7 @@ interface SwipeableEmailItemProps {
 const REVEAL_PERCENT = 22;
 const DELETE_PERCENT = 70;
 const MAX_SWIPE_PERCENT = 99;
+const MORE_BUTTON_WIDTH = 72;
 
 export function SwipeableEmailItem({
   emailId,
@@ -240,10 +241,228 @@ export function SwipeableEmailItem({
   const absSwipe = Math.abs(swipeX);
   const isFullSwipe = swipeX <= -deleteThreshold;
 
-  const circleBaseSize = 36;
-  const circleMaxSize = 44;
-  const growFactor = Math.min(absSwipe / revealThreshold, 1);
-  const circleSize = circleBaseSize + (circleMaxSize - circleBaseSize) * growFactor;
+  const deleteButtonWidth = isFullSwipe
+    ? absSwipe
+    : Math.max(0, absSwipe - MORE_BUTTON_WIDTH);
+
+  const moreButtonWidth = isFullSwipe
+    ? 0
+    : Math.min(absSwipe, MORE_BUTTON_WIDTH);
+
+  const iconScale = Math.min(absSwipe / revealThreshold, 1);
+  const iconOpacity = Math.min((absSwipe - 10) / 40, 1);
+
+  const renderLeftAction = () => {
+    if (isTrashFolder) {
+      const firstWidth = Math.min(absSwipe, MORE_BUTTON_WIDTH);
+      const secondWidth = Math.max(0, absSwipe - MORE_BUTTON_WIDTH);
+      if (isFullSwipe) {
+        return (
+          <button
+            onClick={handleActionClick(onPermanentDelete || onDelete)}
+            className="flex items-center justify-center gap-2"
+            style={{
+              width: absSwipe,
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.85) 0%, rgba(185,28,28,0.9) 100%)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}
+            data-testid={`swipe-delete-${emailId}`}
+          >
+            <Trash2 className="w-5 h-5 text-white" style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }} />
+            <span className="text-xs font-medium text-white/90">Delete</span>
+          </button>
+        );
+      }
+      return (
+        <>
+          <button
+            onClick={handleActionClick(onRestore || (() => {}))}
+            className="flex items-center justify-center flex-shrink-0 border-r border-white/[0.06]"
+            style={{
+              width: firstWidth,
+              background: 'linear-gradient(135deg, rgba(34,197,94,0.8) 0%, rgba(22,163,74,0.85) 100%)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}
+            data-testid={`swipe-restore-${emailId}`}
+          >
+            <RotateCcw className="w-4 h-4 text-white" style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }} />
+          </button>
+          {secondWidth > 0 && (
+            <button
+              onClick={handleActionClick(onPermanentDelete || onDelete)}
+              className="flex items-center justify-center"
+              style={{
+                width: secondWidth,
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.85) 0%, rgba(185,28,28,0.9) 100%)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+              }}
+              data-testid={`swipe-delete-${emailId}`}
+            >
+              <Trash2 className="w-4 h-4 text-white" style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }} />
+            </button>
+          )}
+        </>
+      );
+    }
+
+    if (isArchiveFolder) {
+      const firstWidth = Math.min(absSwipe, MORE_BUTTON_WIDTH);
+      const secondWidth = Math.max(0, absSwipe - MORE_BUTTON_WIDTH);
+      if (isFullSwipe) {
+        return (
+          <button
+            onClick={handleActionClick(onDelete)}
+            className="flex items-center justify-center gap-2"
+            style={{
+              width: absSwipe,
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.85) 0%, rgba(185,28,28,0.9) 100%)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}
+            data-testid={`swipe-delete-${emailId}`}
+          >
+            <Trash2 className="w-5 h-5 text-white" style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }} />
+            <span className="text-xs font-medium text-white/90">Delete</span>
+          </button>
+        );
+      }
+      return (
+        <>
+          <button
+            onClick={handleActionClick(onRestore || (() => {}))}
+            className="flex items-center justify-center flex-shrink-0 border-r border-white/[0.06]"
+            style={{
+              width: firstWidth,
+              background: 'linear-gradient(135deg, rgba(34,197,94,0.8) 0%, rgba(22,163,74,0.85) 100%)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}
+            data-testid={`swipe-restore-${emailId}`}
+          >
+            <RotateCcw className="w-4 h-4 text-white" style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }} />
+          </button>
+          {secondWidth > 0 && (
+            <button
+              onClick={handleActionClick(onDelete)}
+              className="flex items-center justify-center"
+              style={{
+                width: secondWidth,
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.85) 0%, rgba(185,28,28,0.9) 100%)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+              }}
+              data-testid={`swipe-delete-${emailId}`}
+            >
+              <Trash2 className="w-4 h-4 text-white" style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }} />
+            </button>
+          )}
+        </>
+      );
+    }
+
+    if (isFullSwipe) {
+      return (
+        <button
+          onClick={handleActionClick(onDelete)}
+          className="flex items-center justify-center gap-2"
+          style={{
+            width: absSwipe,
+            background: 'linear-gradient(135deg, rgba(239,68,68,0.85) 0%, rgba(185,28,28,0.9) 100%)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}
+          data-testid={`swipe-delete-${emailId}`}
+        >
+          <Trash2 className="w-5 h-5 text-white" style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }} />
+          <span className="text-xs font-medium text-white/90">Delete</span>
+        </button>
+      );
+    }
+
+    return (
+      <>
+        {moreButtonWidth > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center justify-center flex-shrink-0 border-r border-white/[0.06]"
+                style={{
+                  width: moreButtonWidth,
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                }}
+                data-testid={`swipe-more-${emailId}`}
+              >
+                <MoreHorizontal className="w-5 h-5 text-foreground/70" style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {onReply && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReply(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-${emailId}`}>
+                  <Reply className="w-4 h-4 mr-2" />
+                  Reply
+                </DropdownMenuItem>
+              )}
+              {onReplyAll && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReplyAll(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-all-${emailId}`}>
+                  <ReplyAll className="w-4 h-4 mr-2" />
+                  Reply All
+                </DropdownMenuItem>
+              )}
+              {onForward && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onForward(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-forward-${emailId}`}>
+                  <Forward className="w-4 h-4 mr-2" />
+                  Forward
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {onMoveToFolder && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToFolder(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-move-${emailId}`}>
+                  <FolderInput className="w-4 h-4 mr-2" />
+                  Move to Folder
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-archive-${emailId}`}>
+                <Archive className="w-4 h-4 mr-2" />
+                Archive
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStar(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-star-${emailId}`}>
+                <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
+                {isStarred ? "Unstar" : "Star"}
+              </DropdownMenuItem>
+              {onToggleFlag && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFlag(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-flag-${emailId}`}>
+                  <Flag className={`w-4 h-4 mr-2 ${isFlagged ? "fill-orange-400 text-orange-400" : ""}`} />
+                  {isFlagged ? "Unflag" : "Flag"}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {deleteButtonWidth > 0 && (
+          <button
+            onClick={handleActionClick(onDelete)}
+            className="flex items-center justify-center"
+            style={{
+              width: deleteButtonWidth,
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.85) 0%, rgba(185,28,28,0.9) 100%)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}
+            data-testid={`swipe-delete-${emailId}`}
+          >
+            <Trash2 className="w-4 h-4 text-white" style={{ opacity: iconOpacity, transform: `scale(${iconScale})` }} />
+          </button>
+        )}
+      </>
+    );
+  };
 
   return (
     <div
@@ -251,151 +470,13 @@ export function SwipeableEmailItem({
       className="relative overflow-hidden rounded-xl w-full"
       data-testid={`email-item-${emailId}`}
     >
-      {/* Swipe action area behind email content */}
       <div
-        className="absolute inset-y-0 right-0 flex items-center justify-end gap-2 px-3"
-        style={{ width: absSwipe }}
+        className="absolute inset-y-0 right-0 flex items-stretch"
+        style={{ width: absSwipe > 4 ? absSwipe : 0 }}
       >
-        {isFullSwipe ? (
-          <div className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-red-500/20">
-            <Trash2 className="w-5 h-5 text-red-400" />
-            <span className="text-xs font-medium text-red-400">Release to delete</span>
-          </div>
-        ) : absSwipe > 20 ? (
-          isTrashFolder ? (
-            <>
-              <button
-                onClick={handleActionClick(onRestore || (() => {}))}
-                className="flex items-center justify-center rounded-full bg-emerald-500/90 backdrop-blur-sm shadow-lg shadow-emerald-500/20 transition-all"
-                style={{
-                  width: circleSize,
-                  height: circleSize,
-                  opacity: Math.min((absSwipe - 20) / 30, 1),
-                }}
-                data-testid={`swipe-restore-${emailId}`}
-              >
-                <RotateCcw className="w-4 h-4 text-white" />
-              </button>
-              <button
-                onClick={handleActionClick(onPermanentDelete || onDelete)}
-                className="flex items-center justify-center rounded-full bg-red-500/90 backdrop-blur-sm shadow-lg shadow-red-500/20 transition-all"
-                style={{
-                  width: circleSize,
-                  height: circleSize,
-                  opacity: Math.min((absSwipe - 20) / 30, 1),
-                }}
-                data-testid={`swipe-delete-${emailId}`}
-              >
-                <Trash2 className="w-4 h-4 text-white" />
-              </button>
-            </>
-          ) : isArchiveFolder ? (
-            <>
-              <button
-                onClick={handleActionClick(onRestore || (() => {}))}
-                className="flex items-center justify-center rounded-full bg-emerald-500/90 backdrop-blur-sm shadow-lg shadow-emerald-500/20 transition-all"
-                style={{
-                  width: circleSize,
-                  height: circleSize,
-                  opacity: Math.min((absSwipe - 20) / 30, 1),
-                }}
-                data-testid={`swipe-restore-${emailId}`}
-              >
-                <RotateCcw className="w-4 h-4 text-white" />
-              </button>
-              <button
-                onClick={handleActionClick(onDelete)}
-                className="flex items-center justify-center rounded-full bg-red-500/90 backdrop-blur-sm shadow-lg shadow-red-500/20 transition-all"
-                style={{
-                  width: circleSize,
-                  height: circleSize,
-                  opacity: Math.min((absSwipe - 20) / 30, 1),
-                }}
-                data-testid={`swipe-delete-${emailId}`}
-              >
-                <Trash2 className="w-4 h-4 text-white" />
-              </button>
-            </>
-          ) : (
-            <>
-              {/* More button with dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center justify-center rounded-full bg-white/[0.12] backdrop-blur-sm border border-white/[0.08] shadow-lg transition-all"
-                    style={{
-                      width: circleSize,
-                      height: circleSize,
-                      opacity: Math.min((absSwipe - 20) / 30, 1),
-                    }}
-                    data-testid={`swipe-more-${emailId}`}
-                  >
-                    <MoreHorizontal className="w-4 h-4 text-foreground/80" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  {onReply && (
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReply(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-${emailId}`}>
-                      <Reply className="w-4 h-4 mr-2" />
-                      Reply
-                    </DropdownMenuItem>
-                  )}
-                  {onReplyAll && (
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReplyAll(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-all-${emailId}`}>
-                      <ReplyAll className="w-4 h-4 mr-2" />
-                      Reply All
-                    </DropdownMenuItem>
-                  )}
-                  {onForward && (
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onForward(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-forward-${emailId}`}>
-                      <Forward className="w-4 h-4 mr-2" />
-                      Forward
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  {onMoveToFolder && (
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToFolder(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-move-${emailId}`}>
-                      <FolderInput className="w-4 h-4 mr-2" />
-                      Move to Folder
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-archive-${emailId}`}>
-                    <Archive className="w-4 h-4 mr-2" />
-                    Archive
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStar(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-star-${emailId}`}>
-                    <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
-                    {isStarred ? "Unstar" : "Star"}
-                  </DropdownMenuItem>
-                  {onToggleFlag && (
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFlag(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-flag-${emailId}`}>
-                      <Flag className={`w-4 h-4 mr-2 ${isFlagged ? "fill-orange-400 text-orange-400" : ""}`} />
-                      {isFlagged ? "Unflag" : "Flag"}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {/* Delete button */}
-              <button
-                onClick={handleActionClick(onDelete)}
-                className="flex items-center justify-center rounded-full bg-red-500/90 backdrop-blur-sm shadow-lg shadow-red-500/20 transition-all"
-                style={{
-                  width: circleSize,
-                  height: circleSize,
-                  opacity: Math.min((absSwipe - 20) / 30, 1),
-                }}
-                data-testid={`swipe-delete-${emailId}`}
-              >
-                <Trash2 className="w-4 h-4 text-white" />
-              </button>
-            </>
-          )
-        ) : null}
+        {absSwipe > 4 && renderLeftAction()}
       </div>
 
-      {/* Email content layer */}
       <div
         onClick={handleClick}
         onMouseDown={handleMouseDown}
