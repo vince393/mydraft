@@ -679,75 +679,6 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
     <div className="email-layout">
       {/* Email List Panel - hidden on mobile when viewing detail */}
       <div className={`email-list-panel overflow-x-hidden ${screen.isMobile && showMobileDetail ? 'hidden' : ''}`}>
-        {/* Mobile/tablet header - show on small screens in list view */}
-        {(screen.isMobile || screen.isTablet) && !showMobileDetail && (
-          <header className="flex items-center justify-between gap-2 h-14 px-4 border-b border-border/20 bg-background sticky top-0 z-50 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={toggleSidebar}
-                data-testid="button-sidebar-toggle"
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
-              <h1 className="text-xl font-semibold capitalize tracking-tight">
-                {isCategoryView ? activeFolder.replace("category-", "") : activeFolder}
-              </h1>
-            </div>
-            <div className="flex items-center gap-1">
-              <NotificationBell />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile-mobile">
-                    <Avatar className="w-8 h-8 ring-2 ring-border/30">
-                      <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
-                        {userInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b border-border/30">
-                    <p className="text-sm font-medium truncate">{userName}</p>
-                    <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
-                    <div className="mt-2">{getPlanBadge()}</div>
-                  </div>
-                  <DropdownMenuItem className="gap-2" onClick={() => setLocation("/profile")}>
-                    <User className="w-4 h-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2" onClick={() => setLocation("/settings")}>
-                    <Settings className="w-4 h-4" />
-                    Settings
-                  </DropdownMenuItem>
-                  {hasPremium && (
-                    <DropdownMenuItem className="gap-2" onClick={() => setLocation("/campaigns")} data-testid="menu-campaigns">
-                      <Megaphone className="w-4 h-4" />
-                      Email Campaigns
-                    </DropdownMenuItem>
-                  )}
-                  {!userData?.user?.connectedEmail && (
-                    <DropdownMenuItem className="gap-2" onClick={() => setLocation("/connect-email")}>
-                      <Link className="w-4 h-4" />
-                      Connect Email
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2" onClick={() => setShowAccountSwitcher(true)} data-testid="menu-switch-account-mobile">
-                    <RefreshCw className="w-4 h-4" />
-                    Switch Account
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
-                    <LogOut className="w-4 h-4" />
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </header>
-        )}
-        
         {activeFolder.toLowerCase() === "drafts" ? (
           <DraftsList />
         ) : (
@@ -792,6 +723,69 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             isRefreshing={isFetchingFresh}
             onCompose={onCompose}
             onOpenAssistant={onOpenAssistant}
+            mobileNavLeft={
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={toggleSidebar}
+                className="flex-shrink-0"
+                data-testid="button-sidebar-toggle"
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+            }
+            mobileNavRight={
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <NotificationBell />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile-mobile">
+                      <Avatar className="w-8 h-8 ring-2 ring-border/30">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
+                          {userInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-3 py-2 border-b border-border/30">
+                      <p className="text-sm font-medium truncate">{userName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                      <div className="mt-2">{getPlanBadge()}</div>
+                    </div>
+                    <DropdownMenuItem className="gap-2" onClick={() => setLocation("/profile")}>
+                      <User className="w-4 h-4" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="gap-2" onClick={() => setLocation("/settings")}>
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </DropdownMenuItem>
+                    {hasPremium && (
+                      <DropdownMenuItem className="gap-2" onClick={() => setLocation("/campaigns")} data-testid="menu-campaigns">
+                        <Megaphone className="w-4 h-4" />
+                        Email Campaigns
+                      </DropdownMenuItem>
+                    )}
+                    {!userData?.user?.connectedEmail && (
+                      <DropdownMenuItem className="gap-2" onClick={() => setLocation("/connect-email")}>
+                        <Link className="w-4 h-4" />
+                        Connect Email
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="gap-2" onClick={() => setShowAccountSwitcher(true)} data-testid="menu-switch-account-mobile">
+                      <RefreshCw className="w-4 h-4" />
+                      Switch Account
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
+                      <LogOut className="w-4 h-4" />
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            }
           />
         )}
       </div>

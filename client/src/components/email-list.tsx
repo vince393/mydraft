@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect, type ReactNode } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
 import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare } from "lucide-react";
+import { useScreenSize } from "@/hooks/use-screen-size";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,8 @@ interface EmailListProps {
   isRefreshing?: boolean;
   onCompose?: () => void;
   onOpenAssistant?: () => void;
+  mobileNavLeft?: ReactNode;
+  mobileNavRight?: ReactNode;
 }
 
 interface ResponseTimeEstimate {
@@ -138,7 +141,8 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onOpenAssistant }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onOpenAssistant, mobileNavLeft, mobileNavRight }: EmailListProps) {
+  const screen = useScreenSize();
   const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -491,12 +495,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
 
   return (
     <div className="flex flex-col h-full overflow-x-hidden relative">
-      {/* Floating search bar overlay */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-        {hasConnectedAccount && activeFolder === "inbox" && (
+      {/* Search bar - sticky top on mobile with nav, floating on desktop */}
+      <div className={`z-20 flex items-center gap-2 ${screen.isMobile ? 'sticky top-0 px-2 py-2 bg-background border-b border-border/20 flex-shrink-0' : 'absolute top-3 left-1/2 -translate-x-1/2'}`}>
+        {screen.isMobile && mobileNavLeft}
+        {!screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && (
           <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
         )}
-        <div className="relative w-64">
+        <div className={`relative ${screen.isMobile ? 'flex-1' : 'w-64'}`}>
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none z-10" />
           <Input 
             type="search"
@@ -651,7 +656,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </Popover>
           </div>
         </div>
-        {onOpenAssistant && (
+        {!screen.isMobile && onOpenAssistant && (
           <button
             onClick={onOpenAssistant}
             className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all duration-150"
@@ -665,11 +670,12 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             <Sparkles className="w-4 h-4 text-indigo-300/80 group-hover:text-indigo-200 transition-colors" />
           </button>
         )}
+        {screen.isMobile && mobileNavRight}
       </div>
-      {/* Email list with top padding for floating search */}
+      {/* Email list */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative pt-16"
+        className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative ${screen.isMobile ? 'pt-0' : 'pt-16'}`}
         onTouchStart={(e) => {
           if (scrollContainerRef.current?.scrollTop === 0) {
             setIsPulling(true);
