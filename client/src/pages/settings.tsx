@@ -52,7 +52,9 @@ import {
   MessageSquare,
   Lightbulb,
   Bug,
-  CheckCircle2
+  CheckCircle2,
+  Gift,
+  Copy
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
@@ -119,7 +121,7 @@ export default function SettingsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-9" : "sm:grid-cols-8"}`}>
+            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-10" : "sm:grid-cols-9"}`}>
               <TabsTrigger value="account" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-account">
                 <User className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Account</span>
@@ -147,6 +149,10 @@ export default function SettingsPage() {
               <TabsTrigger value="connections" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-connections">
                 <Link2 className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Connect</span>
+              </TabsTrigger>
+              <TabsTrigger value="referrals" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-referrals">
+                <Gift className="w-5 h-5" />
+                <span className="text-xs sm:text-sm">Referrals</span>
               </TabsTrigger>
               <TabsTrigger value="feedback" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-feedback">
                 <MessageSquare className="w-5 h-5" />
@@ -181,6 +187,9 @@ export default function SettingsPage() {
           </TabsContent>
           <TabsContent value="connections">
             <ConnectionsTab settings={settings!} />
+          </TabsContent>
+          <TabsContent value="referrals">
+            <ReferralTab />
           </TabsContent>
           <TabsContent value="feedback">
             <FeedbackTab settings={settings!} />
@@ -2342,6 +2351,145 @@ function FeedbackTab({ settings }: { settings: Settings }) {
               })}
             </div>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ReferralTab() {
+  const { toast } = useToast();
+  const { data, isLoading } = useQuery<{
+    referralCode: string;
+    stats: { total: number; connected: number };
+    proCreditsUntil: string | null;
+    progressToNextReward: number;
+    connectedNeeded: number;
+  }>({
+    queryKey: ["/api/referrals/stats"],
+  });
+
+  const referralLink = data?.referralCode
+    ? `${window.location.origin}/login?mode=register&ref=${data.referralCode}`
+    : "";
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: "Referral link copied to clipboard.",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const progress = data ? (data.progressToNextReward / 5) * 100 : 0;
+  const connectedCount = data?.stats.connected ?? 0;
+  const totalReferred = data?.stats.total ?? 0;
+  const creditsActive = data?.proCreditsUntil && new Date(data.proCreditsUntil) > new Date();
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Gift className="w-5 h-5" />
+            Refer Friends, Get Pro Free
+          </CardTitle>
+          <CardDescription>
+            Share your referral link. For every 5 friends who sign up and connect their email, you get 1 free month of Pro.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label>Your Referral Link</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={referralLink}
+                readOnly
+                className="font-mono text-sm"
+                data-testid="input-referral-link"
+              />
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => copyToClipboard(referralLink)}
+                data-testid="button-copy-referral"
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Your Referral Code</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={data?.referralCode ?? ""}
+                readOnly
+                className="font-mono text-sm max-w-[200px]"
+                data-testid="input-referral-code"
+              />
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => copyToClipboard(data?.referralCode ?? "")}
+                data-testid="button-copy-code"
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Progress to Next Reward</Label>
+              <span className="text-sm text-muted-foreground">
+                {data?.progressToNextReward ?? 0} / 5 connected
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-md h-3 overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-md transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            {data && data.connectedNeeded > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {data.connectedNeeded} more connected referral{data.connectedNeeded !== 1 ? "s" : ""} until your next free Pro month.
+              </p>
+            )}
+          </div>
+
+          {creditsActive && (
+            <div className="p-3 rounded-md bg-primary/10 border border-primary/20">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-primary" />
+                Pro credit active until {new Date(data!.proCreditsUntil!).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold" data-testid="text-total-referrals">{totalReferred}</p>
+                <p className="text-sm text-muted-foreground">Total Referred</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-2xl font-bold" data-testid="text-connected-referrals">{connectedCount}</p>
+                <p className="text-sm text-muted-foreground">Connected</p>
+              </CardContent>
+            </Card>
+          </div>
         </CardContent>
       </Card>
     </div>

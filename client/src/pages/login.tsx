@@ -80,7 +80,7 @@ export default function LoginPage() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (data: { email: string; password: string }) => {
+    mutationFn: async (data: { email: string; password: string; referralCode?: string }) => {
       const response = await apiRequest("POST", "/api/auth/register", data);
       return response.json();
     },
@@ -210,7 +210,8 @@ export default function LoginPage() {
     if (!validateForm()) return;
     
     if (isRegister) {
-      registerMutation.mutate({ email, password });
+      const refCode = urlParams.get("ref") || undefined;
+      registerMutation.mutate({ email, password, referralCode: refCode });
     } else {
       loginMutation.mutate({ email, password });
     }
