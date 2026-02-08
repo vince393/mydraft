@@ -870,7 +870,9 @@ export async function registerRoutes(
         emailConnected: !!grant,
         connectedEmail: grant?.email || null,
         connectedProvider: grant?.provider || null,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        emailSignature: user.emailSignature,
+        signatureEnabled: user.signatureEnabled,
       } 
     });
   });

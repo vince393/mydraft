@@ -167,7 +167,7 @@ This ensures that even database administrators cannot read user email content, m
   - Landing page updated to highlight global inbox positioning
 - **Contact Autocomplete**: Added email autocomplete for To, Cc, Bcc fields in compose dialog. Contacts are automatically saved when emails are sent and appear as suggestions when composing new emails. Uses `contacts` table with deduplication by (userId, email)
 - **AI Subject-in-Body Bug Fix**: Fixed issue where AI regeneration would put subject line text in the email body. Added explicit instructions to AI prompts and post-processing to strip subject-like prefixes
-- **Email Signature Feature**: Signature is automatically appended to all AI-generated drafts when enabled in Settings > Email Settings
+- **Email Signature Feature**: Signature saved to user account, auto-appended when composing new/reply/forward emails, included in all AI-generated drafts. Suggestion banner appears in compose dialog if signature is missing. Signature data exposed via `/api/auth/me` endpoint.
 - **Email Formatting**: Implemented `formatEmailBody()` function that converts plain text newlines to HTML breaks for proper email rendering
 - **Legal Pages**: All 7 legal policy pages rewritten with professional business language, 18+ age requirement, mydraft.io domains, and 2026 copyright
 - **Stripe Subscription Management**: Full subscription lifecycle with plan switching, cancellations, and upgrade/downgrade flows

@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2, Image, FileImage, Loader2, Paperclip, File } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2, Image, FileImage, Loader2, Paperclip, File, PenLine } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -59,6 +59,8 @@ interface UserData {
     aiPreferences?: {
       replyTone?: string;
     };
+    emailSignature?: string | null;
+    signatureEnabled?: boolean;
   };
 }
 
@@ -110,6 +112,11 @@ export function ComposeDialog({
   const isPro = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
   const canScheduleSend = isPro;
   
+  const userSignature = userData?.user?.emailSignature || "";
+  const signatureEnabled = userData?.user?.signatureEnabled || false;
+  const hasSignature = signatureEnabled && userSignature.trim().length > 0;
+  const [signatureSuggestionDismissed, setSignatureSuggestionDismissed] = useState(false);
+  
   // Check if this is a reply mode (used for original email context)
   const isReplyMode = mode === "reply" || mode === "replyAll";
   
@@ -140,6 +147,9 @@ export function ComposeDialog({
   const initializedRef = useRef(false);
   const lastEmailIdRef = useRef<string | undefined>(undefined);
 
+  const signatureBlock = hasSignature ? `\n\n--\n${userSignature}` : "";
+  const bodyContainsSignature = hasSignature && body.includes(`--\n${userSignature.trim()}`);
+
   // Reset form when dialog opens with new content
   useEffect(() => {
     if (!open) return;
@@ -152,8 +162,9 @@ export function ComposeDialog({
         setCc("");
         setBcc("");
         setSubject("");
-        setBody("");
+        setBody(hasSignature ? signatureBlock : "");
         setShowCcBcc(false);
+        setSignatureSuggestionDismissed(false);
       }
       return;
     }
@@ -169,6 +180,7 @@ export function ComposeDialog({
     
     initializedRef.current = true;
     lastEmailIdRef.current = currentEmailId;
+    setSignatureSuggestionDismissed(false);
     
     // Reset showCcBcc based on mode
     setShowCcBcc(mode === "replyAll");
@@ -179,7 +191,8 @@ export function ComposeDialog({
       setCc("");
       setSubject(originalEmail.subject.startsWith("Re:") ? originalEmail.subject : `Re: ${originalEmail.subject}`);
       const date = new Date(originalEmail.date).toLocaleString();
-      setBody(`\n\n---------- Original message ----------\nFrom: ${originalEmail.from} <${originalEmail.fromEmail}>\nDate: ${date}\nSubject: ${originalEmail.subject}\n\n${originalEmail.body.replace(/<[^>]*>/g, '')}`);
+      const quoted = `\n\n---------- Original message ----------\nFrom: ${originalEmail.from} <${originalEmail.fromEmail}>\nDate: ${date}\nSubject: ${originalEmail.subject}\n\n${originalEmail.body.replace(/<[^>]*>/g, '')}`;
+      setBody(hasSignature ? signatureBlock + quoted : quoted);
     } else if (mode === "replyAll") {
       setTo(originalEmail.fromEmail);
       const allRecipients = [...(originalEmail.to || []), ...(originalEmail.cc || [])];
@@ -191,15 +204,17 @@ export function ComposeDialog({
       setCc(uniqueCc.join(", "));
       setSubject(originalEmail.subject.startsWith("Re:") ? originalEmail.subject : `Re: ${originalEmail.subject}`);
       const date = new Date(originalEmail.date).toLocaleString();
-      setBody(`\n\n---------- Original message ----------\nFrom: ${originalEmail.from} <${originalEmail.fromEmail}>\nDate: ${date}\nSubject: ${originalEmail.subject}\n\n${originalEmail.body.replace(/<[^>]*>/g, '')}`);
+      const quoted = `\n\n---------- Original message ----------\nFrom: ${originalEmail.from} <${originalEmail.fromEmail}>\nDate: ${date}\nSubject: ${originalEmail.subject}\n\n${originalEmail.body.replace(/<[^>]*>/g, '')}`;
+      setBody(hasSignature ? signatureBlock + quoted : quoted);
     } else if (mode === "forward") {
       setTo("");
       setCc("");
       setSubject(originalEmail.subject.startsWith("Fwd:") ? originalEmail.subject : `Fwd: ${originalEmail.subject}`);
       const date = new Date(originalEmail.date).toLocaleString();
-      setBody(`\n\n---------- Forwarded message ----------\nFrom: ${originalEmail.from} <${originalEmail.fromEmail}>\nDate: ${date}\nSubject: ${originalEmail.subject}\n\n${originalEmail.body.replace(/<[^>]*>/g, '')}`);
+      const quoted = `\n\n---------- Forwarded message ----------\nFrom: ${originalEmail.from} <${originalEmail.fromEmail}>\nDate: ${date}\nSubject: ${originalEmail.subject}\n\n${originalEmail.body.replace(/<[^>]*>/g, '')}`;
+      setBody(hasSignature ? signatureBlock + quoted : quoted);
     }
-  }, [open, mode, originalEmail, currentUserEmail]);
+  }, [open, mode, originalEmail, currentUserEmail, hasSignature, signatureBlock]);
 
   const cancelMutation = useMutation({
     mutationFn: async (pendingSendId: number) => {
@@ -394,6 +409,7 @@ export function ComposeDialog({
     setScheduledDate(undefined);
     setScheduledTime("09:00");
     setShowSchedulePicker(false);
+    setSignatureSuggestionDismissed(false);
     setShowAiOptions(false);
     setAiTone("professional");
     setAiInstructions("");
@@ -923,6 +939,60 @@ export function ComposeDialog({
               className="flex-1 min-h-[160px] resize-none border-0 bg-transparent px-4 py-3 text-sm leading-relaxed placeholder:text-foreground/20 focus-visible:ring-0 focus-visible:ring-offset-0"
               data-testid="textarea-compose-body"
             />
+
+            {hasSignature && !bodyContainsSignature && !signatureSuggestionDismissed && body.replace(/\s/g, '').length > 0 && (
+              <div
+                className="mx-4 mb-2 flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+                style={{
+                  background: "rgba(99, 102, 241, 0.08)",
+                  border: "1px solid rgba(99, 102, 241, 0.15)",
+                }}
+                data-testid="banner-signature-suggestion"
+              >
+                <PenLine className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                <span className="text-foreground/60 flex-1">Add your email signature?</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-indigo-400"
+                  onClick={() => {
+                    if (mode === "new") {
+                      setBody(prev => prev + signatureBlock);
+                    } else {
+                      const separatorPatterns = [
+                        "---------- Original message ----------",
+                        "---------- Forwarded message ----------",
+                      ];
+                      let insertIndex = -1;
+                      for (const sep of separatorPatterns) {
+                        const idx = body.indexOf(sep);
+                        if (idx !== -1) {
+                          const lineStart = body.lastIndexOf('\n', idx - 1);
+                          insertIndex = lineStart !== -1 ? lineStart : idx;
+                          break;
+                        }
+                      }
+                      if (insertIndex !== -1) {
+                        setBody(prev => prev.slice(0, insertIndex) + signatureBlock + prev.slice(insertIndex));
+                      } else {
+                        setBody(prev => prev + signatureBlock);
+                      }
+                    }
+                    setSignatureSuggestionDismissed(true);
+                  }}
+                  data-testid="button-add-signature"
+                >
+                  Add
+                </Button>
+                <button
+                  onClick={() => setSignatureSuggestionDismissed(true)}
+                  className="text-foreground/20 hover:text-foreground/40 transition-colors cursor-pointer"
+                  data-testid="button-dismiss-signature"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
             
             {/* Attached Images Preview */}
             {attachedImages.length > 0 && (
