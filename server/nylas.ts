@@ -110,57 +110,169 @@ function stripHtml(html: string): string {
 }
 
 function sanitizeEmailHtml(html: string): string {
-  return sanitizeHtml(html, {
+  const safeStyleRegex = /^(?!.*(?:expression|javascript|vbscript|-moz-binding|behavior)\s*[:(])(?!.*url\s*\()/i;
+  const safeStyleWithUrlRegex = /^(?!.*(?:expression|javascript|vbscript|-moz-binding|behavior)\s*[:(])(?!.*url\s*\(\s*['"]?\s*(?:javascript|vbscript|data:text))/i;
+
+  const commonAttrs = ['style', 'class', 'id', 'dir', 'lang', 'title', 'role', 'aria-label', 'aria-hidden'];
+
+  const result = sanitizeHtml(html, {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat([
-      'img', 'center', 'font', 'hr'
+      'img', 'center', 'font', 'hr', 'style',
+      'section', 'article', 'header', 'footer', 'main',
+      'figure', 'figcaption', 'details', 'summary',
+      'mark', 'time', 'wbr', 'abbr', 'del', 'ins', 'sub', 'sup', 'small',
+      'caption', 'colgroup', 'col', 'thead', 'tbody', 'tfoot',
     ]),
     allowedAttributes: {
-      ...sanitizeHtml.defaults.allowedAttributes,
-      'a': ['href', 'target', 'rel'],
-      'img': ['src', 'alt', 'width', 'height'],
-      'font': ['color', 'face', 'size'],
-      'table': ['width', 'border', 'cellpadding', 'cellspacing', 'align', 'bgcolor'],
-      'td': ['width', 'align', 'valign', 'colspan', 'rowspan', 'bgcolor'],
-      'th': ['width', 'align', 'valign', 'colspan', 'rowspan', 'bgcolor'],
-      'tr': ['align', 'valign', 'bgcolor'],
-      'div': ['align', 'class', 'dir'],
-      'p': ['align', 'dir'],
-      'span': ['class', 'dir'],
-      'blockquote': ['type', 'cite', 'class'],
+      '*': commonAttrs,
+      'a': [...commonAttrs, 'href', 'target', 'rel', 'name'],
+      'img': [...commonAttrs, 'src', 'alt', 'width', 'height', 'border'],
+      'font': [...commonAttrs, 'color', 'face', 'size'],
+      'table': [...commonAttrs, 'width', 'height', 'border', 'cellpadding', 'cellspacing', 'align', 'bgcolor', 'background', 'valign', 'summary'],
+      'td': [...commonAttrs, 'width', 'height', 'align', 'valign', 'colspan', 'rowspan', 'bgcolor', 'background', 'nowrap'],
+      'th': [...commonAttrs, 'width', 'height', 'align', 'valign', 'colspan', 'rowspan', 'bgcolor', 'scope'],
+      'tr': [...commonAttrs, 'align', 'valign', 'bgcolor', 'height'],
+      'col': [...commonAttrs, 'width', 'span', 'align', 'valign'],
+      'colgroup': [...commonAttrs, 'width', 'span', 'align', 'valign'],
+      'div': [...commonAttrs, 'align', 'data-smartmail'],
+      'p': [...commonAttrs, 'align'],
+      'span': [...commonAttrs],
+      'blockquote': [...commonAttrs, 'type', 'cite'],
+      'ol': [...commonAttrs, 'start', 'type'],
+      'ul': [...commonAttrs, 'type'],
+      'li': [...commonAttrs, 'value'],
+      'hr': [...commonAttrs, 'width', 'size', 'color', 'noshade', 'align'],
+      'center': [...commonAttrs],
+      'h1': [...commonAttrs, 'align'],
+      'h2': [...commonAttrs, 'align'],
+      'h3': [...commonAttrs, 'align'],
+      'h4': [...commonAttrs, 'align'],
+      'h5': [...commonAttrs, 'align'],
+      'h6': [...commonAttrs, 'align'],
+      'br': [...commonAttrs, 'clear'],
     },
-    allowedSchemes: ['http', 'https', 'mailto'],
+    allowedSchemes: ['http', 'https', 'mailto', 'cid'],
+    allowedSchemesByTag: {
+      'img': ['http', 'https', 'cid'],
+      'a': ['http', 'https', 'mailto'],
+    },
     allowedClasses: {
-      'div': ['gmail_quote', 'gmail_attr', 'moz-cite-prefix', 'yahoo_quoted', 'WordSection1', 'MsoNormal'],
-      'blockquote': ['gmail_quote', 'moz-cite-prefix'],
-      'span': ['gmail_default', 'MsoHyperlink'],
-      'p': ['MsoNormal'],
+      '*': ['*'],
     },
     allowedStyles: {
-      'div': {
-        'border-left': [/^\d+(?:\.\d+)?(?:px|pt)\s+solid\s+[#a-zA-Z0-9]+$/],
-        'margin-left': [/^\d+(?:\.\d+)?(?:px|pt|em)$/],
-        'padding-left': [/^\d+(?:\.\d+)?(?:px|pt|em)$/],
+      '*': {
+        'color': [safeStyleRegex],
+        'background-color': [safeStyleRegex],
+        'background': [safeStyleWithUrlRegex],
+        'font-family': [safeStyleRegex],
+        'font-size': [safeStyleRegex],
+        'font-weight': [safeStyleRegex],
+        'font-style': [safeStyleRegex],
+        'text-align': [safeStyleRegex],
+        'text-decoration': [safeStyleRegex],
+        'text-transform': [safeStyleRegex],
+        'text-indent': [safeStyleRegex],
+        'line-height': [safeStyleRegex],
+        'letter-spacing': [safeStyleRegex],
+        'word-spacing': [safeStyleRegex],
+        'white-space': [safeStyleRegex],
+        'vertical-align': [safeStyleRegex],
+        'display': [safeStyleRegex],
+        'visibility': [safeStyleRegex],
+        'float': [safeStyleRegex],
+        'clear': [safeStyleRegex],
+        'overflow': [safeStyleRegex],
+        'overflow-x': [safeStyleRegex],
+        'overflow-y': [safeStyleRegex],
+        'width': [safeStyleRegex],
+        'height': [safeStyleRegex],
+        'min-width': [safeStyleRegex],
+        'min-height': [safeStyleRegex],
+        'max-width': [safeStyleRegex],
+        'max-height': [safeStyleRegex],
+        'margin': [safeStyleRegex],
+        'margin-top': [safeStyleRegex],
+        'margin-right': [safeStyleRegex],
+        'margin-bottom': [safeStyleRegex],
+        'margin-left': [safeStyleRegex],
+        'padding': [safeStyleRegex],
+        'padding-top': [safeStyleRegex],
+        'padding-right': [safeStyleRegex],
+        'padding-bottom': [safeStyleRegex],
+        'padding-left': [safeStyleRegex],
+        'border': [safeStyleRegex],
+        'border-top': [safeStyleRegex],
+        'border-right': [safeStyleRegex],
+        'border-bottom': [safeStyleRegex],
+        'border-left': [safeStyleRegex],
+        'border-width': [safeStyleRegex],
+        'border-style': [safeStyleRegex],
+        'border-color': [safeStyleRegex],
+        'border-collapse': [safeStyleRegex],
+        'border-spacing': [safeStyleRegex],
+        'border-radius': [safeStyleRegex],
+        'border-top-left-radius': [safeStyleRegex],
+        'border-top-right-radius': [safeStyleRegex],
+        'border-bottom-left-radius': [safeStyleRegex],
+        'border-bottom-right-radius': [safeStyleRegex],
+        'table-layout': [safeStyleRegex],
+        'list-style': [safeStyleRegex],
+        'list-style-type': [safeStyleRegex],
+        'opacity': [safeStyleRegex],
+        'box-shadow': [safeStyleRegex],
+        'direction': [safeStyleRegex],
+        'unicode-bidi': [safeStyleRegex],
+        'word-wrap': [safeStyleRegex],
+        'word-break': [safeStyleRegex],
+        'overflow-wrap': [safeStyleRegex],
+        'position': [/^(?:relative|static)$/],
+        'cursor': [safeStyleRegex],
+        'outline': [safeStyleRegex],
+        'mso-line-height-rule': [safeStyleRegex],
+        'mso-table-lspace': [safeStyleRegex],
+        'mso-table-rspace': [safeStyleRegex],
+        'mso-padding-alt': [safeStyleRegex],
+        '-webkit-text-size-adjust': [safeStyleRegex],
+        '-ms-text-size-adjust': [safeStyleRegex],
       },
-      'blockquote': {
-        'border-left': [/^\d+(?:\.\d+)?(?:px|pt)\s+solid\s+[#a-zA-Z0-9]+$/],
-        'margin': [/^\d+(?:\.\d+)?(?:px|pt|em)(?:\s+\d+(?:\.\d+)?(?:px|pt|em))*$/],
-        'margin-left': [/^\d+(?:\.\d+)?(?:px|pt|em)$/],
-        'padding-left': [/^\d+(?:\.\d+)?(?:px|pt|em)$/],
+    },
+    exclusiveFilter: (frame) => {
+      return ['script', 'object', 'embed', 'applet', 'iframe', 'form', 'input', 'button', 'select', 'textarea', 'svg', 'math'].includes(frame.tag);
+    },
+    transformTags: {
+      'a': (tagName, attribs) => {
+        const cleanAttribs = { ...attribs };
+        delete cleanAttribs.onclick;
+        delete cleanAttribs.onmouseover;
+        return {
+          tagName,
+          attribs: {
+            ...cleanAttribs,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+          },
+        };
       },
-      'span': {
-        'color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(\d+,\s*\d+,\s*\d+\)$/, /^[a-z]+$/i],
-        'font-size': [/^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/],
-        'font-family': [/^[a-zA-Z\s,'-]+$/],
-        'font-weight': [/^(?:normal|bold|\d{3})$/],
-      },
-      'p': {
-        'margin': [/^\d+(?:\.\d+)?(?:px|pt|em)(?:\s+\d+(?:\.\d+)?(?:px|pt|em))*$/],
-      },
-      'font': {
-        'color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(\d+,\s*\d+,\s*\d+\)$/, /^[a-z]+$/i],
+      'style': (tagName, attribs) => {
+        return { tagName, attribs };
       },
     },
   });
+
+  let cleaned = result
+    .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (match, content) => {
+      const safeContent = content
+        .replace(/expression\s*\([^)]*\)/gi, '')
+        .replace(/javascript\s*:/gi, '')
+        .replace(/vbscript\s*:/gi, '')
+        .replace(/-moz-binding\s*:[^;}]*/gi, '')
+        .replace(/behavior\s*:[^;}]*/gi, '')
+        .replace(/@import\s+[^;]*/gi, '')
+        .replace(/url\s*\(\s*['"]?\s*(?:javascript|vbscript|data:text)[^)]*\)/gi, 'none');
+      return `<style>${safeContent}</style>`;
+    });
+
+  return cleaned;
 }
 
 async function nylasRequest(path: string, options: RequestInit = {}, retries = 3): Promise<Response> {

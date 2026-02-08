@@ -34,7 +34,7 @@ function sanitizeForIframe(html: string): string {
   });
 
   temp
-    .querySelectorAll("script, object, embed, applet, iframe, form")
+    .querySelectorAll("script, object, embed, applet, iframe, form, input, button, select, textarea")
     .forEach((el) => el.remove());
 
   const dangerousSchemes = [
@@ -108,6 +108,7 @@ export function EmailIframeRenderer({
   const buildIframeContent = useCallback((rawHtml: string, dark: boolean) => {
     const hasFullHtml = /<html/i.test(rawHtml);
     const hasBody = /<body/i.test(rawHtml);
+    const hasStyleTag = /<style[\s>]/i.test(rawHtml);
 
     let bodyContent = rawHtml;
     let headContent = "";
@@ -143,10 +144,13 @@ export function EmailIframeRenderer({
     const sanitized = sanitizeForIframe(bodyContent);
 
     const bgColor = dark ? "#1a1a1e" : "#ffffff";
-    const textColor = dark ? "#e0e0e4" : "#222222";
-    const linkColor = dark ? "#6fa8ff" : "";
+    const textColor = dark ? "#e0e0e4" : "#1f1f1f";
+    const linkColor = dark ? "#6fa8ff" : "#1a73e8";
+    const quoteColor = dark ? "rgba(255,255,255,0.15)" : "#dadce0";
+    const quoteFg = dark ? "#9aa0a6" : "#5f6368";
+    const hrColor = dark ? "rgba(255,255,255,0.08)" : "#dadce0";
 
-    const darkLinkStyle = linkColor ? `a { color: ${linkColor}; }` : "";
+    const hasRichContent = hasStyleTag || /<table/i.test(rawHtml);
 
     return `<!DOCTYPE html>
 <html>
@@ -154,42 +158,66 @@ export function EmailIframeRenderer({
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  html, body {
+  html {
     margin: 0;
-    padding: 16px;
+    padding: 0;
+    background: ${bgColor};
+  }
+  body {
+    margin: 0;
+    padding: ${hasRichContent ? '0' : '14px 16px'};
     background: ${bgColor};
     color: ${textColor};
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 15px;
-    line-height: 1.65;
+    font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.58;
     word-wrap: break-word;
     overflow-wrap: break-word;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.01em;
   }
-  body > div, body > table { max-width: 100%; }
-  p { margin: 0 0 0.85em 0; }
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  table {
+    max-width: 100%;
+    border-collapse: collapse;
+  }
+  body > table,
+  body > div > table,
+  body > center > table {
+    margin: 0 auto;
+  }
+  a {
+    color: ${linkColor};
+  }
   blockquote {
-    margin: 0.8em 0;
-    padding: 0.4em 0 0.4em 1em;
-    border-left: 3px solid ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'};
-    color: ${dark ? '#a0a0a4' : '#555555'};
+    margin: 0 0 0 0.8ex;
+    padding-left: 1ex;
+    border-left: 1px solid ${quoteColor};
+    color: ${quoteFg};
+  }
+  .gmail_quote {
+    margin: 0 0 0 0.8ex;
+    padding-left: 1ex;
+    border-left: 1px solid ${quoteColor};
+    color: ${quoteFg};
   }
   pre, code {
-    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-family: 'Roboto Mono', monospace;
     font-size: 13px;
-    background: ${dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'};
+    background: ${dark ? 'rgba(255,255,255,0.05)' : '#f8f9fa'};
     border-radius: 4px;
-    padding: 2px 5px;
+    padding: 2px 4px;
+    white-space: pre-wrap;
   }
   pre { padding: 12px; overflow-x: auto; }
   hr {
     border: none;
-    border-top: 1px solid ${dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'};
-    margin: 1.2em 0;
+    border-top: 1px solid ${hrColor};
+    margin: 16px 0;
   }
-  ${darkLinkStyle}
   img[width="1"], img[height="1"],
   img[width="0"], img[height="0"] {
     display: none !important;
@@ -198,6 +226,29 @@ export function EmailIframeRenderer({
   [style*="visibility:hidden"], [style*="visibility: hidden"] {
     display: none !important;
   }
+  ${dark ? `
+  body[bgcolor], body[style*="background"],
+  div[style*="background-color: #ffffff"], div[style*="background-color:#ffffff"],
+  div[style*="background-color: #fff"], div[style*="background-color:#fff"],
+  div[style*="background-color: white"], div[style*="background-color:white"],
+  table[bgcolor="#ffffff"], table[bgcolor="#fff"], table[bgcolor="white"],
+  td[bgcolor="#ffffff"], td[bgcolor="#fff"], td[bgcolor="white"],
+  td[style*="background-color: #ffffff"], td[style*="background-color:#ffffff"],
+  td[style*="background-color: #fff"], td[style*="background-color:#fff"],
+  td[style*="background-color: white"], td[style*="background-color:white"] {
+    background-color: ${bgColor} !important;
+    background: ${bgColor} !important;
+  }
+  body[text], td[style*="color: #000"], td[style*="color:#000"],
+  td[style*="color: black"], td[style*="color:black"],
+  span[style*="color: #000"], span[style*="color:#000"],
+  span[style*="color: black"], span[style*="color:black"],
+  font[color="#000000"], font[color="#000"], font[color="black"],
+  p[style*="color: #000"], p[style*="color:#000"],
+  div[style*="color: #000"], div[style*="color:#000"] {
+    color: ${textColor} !important;
+  }
+  ` : ''}
 </style>
 ${headContent}
 </head>
