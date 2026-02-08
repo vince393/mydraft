@@ -535,94 +535,72 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 </button>
               </PopoverTrigger>
               <PopoverContent 
-                className="w-80 p-0 border-0 shadow-2xl overflow-hidden" 
+                className="w-64 p-0 border-0 shadow-xl overflow-hidden" 
                 align="end"
                 style={{
-                  backdropFilter: "blur(32px)",
-                  WebkitBackdropFilter: "blur(32px)",
-                  background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
+                  backdropFilter: "blur(24px)",
+                  WebkitBackdropFilter: "blur(24px)",
+                  background: "linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)",
                   border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: "16px",
-                  boxShadow: "0 24px 48px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)"
+                  borderRadius: "12px",
+                  boxShadow: "0 16px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06)"
                 }}
               >
-                <div className="px-5 pt-4 pb-3 flex flex-wrap items-center justify-between gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div className="flex items-center gap-2">
-                    <SlidersHorizontal className="w-4 h-4 text-foreground/50" />
-                    <span className="text-sm font-medium text-foreground/90">Filters</span>
-                  </div>
+                <div className="px-3 pt-2.5 pb-2 flex flex-wrap items-center justify-between gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <span className="text-xs font-medium text-foreground/60">Filters</span>
                   {hasActiveFilters && (
                     <button 
                       onClick={clearFilters}
-                      className="text-xs text-foreground/40 hover:text-foreground/70 transition-colors cursor-pointer"
+                      className="text-[11px] text-foreground/35 hover:text-foreground/60 transition-colors cursor-pointer"
                       data-testid="button-clear-filters"
                     >
-                      Clear all
+                      Clear
                     </button>
                   )}
                 </div>
 
-                <div className="px-5 py-4 space-y-5">
+                <div className="px-3 py-2.5 space-y-3">
                   <button
                     onClick={() => setFilters(f => ({ ...f, unreadOnly: !f.unreadOnly }))}
-                    className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl cursor-pointer transition-all"
+                    className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-all"
                     style={{
-                      background: filters.unreadOnly 
-                        ? "linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.08) 100%)"
-                        : "rgba(255,255,255,0.03)",
-                      border: filters.unreadOnly 
-                        ? "1px solid rgba(59,130,246,0.25)" 
-                        : "1px solid rgba(255,255,255,0.06)",
+                      background: filters.unreadOnly ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.03)",
+                      border: filters.unreadOnly ? "1px solid rgba(59,130,246,0.2)" : "1px solid rgba(255,255,255,0.05)",
                     }}
                     data-testid="checkbox-unread-only"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(59,130,246,0.12)" }}>
-                        <Mail className="w-4 h-4 text-blue-400" />
-                      </div>
-                      <span className="text-sm text-foreground/80">Unread only</span>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 text-blue-400/70" />
+                      <span className="text-xs text-foreground/70">Unread only</span>
                     </div>
                     <div 
-                      className="w-5 h-5 rounded-md flex items-center justify-center transition-all"
+                      className="w-4 h-4 rounded flex items-center justify-center transition-all"
                       style={{
-                        background: filters.unreadOnly 
-                          ? "linear-gradient(135deg, #3B82F6, #6366F1)" 
-                          : "rgba(255,255,255,0.06)",
-                        border: filters.unreadOnly 
-                          ? "none" 
-                          : "1px solid rgba(255,255,255,0.12)"
+                        background: filters.unreadOnly ? "linear-gradient(135deg, #3B82F6, #6366F1)" : "rgba(255,255,255,0.06)",
+                        border: filters.unreadOnly ? "none" : "1px solid rgba(255,255,255,0.1)"
                       }}
                     >
-                      {filters.unreadOnly && <Check className="w-3 h-3 text-white" />}
+                      {filters.unreadOnly && <Check className="w-2.5 h-2.5 text-white" />}
                     </div>
                   </button>
 
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-2 px-1">
-                      <Calendar className="w-3.5 h-3.5 text-foreground/40" />
-                      <span className="text-xs font-medium text-foreground/50 uppercase tracking-wider">Date Range</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1.5">
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] text-foreground/40 px-0.5">Date</span>
+                    <div className="grid grid-cols-4 gap-1">
                       {([
                         { value: "all", label: "All" },
                         { value: "today", label: "Today" },
-                        { value: "week", label: "7 days" },
-                        { value: "month", label: "30 days" },
+                        { value: "week", label: "7d" },
+                        { value: "month", label: "30d" },
                       ] as const).map((option) => (
                         <button
                           key={option.value}
                           onClick={() => setFilters(f => ({ ...f, dateRange: option.value }))}
-                          className="py-2 rounded-lg text-xs font-medium transition-all cursor-pointer"
+                          className="py-1.5 rounded-md text-[11px] font-medium transition-all cursor-pointer"
                           style={{
-                            background: filters.dateRange === option.value
-                              ? "linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(99,102,241,0.15) 100%)"
-                              : "rgba(255,255,255,0.03)",
-                            border: filters.dateRange === option.value
-                              ? "1px solid rgba(59,130,246,0.3)"
-                              : "1px solid rgba(255,255,255,0.06)",
-                            color: filters.dateRange === option.value
-                              ? "rgba(147,197,253,1)"
-                              : "rgba(255,255,255,0.5)",
+                            background: filters.dateRange === option.value ? "rgba(59,130,246,0.15)" : "rgba(255,255,255,0.03)",
+                            border: filters.dateRange === option.value ? "1px solid rgba(59,130,246,0.25)" : "1px solid rgba(255,255,255,0.05)",
+                            color: filters.dateRange === option.value ? "rgba(147,197,253,1)" : "rgba(255,255,255,0.45)",
                           }}
                           data-testid={`button-date-${option.value}`}
                         >
@@ -632,36 +610,33 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                     </div>
                   </div>
 
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-2 px-1">
-                      <User className="w-3.5 h-3.5 text-foreground/40" />
-                      <span className="text-xs font-medium text-foreground/50 uppercase tracking-wider">Sender</span>
-                    </div>
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] text-foreground/40 px-0.5">Sender</span>
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/30 pointer-events-none" />
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-foreground/25 pointer-events-none" />
                       <input
-                        placeholder="Search by sender..."
+                        placeholder="Filter sender..."
                         value={filters.sender}
                         onChange={(e) => setFilters(f => ({ ...f, sender: e.target.value }))}
-                        className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-foreground/80 placeholder:text-foreground/25 outline-none transition-all"
+                        className="w-full pl-7 pr-3 py-1.5 rounded-lg text-xs text-foreground/70 placeholder:text-foreground/20 outline-none transition-all"
                         style={{
                           background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.08)",
+                          border: "1px solid rgba(255,255,255,0.06)",
                         }}
                         data-testid="input-filter-sender"
                       />
                     </div>
                     {uniqueSenders.length > 0 && !filters.sender && (
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {uniqueSenders.slice(0, 5).map(([email, name]) => (
+                      <div className="flex flex-wrap gap-1">
+                        {uniqueSenders.slice(0, 4).map(([email, name]) => (
                           <button
                             key={email}
                             onClick={() => setFilters(f => ({ ...f, sender: name }))}
-                            className="px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-all"
+                            className="px-2 py-0.5 rounded-full text-[10px] cursor-pointer transition-all"
                             style={{
                               background: "rgba(255,255,255,0.05)",
-                              border: "1px solid rgba(255,255,255,0.08)",
-                              color: "rgba(255,255,255,0.55)",
+                              border: "1px solid rgba(255,255,255,0.06)",
+                              color: "rgba(255,255,255,0.45)",
                             }}
                             data-testid={`button-sender-${email}`}
                           >
@@ -672,15 +647,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                     )}
                   </div>
                 </div>
-
-                {hasActiveFilters && (
-                  <div className="px-5 py-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                    <div className="flex items-center gap-2 text-xs text-foreground/40">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                      <span>{categoryFilteredEmails.length} email{categoryFilteredEmails.length !== 1 ? 's' : ''} match</span>
-                    </div>
-                  </div>
-                )}
               </PopoverContent>
             </Popover>
           </div>
