@@ -131,6 +131,15 @@ export class WebhookHandlers {
         
         // Find user by stripe customer ID
         const user = await storage.getUserByStripeCustomerId(customerId);
+
+        // Mark referral as subscribed (real payment, not trial)
+        if (user) {
+          try {
+            await storage.markReferralSubscribed(user.id);
+          } catch (refErr) {
+            console.error("Error marking referral subscribed:", refErr);
+          }
+        }
         
         // Determine plan from subscription items
         let plan: 'free' | 'pro' | 'premium' = 'free';

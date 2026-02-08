@@ -2361,10 +2361,10 @@ function ReferralTab() {
   const { toast } = useToast();
   const { data, isLoading } = useQuery<{
     referralCode: string;
-    stats: { total: number; connected: number };
+    stats: { total: number; subscribed: number };
     proCreditsUntil: string | null;
     progressToNextReward: number;
-    connectedNeeded: number;
+    subscribedNeeded: number;
   }>({
     queryKey: ["/api/referrals/stats"],
   });
@@ -2389,8 +2389,8 @@ function ReferralTab() {
     );
   }
 
-  const progress = data ? (data.progressToNextReward / 5) * 100 : 0;
-  const connectedCount = data?.stats.connected ?? 0;
+  const progress = data ? (data.progressToNextReward / 2) * 100 : 0;
+  const subscribedCount = data?.stats.subscribed ?? 0;
   const totalReferred = data?.stats.total ?? 0;
   const creditsActive = data?.proCreditsUntil && new Date(data.proCreditsUntil) > new Date();
 
@@ -2400,15 +2400,15 @@ function ReferralTab() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Gift className="w-5 h-5" />
-            Refer Friends, Get Pro Free
+            Give Pro, Get Pro
           </CardTitle>
           <CardDescription>
-            Share your referral link. For every 5 friends who sign up and connect their email, you get 1 free month of Pro.
+            Love MyDraft? Share it with friends and colleagues. When just 2 people you refer become members, you'll unlock a full month of Pro — completely on us. Keep sharing, keep earning.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label>Your Referral Link</Label>
+            <Label>Your Personal Invite Link</Label>
             <div className="flex items-center gap-2">
               <Input
                 value={referralLink}
@@ -2428,7 +2428,7 @@ function ReferralTab() {
           </div>
 
           <div className="space-y-2">
-            <Label>Your Referral Code</Label>
+            <Label>Invite Code</Label>
             <div className="flex items-center gap-2">
               <Input
                 value={data?.referralCode ?? ""}
@@ -2449,9 +2449,9 @@ function ReferralTab() {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Progress to Next Reward</Label>
+              <Label>Your Progress</Label>
               <span className="text-sm text-muted-foreground">
-                {data?.progressToNextReward ?? 0} / 5 connected
+                {data?.progressToNextReward ?? 0} / 2
               </span>
             </div>
             <div className="w-full bg-muted rounded-md h-3 overflow-hidden">
@@ -2460,9 +2460,14 @@ function ReferralTab() {
                 style={{ width: `${progress}%` }}
               />
             </div>
-            {data && data.connectedNeeded > 0 && (
+            {data && data.subscribedNeeded > 0 && (
               <p className="text-sm text-muted-foreground">
-                {data.connectedNeeded} more connected referral{data.connectedNeeded !== 1 ? "s" : ""} until your next free Pro month.
+                {data.subscribedNeeded === 1 ? "Just 1 more friend" : `${data.subscribedNeeded} friends`} away from your next free month of Pro.
+              </p>
+            )}
+            {data && data.subscribedNeeded === 0 && (
+              <p className="text-sm text-muted-foreground">
+                You've earned a reward! Keep inviting to unlock more free months.
               </p>
             )}
           </div>
@@ -2480,15 +2485,21 @@ function ReferralTab() {
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold" data-testid="text-total-referrals">{totalReferred}</p>
-                <p className="text-sm text-muted-foreground">Total Referred</p>
+                <p className="text-sm text-muted-foreground">Friends Invited</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold" data-testid="text-connected-referrals">{connectedCount}</p>
-                <p className="text-sm text-muted-foreground">Connected</p>
+                <p className="text-2xl font-bold" data-testid="text-subscribed-referrals">{subscribedCount}</p>
+                <p className="text-sm text-muted-foreground">Became Members</p>
               </CardContent>
             </Card>
+          </div>
+
+          <div className="p-3 rounded-md bg-muted/50">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              How it works: Share your link, your friends sign up and choose a plan. Once their subscription is active, it counts toward your reward. Every 2 members you bring in earns you a free month of Pro.
+            </p>
           </div>
         </CardContent>
       </Card>

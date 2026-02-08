@@ -1492,12 +1492,6 @@ Return ONLY valid JSON, no other text.`;
           `Connected ${grant.provider || provider} email: ${normalizedEmail}`
         );
 
-        // Mark referral as connected (triggers pro credit at every 5th connection)
-        try {
-          await storage.markReferralConnected(userId);
-        } catch (refErr) {
-          console.error("Error marking referral connected:", refErr);
-        }
       }
 
       res.redirect('/?connected=true');
@@ -6546,8 +6540,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         stats,
         referrals: referralsList,
         proCreditsUntil: user.proCreditsUntil,
-        progressToNextReward: stats.connected % 5,
-        connectedNeeded: 5 - (stats.connected % 5),
+        progressToNextReward: stats.subscribed % 2,
+        subscribedNeeded: 2 - (stats.subscribed % 2),
       });
     } catch (error) {
       console.error("Error getting referral stats:", error);

@@ -262,8 +262,8 @@ export interface IStorage {
   getUserByReferralCode(code: string): Promise<User | undefined>;
   generateReferralCode(userId: string): Promise<string>;
   createReferral(referrerUserId: string, referredUserId: string): Promise<Referral>;
-  markReferralConnected(referredUserId: string): Promise<void>;
-  getReferralStats(userId: string): Promise<{ total: number; connected: number }>;
+  markReferralSubscribed(referredUserId: string): Promise<void>;
+  getReferralStats(userId: string): Promise<{ total: number; subscribed: number }>;
   getReferrals(userId: string): Promise<Referral[]>;
   applyProCredit(userId: string, months: number): Promise<void>;
 }
@@ -2464,33 +2464,30 @@ Business Development`,
     return referral;
   }
 
-  async markReferralConnected(referredUserId: string): Promise<void> {
-    await db.update(referrals)
-      .set({ status: "connected", connectedAt: new Date() })
+  async markReferralSubscribed(referredUserId: string): Promise<void> {
+    const [existing] = await db.select().from(referrals)
       .where(and(
         eq(referrals.referredUserId, referredUserId),
         eq(referrals.status, "registered")
       ));
+    if (!existing) return;
 
-    const [result] = await db.select({ referrerUserId: referrals.referrerUserId })
-      .from(referrals)
-      .where(eq(referrals.referredUserId, referredUserId))
-      .limit(1);
+    await db.update(referrals)
+      .set({ status: "subscribed", connectedAt: new Date() })
+      .where(eq(referrals.id, existing.id));
 
-    if (result) {
-      const stats = await this.getReferralStats(result.referrerUserId);
-      if (stats.connected >= 5 && stats.connected % 5 === 0) {
-        await this.applyProCredit(result.referrerUserId, 1);
-      }
+    const stats = await this.getReferralStats(existing.referrerUserId);
+    if (stats.subscribed >= 2 && stats.subscribed % 2 === 0) {
+      await this.applyProCredit(existing.referrerUserId, 1);
     }
   }
 
-  async getReferralStats(userId: string): Promise<{ total: number; connected: number }> {
+  async getReferralStats(userId: string): Promise<{ total: number; subscribed: number }> {
     const allReferrals = await db.select().from(referrals)
       .where(eq(referrals.referrerUserId, userId));
     const total = allReferrals.length;
-    const connected = allReferrals.filter(r => r.status === "connected").length;
-    return { total, connected };
+    const subscribed = allReferrals.filter(r => r.status === "subscribed").length;
+    return { total, subscribed };
   }
 
   async getReferrals(userId: string): Promise<Referral[]> {

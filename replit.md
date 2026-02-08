@@ -178,10 +178,10 @@ This ensures that even database administrators cannot read user email content, m
   - Pricing page shows Upgrade/Downgrade/Switch labels for existing subscribers
   - Settings billing tab shows pending cancellation status with cancel date, cancel confirmation flow
   - Billing info includes `cancelAtPeriodEnd` and `cancelAt` fields from Stripe
-- **Referral Program**: Users earn 1 free month of Pro for every 5 referrals who sign up and connect their email
+- **Referral Program**: Users earn 1 free month of Pro for every 2 referrals who sign up and subscribe (payment must go through, trial doesn't count)
   - Database: `referral_code`, `referred_by_user_id`, `pro_credits_until` on users table; `referrals` table tracks status
   - Registration captures `?ref=CODE` from URL, links referral on verification
-  - Nylas OAuth callback marks referral as "connected" and auto-applies Pro credit at every 5th connection
+  - `invoice.paid` Stripe webhook marks referral as "subscribed" (only fires on real payment, not $0 trial invoices) and auto-applies Pro credit at every 2nd subscription
   - API: `/api/referrals/stats` (GET), `/api/referrals/generate-code` (POST)
-  - Settings page "Referrals" tab with copy link, progress bar (X/5), stats cards
+  - Settings page "Referrals" tab: "Give Pro, Get Pro" messaging, copy link, progress bar (X/2), stats cards
 - **Pricing Page Fix**: Grid corrected from 4 to 3 columns, centered with max-width
