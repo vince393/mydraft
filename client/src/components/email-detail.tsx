@@ -42,7 +42,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { SmartAvatar } from "@/components/smart-avatar";
-import { formatEmailBody } from "@/lib/email-formatter";
+import { formatEmailBody, isHtmlContent } from "@/lib/email-formatter";
+import { EmailIframeRenderer } from "@/components/email-iframe-renderer";
 import type { Email, Draft } from "@shared/schema";
 
 interface EmailAttachment {
@@ -806,11 +807,8 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     </div>
                   </div>
                   <div className="email-body-container">
-                    {emailContent.includes('<') ? (
-                      <div 
-                        className="email-content"
-                        dangerouslySetInnerHTML={{ __html: formatEmailBody(emailContent) }}
-                      />
+                    {isHtmlContent(emailContent) ? (
+                      <EmailIframeRenderer html={emailContent} />
                     ) : (
                       <div className="email-content-plain">
                         {emailContent.split("\n").map((p, i) => (
@@ -1032,11 +1030,8 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   <Languages className="w-3 h-3" />
                   Translated from {detectedLanguage?.name || "original language"}
                 </div>
-                {translatedContent.body.includes('<') ? (
-                  <div 
-                    className="email-content"
-                    dangerouslySetInnerHTML={{ __html: translatedContent.body }} 
-                  />
+                {isHtmlContent(translatedContent.body) ? (
+                  <EmailIframeRenderer html={translatedContent.body} />
                 ) : (
                   <div className="email-content-plain">
                     {translatedContent.body.split("\n").map((paragraph, i) => (
@@ -1048,17 +1043,11 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                 )}
               </>
             ) : showFormatted && formattedBody ? (
-              <div 
-                className="email-content"
-                dangerouslySetInnerHTML={{ __html: formattedBody }} 
-              />
+              <EmailIframeRenderer html={formattedBody} />
             ) : (
               <>
-                {email.body.includes('<') ? (
-                  <div 
-                    className="email-content"
-                    dangerouslySetInnerHTML={{ __html: email.body }} 
-                  />
+                {isHtmlContent(email.body) ? (
+                  <EmailIframeRenderer html={email.body} />
                 ) : (
                   <div className="email-content-plain">
                     {email.body.split("\n").map((paragraph, i) => (
