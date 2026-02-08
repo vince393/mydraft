@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, users, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, users, referrals, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -257,6 +257,15 @@ export interface IStorage {
   getAllFeatureFlags(): Promise<FeatureFlag[]>;
   setFeatureFlag(key: string, enabled: boolean, allowedEmails?: string[], description?: string): Promise<FeatureFlag>;
   isFeatureEnabled(key: string, userEmail?: string): Promise<boolean>;
+
+  // Referral methods
+  getUserByReferralCode(code: string): Promise<User | undefined>;
+  generateReferralCode(userId: string): Promise<string>;
+  createReferral(referrerUserId: string, referredUserId: string): Promise<Referral>;
+  markReferralConnected(referredUserId: string): Promise<void>;
+  getReferralStats(userId: string): Promise<{ total: number; connected: number }>;
+  getReferrals(userId: string): Promise<Referral[]>;
+  applyProCredit(userId: string, months: number): Promise<void>;
 }
 
 const avatarColors = [
@@ -2431,6 +2440,75 @@ Business Development`,
     }
     
     return false;
+  }
+
+  async getUserByReferralCode(code: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.referralCode, code));
+    return user;
+  }
+
+  async generateReferralCode(userId: string): Promise<string> {
+    const user = await this.getUser(userId);
+    if (user?.referralCode) return user.referralCode;
+    const code = randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase();
+    await db.update(users).set({ referralCode: code }).where(eq(users.id, userId));
+    return code;
+  }
+
+  async createReferral(referrerUserId: string, referredUserId: string): Promise<Referral> {
+    const [referral] = await db.insert(referrals).values({
+      referrerUserId,
+      referredUserId,
+      status: "registered",
+    }).returning();
+    return referral;
+  }
+
+  async markReferralConnected(referredUserId: string): Promise<void> {
+    await db.update(referrals)
+      .set({ status: "connected", connectedAt: new Date() })
+      .where(and(
+        eq(referrals.referredUserId, referredUserId),
+        eq(referrals.status, "registered")
+      ));
+
+    const [result] = await db.select({ referrerUserId: referrals.referrerUserId })
+      .from(referrals)
+      .where(eq(referrals.referredUserId, referredUserId))
+      .limit(1);
+
+    if (result) {
+      const stats = await this.getReferralStats(result.referrerUserId);
+      if (stats.connected >= 5 && stats.connected % 5 === 0) {
+        await this.applyProCredit(result.referrerUserId, 1);
+      }
+    }
+  }
+
+  async getReferralStats(userId: string): Promise<{ total: number; connected: number }> {
+    const allReferrals = await db.select().from(referrals)
+      .where(eq(referrals.referrerUserId, userId));
+    const total = allReferrals.length;
+    const connected = allReferrals.filter(r => r.status === "connected").length;
+    return { total, connected };
+  }
+
+  async getReferrals(userId: string): Promise<Referral[]> {
+    return db.select().from(referrals)
+      .where(eq(referrals.referrerUserId, userId))
+      .orderBy(desc(referrals.createdAt));
+  }
+
+  async applyProCredit(userId: string, months: number): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) return;
+    const now = new Date();
+    const currentEnd = user.proCreditsUntil && new Date(user.proCreditsUntil) > now
+      ? new Date(user.proCreditsUntil)
+      : now;
+    const newEnd = new Date(currentEnd);
+    newEnd.setMonth(newEnd.getMonth() + months);
+    await db.update(users).set({ proCreditsUntil: newEnd }).where(eq(users.id, userId));
   }
 }
 

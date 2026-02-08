@@ -19,7 +19,7 @@ import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
 import { authLimiter, passwordResetLimiter, twoFactorLimiter, apiLimiter, aiGenerationLimiter, emailSendLimiter, fileLimiter } from "./rate-limiter";
 
 // Pending registrations waiting for email verification
-const pendingRegistrations: Map<string, { email: string; hashedPassword: string; expiresAt: number }> = new Map();
+const pendingRegistrations: Map<string, { email: string; hashedPassword: string; expiresAt: number; referralCode?: string }> = new Map();
 
 // Pending login sessions waiting for 2FA verification  
 const pending2FALogins: Map<string, { userId: string; expiresAt: number }> = new Map();
@@ -246,7 +246,7 @@ export async function registerRoutes(
   // Step 1: Initiate registration - sends verification email
   app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, referralCode } = req.body;
       
       if (!email || !password) {
         return res.status(400).json({ error: "Email and password are required" });
@@ -266,11 +266,12 @@ export async function registerRoutes(
       // Create verification code
       const verificationCode = await storage.createVerificationCode(normalizedEmail, "signup");
       
-      // Store pending registration
+      // Store pending registration with optional referral code
       pendingRegistrations.set(normalizedEmail, {
         email: normalizedEmail,
         hashedPassword,
         expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+        referralCode: referralCode || undefined,
       });
       
       // Send verification email
@@ -327,6 +328,19 @@ export async function registerRoutes(
       
       // Mark email as verified
       await storage.updateUser(user.id, { emailVerified: true });
+      
+      // Process referral link if present
+      if (pending.referralCode) {
+        try {
+          const referrer = await storage.getUserByReferralCode(pending.referralCode);
+          if (referrer && referrer.id !== user.id) {
+            await storage.createReferral(referrer.id, user.id);
+            await storage.updateUser(user.id, { referredByUserId: referrer.id });
+          }
+        } catch (refErr) {
+          console.error("Error processing referral:", refErr);
+        }
+      }
       
       // Clean up pending registration
       pendingRegistrations.delete(normalizedEmail);
@@ -1477,6 +1491,13 @@ Return ONLY valid JSON, no other text.`;
           "email_connected", 
           `Connected ${grant.provider || provider} email: ${normalizedEmail}`
         );
+
+        // Mark referral as connected (triggers pro credit at every 5th connection)
+        try {
+          await storage.markReferralConnected(userId);
+        } catch (refErr) {
+          console.error("Error marking referral connected:", refErr);
+        }
       }
 
       res.redirect('/?connected=true');
@@ -6501,6 +6522,47 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error deleting owner note:", error);
       res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+
+  // ==================== REFERRAL ROUTES ====================
+
+  app.get("/api/referrals/stats", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      let referralCode = user.referralCode;
+      if (!referralCode) {
+        referralCode = await storage.generateReferralCode(userId);
+      }
+
+      const stats = await storage.getReferralStats(userId);
+      const referralsList = await storage.getReferrals(userId);
+
+      res.json({
+        referralCode,
+        stats,
+        referrals: referralsList,
+        proCreditsUntil: user.proCreditsUntil,
+        progressToNextReward: stats.connected % 5,
+        connectedNeeded: 5 - (stats.connected % 5),
+      });
+    } catch (error) {
+      console.error("Error getting referral stats:", error);
+      res.status(500).json({ error: "Failed to get referral stats" });
+    }
+  });
+
+  app.post("/api/referrals/generate-code", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const code = await storage.generateReferralCode(userId);
+      res.json({ referralCode: code });
+    } catch (error) {
+      console.error("Error generating referral code:", error);
+      res.status(500).json({ error: "Failed to generate referral code" });
     }
   });
 

@@ -71,6 +71,9 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   dailySendCount: integer("daily_send_count").default(0).notNull(),
   dailySendResetAt: timestamp("daily_send_reset_at"),
+  referralCode: varchar("referral_code", { length: 12 }).unique(),
+  referredByUserId: varchar("referred_by_user_id"),
+  proCreditsUntil: timestamp("pro_credits_until"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -185,6 +188,17 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
 
 export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
+
+export const referrals = pgTable("referrals", {
+  id: serial("id").primaryKey(),
+  referrerUserId: varchar("referrer_user_id").notNull(),
+  referredUserId: varchar("referred_user_id").notNull(),
+  status: text("status").$type<"registered" | "connected">().default("registered").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  connectedAt: timestamp("connected_at"),
+});
+
+export type Referral = typeof referrals.$inferSelect;
 
 // Linked accounts for account switching without re-authentication
 export const linkedAccounts = pgTable("linked_accounts", {
