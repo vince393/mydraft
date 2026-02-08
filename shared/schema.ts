@@ -863,7 +863,7 @@ export const aiInboxSuggestions = pgTable("ai_inbox_suggestions", {
   messageId: varchar("message_id").notNull(), // Nylas message ID
   messageSubject: text("message_subject"),
   messageSender: text("message_sender"),
-  actionType: text("action_type").notNull(), // "spam", "archive", "delete", "star", "move_folder", "mark_read"
+  actionType: text("action_type").notNull(), // "spam", "junk", "archive", "delete", "star", "move_folder", "mark_read"
   actionData: jsonb("action_data").$type<{ folder?: string; reason?: string }>(),
   confidence: integer("confidence").default(0).notNull(), // 0-100
   status: text("status").default("pending").notNull(), // "pending", "approved", "rejected", "executed"

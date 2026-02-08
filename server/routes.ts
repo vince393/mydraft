@@ -2285,17 +2285,26 @@ If no emails match, return an empty array: []`
       // Generate unique batch ID
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       
-      // Prepare email summaries for AI analysis
-      const emailSummaries = messages.slice(0, 30).map((msg: any) => ({
-        id: msg.id,
-        subject: msg.subject || "(No subject)",
-        from: msg.from?.[0]?.email || "unknown",
-        fromName: msg.from?.[0]?.name || "",
-        snippet: msg.snippet || "",
-        date: msg.date,
-        starred: msg.starred,
-        unread: msg.unread,
-      }));
+      // Prepare email summaries for AI analysis with better signals
+      const emailSummaries = messages.slice(0, 30).map((msg: any) => {
+        const fromEmail = msg.from?.[0]?.email || "unknown";
+        const domain = fromEmail.split("@")[1] || "";
+        const toCount = (msg.to?.length || 0) + (msg.cc?.length || 0) + (msg.bcc?.length || 0);
+        const hasUnsubscribe = !!(msg.headers?.["list-unsubscribe"] || msg.body?.includes("unsubscribe"));
+        return {
+          id: msg.id,
+          subject: msg.subject || "(No subject)",
+          from: fromEmail,
+          fromName: msg.from?.[0]?.name || "",
+          domain,
+          snippet: msg.snippet || "",
+          date: msg.date,
+          starred: msg.starred,
+          unread: msg.unread,
+          recipientCount: toCount,
+          hasUnsubscribe,
+        };
+      });
       
       // Build folder sorting section if user has custom folders with AI descriptions
       const folderSortingSection = foldersWithAiDesc.length > 0 ? `
@@ -2322,49 +2331,45 @@ PRIORITY: Suggest deleting/archiving emails from senders/domains the user has hi
 ` : "";
 
       // Call AI to analyze emails
-      const systemPrompt = `You are an intelligent email inbox assistant that learns from user behavior. Your job is to recommend emails to delete or move based on the user's history.
+      const systemPrompt = `You are a precise email inbox cleanup assistant. Analyze emails and categorize actionable ones.
 
-${hasHistory ? "IMPORTANT: The user has deletion/archive history. Use it to recommend similar emails for deletion or archiving." : "IMPORTANT: The user has no history yet. Be conservative and only suggest obvious spam or junk."}
+${hasHistory ? "The user has action history — weight these patterns heavily." : "No history yet — be very conservative, only flag obvious cases."}
 
-User preferences context:
-${learnedStyle?.styleAnalysis ? `- Writing style: ${learnedStyle.styleAnalysis}` : ""}
-${learnedStyle?.toneDescription ? `- Preferred tone: ${learnedStyle.toneDescription}` : ""}
+${learnedStyle?.styleAnalysis ? `User style: ${learnedStyle.styleAnalysis}` : ""}
 ${userHistorySection}
 ${folderSortingSection}
 
-Available actions (use sparingly):
-- "spam": ONLY for obvious spam like "You've won $1M", fake lottery, phishing attempts, or clearly unwanted mass marketing from unknown senders. Do NOT mark newsletters the user subscribed to as spam.
-- "archive": ONLY for already-read emails that are clearly no longer needed (old receipts, confirmations from months ago, automated notifications that have been addressed)
-- "delete": ONLY for very obvious junk like bounce-back notifications, system errors from weeks ago, or clearly expired content
-- "star": ONLY for clearly important emails like meeting requests from bosses, urgent deadlines, or family emergencies
-- "mark_read": ONLY for informational emails that clearly don't need a response (like read receipts, automated system updates)
-${foldersWithAiDesc.length > 0 ? '- "move_to_folder": Move to a custom folder ONLY if email very clearly matches folder description' : ""}
+CLASSIFICATION SIGNALS (use these to decide):
+- "hasUnsubscribe: true" = mass/bulk email (newsletter, marketing, promotional)
+- "recipientCount" > 5 = blast email, likely promotional
+- Domain patterns: noreply@, notifications@, marketing@, promo@ = automated
+- Subject patterns: "your order", "receipt", "confirmation" = transactional
+- Subject patterns: "unsubscribe", "% off", "deal", "limited time" = marketing
+- Starred emails = NEVER suggest actions on these
 
-STRICT RULES:
-1. BE EXTREMELY CONSERVATIVE - when in doubt, DON'T suggest any action
-2. NEVER mark emails from real people as spam - those are just regular emails
-3. NEVER mark emails from known companies (Google, Apple, Amazon, banks, etc.) as spam unless they're clearly phishing
-4. NEVER suggest actions for unread emails from real people
-5. Personal emails, work emails, and newsletters should almost never have suggested actions
-6. Only suggest spam for emails that are CLEARLY unsolicited junk with deceptive content
-7. If an email looks even slightly legitimate, DO NOT suggest marking it as spam
-8. Return an EMPTY suggestions array if no emails clearly need action
-9. Maximum of 3-5 suggestions per analysis - quality over quantity
-${foldersWithAiDesc.length > 0 ? '10. For move_to_folder actions, include folderId and folderName in the response' : ""}
+ACTIONS (ranked by severity):
+- "spam": Deceptive/phishing emails with false claims, unknown senders with suspicious content. NOT for newsletters or known companies.
+- "junk": Low-value bulk mail the user probably doesn't want: expired promotions, old marketing blasts, mass emails from unfamiliar companies. Use this instead of spam when email is annoying but not malicious.
+- "archive": Read emails no longer needed: old confirmations, processed receipts, addressed notifications
+- "delete": Expired/irrelevant content: old bounce-backs, week-old system errors, clearly outdated promotions
+- "star": Clearly urgent/important: meeting requests from important contacts, deadlines, critical alerts
+- "mark_read": Informational-only emails needing no response: read receipts, automated status updates
+${foldersWithAiDesc.length > 0 ? '- "move_to_folder": Email clearly matches a custom folder\'s description' : ""}
 
-Respond with valid JSON only:
-{
-  "suggestions": [
-    {
-      "messageId": "email_id",
-      "action": "spam|archive|delete|star|mark_read${foldersWithAiDesc.length > 0 ? '|move_to_folder' : ""}",
-      "confidence": 0-100,
-      "reason": "Brief explanation"${foldersWithAiDesc.length > 0 ? ',\n      "folderId": 123,\n      "folderName": "Folder Name"' : ""}
-    }
-  ]
-}`;
+RULES:
+1. NEVER act on starred emails
+2. NEVER mark real person-to-person emails as spam or junk
+3. NEVER spam known companies (Google, Apple, Amazon, banks) — use "junk" if unwanted
+4. Prefer "junk" over "spam" — spam is ONLY for truly deceptive/malicious content
+5. Unread emails from real people = skip entirely
+6. When in doubt = skip. Return empty array if nothing is clearly actionable
+7. Maximum 8 suggestions, minimum confidence 60%
+${foldersWithAiDesc.length > 0 ? '8. For move_to_folder, include folderId and folderName' : ""}
 
-      const userPrompt = `Analyze these emails and suggest inbox actions:\n\n${JSON.stringify(emailSummaries, null, 2)}`;
+JSON response only:
+{"suggestions":[{"messageId":"id","action":"spam|junk|archive|delete|star|mark_read${foldersWithAiDesc.length > 0 ? '|move_to_folder' : ""}","confidence":60-100,"reason":"1-sentence reason"${foldersWithAiDesc.length > 0 ? ',"folderId":0,"folderName":""' : ""}}]}`;
+
+      const userPrompt = `Analyze these ${emailSummaries.length} emails:\n${JSON.stringify(emailSummaries)}`;
       
       const completion = await geminiAI.chat.completions.create({
         model: "gemini-3-flash-preview",
@@ -2489,6 +2494,7 @@ Respond with valid JSON only:
         try {
           switch (suggestion.actionType) {
             case "spam":
+            case "junk":
               // Use local storage for folder changes - faster and more reliable
               await storage.setLocalEmailFolder(userId, suggestion.messageId, "junk");
               break;
