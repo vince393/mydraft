@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Menu, Sparkles } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Menu } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -733,22 +733,6 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
               >
                 <Menu className="w-5 h-5" />
               </Button>
-            }
-            mobileNavRight={
-              onOpenAssistant ? (
-                <button
-                  onClick={onOpenAssistant}
-                  className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all duration-150 flex-shrink-0"
-                  style={{
-                    background: "linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15))",
-                    border: "1px solid rgba(129, 140, 248, 0.25)",
-                    boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1)"
-                  }}
-                  data-testid="button-ai-chat-mobile"
-                >
-                  <Sparkles className="w-4 h-4 text-indigo-300/80 group-hover:text-indigo-200 transition-colors" />
-                </button>
-              ) : undefined
             }
           />
         )}

@@ -118,7 +118,7 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="group w-9 h-9 flex items-center justify-center rounded-full cursor-pointer transition-all"
+        className="group w-9 h-9 flex items-center justify-center rounded-full cursor-pointer transition-all flex-shrink-0"
         style={{
           background: "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(99,102,241,0.08))",
           border: "1px solid rgba(168,85,247,0.18)",

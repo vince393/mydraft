@@ -65,7 +65,6 @@ interface EmailListProps {
   onCompose?: () => void;
   onOpenAssistant?: () => void;
   mobileNavLeft?: ReactNode;
-  mobileNavRight?: ReactNode;
 }
 
 interface ResponseTimeEstimate {
@@ -141,7 +140,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onOpenAssistant, mobileNavLeft, mobileNavRight }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onOpenAssistant, mobileNavLeft }: EmailListProps) {
   const screen = useScreenSize();
   const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -496,12 +495,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   return (
     <div className="flex flex-col h-full overflow-x-hidden relative">
       {/* Search bar - sticky top on mobile with nav, floating on desktop */}
-      <div className={`z-20 flex items-center gap-2 ${screen.isMobile ? 'sticky top-0 px-2 py-2 bg-background border-b border-border/20 flex-shrink-0' : 'absolute top-3 left-1/2 -translate-x-1/2'}`}>
+      <div className={`z-20 flex items-center ${screen.isMobile ? 'gap-1.5 sticky top-0 px-2 py-2 bg-background border-b border-border/20 flex-shrink-0' : 'gap-2 absolute top-3 left-1/2 -translate-x-1/2'}`}>
         {screen.isMobile && mobileNavLeft}
-        {!screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && (
-          <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
-        )}
-        <div className={`relative ${screen.isMobile ? 'flex-1' : 'w-64'}`}>
+        <div className={`relative ${screen.isMobile ? 'flex-1 min-w-0' : 'w-64'}`}>
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none z-10" />
           <Input 
             type="search"
@@ -656,10 +652,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </Popover>
           </div>
         </div>
-        {!screen.isMobile && onOpenAssistant && (
+        {hasConnectedAccount && activeFolder === "inbox" && (
+          <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
+        )}
+        {onOpenAssistant && (
           <button
             onClick={onOpenAssistant}
-            className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all duration-150"
+            className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all duration-150 flex-shrink-0"
             style={{
               background: "linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15))",
               border: "1px solid rgba(129, 140, 248, 0.25)",
@@ -670,7 +669,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             <Sparkles className="w-4 h-4 text-indigo-300/80 group-hover:text-indigo-200 transition-colors" />
           </button>
         )}
-        {screen.isMobile && mobileNavRight}
       </div>
       {/* Email list */}
       <div 
