@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Menu } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Menu, Sparkles } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -735,56 +735,20 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
               </Button>
             }
             mobileNavRight={
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <NotificationBell />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="hover:opacity-80 transition-opacity outline-none" data-testid="button-profile-mobile">
-                      <Avatar className="w-8 h-8 ring-2 ring-border/30">
-                        <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
-                          {userInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <div className="px-3 py-2 border-b border-border/30">
-                      <p className="text-sm font-medium truncate">{userName}</p>
-                      <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
-                      <div className="mt-2">{getPlanBadge()}</div>
-                    </div>
-                    <DropdownMenuItem className="gap-2" onClick={() => setLocation("/profile")}>
-                      <User className="w-4 h-4" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2" onClick={() => setLocation("/settings")}>
-                      <Settings className="w-4 h-4" />
-                      Settings
-                    </DropdownMenuItem>
-                    {hasPremium && (
-                      <DropdownMenuItem className="gap-2" onClick={() => setLocation("/campaigns")} data-testid="menu-campaigns">
-                        <Megaphone className="w-4 h-4" />
-                        Email Campaigns
-                      </DropdownMenuItem>
-                    )}
-                    {!userData?.user?.connectedEmail && (
-                      <DropdownMenuItem className="gap-2" onClick={() => setLocation("/connect-email")}>
-                        <Link className="w-4 h-4" />
-                        Connect Email
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="gap-2" onClick={() => setShowAccountSwitcher(true)} data-testid="menu-switch-account-mobile">
-                      <RefreshCw className="w-4 h-4" />
-                      Switch Account
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
-                      <LogOut className="w-4 h-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              onOpenAssistant ? (
+                <button
+                  onClick={onOpenAssistant}
+                  className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all duration-150 flex-shrink-0"
+                  style={{
+                    background: "linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15))",
+                    border: "1px solid rgba(129, 140, 248, 0.25)",
+                    boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1)"
+                  }}
+                  data-testid="button-ai-chat-mobile"
+                >
+                  <Sparkles className="w-4 h-4 text-indigo-300/80 group-hover:text-indigo-200 transition-colors" />
+                </button>
+              ) : undefined
             }
           />
         )}

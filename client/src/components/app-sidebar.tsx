@@ -1,6 +1,15 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, Megaphone, type LucideIcon } from "lucide-react";
+import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, Megaphone, Settings, LogOut, RefreshCw, Link, Crown, type LucideIcon } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/notification-bell";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { EmailCategory } from "@/lib/email-categories";
 import { usePlan } from "@/hooks/use-plan";
 import { UpgradeModal } from "./upgrade-modal";
@@ -173,6 +182,36 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { isMobile, setOpenMobile } = useSidebar();
+
+  const { data: userData } = useQuery<{ user: { 
+    email: string; 
+    connectedEmail: string | null;
+    connectedProvider: string | null;
+    plan: string | null;
+  } | null }>({
+    queryKey: ["/api/auth/me"],
+    queryFn: async () => {
+      const response = await fetch("/api/auth/me");
+      if (!response.ok) throw new Error("Failed to fetch user");
+      return response.json();
+    },
+    enabled: isMobile,
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout", {});
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      setLocation("/");
+    },
+  });
+
+  const userEmail = userData?.user?.email || "";
+  const sidebarUserName = userEmail.split("@")[0] || "User";
+  const sidebarUserInitials = sidebarUserName.slice(0, 2).toUpperCase();
+  const sidebarUserPlan = userData?.user?.plan || "free";
 
   // Fetch custom folders from API
   const { data: customFoldersData } = useQuery<{ folders: CustomFolder[] }>({
@@ -793,7 +832,59 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-2" />
+      <SidebarFooter className="p-2">
+        {isMobile && (
+          <div className="flex items-center gap-2 px-1 py-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 flex-1 min-w-0 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors outline-none" data-testid="button-profile-sidebar">
+                  <Avatar className="w-8 h-8 ring-2 ring-border/30 flex-shrink-0">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
+                      {sidebarUserInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col items-start min-w-0">
+                    <span className="text-sm font-medium truncate max-w-[120px]">{sidebarUserName}</span>
+                    <span className="text-[10px] text-muted-foreground/60 capitalize">{sidebarUserPlan}</span>
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <div className="px-3 py-2 border-b border-border/30">
+                  <p className="text-sm font-medium truncate">{sidebarUserName}</p>
+                  <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                </div>
+                <DropdownMenuItem className="gap-2" onClick={() => { setOpenMobile(false); setLocation("/profile"); }}>
+                  <User className="w-4 h-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2" onClick={() => { setOpenMobile(false); setLocation("/settings"); }}>
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </DropdownMenuItem>
+                {hasPremium && (
+                  <DropdownMenuItem className="gap-2" onClick={() => { setOpenMobile(false); setLocation("/campaigns"); }} data-testid="menu-campaigns-sidebar">
+                    <Megaphone className="w-4 h-4" />
+                    Email Campaigns
+                  </DropdownMenuItem>
+                )}
+                {!userData?.user?.connectedEmail && (
+                  <DropdownMenuItem className="gap-2" onClick={() => { setOpenMobile(false); setLocation("/connect-email"); }}>
+                    <Link className="w-4 h-4" />
+                    Connect Email
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
+                  <LogOut className="w-4 h-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <NotificationBell />
+          </div>
+        )}
+      </SidebarFooter>
     </>
   );
 
