@@ -103,9 +103,7 @@ export function EmailIframeRenderer({
   const [height, setHeight] = useState(200);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
-  const isDark = document.documentElement.classList.contains("dark");
-
-  const buildIframeContent = useCallback((rawHtml: string, dark: boolean) => {
+  const buildIframeContent = useCallback((rawHtml: string) => {
     const hasFullHtml = /<html/i.test(rawHtml);
     const hasBody = /<body/i.test(rawHtml);
 
@@ -142,16 +140,6 @@ export function EmailIframeRenderer({
 
     const sanitized = sanitizeForIframe(bodyContent);
 
-    const bgColor = dark ? "#1a1a1e" : "#ffffff";
-    const textColor = dark ? "#e0e0e4" : "#222222";
-
-    const darkInvertStyles = dark ? `
-  img:not([src*="tracking"]):not([width="1"]):not([height="1"]) {
-    /* keep images visible on dark bg */
-  }
-  a { color: #6fa8ff; }
-` : "";
-
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -161,8 +149,8 @@ export function EmailIframeRenderer({
   html, body {
     margin: 0;
     padding: 0;
-    background: ${bgColor};
-    color: ${textColor};
+    background: #ffffff;
+    color: #222222;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
     line-height: 1.5;
@@ -170,7 +158,7 @@ export function EmailIframeRenderer({
     overflow-wrap: break-word;
     -webkit-font-smoothing: antialiased;
   }
-  ${darkInvertStyles}
+  img { max-width: 100%; height: auto; }
   img[width="1"], img[height="1"],
   img[width="0"], img[height="0"] {
     display: none !important;
@@ -193,7 +181,7 @@ ${headContent}
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!doc) return;
 
-    const fullHtml = buildIframeContent(html, isDark);
+    const fullHtml = buildIframeContent(html);
     doc.open();
     doc.write(fullHtml);
     doc.close();
@@ -245,7 +233,7 @@ ${headContent}
         resizeObserverRef.current.disconnect();
       }
     };
-  }, [html, isDark, buildIframeContent]);
+  }, [html, buildIframeContent]);
 
   return (
     <div className={`email-iframe-wrapper ${className}`}>
@@ -258,7 +246,7 @@ ${headContent}
           border: "none",
           display: "block",
           overflow: "hidden",
-          background: isDark ? "#1a1a1e" : "#ffffff",
+          background: "#ffffff",
         }}
         title="Email content"
         data-testid="iframe-email-content"

@@ -458,7 +458,7 @@
   color: hsl(var(--foreground));
 }
 
-/* Gmail-style email iframe wrapper */
+/* Gmail-style email iframe wrapper - always white inside, dimmed in dark mode */
 .email-iframe-wrapper {
   border-radius: 8px;
   overflow: hidden;
@@ -467,9 +467,9 @@
 }
 
 .dark .email-iframe-wrapper {
-  background: #1a1a1e;
-  border-color: hsl(var(--border) / 0.12);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  filter: brightness(0.88);
 }
 
 .email-content-plain {
