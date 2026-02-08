@@ -6,10 +6,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { SwipeableEmailItem } from "@/components/swipeable-email-item";
 import { AiInboxRefreshButton } from "@/components/ai-inbox-refresh";
 import { categorizeEmail, getCategoryFromFolder, type EmailCategory } from "@/lib/email-categories";
@@ -538,85 +534,153 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                   <SlidersHorizontal className={`w-3.5 h-3.5 ${hasActiveFilters ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground/80'} transition-colors`} />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 p-4" align="end">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h4 className="font-medium text-sm">Filters</h4>
-                    {hasActiveFilters && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={clearFilters}
-                        data-testid="button-clear-filters"
-                      >
-                        Clear all
-                      </Button>
-                    )}
+              <PopoverContent 
+                className="w-80 p-0 border-0 shadow-2xl overflow-hidden" 
+                align="end"
+                style={{
+                  backdropFilter: "blur(32px)",
+                  WebkitBackdropFilter: "blur(32px)",
+                  background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: "16px",
+                  boxShadow: "0 24px 48px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)"
+                }}
+              >
+                <div className="px-5 pt-4 pb-3 flex flex-wrap items-center justify-between gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-foreground/50" />
+                    <span className="text-sm font-medium text-foreground/90">Filters</span>
                   </div>
-                  
-                  <div className="flex flex-wrap items-center space-x-2">
-                    <Checkbox 
-                      id="unread-only" 
-                      checked={filters.unreadOnly}
-                      onCheckedChange={(checked) => setFilters(f => ({ ...f, unreadOnly: !!checked }))}
-                      data-testid="checkbox-unread-only"
-                    />
-                    <Label htmlFor="unread-only" className="text-sm flex flex-wrap items-center gap-2 cursor-pointer">
-                      <Mail className="w-4 h-4 text-muted-foreground" />
-                      Unread only
-                    </Label>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm flex flex-wrap items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      Date range
-                    </Label>
-                    <Select 
-                      value={filters.dateRange} 
-                      onValueChange={(value: "all" | "today" | "week" | "month") => setFilters(f => ({ ...f, dateRange: value }))}
+                  {hasActiveFilters && (
+                    <button 
+                      onClick={clearFilters}
+                      className="text-xs text-foreground/40 hover:text-foreground/70 transition-colors cursor-pointer"
+                      data-testid="button-clear-filters"
                     >
-                      <SelectTrigger className="w-full h-9" data-testid="select-date-range">
-                        <SelectValue placeholder="Select date range" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All time</SelectItem>
-                        <SelectItem value="today">Today</SelectItem>
-                        <SelectItem value="week">Last 7 days</SelectItem>
-                        <SelectItem value="month">Last 30 days</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      Clear all
+                    </button>
+                  )}
+                </div>
+
+                <div className="px-5 py-4 space-y-5">
+                  <button
+                    onClick={() => setFilters(f => ({ ...f, unreadOnly: !f.unreadOnly }))}
+                    className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl cursor-pointer transition-all"
+                    style={{
+                      background: filters.unreadOnly 
+                        ? "linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.08) 100%)"
+                        : "rgba(255,255,255,0.03)",
+                      border: filters.unreadOnly 
+                        ? "1px solid rgba(59,130,246,0.25)" 
+                        : "1px solid rgba(255,255,255,0.06)",
+                    }}
+                    data-testid="checkbox-unread-only"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(59,130,246,0.12)" }}>
+                        <Mail className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <span className="text-sm text-foreground/80">Unread only</span>
+                    </div>
+                    <div 
+                      className="w-5 h-5 rounded-md flex items-center justify-center transition-all"
+                      style={{
+                        background: filters.unreadOnly 
+                          ? "linear-gradient(135deg, #3B82F6, #6366F1)" 
+                          : "rgba(255,255,255,0.06)",
+                        border: filters.unreadOnly 
+                          ? "none" 
+                          : "1px solid rgba(255,255,255,0.12)"
+                      }}
+                    >
+                      {filters.unreadOnly && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                  </button>
+
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 px-1">
+                      <Calendar className="w-3.5 h-3.5 text-foreground/40" />
+                      <span className="text-xs font-medium text-foreground/50 uppercase tracking-wider">Date Range</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {([
+                        { value: "all", label: "All" },
+                        { value: "today", label: "Today" },
+                        { value: "week", label: "7 days" },
+                        { value: "month", label: "30 days" },
+                      ] as const).map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => setFilters(f => ({ ...f, dateRange: option.value }))}
+                          className="py-2 rounded-lg text-xs font-medium transition-all cursor-pointer"
+                          style={{
+                            background: filters.dateRange === option.value
+                              ? "linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(99,102,241,0.15) 100%)"
+                              : "rgba(255,255,255,0.03)",
+                            border: filters.dateRange === option.value
+                              ? "1px solid rgba(59,130,246,0.3)"
+                              : "1px solid rgba(255,255,255,0.06)",
+                            color: filters.dateRange === option.value
+                              ? "rgba(147,197,253,1)"
+                              : "rgba(255,255,255,0.5)",
+                          }}
+                          data-testid={`button-date-${option.value}`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm flex flex-wrap items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      Sender
-                    </Label>
-                    <Input
-                      placeholder="Filter by sender..."
-                      value={filters.sender}
-                      onChange={(e) => setFilters(f => ({ ...f, sender: e.target.value }))}
-                      className="h-9"
-                      data-testid="input-filter-sender"
-                    />
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 px-1">
+                      <User className="w-3.5 h-3.5 text-foreground/40" />
+                      <span className="text-xs font-medium text-foreground/50 uppercase tracking-wider">Sender</span>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/30 pointer-events-none" />
+                      <input
+                        placeholder="Search by sender..."
+                        value={filters.sender}
+                        onChange={(e) => setFilters(f => ({ ...f, sender: e.target.value }))}
+                        className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-foreground/80 placeholder:text-foreground/25 outline-none transition-all"
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                        data-testid="input-filter-sender"
+                      />
+                    </div>
                     {uniqueSenders.length > 0 && !filters.sender && (
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="flex flex-wrap gap-1.5 mt-1">
                         {uniqueSenders.slice(0, 5).map(([email, name]) => (
-                          <Badge
+                          <button
                             key={email}
-                            variant="secondary"
                             onClick={() => setFilters(f => ({ ...f, sender: name }))}
-                            className="cursor-pointer text-xs truncate max-w-[120px]"
+                            className="px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-all"
+                            style={{
+                              background: "rgba(255,255,255,0.05)",
+                              border: "1px solid rgba(255,255,255,0.08)",
+                              color: "rgba(255,255,255,0.55)",
+                            }}
                             data-testid={`button-sender-${email}`}
                           >
                             {name}
-                          </Badge>
+                          </button>
                         ))}
                       </div>
                     )}
                   </div>
                 </div>
+
+                {hasActiveFilters && (
+                  <div className="px-5 py-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="flex items-center gap-2 text-xs text-foreground/40">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                      <span>{categoryFilteredEmails.length} email{categoryFilteredEmails.length !== 1 ? 's' : ''} match</span>
+                    </div>
+                  </div>
+                )}
               </PopoverContent>
             </Popover>
           </div>
