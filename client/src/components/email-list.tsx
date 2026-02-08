@@ -736,6 +736,12 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             />
           </div>
         )}
+        {isSyncing && (
+          <div className="flex items-center justify-center gap-2 py-2 px-3 border-b border-border/10" data-testid="syncing-banner">
+            <Loader2 className="w-3.5 h-3.5 text-muted-foreground/60 animate-spin" />
+            <span className="text-xs text-muted-foreground/60">Checking for new emails...</span>
+          </div>
+        )}
         {categoryFilteredEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center p-8">
             <Search className="w-10 h-10 text-muted-foreground/40 mb-4" />
@@ -804,12 +810,6 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </div>
           );
         })}
-        {isSyncing && (
-          <div className="flex items-center justify-center gap-2 py-4 px-3" data-testid="updating-indicator">
-            <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
-            <span className="text-xs text-muted-foreground">Checking for new emails...</span>
-          </div>
-        )}
         </div>
         )}
       </div>
