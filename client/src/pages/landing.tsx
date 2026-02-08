@@ -783,8 +783,13 @@ function TestimonialsSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
   
+  const { data: testimonialsSetting } = useQuery<{ enabled: boolean }>({
+    queryKey: ["/api/site-settings/show_testimonials"],
+  });
+
   const { data: apiTestimonials } = useQuery<Testimonial[]>({
     queryKey: ["/api/testimonials"],
+    enabled: testimonialsSetting?.enabled === true,
   });
 
   const testimonials = apiTestimonials || [];
@@ -797,7 +802,7 @@ function TestimonialsSection() {
     setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
-  if (testimonials.length === 0) {
+  if (!testimonialsSetting?.enabled || testimonials.length === 0) {
     return null;
   }
 

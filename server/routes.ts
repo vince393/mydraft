@@ -5900,6 +5900,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           { key: "ai_draft", description: "AI Draft Generation", enabled: true, allowedEmails: [] },
           { key: "ai_polish", description: "AI Polish Feature", enabled: true, allowedEmails: [] },
           { key: "voice_assistant", description: "Voice Assistant", enabled: true, allowedEmails: [] },
+          { key: "show_testimonials", description: "Show Testimonials on Landing Page", enabled: false, allowedEmails: [] },
         ];
         
         for (const flag of defaults) {
@@ -5947,6 +5948,22 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error checking feature flag:", error);
       res.status(500).json({ error: "Failed to check feature" });
+    }
+  });
+
+  // Public endpoint to check site display settings (no auth needed)
+  app.get("/api/site-settings/:key", async (req, res) => {
+    try {
+      const { key } = req.params;
+      const allowedKeys = ["show_testimonials"];
+      if (!allowedKeys.includes(key)) {
+        return res.status(404).json({ error: "Setting not found" });
+      }
+      const flag = await storage.getFeatureFlag(key);
+      res.json({ key, enabled: flag?.enabled ?? false });
+    } catch (error) {
+      console.error("Error checking site setting:", error);
+      res.status(500).json({ error: "Failed to check setting" });
     }
   });
 
