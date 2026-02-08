@@ -121,40 +121,40 @@ export default function SettingsPage() {
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-9" : "sm:grid-cols-8"}`}>
               <TabsTrigger value="account" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-account">
-                <User className="w-4 h-4" />
+                <User className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Account</span>
               </TabsTrigger>
               <TabsTrigger value="appearance" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-appearance">
-                <Palette className="w-4 h-4" />
+                <Palette className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Theme</span>
               </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-security">
-                <Shield className="w-4 h-4" />
+                <Shield className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Security</span>
               </TabsTrigger>
               <TabsTrigger value="billing" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-billing">
-                <CreditCard className="w-4 h-4" />
+                <CreditCard className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Billing</span>
               </TabsTrigger>
               <TabsTrigger value="ai" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-ai">
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">AI</span>
               </TabsTrigger>
               <TabsTrigger value="email" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-email">
-                <Mail className="w-4 h-4" />
+                <Mail className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Email</span>
               </TabsTrigger>
               <TabsTrigger value="connections" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-connections">
-                <Link2 className="w-4 h-4" />
+                <Link2 className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Connect</span>
               </TabsTrigger>
               <TabsTrigger value="feedback" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-feedback">
-                <MessageSquare className="w-4 h-4" />
+                <MessageSquare className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Feedback</span>
               </TabsTrigger>
               {settings.plan === "premium" && (
                 <TabsTrigger value="team" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-team">
-                  <Users className="w-4 h-4" />
+                  <Users className="w-5 h-5" />
                   <span className="text-xs sm:text-sm">Team</span>
                 </TabsTrigger>
               )}
