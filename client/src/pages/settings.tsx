@@ -53,7 +53,10 @@ import {
   Lightbulb,
   Bug,
   CheckCircle2,
-  Copy
+  Copy,
+  Gift,
+  Trophy,
+  ArrowRight,
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
@@ -149,6 +152,10 @@ export default function SettingsPage() {
                 <Link2 className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Connect</span>
               </TabsTrigger>
+              <TabsTrigger value="referrals" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-referrals">
+                <Gift className="w-5 h-5" />
+                <span className="text-xs sm:text-sm">Referrals</span>
+              </TabsTrigger>
               <TabsTrigger value="feedback" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-feedback">
                 <MessageSquare className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Feedback</span>
@@ -182,6 +189,9 @@ export default function SettingsPage() {
           </TabsContent>
           <TabsContent value="connections">
             <ConnectionsTab settings={settings!} />
+          </TabsContent>
+          <TabsContent value="referrals">
+            <ReferralTab />
           </TabsContent>
           <TabsContent value="feedback">
             <FeedbackTab settings={settings!} />
@@ -2349,3 +2359,174 @@ function FeedbackTab({ settings }: { settings: Settings }) {
   );
 }
 
+function ReferralTab() {
+  const { toast } = useToast();
+  const { data, isLoading } = useQuery<{
+    referralCode: string;
+    stats: { total: number; subscribed: number };
+    proCreditsUntil: string | null;
+    progressToNextReward: number;
+    subscribedNeeded: number;
+  }>({
+    queryKey: ["/api/referrals/stats"],
+  });
+
+  const referralLink = data?.referralCode
+    ? `https://mydraft.io/login?mode=register&ref=${data.referralCode}`
+    : "";
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: "Link copied to clipboard.",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const progress = data ? (data.progressToNextReward / 2) * 100 : 0;
+  const subscribedCount = data?.stats.subscribed ?? 0;
+  const totalReferred = data?.stats.total ?? 0;
+  const creditsActive = data?.proCreditsUntil && new Date(data.proCreditsUntil) > new Date();
+
+  return (
+    <div className="space-y-5">
+      <div
+        className="rounded-lg p-6 sm:p-8 border border-primary/20 text-center"
+        style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.02))" }}
+      >
+        <div className="inline-flex items-center justify-center p-3 rounded-xl mb-4" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.08))" }}>
+          <Gift className="w-7 h-7 text-primary" />
+        </div>
+        <h2 className="text-xl sm:text-2xl font-bold mb-2">Give Pro, Get Pro</h2>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+          Share MyDraft with friends and colleagues. When just 2 of them become paying members, you'll unlock a full month of Pro — on us. There's no cap. Keep sharing, keep earning.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <ReferralStepCard
+          icon={<Copy className="w-5 h-5" />}
+          title="Share Your Link"
+          description="Copy your personal invite link and send it to anyone you think would love MyDraft."
+        />
+        <ReferralStepCard
+          icon={<Users className="w-5 h-5" />}
+          title="They Sign Up"
+          description="Your friend creates an account and picks a plan that works for them."
+        />
+        <ReferralStepCard
+          icon={<Trophy className="w-5 h-5" />}
+          title="You Both Win"
+          description="Once 2 friends subscribe, you get a free month of Pro automatically."
+        />
+      </div>
+
+      <Card>
+        <CardContent className="p-4 sm:p-6 space-y-5">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Personal Invite Link</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={referralLink}
+                readOnly
+                className="font-mono text-xs sm:text-sm"
+                data-testid="input-referral-link"
+              />
+              <Button
+                variant="default"
+                onClick={() => copyToClipboard(referralLink)}
+                className="flex-shrink-0"
+                data-testid="button-copy-referral"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Progress to Next Reward</span>
+              <Badge variant="secondary">
+                {data?.progressToNextReward ?? 0} / 2
+              </Badge>
+            </div>
+            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${Math.max(progress, 2)}%`,
+                  background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+                }}
+              />
+            </div>
+            {data && data.subscribedNeeded > 0 ? (
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <ArrowRight className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                {data.subscribedNeeded === 1
+                  ? "You're so close — just 1 more friend and you unlock free Pro."
+                  : `Invite ${data.subscribedNeeded} friends who subscribe to earn your next reward.`}
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-primary flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                Reward earned! Keep inviting for more free months.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {creditsActive && (
+        <div
+          className="p-4 rounded-lg border border-primary/20"
+          style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--primary) / 0.03))" }}
+        >
+          <p className="text-sm font-medium flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+            Your Pro credit is active until {new Date(data!.proCreditsUntil!).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <Card>
+          <CardContent className="p-4 sm:p-5 text-center">
+            <p className="text-3xl font-bold" data-testid="text-total-referrals">{totalReferred}</p>
+            <p className="text-sm text-muted-foreground mt-1">Friends Invited</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 sm:p-5 text-center">
+            <p className="text-3xl font-bold" data-testid="text-subscribed-referrals">{subscribedCount}</p>
+            <p className="text-sm text-muted-foreground mt-1">Became Members</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <p className="text-xs text-muted-foreground/60 leading-relaxed text-center">
+        Your reward is applied automatically when 2 referrals subscribe. Free trials don't count — only active paid subscriptions qualify.
+      </p>
+    </div>
+  );
+}
+
+function ReferralStepCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-lg bg-muted/30 text-center">
+      <div className="p-2 rounded-lg bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <p className="text-xs sm:text-sm font-semibold">{title}</p>
+      <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed hidden sm:block">{description}</p>
+    </div>
+  );
+}
