@@ -2286,22 +2286,24 @@ If no emails match, return an empty array: []`
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       
       // Prepare email summaries for AI analysis with better signals
+      // Note: messages come from nylas.getMessages() which returns EmailListItem objects
+      // with .from (display name), .fromEmail (email address), .preview (snippet), etc.
       const emailSummaries = messages.slice(0, 30).map((msg: any) => {
-        const fromEmail = msg.from?.[0]?.email || "unknown";
+        const fromEmail = msg.fromEmail || "";
+        const fromName = msg.from || "";
         const domain = fromEmail.split("@")[1] || "";
-        const toCount = (msg.to?.length || 0) + (msg.cc?.length || 0) + (msg.bcc?.length || 0);
-        const hasUnsubscribe = !!(msg.headers?.["list-unsubscribe"] || msg.body?.includes("unsubscribe"));
+        const hasUnsubscribe = !!(msg.preview?.toLowerCase()?.includes("unsubscribe"));
         return {
           id: msg.id,
           subject: msg.subject || "(No subject)",
-          from: fromEmail,
-          fromName: msg.from?.[0]?.name || "",
+          from: fromEmail || fromName || "unknown",
+          fromName: fromName,
           domain,
-          snippet: msg.snippet || "",
+          snippet: msg.preview || "",
           date: msg.date,
-          starred: msg.starred,
-          unread: msg.unread,
-          recipientCount: toCount,
+          starred: msg.isStarred,
+          unread: !msg.isRead,
+          recipientCount: 1,
           hasUnsubscribe,
         };
       });
@@ -2416,7 +2418,9 @@ JSON response only:
           batchId,
           messageId: suggestion.messageId,
           messageSubject: emailInfo.subject,
-          messageSender: emailInfo.fromName || emailInfo.from,
+          messageSender: emailInfo.fromName && emailInfo.fromName.trim()
+            ? (emailInfo.from && emailInfo.from !== "unknown" ? `${emailInfo.fromName} <${emailInfo.from}>` : emailInfo.fromName)
+            : (emailInfo.from || "Unknown"),
           actionType: suggestion.action,
           actionData,
           confidence: Math.min(100, Math.max(0, suggestion.confidence || 50)),
