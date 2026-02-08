@@ -53,7 +53,6 @@ import {
   Lightbulb,
   Bug,
   CheckCircle2,
-  Gift,
   Copy
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
@@ -150,10 +149,6 @@ export default function SettingsPage() {
                 <Link2 className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Connect</span>
               </TabsTrigger>
-              <TabsTrigger value="referrals" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-referrals">
-                <Gift className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Referrals</span>
-              </TabsTrigger>
               <TabsTrigger value="feedback" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-feedback">
                 <MessageSquare className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Feedback</span>
@@ -187,9 +182,6 @@ export default function SettingsPage() {
           </TabsContent>
           <TabsContent value="connections">
             <ConnectionsTab settings={settings!} />
-          </TabsContent>
-          <TabsContent value="referrals">
-            <ReferralTab />
           </TabsContent>
           <TabsContent value="feedback">
             <FeedbackTab settings={settings!} />
@@ -2357,152 +2349,3 @@ function FeedbackTab({ settings }: { settings: Settings }) {
   );
 }
 
-function ReferralTab() {
-  const { toast } = useToast();
-  const { data, isLoading } = useQuery<{
-    referralCode: string;
-    stats: { total: number; subscribed: number };
-    proCreditsUntil: string | null;
-    progressToNextReward: number;
-    subscribedNeeded: number;
-  }>({
-    queryKey: ["/api/referrals/stats"],
-  });
-
-  const referralLink = data?.referralCode
-    ? `https://mydraft.io/login?mode=register&ref=${data.referralCode}`
-    : "";
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied",
-      description: "Referral link copied to clipboard.",
-    });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  const progress = data ? (data.progressToNextReward / 2) * 100 : 0;
-  const subscribedCount = data?.stats.subscribed ?? 0;
-  const totalReferred = data?.stats.total ?? 0;
-  const creditsActive = data?.proCreditsUntil && new Date(data.proCreditsUntil) > new Date();
-
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gift className="w-5 h-5" />
-            Give Pro, Get Pro
-          </CardTitle>
-          <CardDescription>
-            Love MyDraft? Share it with friends and colleagues. When just 2 people you refer become members, you'll unlock a full month of Pro — completely on us. Keep sharing, keep earning.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label>Your Personal Invite Link</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={referralLink}
-                readOnly
-                className="font-mono text-sm"
-                data-testid="input-referral-link"
-              />
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => copyToClipboard(referralLink)}
-                data-testid="button-copy-referral"
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Invite Code</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={data?.referralCode ?? ""}
-                readOnly
-                className="font-mono text-sm max-w-[200px]"
-                data-testid="input-referral-code"
-              />
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => copyToClipboard(data?.referralCode ?? "")}
-                data-testid="button-copy-code"
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Your Progress</Label>
-              <span className="text-sm text-muted-foreground">
-                {data?.progressToNextReward ?? 0} / 2
-              </span>
-            </div>
-            <div className="w-full bg-muted rounded-md h-3 overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-md transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            {data && data.subscribedNeeded > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {data.subscribedNeeded === 1 ? "Just 1 more friend" : `${data.subscribedNeeded} friends`} away from your next free month of Pro.
-              </p>
-            )}
-            {data && data.subscribedNeeded === 0 && (
-              <p className="text-sm text-muted-foreground">
-                You've earned a reward! Keep inviting to unlock more free months.
-              </p>
-            )}
-          </div>
-
-          {creditsActive && (
-            <div className="p-3 rounded-md bg-primary/10 border border-primary/20">
-              <p className="text-sm font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-primary" />
-                Pro credit active until {new Date(data!.proCreditsUntil!).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
-              </p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold" data-testid="text-total-referrals">{totalReferred}</p>
-                <p className="text-sm text-muted-foreground">Friends Invited</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold" data-testid="text-subscribed-referrals">{subscribedCount}</p>
-                <p className="text-sm text-muted-foreground">Became Members</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="p-3 rounded-md bg-muted/50">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              How it works: Share your link, your friends sign up and choose a plan. Once their subscription is active, it counts toward your reward. Every 2 members you bring in earns you a free month of Pro.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}

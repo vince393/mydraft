@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Menu, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, Megaphone, Settings, LogOut, RefreshCw, Link, Crown, type LucideIcon } from "lucide-react";
+import { ReferralBanner } from "@/components/referral-banner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notification-bell";
 import {
@@ -832,6 +833,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <ReferralBanner collapsed={!isExpanded && !isMobile} />
       <SidebarFooter className="p-2">
         {isMobile && (
           <div className="flex items-center gap-2 px-1 py-1">
