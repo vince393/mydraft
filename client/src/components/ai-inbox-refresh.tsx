@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Wand2, Loader2, Check, X, Archive, Trash2, Star, Mail, Sparkles, FolderInput, ShieldAlert, RotateCcw, Ban } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface AiSuggestion {
   id: number;
@@ -27,7 +28,7 @@ const actionMeta: Record<string, { icon: any; label: string; color: string }> = 
   move_to_folder: { icon: FolderInput, label: "Move", color: "#a855f7" },
 };
 
-export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?: () => void }) {
+export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMenuItem = false }: { onRefreshComplete?: () => void; compact?: boolean; asMenuItem?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const { toast } = useToast();
@@ -116,18 +117,25 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="group w-9 h-9 flex items-center justify-center rounded-full cursor-pointer transition-all flex-shrink-0"
-        style={{
-          background: "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(99,102,241,0.08))",
-          border: "1px solid rgba(168,85,247,0.18)",
-        }}
-        title="AI Inbox Cleanup"
-        data-testid="button-ai-inbox-refresh"
-      >
-        <Wand2 className="w-4 h-4 text-purple-400/70 group-hover:text-purple-300 transition-colors" />
-      </button>
+      {asMenuItem ? (
+        <DropdownMenuItem onClick={() => setIsOpen(true)} className="gap-2" data-testid="button-ai-inbox-refresh">
+          <Wand2 className="w-4 h-4 text-purple-400" />
+          AI Cleanup
+        </DropdownMenuItem>
+      ) : (
+        <button
+          onClick={() => setIsOpen(true)}
+          className={`group ${compact ? 'w-8 h-8' : 'w-9 h-9'} flex items-center justify-center rounded-full cursor-pointer transition-all flex-shrink-0`}
+          style={{
+            background: "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(99,102,241,0.08))",
+            border: "1px solid rgba(168,85,247,0.18)",
+          }}
+          title="AI Inbox Cleanup"
+          data-testid="button-ai-inbox-refresh"
+        >
+          <Wand2 className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-purple-400/70 group-hover:text-purple-300 transition-colors`} />
+        </button>
+      )}
 
       {isOpen && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setIsOpen(false)}>

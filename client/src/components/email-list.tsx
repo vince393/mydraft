@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SwipeableEmailItem } from "@/components/swipeable-email-item";
 import { AiInboxRefreshButton } from "@/components/ai-inbox-refresh";
 import { categorizeEmail, getCategoryFromFolder, type EmailCategory } from "@/lib/email-categories";
@@ -495,7 +496,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   return (
     <div className="flex flex-col h-full overflow-x-hidden relative">
       {/* Search bar - sticky top on mobile with nav, floating on desktop */}
-      <div className={`z-20 flex items-center ${screen.isMobile ? 'gap-1.5 sticky top-0 px-2 py-2 bg-background border-b border-border/20 flex-shrink-0' : 'gap-2 absolute top-3 left-1/2 -translate-x-1/2'}`}>
+      <div className={`z-20 flex items-center ${screen.isMobile ? 'gap-1 sticky top-0 px-1.5 py-1.5 bg-background border-b border-border/20 flex-shrink-0' : 'gap-2 absolute top-3 left-1/2 -translate-x-1/2'}`}>
         {screen.isMobile && mobileNavLeft}
         {!screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && (
           <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
@@ -504,10 +505,10 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none z-10" />
           <Input 
             type="search"
-            placeholder="Search emails..." 
+            placeholder={screen.isMobile ? "Search..." : "Search emails..."} 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`pl-9 pr-16 backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 h-9 rounded-full text-sm placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
+            className={`pl-9 pr-16 h-9 text-sm backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 rounded-full placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.1)"
             }}
@@ -655,22 +656,25 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </Popover>
           </div>
         </div>
-        {screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && (
-          <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
-        )}
-        {screen.isMobile && onOpenAssistant && (
-          <button
-            onClick={onOpenAssistant}
-            className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all duration-150 flex-shrink-0"
-            style={{
-              background: "linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15))",
-              border: "1px solid rgba(129, 140, 248, 0.25)",
-              boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1)"
-            }}
-            data-testid="button-ai-chat-mobile"
-          >
-            <Sparkles className="w-4 h-4 text-indigo-300/80 group-hover:text-indigo-200 transition-colors" />
-          </button>
+        {screen.isMobile && (hasConnectedAccount && activeFolder === "inbox" || onOpenAssistant) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost" className="flex-shrink-0" data-testid="button-ai-mobile-menu">
+                <Sparkles className="w-4 h-4 text-indigo-300/80" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" data-testid="dropdown-ai-mobile-menu">
+              {onOpenAssistant && (
+                <DropdownMenuItem onClick={onOpenAssistant} className="gap-2" data-testid="button-ai-chat-mobile">
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                  AI Chat
+                </DropdownMenuItem>
+              )}
+              {hasConnectedAccount && activeFolder === "inbox" && (
+                <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} asMenuItem />
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         {!screen.isMobile && onOpenAssistant && (
           <button
