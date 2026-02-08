@@ -103,7 +103,9 @@ export function EmailIframeRenderer({
   const [height, setHeight] = useState(200);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
-  const buildIframeContent = useCallback((rawHtml: string) => {
+  const isDark = document.documentElement.classList.contains("dark");
+
+  const buildIframeContent = useCallback((rawHtml: string, dark: boolean) => {
     const hasFullHtml = /<html/i.test(rawHtml);
     const hasBody = /<body/i.test(rawHtml);
 
@@ -140,19 +142,38 @@ export function EmailIframeRenderer({
 
     const sanitized = sanitizeForIframe(bodyContent);
 
+    const bgColor = dark ? "#1a1a1e" : "#ffffff";
+    const textColor = dark ? "#e0e0e4" : "#222222";
+    const linkColor = dark ? "#6fa8ff" : "";
+
+    const darkLinkStyle = linkColor ? `a { color: ${linkColor}; }` : "";
+
     return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  body {
+  html, body {
     margin: 0;
     padding: 0;
-    background: #ffffff;
-    color: #222222;
+    background: ${bgColor};
+    color: ${textColor};
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    -webkit-font-smoothing: antialiased;
+  }
+  ${darkLinkStyle}
+  img[width="1"], img[height="1"],
+  img[width="0"], img[height="0"] {
+    display: none !important;
+  }
+  [style*="display:none"], [style*="display: none"],
+  [style*="visibility:hidden"], [style*="visibility: hidden"] {
+    display: none !important;
   }
 </style>
 ${headContent}
@@ -168,7 +189,7 @@ ${headContent}
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!doc) return;
 
-    const fullHtml = buildIframeContent(html);
+    const fullHtml = buildIframeContent(html, isDark);
     doc.open();
     doc.write(fullHtml);
     doc.close();
@@ -220,7 +241,7 @@ ${headContent}
         resizeObserverRef.current.disconnect();
       }
     };
-  }, [html, buildIframeContent]);
+  }, [html, isDark, buildIframeContent]);
 
   return (
     <div className={`email-iframe-wrapper ${className}`}>
@@ -233,7 +254,7 @@ ${headContent}
           border: "none",
           display: "block",
           overflow: "hidden",
-          background: "#ffffff",
+          background: isDark ? "#1a1a1e" : "#ffffff",
         }}
         title="Email content"
         data-testid="iframe-email-content"
