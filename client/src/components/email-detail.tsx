@@ -42,7 +42,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { SmartAvatar } from "@/components/smart-avatar";
-import { formatEmailBody, isHtmlContent } from "@/lib/email-formatter";
+import { isHtmlContent } from "@/lib/email-formatter";
 import { EmailIframeRenderer } from "@/components/email-iframe-renderer";
 import type { Email, Draft } from "@shared/schema";
 
@@ -101,8 +101,6 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [customDate, setCustomDate] = useState("");
   const [customTime, setCustomTime] = useState("");
-  const [showFormatted, setShowFormatted] = useState(true);
-  const [formattedBody, setFormattedBody] = useState<string | null>(null);
   const [detectedLanguage, setDetectedLanguage] = useState<{ code: string; name: string; isEnglish: boolean } | null>(null);
   const [translatedContent, setTranslatedContent] = useState<{ subject: string; body: string; culturalNotes?: string } | null>(null);
   const [showTranslated, setShowTranslated] = useState(false);
@@ -222,20 +220,11 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   }, [generatedDraft]);
 
   useEffect(() => {
-    setFormattedBody(null);
     setDetectedLanguage(null);
     setTranslatedContent(null);
     setShowTranslated(false);
   }, [email?.id]);
 
-  // Instant client-side formatting (no API call needed)
-  useEffect(() => {
-    if (email && showFormatted && !formattedBody) {
-      // Format instantly on client side
-      const formatted = formatEmailBody(email.body);
-      setFormattedBody(formatted);
-    }
-  }, [email?.id, showFormatted, formattedBody]);
 
   const detectLanguageMutation = useMutation({
     mutationFn: async ({ emailId, subject, body }: { emailId: string | number; subject: string; body: string }) => {
@@ -920,26 +909,6 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
           )}
 
           <div className="flex items-center gap-2 mb-4 flex-wrap">
-            <Button
-              variant={showFormatted ? "default" : "secondary"}
-              size="sm"
-              onClick={() => setShowFormatted(true)}
-              className="text-xs rounded-full toggle-elevate"
-              data-testid="button-formatted-view"
-            >
-              <Sparkles className="w-3 h-3 mr-1" />
-              AI Formatted
-            </Button>
-            <Button
-              variant={!showFormatted ? "default" : "secondary"}
-              size="sm"
-              onClick={() => setShowFormatted(false)}
-              className="text-xs rounded-full toggle-elevate"
-              data-testid="button-original-view"
-            >
-              Original
-            </Button>
-            
             {detectedLanguage && !detectedLanguage.isEnglish && (
               <>
                 {translatedContent ? (
@@ -1042,8 +1011,6 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   </div>
                 )}
               </>
-            ) : showFormatted && formattedBody ? (
-              <EmailIframeRenderer html={formattedBody} />
             ) : (
               <>
                 {isHtmlContent(email.body) ? (

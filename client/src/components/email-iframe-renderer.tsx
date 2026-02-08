@@ -145,10 +145,19 @@ export function EmailIframeRenderer({
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${headContent}
 <style>
-  html { margin: 0; padding: 0; overflow-x: hidden; }
-  body { margin: 0; padding: 0; word-wrap: break-word; overflow-wrap: break-word; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #222222;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    -webkit-font-smoothing: antialiased;
+  }
   img[width="1"], img[height="1"],
   img[width="0"], img[height="0"] {
     display: none !important;
@@ -158,6 +167,7 @@ ${headContent}
     display: none !important;
   }
 </style>
+${headContent}
 </head>
 <body${bodyAttrs}>${sanitized}</body>
 </html>`;
@@ -185,10 +195,7 @@ ${headContent}
 
     const handleLoad = () => {
       const images = doc.querySelectorAll("img");
-
-      const onImageLoad = () => {
-        updateHeight();
-      };
+      const onImageLoad = () => updateHeight();
 
       images.forEach((img) => {
         if (!img.complete) {
@@ -198,9 +205,9 @@ ${headContent}
       });
 
       updateHeight();
-      setTimeout(updateHeight, 100);
-      setTimeout(updateHeight, 500);
-      setTimeout(updateHeight, 1500);
+      setTimeout(updateHeight, 150);
+      setTimeout(updateHeight, 600);
+      setTimeout(updateHeight, 2000);
     };
 
     if (resizeObserverRef.current) {
@@ -208,9 +215,7 @@ ${headContent}
     }
 
     if (doc.body) {
-      resizeObserverRef.current = new ResizeObserver(() => {
-        updateHeight();
-      });
+      resizeObserverRef.current = new ResizeObserver(() => updateHeight());
       resizeObserverRef.current.observe(doc.body);
     }
 
@@ -230,21 +235,21 @@ ${headContent}
   }, [html, buildIframeContent]);
 
   return (
-    <iframe
-      ref={iframeRef}
-      className={className}
-      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-      style={{
-        width: "100%",
-        height: `${height}px`,
-        border: "none",
-        borderRadius: "8px",
-        background: "#ffffff",
-        display: "block",
-        overflow: "hidden",
-      }}
-      title="Email content"
-      data-testid="iframe-email-content"
-    />
+    <div className={`email-iframe-wrapper ${className}`}>
+      <iframe
+        ref={iframeRef}
+        sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+        style={{
+          width: "100%",
+          height: `${height}px`,
+          border: "none",
+          display: "block",
+          overflow: "hidden",
+          background: "#ffffff",
+        }}
+        title="Email content"
+        data-testid="iframe-email-content"
+      />
+    </div>
   );
 }

@@ -458,6 +458,18 @@
   color: hsl(var(--foreground));
 }
 
+/* Gmail-style email iframe wrapper */
+.email-iframe-wrapper {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border) / 0.3);
+  background: #ffffff;
+}
+
+.dark .email-iframe-wrapper {
+  border-color: hsl(var(--border) / 0.2);
+}
+
 .email-content-plain {
   font-size: 15px;
   line-height: 1.6;
