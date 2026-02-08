@@ -516,25 +516,26 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const isExpanded = !isCollapsed || isHoverExpanded;
   const showText = isExpanded;
 
-  return (
+  const handleFolderChangeWithClose = (folderId: string) => {
+    onFolderChange(folderId);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
+  const effectiveShowText = isMobile ? true : showText;
+  const effectiveExpanded = isMobile ? true : isExpanded;
+
+  const folderContent = (
     <>
-      <div 
-        className={`
-          flex-shrink-0 transition-all duration-300 ease-in-out overflow-visible relative
-          ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}
-        `}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={handleSidebarClick}
-      >
-        <Sidebar collapsible="none" className={`border-r border-border/20 transition-all duration-300 ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}`}>
-        <SidebarContent className={`${isExpanded ? "px-3" : "px-1.5"} transition-all duration-300`}>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu className="space-y-1">
+      <SidebarContent className={`${effectiveShowText ? "px-3" : "px-1.5"} transition-all duration-300`}>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {!isMobile && (
                 <SidebarMenuItem className="mb-2">
-                  <div className={`flex ${isExpanded ? "flex-row items-center gap-2" : "flex-col gap-1"}`}>
-                    {showText ? (
+                  <div className={`flex ${effectiveExpanded ? "flex-row items-center gap-2" : "flex-col gap-1"}`}>
+                    {effectiveShowText ? (
                       <>
                         <button 
                           onClick={(e) => {
@@ -583,183 +584,30 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     )}
                   </div>
                 </SidebarMenuItem>
-                {folders.map((item, itemIndex) => {
-                  const folderId = item.isCustom && item.id ? `custom-${item.id}` : item.title.toLowerCase();
-                  const isActive = activeFolder === folderId || activeFolder.toLowerCase() === item.title.toLowerCase();
-                  const folderKey = item.title.toLowerCase() as keyof UnreadCounts;
-                  const folderCount = unreadCounts?.[folderKey] || (item.title === "Inbox" ? unreadCount : 0);
-                  const showCount = folderCount > 0 && item.title.toLowerCase() !== "trash";
-                  
-                  if (!showText) {
-                    return (
-                      <SidebarMenuItem 
-                        key={item.title}
-                        onDragOver={(e) => handleFolderDragOver(e, folderId)}
-                        onDragLeave={handleFolderDragLeave}
-                        onDrop={(e) => handleFolderDrop(e, item.title.toLowerCase(), item.id)}
-                      >
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <SidebarMenuButton 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onFolderChange(folderId);
-                              }}
-                              className={`
-                                w-full justify-center h-11 rounded-xl transition-all duration-200
-                                ${dragOverFolder === folderId
-                                  ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
-                                  : isActive 
-                                    ? "bg-muted/60 text-foreground" 
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                                }
-                              `}
-                              data-testid={`nav-${item.title.toLowerCase()}`}
-                            >
-                              <div className="relative">
-                                <item.icon className="w-[18px] h-[18px]" />
-                                {showCount && (
-                                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
-                                )}
-                              </div>
-                            </SidebarMenuButton>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            {item.title}{showCount ? ` (${folderCount})` : ""}
-                          </TooltipContent>
-                        </Tooltip>
-                      </SidebarMenuItem>
-                    );
-                  }
-                  
-                  const folderButton = (
-                    <SidebarMenuButton 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onFolderChange(folderId);
-                      }}
-                      className={`
-                        w-full justify-between h-11 rounded-xl transition-all duration-200
-                        ${dragOverFolder === folderId
-                          ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
-                          : isActive 
-                            ? "bg-muted/60 text-foreground" 
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                        }
-                      `}
-                      data-testid={`nav-${item.title.toLowerCase()}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <item.icon className="w-[18px] h-[18px]" />
-                        <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
-                        {item.aiDescription && (
-                          <Sparkles className="w-3 h-3 text-primary/60" />
-                        )}
-                      </div>
-                      {showCount && (
-                        <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
-                          {folderCount}
-                        </Badge>
-                      )}
-                    </SidebarMenuButton>
-                  );
-
-                  // Custom folders get a visible menu button for rename/delete/icon
-                  if (item.isCustom) {
-                    return (
-                      <SidebarMenuItem 
-                        key={item.title} 
-                        className="group/folder"
-                        onDragOver={(e) => handleFolderDragOver(e, folderId)}
-                        onDragLeave={handleFolderDragLeave}
-                        onDrop={(e) => handleFolderDrop(e, item.title.toLowerCase(), item.id)}
-                      >
-                        <SidebarMenuButton 
-                          onClick={() => handleFolderClick(folderId)}
-                          className={`
-                            w-full justify-between h-11 rounded-xl transition-all duration-200
-                            ${dragOverFolder === folderId
-                              ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
-                              : isActive 
-                                ? "bg-muted/60 text-foreground" 
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                            }
-                          `}
-                          data-testid={`nav-${item.title.toLowerCase()}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <item.icon className="w-[18px] h-[18px]" />
-                            <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
-                            {item.aiDescription && (
-                              <Sparkles className="w-3 h-3 text-primary/60" />
-                            )}
-                          </div>
-                          
-                          {/* Menu button inside the folder bubble - visible on hover */}
-                          <div className="flex items-center gap-1">
-                            {showCount && (
-                              <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
-                                {folderCount}
-                              </Badge>
-                            )}
-                            <Popover 
-                              open={folderActionMenuOpen === item.title} 
-                              onOpenChange={(open) => setFolderActionMenuOpen(open ? item.title : null)}
-                            >
-                              <PopoverTrigger asChild>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setFolderActionMenuOpen(folderActionMenuOpen === item.title ? null : item.title);
-                                  }}
-                                  className="p-1 rounded-md opacity-0 group-hover/folder:opacity-100 hover:bg-background/50 transition-all text-muted-foreground hover:text-foreground"
-                                  data-testid={`button-folder-menu-${item.title.toLowerCase()}`}
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-44 p-1" align="start" side="right">
-                                <button
-                                  onClick={() => {
-                                    setFolderActionMenuOpen(null);
-                                    handleOpenRename(item);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
-                                  data-testid={`button-rename-${item.title.toLowerCase()}`}
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                  Rename
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setFolderActionMenuOpen(null);
-                                    handleOpenIconPicker(item);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
-                                  data-testid={`button-icon-${item.title.toLowerCase()}`}
-                                >
-                                  <ImageIcon className="w-4 h-4" />
-                                  Change Icon
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setFolderActionMenuOpen(null);
-                                    handleOpenDelete(item);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted text-destructive transition-colors"
-                                  data-testid={`button-delete-${item.title.toLowerCase()}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  Delete
-                                </button>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  }
-                  
+              )}
+              {isMobile && (
+                <SidebarMenuItem className="mb-2">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsCreateOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
+                    data-testid="button-create-folder-mobile"
+                  >
+                    <FolderPlus className="w-4 h-4 ml-3" />
+                    <span className="text-sm">New Folder</span>
+                  </button>
+                </SidebarMenuItem>
+              )}
+              {folders.map((item, itemIndex) => {
+                const folderId = item.isCustom && item.id ? `custom-${item.id}` : item.title.toLowerCase();
+                const isActive = activeFolder === folderId || activeFolder.toLowerCase() === item.title.toLowerCase();
+                const folderKey = item.title.toLowerCase() as keyof UnreadCounts;
+                const folderCount = unreadCounts?.[folderKey] || (item.title === "Inbox" ? unreadCount : 0);
+                const showCount = folderCount > 0 && item.title.toLowerCase() !== "trash";
+                
+                if (!effectiveShowText) {
                   return (
                     <SidebarMenuItem 
                       key={item.title}
@@ -767,20 +615,209 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                       onDragLeave={handleFolderDragLeave}
                       onDrop={(e) => handleFolderDrop(e, item.title.toLowerCase(), item.id)}
                     >
-                      {folderButton}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFolderChangeWithClose(folderId);
+                            }}
+                            className={`
+                              w-full justify-center h-11 rounded-xl transition-all duration-200
+                              ${dragOverFolder === folderId
+                                ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
+                                : isActive 
+                                  ? "bg-muted/60 text-foreground" 
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              }
+                            `}
+                            data-testid={`nav-${item.title.toLowerCase()}`}
+                          >
+                            <div className="relative">
+                              <item.icon className="w-[18px] h-[18px]" />
+                              {showCount && (
+                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                              )}
+                            </div>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          {item.title}{showCount ? ` (${folderCount})` : ""}
+                        </TooltipContent>
+                      </Tooltip>
                     </SidebarMenuItem>
                   );
-                })}
+                }
+                
+                const folderButton = (
+                  <SidebarMenuButton 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFolderChangeWithClose(folderId);
+                    }}
+                    className={`
+                      w-full justify-between h-11 rounded-xl transition-all duration-200
+                      ${dragOverFolder === folderId
+                        ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
+                        : isActive 
+                          ? "bg-muted/60 text-foreground" 
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                      }
+                    `}
+                    data-testid={`nav-${item.title.toLowerCase()}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="w-[18px] h-[18px]" />
+                      <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
+                      {item.aiDescription && (
+                        <Sparkles className="w-3 h-3 text-primary/60" />
+                      )}
+                    </div>
+                    {showCount && (
+                      <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
+                        {folderCount}
+                      </Badge>
+                    )}
+                  </SidebarMenuButton>
+                );
 
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
+                if (item.isCustom) {
+                  return (
+                    <SidebarMenuItem 
+                      key={item.title} 
+                      className="group/folder"
+                      onDragOver={(e) => handleFolderDragOver(e, folderId)}
+                      onDragLeave={handleFolderDragLeave}
+                      onDrop={(e) => handleFolderDrop(e, item.title.toLowerCase(), item.id)}
+                    >
+                      <SidebarMenuButton 
+                        onClick={() => {
+                          handleFolderClick(folderId);
+                          if (isMobile) setOpenMobile(false);
+                        }}
+                        className={`
+                          w-full justify-between h-11 rounded-xl transition-all duration-200
+                          ${dragOverFolder === folderId
+                            ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
+                            : isActive 
+                              ? "bg-muted/60 text-foreground" 
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                          }
+                        `}
+                        data-testid={`nav-${item.title.toLowerCase()}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <item.icon className="w-[18px] h-[18px]" />
+                          <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
+                          {item.aiDescription && (
+                            <Sparkles className="w-3 h-3 text-primary/60" />
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-1">
+                          {showCount && (
+                            <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
+                              {folderCount}
+                            </Badge>
+                          )}
+                          <Popover 
+                            open={folderActionMenuOpen === item.title} 
+                            onOpenChange={(open) => setFolderActionMenuOpen(open ? item.title : null)}
+                          >
+                            <PopoverTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFolderActionMenuOpen(folderActionMenuOpen === item.title ? null : item.title);
+                                }}
+                                className="p-1 rounded-md opacity-0 group-hover/folder:opacity-100 hover:bg-background/50 transition-all text-muted-foreground hover:text-foreground"
+                                data-testid={`button-folder-menu-${item.title.toLowerCase()}`}
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-44 p-1" align="start" side="right">
+                              <button
+                                onClick={() => {
+                                  setFolderActionMenuOpen(null);
+                                  handleOpenRename(item);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
+                                data-testid={`button-rename-${item.title.toLowerCase()}`}
+                              >
+                                <Pencil className="w-4 h-4" />
+                                Rename
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setFolderActionMenuOpen(null);
+                                  handleOpenIconPicker(item);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
+                                data-testid={`button-icon-${item.title.toLowerCase()}`}
+                              >
+                                <ImageIcon className="w-4 h-4" />
+                                Change Icon
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setFolderActionMenuOpen(null);
+                                  handleOpenDelete(item);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted text-destructive transition-colors"
+                                data-testid={`button-delete-${item.title.toLowerCase()}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </button>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                }
+                
+                return (
+                  <SidebarMenuItem 
+                    key={item.title}
+                    onDragOver={(e) => handleFolderDragOver(e, folderId)}
+                    onDragLeave={handleFolderDragLeave}
+                    onDrop={(e) => handleFolderDrop(e, item.title.toLowerCase(), item.id)}
+                  >
+                    {folderButton}
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="p-2" />
+    </>
+  );
 
-        <SidebarFooter className={`${isExpanded ? "p-3" : "p-2"} transition-all duration-300`}>
-        </SidebarFooter>
+  return (
+    <>
+      {isMobile ? (
+        <Sidebar className="border-r border-border/20">
+          {folderContent}
         </Sidebar>
-      </div>
+      ) : (
+        <div 
+          className={`
+            flex-shrink-0 transition-all duration-300 ease-in-out overflow-visible relative
+            ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}
+          `}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onClick={handleSidebarClick}
+        >
+          <Sidebar collapsible="none" className={`border-r border-border/20 transition-all duration-300 ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}`}>
+            {folderContent}
+          </Sidebar>
+        </div>
+      )}
 
       {/* Create Folder Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

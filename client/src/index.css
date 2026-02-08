@@ -324,7 +324,7 @@
     flex-direction: column;
     overflow: hidden;
     border-right: none;
-    padding-bottom: 4rem; /* Space for mobile bottom nav */
+    padding-bottom: 0;
   }
 
   .email-detail-panel {
@@ -340,7 +340,7 @@
     inset: 0;
     z-index: 40;
     background: hsl(var(--background));
-    padding-bottom: 0; /* No bottom nav when viewing email detail */
+    padding-bottom: 0;
   }
 
   @media (min-width: 768px) {
@@ -348,7 +348,7 @@
       width: 40%;
       max-width: 400px;
       border-right: 1px solid hsl(var(--border) / 0.5);
-      padding-bottom: 0; /* No bottom nav on tablet+ */
+      padding-bottom: 0;
     }
     
     .email-detail-panel {
