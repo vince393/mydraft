@@ -570,58 +570,39 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
       <SidebarContent className={`${effectiveShowText ? "px-3" : "px-1.5"} transition-all duration-300`}>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {!isMobile && (
-                <SidebarMenuItem className="mb-2">
-                  <div className={`flex ${effectiveExpanded ? "flex-row items-center gap-2" : "flex-col gap-1"}`}>
-                    {effectiveShowText ? (
-                      <>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsCreateOpen(true);
-                          }}
-                          className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                          data-testid="button-create-folder"
-                        >
-                          <FolderPlus className="w-4 h-4" />
-                          <span className="text-sm">Folder</span>
-                        </button>
-                        <button
-                          onClick={handleToggleCollapse}
-                          className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                          data-testid="button-toggle-sidebar"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={handleToggleCollapse}
-                          className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                          data-testid="button-toggle-sidebar"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setIsCreateOpen(true);
-                              }}
-                              className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200"
-                              data-testid="button-create-folder"
-                            >
-                              <FolderPlus className="w-4 h-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">New Folder</TooltipContent>
-                        </Tooltip>
-                      </>
-                    )}
-                  </div>
+            <SidebarMenu className="space-y-0.5">
+              {!isMobile && effectiveShowText && (
+                <SidebarMenuItem className="mb-1">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsCreateOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+                    data-testid="button-create-folder"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    <span>New folder</span>
+                  </button>
+                </SidebarMenuItem>
+              )}
+              {!isMobile && !effectiveShowText && (
+                <SidebarMenuItem className="mb-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsCreateOpen(true);
+                        }}
+                        className="flex items-center justify-center w-full py-1.5 text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+                        data-testid="button-create-folder"
+                      >
+                        <FolderPlus className="w-3.5 h-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">New Folder</TooltipContent>
+                  </Tooltip>
                 </SidebarMenuItem>
               )}
               {isMobile && (
@@ -662,20 +643,20 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                               handleFolderChangeWithClose(folderId);
                             }}
                             className={`
-                              w-full justify-center h-11 rounded-xl transition-all duration-200
+                              w-full justify-center h-9 rounded-lg transition-all duration-200
                               ${dragOverFolder === folderId
-                                ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
+                                ? "ring-1 ring-primary/50 bg-primary/10 text-foreground"
                                 : isActive 
-                                  ? "bg-muted/60 text-foreground" 
-                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                  ? "bg-white/[0.06] text-foreground" 
+                                  : "text-muted-foreground/70 hover:text-foreground hover:bg-white/[0.04]"
                               }
                             `}
                             data-testid={`nav-${item.title.toLowerCase()}`}
                           >
                             <div className="relative">
-                              <item.icon className="w-[18px] h-[18px]" />
+                              <item.icon className="w-4 h-4" />
                               {showCount && (
-                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                                <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-primary rounded-full" />
                               )}
                             </div>
                           </SidebarMenuButton>
@@ -695,27 +676,27 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                       handleFolderChangeWithClose(folderId);
                     }}
                     className={`
-                      w-full justify-between h-11 rounded-xl transition-all duration-200
+                      w-full justify-between h-9 rounded-lg transition-all duration-200
                       ${dragOverFolder === folderId
-                        ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
+                        ? "ring-1 ring-primary/50 bg-primary/10 text-foreground"
                         : isActive 
-                          ? "bg-muted/60 text-foreground" 
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                          ? "bg-white/[0.06] text-foreground" 
+                          : "text-muted-foreground/70 hover:text-foreground hover:bg-white/[0.04]"
                       }
                     `}
                     data-testid={`nav-${item.title.toLowerCase()}`}
                   >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="w-[18px] h-[18px]" />
-                      <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
+                    <div className="flex items-center gap-2.5">
+                      <item.icon className="w-4 h-4" />
+                      <span className={`text-[13px] ${isActive ? "font-medium" : ""}`}>{item.title}</span>
                       {item.aiDescription && (
-                        <Sparkles className="w-3 h-3 text-primary/60" />
+                        <Sparkles className="w-3 h-3 text-primary/40" />
                       )}
                     </div>
                     {showCount && (
-                      <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
+                      <span className="text-[11px] text-muted-foreground/60 tabular-nums">
                         {folderCount}
-                      </Badge>
+                      </span>
                     )}
                   </SidebarMenuButton>
                 );
@@ -735,29 +716,29 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                           if (isMobile) setOpenMobile(false);
                         }}
                         className={`
-                          w-full justify-between h-11 rounded-xl transition-all duration-200
+                          w-full justify-between h-9 rounded-lg transition-all duration-200
                           ${dragOverFolder === folderId
-                            ? "ring-2 ring-primary bg-primary/15 text-foreground scale-105"
+                            ? "ring-1 ring-primary/50 bg-primary/10 text-foreground"
                             : isActive 
-                              ? "bg-muted/60 text-foreground" 
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              ? "bg-white/[0.06] text-foreground" 
+                              : "text-muted-foreground/70 hover:text-foreground hover:bg-white/[0.04]"
                           }
                         `}
                         data-testid={`nav-${item.title.toLowerCase()}`}
                       >
-                        <div className="flex items-center gap-3">
-                          <item.icon className="w-[18px] h-[18px]" />
-                          <span className={`text-sm ${isActive ? "font-medium" : ""}`}>{item.title}</span>
+                        <div className="flex items-center gap-2.5">
+                          <item.icon className="w-4 h-4" />
+                          <span className={`text-[13px] ${isActive ? "font-medium" : ""}`}>{item.title}</span>
                           {item.aiDescription && (
-                            <Sparkles className="w-3 h-3 text-primary/60" />
+                            <Sparkles className="w-3 h-3 text-primary/40" />
                           )}
                         </div>
                         
                         <div className="flex items-center gap-1">
                           {showCount && (
-                            <Badge variant="secondary" className="text-xs min-w-[24px] h-6 justify-center rounded-lg bg-muted text-foreground border-0">
+                            <span className="text-[11px] text-muted-foreground/60 tabular-nums">
                               {folderCount}
-                            </Badge>
+                            </span>
                           )}
                           <Popover 
                             open={folderActionMenuOpen === item.title} 
@@ -833,6 +814,19 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-2">
+        {!isMobile && (
+          <button
+            onClick={handleToggleCollapse}
+            className="w-full flex items-center justify-center py-1 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+            data-testid="button-toggle-sidebar"
+          >
+            {effectiveExpanded ? (
+              <ChevronLeft className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5" />
+            )}
+          </button>
+        )}
         {isMobile && (
           <div className="flex items-center gap-2 px-1 py-1">
             <DropdownMenu>
@@ -891,7 +885,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   return (
     <>
       {isMobile ? (
-        <Sidebar className="border-r border-border/20">
+        <Sidebar className="border-r border-white/[0.06]">
           {folderContent}
         </Sidebar>
       ) : (
@@ -904,7 +898,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
           onMouseLeave={handleMouseLeave}
           onClick={handleSidebarClick}
         >
-          <Sidebar collapsible="none" className={`border-r border-border/20 transition-all duration-300 ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}`}>
+          <Sidebar collapsible="none" className={`border-r border-white/[0.06] transition-all duration-300 ${isExpanded ? "w-[11rem]" : "w-[3.5rem]"}`}>
             {folderContent}
           </Sidebar>
         </div>
