@@ -140,12 +140,13 @@ function AuthenticatedApp() {
   return (
     <SidebarProvider
       defaultOpen={screen.isDesktop}
+      className="!min-h-0 h-dvh overflow-hidden"
       style={{
         "--sidebar-width": screen.isMobile ? "18rem" : "12%",
         "--sidebar-width-icon": "0rem",
       } as React.CSSProperties}
     >
-      <div className="flex h-screen w-full bg-background overflow-hidden">
+      <div className="flex h-full w-full bg-background overflow-hidden">
         <AppSidebar
           activeFolder={activeFolder}
           onFolderChange={setActiveFolder}
@@ -155,7 +156,7 @@ function AuthenticatedApp() {
           onCompose={handleCompose}
           onDropEmail={handleDropEmail}
         />
-        <SidebarInset className="flex flex-1 min-w-0">
+        <SidebarInset className="flex flex-1 min-w-0 overflow-hidden">
           <Inbox 
             activeFolder={activeFolder} 
             showComposeDialog={showComposeDialog}
