@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Wand2, Loader2, Check, X, Archive, Trash2, Star, Mail, Sparkles, FolderInput, ShieldAlert, RotateCcw, Ban } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -128,8 +129,8 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
         <Wand2 className="w-4 h-4 text-purple-400/70 group-hover:text-purple-300 transition-colors" />
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setIsOpen(false)}>
+      {isOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setIsOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
             className="relative w-full flex flex-col"
@@ -399,7 +400,8 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
