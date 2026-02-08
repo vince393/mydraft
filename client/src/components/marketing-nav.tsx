@@ -59,7 +59,7 @@ export function MarketingNav() {
           <span className="text-lg md:text-xl font-bold tracking-tight text-foreground">MyDraft</span>
         </Link>
         
-        <div className="hidden md:flex items-center gap-1 mr-auto">
+        <div className="hidden md:flex items-center gap-1 ml-6 mr-auto">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
               <Button 
