@@ -146,26 +146,13 @@ export function EmailIframeRenderer({
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  html, body {
+  body {
     margin: 0;
     padding: 0;
     background: #ffffff;
     color: #222222;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    -webkit-font-smoothing: antialiased;
-  }
-  img { max-width: 100%; height: auto; }
-  img[width="1"], img[height="1"],
-  img[width="0"], img[height="0"] {
-    display: none !important;
-  }
-  [style*="display:none"], [style*="display: none"],
-  [style*="visibility:hidden"], [style*="visibility: hidden"] {
-    display: none !important;
   }
 </style>
 ${headContent}
