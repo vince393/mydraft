@@ -2370,7 +2370,7 @@ function ReferralTab() {
   });
 
   const referralLink = data?.referralCode
-    ? `${window.location.origin}/login?mode=register&ref=${data.referralCode}`
+    ? `https://mydraft.io/login?mode=register&ref=${data.referralCode}`
     : "";
 
   const copyToClipboard = (text: string) => {
