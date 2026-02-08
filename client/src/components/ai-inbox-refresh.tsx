@@ -136,8 +136,8 @@ export function AiInboxRefreshButton({ onRefreshComplete }: { onRefreshComplete?
             className="relative w-full flex flex-col"
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: "380px",
-              maxHeight: "min(520px, 80vh)",
+              maxWidth: "520px",
+              maxHeight: "min(640px, 85vh)",
               backdropFilter: "blur(40px)",
               WebkitBackdropFilter: "blur(40px)",
               background: "linear-gradient(145deg, rgba(30,30,40,0.92) 0%, rgba(20,20,28,0.96) 100%)",
