@@ -497,6 +497,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       {/* Search bar - sticky top on mobile with nav, floating on desktop */}
       <div className={`z-20 flex items-center ${screen.isMobile ? 'gap-1.5 sticky top-0 px-2 py-2 bg-background border-b border-border/20 flex-shrink-0' : 'gap-2 absolute top-3 left-1/2 -translate-x-1/2'}`}>
         {screen.isMobile && mobileNavLeft}
+        {!screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && (
+          <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
+        )}
         <div className={`relative ${screen.isMobile ? 'flex-1 min-w-0' : 'w-64'}`}>
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none z-10" />
           <Input 
@@ -652,13 +655,27 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </Popover>
           </div>
         </div>
-        {hasConnectedAccount && activeFolder === "inbox" && (
+        {screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && (
           <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
         )}
-        {onOpenAssistant && (
+        {screen.isMobile && onOpenAssistant && (
           <button
             onClick={onOpenAssistant}
             className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all duration-150 flex-shrink-0"
+            style={{
+              background: "linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15))",
+              border: "1px solid rgba(129, 140, 248, 0.25)",
+              boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1)"
+            }}
+            data-testid="button-ai-chat-mobile"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-300/80 group-hover:text-indigo-200 transition-colors" />
+          </button>
+        )}
+        {!screen.isMobile && onOpenAssistant && (
+          <button
+            onClick={onOpenAssistant}
+            className="group w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all duration-150"
             style={{
               background: "linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15))",
               border: "1px solid rgba(129, 140, 248, 0.25)",
