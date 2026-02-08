@@ -920,7 +920,7 @@ export function ComposeDialog({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write your message..."
-              className="flex-1 min-h-[160px] resize-none border-0 bg-transparent px-0 text-sm leading-relaxed placeholder:text-foreground/20 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="flex-1 min-h-[160px] resize-none border-0 bg-transparent px-4 py-3 text-sm leading-relaxed placeholder:text-foreground/20 focus-visible:ring-0 focus-visible:ring-offset-0"
               data-testid="textarea-compose-body"
             />
             
