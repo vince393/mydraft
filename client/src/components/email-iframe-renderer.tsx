@@ -272,7 +272,7 @@ ${headContent}
       if (!doc.body) return;
       const scrollH =
         doc.documentElement?.scrollHeight || doc.body.scrollHeight;
-      const newHeight = Math.max(scrollH, 100);
+      const newHeight = Math.max(scrollH + 16, 100);
       setHeight(newHeight);
     };
 
@@ -327,7 +327,7 @@ ${headContent}
           height: `${height}px`,
           border: "none",
           display: "block",
-          overflow: "hidden",
+          overflow: "auto",
           background: isDark ? "#1a1a1e" : "#ffffff",
         }}
         title="Email content"
