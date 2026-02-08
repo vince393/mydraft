@@ -777,7 +777,6 @@ interface Testimonial {
   userName: string;
   content: string;
   rating: number;
-  isFounder: boolean;
 }
 
 function TestimonialsSection() {
@@ -788,15 +787,7 @@ function TestimonialsSection() {
     queryKey: ["/api/testimonials"],
   });
 
-  const founderTestimonial = {
-    id: 0,
-    userName: "Founder",
-    content: "We built MyDraft for ourselves first. An inbox that loads instantly, clears quickly, and never gets in the way. Now we use it every day.",
-    rating: 5,
-    isFounder: true,
-  };
-
-  const testimonials = [founderTestimonial, ...(apiTestimonials || [])];
+  const testimonials = apiTestimonials || [];
 
   const nextSlide = () => {
     setCurrentIndex((prev) => (prev + 1) % testimonials.length);
@@ -851,9 +842,6 @@ function TestimonialsSection() {
                       <p className="text-xl text-muted-foreground leading-relaxed mb-8">"{t.content}"</p>
                       <div>
                         <p className="font-medium text-lg">{t.userName}</p>
-                        {t.isFounder && (
-                          <p className="text-primary/80">Founder of MyDraft</p>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
