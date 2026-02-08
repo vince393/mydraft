@@ -64,8 +64,8 @@ export function MobileBottomNav({ activeFolder, onFolderChange, unreadCounts, on
           className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 touch-target"
           data-testid="mobile-nav-compose"
         >
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shadow-sm">
-            <PenSquare className="w-4 h-4 text-primary-foreground" />
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-sm">
+            <PenSquare className="w-5 h-5 text-primary-foreground" />
           </div>
         </button>
       </div>

@@ -508,7 +508,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             placeholder={screen.isMobile ? "Search..." : "Search emails..."} 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`pl-9 pr-16 h-9 text-sm backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 rounded-full placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
+            className={`pl-9 pr-16 ${screen.isMobile ? 'h-8' : 'h-9'} text-sm backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 rounded-full placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.1)"
             }}
@@ -660,7 +660,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button size="icon" variant="ghost" className="flex-shrink-0" data-testid="button-ai-mobile-menu">
-                <Sparkles className="w-4 h-4 text-indigo-300/80" />
+                <Sparkles className="w-5 h-5 text-indigo-300/80" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" data-testid="dropdown-ai-mobile-menu">
@@ -870,14 +870,14 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       ) : (
         <div className="absolute bottom-4 right-4">
           <button 
-            className="group rounded-full w-14 h-14 flex items-center justify-center backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border border-white/20 dark:border-white/10 hover:bg-white/8 dark:hover:bg-white/5 hover:border-white/30 dark:hover:border-white/15 hover:scale-110 active:scale-95 active:bg-white/12 dark:active:bg-white/8 transition-all duration-150 cursor-pointer"
+            className="group rounded-full w-16 h-16 flex items-center justify-center backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border border-white/20 dark:border-white/10 hover:bg-white/8 dark:hover:bg-white/5 hover:border-white/30 dark:hover:border-white/15 hover:scale-110 active:scale-95 active:bg-white/12 dark:active:bg-white/8 transition-all duration-150 cursor-pointer"
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.1)"
             }}
             onClick={onCompose}
             data-testid="button-compose"
           >
-            <PenSquare className="w-5 h-5 text-foreground/60 group-hover:text-foreground/80 transition-colors" />
+            <PenSquare className="w-6 h-6 text-foreground/60 group-hover:text-foreground/80 transition-colors" />
           </button>
         </div>
       )}

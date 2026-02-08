@@ -731,7 +731,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                 className="flex-shrink-0"
                 data-testid="button-sidebar-toggle"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-[22px] h-[22px]" />
               </Button>
             }
           />
