@@ -17,6 +17,7 @@ interface EmailWithNylasId extends Email {
   nylasId?: string;
   threadCount?: number;
   threadEmails?: EmailWithNylasId[];
+  isFlagged?: boolean;
 }
 
 function getEmailId(email: EmailWithNylasId): string | number {

@@ -454,7 +454,8 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
   color: hsl(var(--foreground));
 }
 
@@ -473,16 +474,21 @@
 }
 
 .email-content-plain {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
   color: hsl(var(--foreground));
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  padding: 4px 0;
 }
 
 .email-content-plain p {
-  margin: 0 0 1em 0;
+  margin: 0 0 0.85em 0;
 }
 
 .email-content-plain p:last-child {

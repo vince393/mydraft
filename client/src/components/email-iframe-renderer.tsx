@@ -156,15 +156,38 @@ export function EmailIframeRenderer({
 <style>
   html, body {
     margin: 0;
-    padding: 0;
+    padding: 16px;
     background: ${bgColor};
     color: ${textColor};
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
     word-wrap: break-word;
     overflow-wrap: break-word;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
+  }
+  body > div, body > table { max-width: 100%; }
+  p { margin: 0 0 0.85em 0; }
+  blockquote {
+    margin: 0.8em 0;
+    padding: 0.4em 0 0.4em 1em;
+    border-left: 3px solid ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'};
+    color: ${dark ? '#a0a0a4' : '#555555'};
+  }
+  pre, code {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    background: ${dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'};
+    border-radius: 4px;
+    padding: 2px 5px;
+  }
+  pre { padding: 12px; overflow-x: auto; }
+  hr {
+    border: none;
+    border-top: 1px solid ${dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'};
+    margin: 1.2em 0;
   }
   ${darkLinkStyle}
   img[width="1"], img[height="1"],

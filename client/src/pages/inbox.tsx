@@ -527,19 +527,15 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   };
 
   const handleTrashEmail = () => {
-    console.log("[DEBUG handleTrashEmail] selectedEmail:", selectedEmail);
     if (selectedEmail) {
       const emailId = getEmailId(selectedEmail);
-      console.log("[DEBUG handleTrashEmail] calling mutation with emailId:", emailId);
       moveEmailMutation.mutate({ emailId, folder: "trash", previousFolder: activeFolder });
     }
   };
 
   const handleArchiveEmail = () => {
-    console.log("[DEBUG handleArchiveEmail] selectedEmail:", selectedEmail);
     if (selectedEmail) {
       const emailId = getEmailId(selectedEmail);
-      console.log("[DEBUG handleArchiveEmail] calling mutation with emailId:", emailId);
       moveEmailMutation.mutate({ emailId, folder: "archived", previousFolder: activeFolder });
     }
   };
