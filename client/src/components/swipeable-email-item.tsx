@@ -87,16 +87,33 @@ export function SwipeableEmailItem({
   const [swipeX, setSwipeX] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [exitHeight, setExitHeight] = useState<number | null>(null);
   const [containerWidth, setContainerWidth] = useState(300);
   const startX = useRef(0);
   const startY = useRef(0);
   const currentX = useRef(0);
   const isHorizontalSwipe = useRef<boolean | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const revealThreshold = (containerWidth * REVEAL_PERCENT) / 100;
   const deleteThreshold = (containerWidth * DELETE_PERCENT) / 100;
   const maxSwipe = (containerWidth * MAX_SWIPE_PERCENT) / 100;
+
+  const animateExit = useCallback((callback: () => void) => {
+    if (isExiting) return;
+    const h = wrapperRef.current?.offsetHeight || 0;
+    setExitHeight(h);
+    setSwipeX(-containerWidth);
+    setIsExiting(true);
+    setTimeout(() => {
+      setExitHeight(0);
+    }, 30);
+    setTimeout(() => {
+      callback();
+    }, 220);
+  }, [isExiting, containerWidth]);
 
   useEffect(() => {
     const updateWidth = () => {
@@ -151,13 +168,8 @@ export function SwipeableEmailItem({
     setIsSwiping(false);
 
     if (swipeX <= -deleteThreshold) {
-      if (isTrashFolder && onPermanentDelete) {
-        onPermanentDelete();
-      } else {
-        onDelete();
-      }
-      setSwipeX(0);
-      setIsRevealed(false);
+      const action = isTrashFolder && onPermanentDelete ? onPermanentDelete : onDelete;
+      animateExit(action);
       return;
     }
 
@@ -168,7 +180,7 @@ export function SwipeableEmailItem({
       setSwipeX(0);
       setIsRevealed(false);
     }
-  }, [swipeX, onDelete, onPermanentDelete, isTrashFolder, isSelectionMode, onLongPressEnd, deleteThreshold, revealThreshold]);
+  }, [swipeX, onDelete, onPermanentDelete, isTrashFolder, isSelectionMode, onLongPressEnd, deleteThreshold, revealThreshold, animateExit]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     onLongPressStart();
@@ -226,13 +238,17 @@ export function SwipeableEmailItem({
     onSelect();
   }, [swipeX, isRevealed, onSelect]);
 
-  const handleActionClick = useCallback((action: () => void) => (e: React.MouseEvent) => {
+  const handleActionClick = useCallback((action: () => void, animate = false) => (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    action();
-    setSwipeX(0);
-    setIsRevealed(false);
-  }, []);
+    if (animate) {
+      animateExit(action);
+    } else {
+      action();
+      setSwipeX(0);
+      setIsRevealed(false);
+    }
+  }, [animateExit]);
 
   const handleStarClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -278,7 +294,7 @@ export function SwipeableEmailItem({
         return (
           <div className="flex items-center w-full" style={{ padding: `0 ${PAD}px` }}>
             <button
-              onClick={handleActionClick(onPermanentDelete || onDelete)}
+              onClick={handleActionClick(onPermanentDelete || onDelete, true)}
               className="flex items-center justify-center gap-2"
               style={{ ...glossyPill(redBg, absSwipe - PAD * 2), opacity: iconOpacity }}
               data-testid={`swipe-delete-${emailId}`}
@@ -301,7 +317,7 @@ export function SwipeableEmailItem({
           </button>
           {secondBtnW > 0 && (
             <button
-              onClick={handleActionClick(onPermanentDelete || onDelete)}
+              onClick={handleActionClick(onPermanentDelete || onDelete, true)}
               className="flex items-center justify-center"
               style={{ ...glossyPill(redBg, secondBtnW), opacity: iconOpacity }}
               data-testid={`swipe-delete-${emailId}`}
@@ -320,7 +336,7 @@ export function SwipeableEmailItem({
         return (
           <div className="flex items-center w-full" style={{ padding: `0 ${PAD}px` }}>
             <button
-              onClick={handleActionClick(onDelete)}
+              onClick={handleActionClick(onDelete, true)}
               className="flex items-center justify-center gap-2"
               style={{ ...glossyPill(redBg, absSwipe - PAD * 2), opacity: iconOpacity }}
               data-testid={`swipe-delete-${emailId}`}
@@ -343,7 +359,7 @@ export function SwipeableEmailItem({
           </button>
           {secondBtnW > 0 && (
             <button
-              onClick={handleActionClick(onDelete)}
+              onClick={handleActionClick(onDelete, true)}
               className="flex items-center justify-center"
               style={{ ...glossyPill(redBg, secondBtnW), opacity: iconOpacity }}
               data-testid={`swipe-delete-${emailId}`}
@@ -359,7 +375,7 @@ export function SwipeableEmailItem({
       return (
         <div className="flex items-center w-full" style={{ padding: `0 ${PAD}px` }}>
           <button
-            onClick={handleActionClick(onDelete)}
+            onClick={handleActionClick(onDelete, true)}
             className="flex items-center justify-center gap-2"
             style={{ ...glossyPill(redBg, absSwipe - PAD * 2), opacity: iconOpacity }}
             data-testid={`swipe-delete-${emailId}`}
@@ -429,7 +445,7 @@ export function SwipeableEmailItem({
         </DropdownMenu>
         {deleteButtonWidth > 0 && (
           <button
-            onClick={handleActionClick(onDelete)}
+            onClick={handleActionClick(onDelete, true)}
             className="flex items-center justify-center"
             style={{ ...glossyPill(redBg, deleteButtonWidth), opacity: iconOpacity }}
             data-testid={`swipe-delete-${emailId}`}
@@ -456,6 +472,15 @@ export function SwipeableEmailItem({
   }, []);
 
   return (
+    <div
+      ref={wrapperRef}
+      style={{
+        height: exitHeight !== null ? exitHeight : undefined,
+        opacity: isExiting ? 0 : 1,
+        overflow: 'hidden',
+        transition: isExiting ? 'height 0.18s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease-out' : 'none',
+      }}
+    >
     <div
       ref={containerRef}
       className="relative overflow-hidden rounded-xl w-full"
@@ -556,11 +581,7 @@ export function SwipeableEmailItem({
                         <RotateCcw className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          if (onPermanentDelete) onPermanentDelete();
-                        }}
+                        onClick={handleActionClick(onPermanentDelete || onDelete, true)}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
                         data-testid={`hover-permanent-delete-${emailId}`}
                         title="Delete permanently"
@@ -579,7 +600,7 @@ export function SwipeableEmailItem({
                         <RotateCcw className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={handleActionClick(onDelete)}
+                        onClick={handleActionClick(onDelete, true)}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
                         data-testid={`hover-delete-${emailId}`}
                       >
@@ -589,14 +610,14 @@ export function SwipeableEmailItem({
                   ) : (
                     <>
                       <button
-                        onClick={handleActionClick(onArchive)}
+                        onClick={handleActionClick(onArchive, true)}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
                         data-testid={`hover-archive-${emailId}`}
                       >
                         <Archive className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={handleActionClick(onDelete)}
+                        onClick={handleActionClick(onDelete, true)}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
                         data-testid={`hover-delete-${emailId}`}
                       >
@@ -629,6 +650,7 @@ export function SwipeableEmailItem({
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

@@ -451,12 +451,10 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       
       return { emailId };
     },
-    onSuccess: (_, variables) => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
-      }, 250);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
     },
     onError: (error: Error, variables) => {
       setOptimisticRemovals(prev => {
@@ -477,7 +475,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
           newSet.delete(variables.emailId);
           return newSet;
         });
-      }, 2000);
+      }, 1000);
     },
   });
 
@@ -679,6 +677,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
         ) : (
           <EmailList
             emails={emails
+              .filter(email => !optimisticRemovals.has(getEmailId(email)))
               .map(email => {
                 const emailId = getEmailId(email);
                 if (optimisticStars.has(emailId)) {
@@ -686,7 +685,6 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                 }
                 return email;
               })}
-            optimisticRemovals={optimisticRemovals}
             selectedEmailId={selectedEmailId}
             onSelectEmail={handleSelectEmail}
             onAiReply={handleAiReply}
