@@ -511,26 +511,34 @@
 }
 
 .email-item-active {
-  max-height: 200px;
+  transform: scale(1);
   opacity: 1;
   overflow: hidden;
-  transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.18s ease-out,
-              margin 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .email-item-removing {
-  max-height: 0px;
-  opacity: 0;
-  overflow: hidden;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  animation: emailRemove 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
   pointer-events: none;
-  transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.15s ease-out,
-              margin 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes emailRemove {
+  0% {
+    opacity: 1;
+    max-height: 120px;
+    transform: scale(1);
+  }
+  40% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 0;
+    max-height: 0px;
+    transform: scale(0.97);
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+  }
 }

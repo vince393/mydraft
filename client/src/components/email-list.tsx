@@ -764,7 +764,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             )}
           </div>
         ) : (
-        <div className="space-y-0.5 p-3">
+        <div className="p-3" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {categoryFilteredEmails.map((email) => {
           const emailId = getEmailId(email);
           const isSelected = getEmailId(email) === selectedEmailId;
