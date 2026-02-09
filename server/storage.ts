@@ -1714,8 +1714,10 @@ Business Development`,
         eq(verificationCodes.used, false)
       ));
     
-    // Generate a 6-digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate a cryptographically secure 6-digit code
+    const randomBuffer = new Uint32Array(1);
+    crypto.getRandomValues(randomBuffer);
+    const code = (100000 + (randomBuffer[0] % 900000)).toString();
     // Code expires in 10 minutes
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     
