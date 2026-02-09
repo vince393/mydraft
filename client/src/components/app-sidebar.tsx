@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Menu, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, Megaphone, Settings, LogOut, RefreshCw, Link, Crown, type LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notification-bell";
+import { AccountSwitcher } from "@/components/account-switcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -173,6 +174,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+  const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
   
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -195,7 +197,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
       if (!response.ok) throw new Error("Failed to fetch user");
       return response.json();
     },
-    enabled: isMobile,
   });
 
   const logoutMutation = useMutation({
@@ -833,10 +834,10 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-2">
-        {isMobile && (
-          <div className="flex items-center gap-2 px-1 py-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+        <div className={`flex items-center gap-2 px-1 py-1 ${!effectiveShowText && !isMobile ? "flex-col" : ""}`}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              {effectiveShowText ? (
                 <button className="flex items-center gap-2 flex-1 min-w-0 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors outline-none" data-testid="button-profile-sidebar">
                   <Avatar className="w-8 h-8 ring-2 ring-border/30 flex-shrink-0">
                     <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
@@ -848,42 +849,59 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     <span className="text-[10px] text-muted-foreground/60 capitalize">{sidebarUserPlan}</span>
                   </div>
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="w-56">
-                <div className="px-3 py-2 border-b border-border/30">
-                  <p className="text-sm font-medium truncate">{sidebarUserName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
-                </div>
-                <DropdownMenuItem className="gap-2" onClick={() => { setOpenMobile(false); setLocation("/profile"); }}>
-                  <User className="w-4 h-4" />
-                  Profile
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted/50 transition-colors outline-none" data-testid="button-profile-sidebar">
+                      <Avatar className="w-8 h-8 ring-2 ring-border/30">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
+                          {sidebarUserInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{sidebarUserName}</TooltipContent>
+                </Tooltip>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-56">
+              <div className="px-3 py-2 border-b border-border/30">
+                <p className="text-sm font-medium truncate">{sidebarUserName}</p>
+                <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+              </div>
+              <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setLocation("/profile"); }}>
+                <User className="w-4 h-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setLocation("/settings"); }}>
+                <Settings className="w-4 h-4" />
+                Settings
+              </DropdownMenuItem>
+              {hasPremium && (
+                <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setLocation("/campaigns"); }} data-testid="menu-campaigns-sidebar">
+                  <Megaphone className="w-4 h-4" />
+                  Email Campaigns
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2" onClick={() => { setOpenMobile(false); setLocation("/settings"); }}>
-                  <Settings className="w-4 h-4" />
-                  Settings
+              )}
+              {!userData?.user?.connectedEmail && (
+                <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setLocation("/connect-email"); }}>
+                  <Link className="w-4 h-4" />
+                  Connect Email
                 </DropdownMenuItem>
-                {hasPremium && (
-                  <DropdownMenuItem className="gap-2" onClick={() => { setOpenMobile(false); setLocation("/campaigns"); }} data-testid="menu-campaigns-sidebar">
-                    <Megaphone className="w-4 h-4" />
-                    Email Campaigns
-                  </DropdownMenuItem>
-                )}
-                {!userData?.user?.connectedEmail && (
-                  <DropdownMenuItem className="gap-2" onClick={() => { setOpenMobile(false); setLocation("/connect-email"); }}>
-                    <Link className="w-4 h-4" />
-                    Connect Email
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
-                  <LogOut className="w-4 h-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <NotificationBell />
-          </div>
-        )}
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setShowAccountSwitcher(true); }} data-testid="menu-switch-account">
+                <RefreshCw className="w-4 h-4" />
+                Switch Account
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
+                <LogOut className="w-4 h-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <NotificationBell />
+        </div>
       </SidebarFooter>
     </>
   );
@@ -1152,6 +1170,10 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         </DialogContent>
       </Dialog>
 
+      <AccountSwitcher
+        open={showAccountSwitcher}
+        onOpenChange={setShowAccountSwitcher}
+      />
     </>
   );
 }

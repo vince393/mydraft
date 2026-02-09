@@ -123,34 +123,22 @@ export default function SettingsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-10" : "sm:grid-cols-9"}`}>
+            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-7" : "sm:grid-cols-6"}`}>
               <TabsTrigger value="account" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-account">
                 <User className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Account</span>
               </TabsTrigger>
-              <TabsTrigger value="appearance" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-appearance">
-                <Palette className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Theme</span>
-              </TabsTrigger>
-              <TabsTrigger value="security" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-security">
-                <Shield className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Security</span>
-              </TabsTrigger>
-              <TabsTrigger value="billing" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-billing">
-                <CreditCard className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Billing</span>
-              </TabsTrigger>
-              <TabsTrigger value="ai" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-ai">
+              <TabsTrigger value="preferences" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-preferences">
                 <Sparkles className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">AI</span>
+                <span className="text-xs sm:text-sm">Preferences</span>
               </TabsTrigger>
               <TabsTrigger value="email" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-email">
                 <Mail className="w-5 h-5" />
                 <span className="text-xs sm:text-sm">Email</span>
               </TabsTrigger>
-              <TabsTrigger value="connections" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-connections">
-                <Link2 className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Connect</span>
+              <TabsTrigger value="billing" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-billing">
+                <CreditCard className="w-5 h-5" />
+                <span className="text-xs sm:text-sm">Billing</span>
               </TabsTrigger>
               <TabsTrigger value="referrals" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-referrals">
                 <Gift className="w-5 h-5" />
@@ -170,25 +158,25 @@ export default function SettingsPage() {
           </div>
 
           <TabsContent value="account">
-            <AccountTab settings={settings!} />
+            <div className="space-y-6">
+              <AccountTab settings={settings!} />
+              <SecurityTab settings={settings!} />
+            </div>
           </TabsContent>
-          <TabsContent value="appearance">
-            <AppearanceTab />
+          <TabsContent value="preferences">
+            <div className="space-y-6">
+              <AppearanceTab />
+              <AIPreferencesTab settings={settings!} />
+            </div>
           </TabsContent>
-          <TabsContent value="security">
-            <SecurityTab settings={settings!} />
+          <TabsContent value="email">
+            <div className="space-y-6">
+              <EmailSettingsTab settings={settings!} />
+              <ConnectionsTab settings={settings!} />
+            </div>
           </TabsContent>
           <TabsContent value="billing">
             <BillingTab settings={settings!} />
-          </TabsContent>
-          <TabsContent value="ai">
-            <AIPreferencesTab settings={settings!} />
-          </TabsContent>
-          <TabsContent value="email">
-            <EmailSettingsTab settings={settings!} />
-          </TabsContent>
-          <TabsContent value="connections">
-            <ConnectionsTab settings={settings!} />
           </TabsContent>
           <TabsContent value="referrals">
             <ReferralTab />
