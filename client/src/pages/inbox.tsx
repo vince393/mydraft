@@ -679,7 +679,6 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
         ) : (
           <EmailList
             emails={emails
-              .filter(email => !optimisticRemovals.has(getEmailId(email)))
               .map(email => {
                 const emailId = getEmailId(email);
                 if (optimisticStars.has(emailId)) {
@@ -687,6 +686,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                 }
                 return email;
               })}
+            optimisticRemovals={optimisticRemovals}
             selectedEmailId={selectedEmailId}
             onSelectEmail={handleSelectEmail}
             onAiReply={handleAiReply}

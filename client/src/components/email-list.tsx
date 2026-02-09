@@ -67,6 +67,7 @@ interface EmailListProps {
   onCompose?: () => void;
   onOpenAssistant?: () => void;
   mobileNavLeft?: ReactNode;
+  optimisticRemovals?: Set<string | number>;
 }
 
 interface ResponseTimeEstimate {
@@ -142,7 +143,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onOpenAssistant, mobileNavLeft }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onOpenAssistant, mobileNavLeft, optimisticRemovals }: EmailListProps) {
   const screen = useScreenSize();
   const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -768,11 +769,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           const emailId = getEmailId(email);
           const isSelected = getEmailId(email) === selectedEmailId;
           const isChecked = selectedIds.has(emailId);
+          const isRemoving = optimisticRemovals?.has(emailId);
 
           return (
             <div 
               key={emailId}
               ref={(el) => registerEmailRef(emailId, el)}
+              className={isRemoving ? 'email-item-removing' : 'email-item-active'}
             >
               <SwipeableEmailItem
                 emailId={emailId}
