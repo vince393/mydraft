@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Email, Draft } from "@shared/schema";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useScreenSize } from "@/hooks/use-screen-size";
 
 interface GenerateError {
   error: string;
@@ -60,6 +61,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const screen = useScreenSize();
 
   const { data: writingStyle } = useQuery<WritingStyleResponse>({
     queryKey: ["/api/writing-style"],
@@ -206,7 +208,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
         <DialogHeader className="px-5 py-4 border-b border-white/[0.06] flex-shrink-0">
           <DialogTitle className="flex items-center justify-between text-base font-medium">
             <div className="flex items-center gap-2.5">

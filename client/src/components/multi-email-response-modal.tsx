@@ -14,6 +14,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Email } from "@shared/schema";
+import { useScreenSize } from "@/hooks/use-screen-size";
 
 interface EmailWithNylasId extends Email {
   nylasId?: string;
@@ -64,6 +65,7 @@ export function MultiEmailResponseModal({
   const [refineInstruction, setRefineInstruction] = useState("");
   const [isRefining, setIsRefining] = useState(false);
   const { toast } = useToast();
+  const screen = useScreenSize();
 
   const currentEmail = emails[currentIndex];
   const currentEmailId = currentEmail ? getEmailId(currentEmail) : null;
@@ -352,7 +354,7 @@ export function MultiEmailResponseModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent hideCloseButton className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 border-white/15 dark:border-white/10 backdrop-blur-3xl bg-background/80 rounded-2xl overflow-hidden">
+      <DialogContent hideCloseButton className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-3xl max-h-[90vh] rounded-2xl'} flex flex-col p-0 gap-0 border-white/15 dark:border-white/10 backdrop-blur-3xl bg-background/80 overflow-hidden`}>
         
         {/* Header */}
         <div className="px-5 py-4 border-b border-white/10">

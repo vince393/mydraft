@@ -495,4 +495,17 @@
   margin-bottom: 0;
 }
 
+@keyframes mobileSlideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 
+.mobile-slide-up {
+  animation: mobileSlideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
