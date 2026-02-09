@@ -491,7 +491,7 @@ export function SwipeableEmailItem({
             ? "bg-muted/50"
             : isSelected
               ? "bg-muted/30"
-              : "hover:bg-muted/30"
+              : ""
           }
         `}
         style={{ transform: `translateX(${swipeX}px)` }}
