@@ -226,6 +226,52 @@ export function EmailIframeRenderer({
   [style*="visibility:hidden"], [style*="visibility: hidden"] {
     display: none !important;
   }
+  ${!dark ? `
+  span[style*="color: #c"], span[style*="color:#c"],
+  span[style*="color: #d"], span[style*="color:#d"],
+  span[style*="color: #e"], span[style*="color:#e"],
+  span[style*="color: #f"], span[style*="color:#f"],
+  span[style*="color: #C"], span[style*="color:#C"],
+  span[style*="color: #D"], span[style*="color:#D"],
+  span[style*="color: #E"], span[style*="color:#E"],
+  span[style*="color: #F"], span[style*="color:#F"],
+  span[style*="color: rgb(2"], span[style*="color:rgb(2"],
+  p[style*="color: #c"], p[style*="color:#c"],
+  p[style*="color: #d"], p[style*="color:#d"],
+  p[style*="color: #e"], p[style*="color:#e"],
+  p[style*="color: #f"], p[style*="color:#f"],
+  p[style*="color: #C"], p[style*="color:#C"],
+  p[style*="color: #D"], p[style*="color:#D"],
+  p[style*="color: #E"], p[style*="color:#E"],
+  p[style*="color: #F"], p[style*="color:#F"],
+  p[style*="color: rgb(2"], p[style*="color:rgb(2"],
+  div[style*="color: #c"], div[style*="color:#c"],
+  div[style*="color: #d"], div[style*="color:#d"],
+  div[style*="color: #e"], div[style*="color:#e"],
+  div[style*="color: #f"], div[style*="color:#f"],
+  div[style*="color: #C"], div[style*="color:#C"],
+  div[style*="color: #D"], div[style*="color:#D"],
+  div[style*="color: #E"], div[style*="color:#E"],
+  div[style*="color: #F"], div[style*="color:#F"],
+  div[style*="color: rgb(2"], div[style*="color:rgb(2"],
+  td[style*="color: #c"], td[style*="color:#c"],
+  td[style*="color: #d"], td[style*="color:#d"],
+  td[style*="color: #e"], td[style*="color:#e"],
+  td[style*="color: #f"], td[style*="color:#f"],
+  td[style*="color: #C"], td[style*="color:#C"],
+  td[style*="color: #D"], td[style*="color:#D"],
+  td[style*="color: #E"], td[style*="color:#E"],
+  td[style*="color: #F"], td[style*="color:#F"],
+  td[style*="color: rgb(2"], td[style*="color:rgb(2"],
+  font[color^="#c"], font[color^="#d"], font[color^="#e"], font[color^="#f"],
+  font[color^="#C"], font[color^="#D"], font[color^="#E"], font[color^="#F"],
+  font[style*="color: #c"], font[style*="color:#c"],
+  font[style*="color: #d"], font[style*="color:#d"],
+  font[style*="color: #e"], font[style*="color:#e"],
+  font[style*="color: #f"], font[style*="color:#f"] {
+    color: #555555 !important;
+  }
+  ` : ''}
   ${dark ? `
   body[bgcolor], body[style*="background"],
   div[style*="background-color: #ffffff"], div[style*="background-color:#ffffff"],
