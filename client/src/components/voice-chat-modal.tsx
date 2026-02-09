@@ -3,6 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Mic, X, Volume2, VolumeX, Loader2, Phone, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useScreenSize } from "@/hooks/use-screen-size";
 
 interface VoiceChatModalProps {
   open: boolean;
@@ -17,6 +18,7 @@ interface ConversationMessage {
 type ConversationState = "idle" | "listening" | "processing" | "speaking";
 
 export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
+  const screen = useScreenSize();
   const [conversationState, setConversationState] = useState<ConversationState>("idle");
   const [transcript, setTranscript] = useState("");
   const [isMuted, setIsMuted] = useState(false);
@@ -434,19 +436,19 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-md p-0 gap-0 overflow-hidden border-0"
+        className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'sm:max-w-md'} p-0 gap-0 overflow-hidden border-0`}
         style={{
           background: "rgba(10, 10, 16, 0.95)",
           backdropFilter: "blur(40px)",
           WebkitBackdropFilter: "blur(40px)",
-          borderRadius: "20px",
+          borderRadius: screen.isMobile ? "0" : "20px",
           border: "1px solid rgba(255, 255, 255, 0.06)",
-          maxHeight: "90vh",
+          maxHeight: screen.isMobile ? "100%" : "90vh",
         }}
         data-testid="modal-voice-chat"
         hideCloseButton
       >
-        <div className="flex flex-col h-[600px]">
+        <div className={`flex flex-col ${screen.isMobile ? 'h-full' : 'h-[600px]'}`}>
           {/* Header */}
           <div 
             className="flex items-center justify-between px-5 py-3 shrink-0"

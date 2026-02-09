@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useScreenSize } from "@/hooks/use-screen-size";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -120,6 +121,7 @@ function VariableChips({ textareaRef, value, onChange }: {
 export default function CampaignsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const screen = useScreenSize();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showRecipientsDialog, setShowRecipientsDialog] = useState(false);
@@ -605,7 +607,7 @@ export default function CampaignsPage() {
 
         {/* Create Campaign Dialog */}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="max-w-xl">
+          <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-xl'} border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : undefined }}>
             <DialogHeader>
               <DialogTitle className="text-base">New Campaign</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground/50">
@@ -669,7 +671,7 @@ export default function CampaignsPage() {
 
         {/* Edit Campaign Dialog */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up flex flex-col overflow-hidden' : 'max-w-2xl'} border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : undefined }}>
             <DialogHeader>
               <DialogTitle className="text-base">Edit Campaign</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground/50">
@@ -788,7 +790,7 @@ export default function CampaignsPage() {
 
         {/* Recipients Dialog */}
         <Dialog open={showRecipientsDialog} onOpenChange={setShowRecipientsDialog}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-2xl max-h-[80vh]'} overflow-hidden flex flex-col border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : undefined }}>
             <DialogHeader>
               <DialogTitle className="text-base">Manage Recipients</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground/50">

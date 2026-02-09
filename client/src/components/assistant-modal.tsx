@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { usePlan } from "@/hooks/use-plan";
+import { useScreenSize } from "@/hooks/use-screen-size";
 import { UpgradeModal } from "./upgrade-modal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -85,6 +86,7 @@ interface AssistantModalProps {
 }
 
 export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
+  const screen = useScreenSize();
   const [message, setMessage] = useState("");
   const [voiceChatOpen, setVoiceChatOpen] = useState(false);
   const [feedbackMessageId, setFeedbackMessageId] = useState<number | null>(null);
@@ -317,12 +319,12 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-md md:max-w-lg max-h-[85vh] flex flex-col p-0 gap-0 border-0 shadow-2xl shadow-black/40"
+        className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'sm:max-w-md md:max-w-lg max-h-[85vh]'} flex flex-col p-0 gap-0 border-0 shadow-2xl shadow-black/40`}
         style={{
           background: "rgba(18, 18, 24, 0.82)",
           backdropFilter: "blur(40px) saturate(1.6)",
           WebkitBackdropFilter: "blur(40px) saturate(1.6)",
-          borderRadius: "20px",
+          borderRadius: screen.isMobile ? "0" : "20px",
           border: "1px solid rgba(255, 255, 255, 0.08)",
         }}
         data-testid="modal-assistant"

@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Draft } from "@shared/schema";
+import { useScreenSize } from "@/hooks/use-screen-size";
 
 interface DraftEditDialogProps {
   draft: Draft;
@@ -28,6 +29,7 @@ export function DraftEditDialog({ draft, open, onOpenChange, onSent }: DraftEdit
   const [isRefining, setIsRefining] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const screen = useScreenSize();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -119,7 +121,7 @@ export function DraftEditDialog({ draft, open, onOpenChange, onSent }: DraftEdit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[640px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
         <DialogHeader className="px-5 py-4 border-b border-white/[0.06] flex-shrink-0">
           <DialogTitle className="text-base font-medium">Edit Draft</DialogTitle>
         </DialogHeader>
