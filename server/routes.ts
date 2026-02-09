@@ -1316,7 +1316,7 @@ Return ONLY valid JSON, no other text.`;
           },
           { role: "user", content: prompt }
         ],
-        max_completion_tokens: 1000,
+        max_tokens: 1000,
         temperature: 0.3,
       });
 
@@ -2189,7 +2189,7 @@ If no emails match, return an empty array: []`
           }
         ],
         temperature: 0.3,
-        max_completion_tokens: 1000
+        max_tokens: 1000
       });
 
       const responseText = aiResponse.choices[0]?.message?.content || "[]";
@@ -2397,7 +2397,7 @@ JSON response only:
           { role: "user", content: userPrompt }
         ],
         temperature: 0.1,
-        max_completion_tokens: 2000,
+        max_tokens: 2000,
       });
       
       const responseText = completion.choices[0]?.message?.content || "{}";
@@ -2653,7 +2653,7 @@ Rules:
           }
         ],
         temperature: 0.3,
-        max_completion_tokens: 500,
+        max_tokens: 500,
       });
 
       const responseText = completion.choices[0]?.message?.content || "{}";
@@ -2719,7 +2719,7 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
             content: `Please clean up and format this email content:\n\n${body}`
           }
         ],
-        max_completion_tokens: 2000,
+        max_tokens: 2000,
         temperature: 0.3,
       });
 
@@ -2766,7 +2766,7 @@ Return ONLY valid JSON, no other text.`
             content: sampleText
           }
         ],
-        max_completion_tokens: 100,
+        max_tokens: 100,
         temperature: 0,
       });
 
@@ -2893,7 +2893,7 @@ Translation Rules:
             content: JSON.stringify({ subject: subject || "", body })
           }
         ],
-        max_completion_tokens: 4000,
+        max_tokens: 4000,
         temperature: 0.3,
       });
 
@@ -3317,7 +3317,7 @@ Reply:`;
             content: prompt
           }
         ],
-        max_completion_tokens: 1024,
+        max_tokens: 1024,
       });
 
       let generatedContent = response.choices[0]?.message?.content;
@@ -3464,7 +3464,7 @@ Reply:`;
             content: text
           }
         ],
-        max_completion_tokens: 1024,
+        max_tokens: 1024,
       });
 
       const polishedText = response.choices[0]?.message?.content;
@@ -3521,7 +3521,7 @@ Instruction: ${instruction}
 Please modify the response according to the instruction.`
           }
         ],
-        max_completion_tokens: 1024,
+        max_tokens: 1024,
       });
 
       const refinedText = response.choices[0]?.message?.content;
@@ -3717,7 +3717,7 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
           { role: "system", content: systemMessage },
           { role: "user", content: prompt }
         ],
-        max_completion_tokens: 512,
+        max_tokens: 512,
         response_format: { type: "json_object" },
       });
 
@@ -3911,7 +3911,7 @@ Return only the improved text, nothing else.`;
           { role: "system", content: systemMessage },
           { role: "user", content: prompt }
         ],
-        max_completion_tokens: 1024,
+        max_tokens: 1024,
       });
       
       const polishedContent = response.choices[0]?.message?.content || content;
@@ -4465,7 +4465,7 @@ RESPONSE STYLE:
           ...conversationHistory,
           { role: "user", content: message }
         ],
-        max_completion_tokens: 800,
+        max_tokens: 800,
         temperature: 0.8,
       });
 
@@ -4909,7 +4909,7 @@ Respond with ONLY a brief suggestion, like:
       const completion = await geminiAI.chat.completions.create({
         model: "gemini-3-flash-preview",
         messages: [{ role: "user", content: prompt }],
-        max_completion_tokens: 100,
+        max_tokens: 100,
         temperature: 0.7,
       });
 
@@ -5059,7 +5059,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
-        max_completion_tokens: 800,
+        max_tokens: 800,
         temperature: 0.7,
       });
 
@@ -5153,7 +5153,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             content: `${instruction}\n\nOriginal draft:\n${draft}` 
           }
         ],
-        max_completion_tokens: 800,
+        max_tokens: 800,
         temperature: 0.7,
       });
 

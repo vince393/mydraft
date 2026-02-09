@@ -69,7 +69,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
   });
 
   const generateMutation = useMutation({
-    mutationFn: async ({ emailId, tone, instructions }: { emailId: number; tone: string; instructions?: string }) => {
+    mutationFn: async ({ emailId, tone, instructions }: { emailId: string | number; tone: string; instructions?: string }) => {
       const response = await apiRequest("POST", "/api/drafts/generate", { emailId, tone, instructions });
       if (!response.ok) {
         const errorData = await response.json();
@@ -89,6 +89,8 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
     },
   });
 
+  const getEmailId = (e: Email): string | number => (e as any).nylasId || e.id;
+
   useEffect(() => {
     if (open && email) {
       setDraftContent("");
@@ -96,20 +98,20 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
       setAiInstructions("");
       setGeneratedDraft(null);
       setGenerateError(null);
-      generateMutation.mutate({ emailId: email.id, tone: selectedTone });
+      generateMutation.mutate({ emailId: getEmailId(email), tone: selectedTone });
     }
   }, [open, email?.id]);
 
   const handleRegenerate = () => {
     if (email) {
-      generateMutation.mutate({ emailId: email.id, tone: selectedTone, instructions: aiInstructions || undefined });
+      generateMutation.mutate({ emailId: getEmailId(email), tone: selectedTone, instructions: aiInstructions || undefined });
     }
   };
 
   const handleToneChange = (tone: ToneType) => {
     setSelectedTone(tone);
     if (email) {
-      generateMutation.mutate({ emailId: email.id, tone, instructions: aiInstructions || undefined });
+      generateMutation.mutate({ emailId: getEmailId(email), tone, instructions: aiInstructions || undefined });
     }
   };
 
