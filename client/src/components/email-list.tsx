@@ -497,25 +497,25 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   return (
     <div className="flex flex-col h-full overflow-x-hidden relative">
       {/* Search bar - sticky top on mobile with nav, floating on desktop */}
-      <div className={`z-20 flex items-center ${screen.isMobile ? 'gap-2 sticky top-0 px-2.5 py-2 bg-background border-b border-border/20 flex-shrink-0' : 'gap-2 absolute top-3 left-1/2 -translate-x-1/2'}`}>
+      <div className={`z-20 flex items-center ${screen.isMobile ? 'gap-2 absolute top-2 left-0 right-0 px-3' : 'gap-2 absolute top-3 left-1/2 -translate-x-1/2'}`}>
         {screen.isMobile && mobileNavLeft}
         {!screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && (
           <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
         )}
         <div className={`relative ${screen.isMobile ? 'flex-1 min-w-0' : 'w-64'}`}>
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none z-10" />
+          <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-4 h-4'} text-muted-foreground/50 pointer-events-none z-10`} />
           <Input 
             type="search"
             placeholder={screen.isMobile ? "Search..." : "Search emails..."} 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`pl-9 pr-16 h-10 text-sm backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 rounded-full placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
+            className={`${screen.isMobile ? 'pl-10 pr-18 h-11' : 'pl-9 pr-16 h-10'} text-sm backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 rounded-full placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.1)"
             }}
             data-testid="input-search"
           />
-          <div className="absolute right-1.5 top-1/2 transform -translate-y-1/2 flex items-center gap-1 z-10">
+          <div className={`absolute ${screen.isMobile ? 'right-2' : 'right-1.5'} top-1/2 transform -translate-y-1/2 flex items-center gap-1 z-10`}>
             {(hasActiveFilters || searchQuery) && (
               <span className="text-[10px] text-muted-foreground/60 tabular-nums">
                 {categoryFilteredEmails.length}
@@ -525,19 +525,19 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="w-6 h-6 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all"
+                className={`${screen.isMobile ? 'w-7 h-7' : 'w-6 h-6'} flex items-center justify-center rounded-full backdrop-blur-sm bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all`}
                 data-testid="button-clear-search"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
               </button>
             )}
             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <PopoverTrigger asChild>
                 <button 
-                  className="group w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 dark:hover:bg-white/8 transition-all cursor-pointer"
+                  className={`group ${screen.isMobile ? 'w-8 h-8' : 'w-7 h-7'} flex items-center justify-center rounded-full hover:bg-white/10 dark:hover:bg-white/8 transition-all cursor-pointer`}
                   data-testid="button-filter"
                 >
-                  <SlidersHorizontal className={`w-4 h-4 ${hasActiveFilters ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground/80'} transition-colors`} />
+                  <SlidersHorizontal className={`${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-4 h-4'} ${hasActiveFilters ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground/80'} transition-colors`} />
                 </button>
               </PopoverTrigger>
               <PopoverContent 
@@ -695,7 +695,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       {/* Email list */}
       <div 
         ref={scrollContainerRef}
-        className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative ${screen.isMobile ? 'pt-0' : 'pt-16'}`}
+        className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative ${screen.isMobile ? 'pt-14' : 'pt-16'}`}
         onTouchStart={(e) => {
           if (scrollContainerRef.current?.scrollTop === 0) {
             setIsPulling(true);
