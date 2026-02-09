@@ -236,24 +236,6 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
                 </TooltipContent>
               </Tooltip>
             )}
-            {!writingStyle?.hasLearnedStyle && writingStyle?.sampleCount !== undefined && writingStyle.sampleCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div 
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs"
-                    data-testid="badge-ai-learning-progress"
-                  >
-                    <GraduationCap className="w-3 h-3" />
-                    {writingStyle.sampleCount}/3 samples
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[250px]">
-                  <p className="text-xs" data-testid="text-learning-progress">
-                    Send {3 - writingStyle.sampleCount} more emails for AI to learn your writing style.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            )}
           </DialogTitle>
         </DialogHeader>
 
