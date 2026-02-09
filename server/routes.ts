@@ -68,10 +68,6 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const geminiAI = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-});
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
@@ -1307,8 +1303,8 @@ ${sampleTexts}
 
 Return ONLY valid JSON, no other text.`;
 
-      const response = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -2169,8 +2165,8 @@ Return ONLY valid JSON, no other text.`;
         preview: e.snippet || ""
       }));
 
-      const aiResponse = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const aiResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -2390,8 +2386,8 @@ JSON response only:
 
       const userPrompt = `Analyze these ${emailSummaries.length} emails:\n${JSON.stringify(emailSummaries)}`;
       
-      const completion = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -2623,8 +2619,8 @@ JSON response only:
         return res.json({ summary: cached.summary, keyPoints: cached.keyPoints, actionItems: cached.actionItems });
       }
 
-      const completion = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -2690,8 +2686,8 @@ Rules:
         return res.json({ formattedBody: cached.body });
       }
 
-      const completion = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -2748,8 +2744,8 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
 
       const sampleText = (subject ? subject + "\n\n" : "") + body.slice(0, 1000);
 
-      const completion = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -2864,8 +2860,8 @@ Return ONLY valid JSON, no other text.`
         ? "Use a balanced, professional but approachable tone."
         : `Adapt the formality to match ${culturalContext.culture} business norms: ${culturalContext.formality}`;
 
-      const completion = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -3305,8 +3301,8 @@ Reply:`;
         ? `You are an email assistant that writes replies matching the user's personal writing style. The user tends to write in a ${learnedStyle.toneDescription || tone} manner with ${learnedStyle.avgSentenceLength || "medium"} sentences. Mimic their natural voice while maintaining the requested ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`
         : `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`;
 
-      const response = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -3452,8 +3448,8 @@ Reply:`;
 
       const instruction = modeInstructions[mode] || modeInstructions.basic;
 
-      const response = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -3504,8 +3500,8 @@ ${originalEmail.body || originalEmail.preview || ""}
 `;
       }
 
-      const response = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -3711,8 +3707,8 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
         }
       }
 
-      const response = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemMessage },
           { role: "user", content: prompt }
@@ -3905,8 +3901,8 @@ ${subject ? `Context - Email subject: ${subject}` : ""}
 Return only the improved text, nothing else.`;
       }
       
-      const response = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemMessage },
           { role: "user", content: prompt }
@@ -4458,8 +4454,8 @@ RESPONSE STYLE:
       const thinkingDelay = 800 + Math.random() * 700;
       await new Promise(resolve => setTimeout(resolve, thinkingDelay));
 
-      const completion = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           ...conversationHistory,
@@ -4906,8 +4902,8 @@ Respond with ONLY a brief suggestion, like:
 - "Politely decline and suggest an alternative date"
 - "Request more details about the project requirements"`;
 
-      const completion = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         max_tokens: 100,
         temperature: 0.7,
@@ -5053,8 +5049,8 @@ ${originalBody.substring(0, 1500)}
 ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note explaining why you're forwarding this."}`;
       }
 
-      const completion = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -5141,8 +5137,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       const instruction = improvementPrompts[improvementType] || improvementPrompts.clearer;
 
-      const completion = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           { 
             role: "system", 

@@ -40,11 +40,10 @@ Preferred communication style: Simple, everyday language.
 - **Storage Pattern**: Interface-based storage abstraction (`IStorage`) with in-memory implementation for development
 
 ### AI Integration
-- **Primary Provider**: Google Gemini (gemini-3-flash-preview) via Replit AI Integrations for all text tasks (chat, drafts, translations, summaries)
-- **Secondary Provider**: OpenAI via Replit AI Integrations for voice/audio features only (whisper transcription, audio chat)
+- **Primary Provider**: OpenAI (gpt-4o-mini) via Replit AI Integrations for all text tasks (chat, drafts, translations, summaries) and voice/audio features (whisper transcription, audio chat)
 - **Features**: Email reply draft generation, inbox sorting, translation, summarization, chatbot assistant
 - **Utilities**: Batch processing with rate limiting, chat conversation management, image generation capabilities
-- **Client Setup**: `geminiAI` (OpenAI-compatible client with Gemini env vars) in `server/routes.ts`, `openai` client retained for audio only
+- **Client Setup**: Single `openai` client in `server/routes.ts` using `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL`
 
 ### Application Structure
 ```

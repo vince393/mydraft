@@ -2,9 +2,9 @@ import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
 import { chatStorage } from "./storage";
 
-const geminiAI = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
 export function registerChatRoutes(app: Express): void {
@@ -72,8 +72,8 @@ export function registerChatRoutes(app: Express): void {
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
-      const stream = await geminiAI.chat.completions.create({
-        model: "gemini-3-flash-preview",
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: chatMessages,
         stream: true,
         max_tokens: 2048,
