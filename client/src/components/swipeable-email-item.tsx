@@ -255,22 +255,20 @@ export function SwipeableEmailItem({
     ? absSwipe - PAD * 2
     : Math.max(0, absSwipe - FIXED_BTN_WIDTH - GAP - PAD * 2);
 
-  const glossyShadow = '0 2px 8px rgba(0,0,0,0.3), 0 6px 20px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.25), inset 0 -1px 1px rgba(0,0,0,0.15)';
-
   const glossyPill = (bg: string, w: number) => ({
     width: w,
     height: PILL_HEIGHT,
     borderRadius: 9999,
     background: bg,
-    backdropFilter: 'blur(24px)',
-    WebkitBackdropFilter: 'blur(24px)',
-    boxShadow: glossyShadow,
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1)',
     border: '1px solid rgba(255,255,255,0.15)',
   });
 
-  const redBg = 'linear-gradient(145deg, rgba(220,50,50,0.55) 0%, rgba(160,25,25,0.6) 50%, rgba(120,15,15,0.55) 100%)';
-  const greenBg = 'linear-gradient(145deg, rgba(40,180,90,0.5) 0%, rgba(20,140,60,0.55) 100%)';
-  const neutralBg = 'linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)';
+  const redBg = 'linear-gradient(145deg, rgba(220,50,50,0.25) 0%, rgba(180,30,30,0.3) 100%)';
+  const greenBg = 'linear-gradient(145deg, rgba(40,180,90,0.2) 0%, rgba(20,140,60,0.25) 100%)';
+  const neutralBg = 'rgba(255,255,255,0.08)';
 
   const renderLeftAction = () => {
     if (isTrashFolder) {
