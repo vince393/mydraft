@@ -451,13 +451,14 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       
       return { emailId };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
+    onSuccess: (_, variables) => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
+      }, 250);
     },
     onError: (error: Error, variables) => {
-      // Remove from optimistic removals on error (show it again)
       setOptimisticRemovals(prev => {
         const newSet = new Set(prev);
         newSet.delete(variables.emailId);
@@ -470,14 +471,13 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       });
     },
     onSettled: (_, __, variables) => {
-      // Clear from optimistic removals after cache invalidation
       setTimeout(() => {
         setOptimisticRemovals(prev => {
           const newSet = new Set(prev);
           newSet.delete(variables.emailId);
           return newSet;
         });
-      }, 1000);
+      }, 2000);
     },
   });
 

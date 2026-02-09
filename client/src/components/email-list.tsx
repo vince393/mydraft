@@ -775,8 +775,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             <div 
               key={emailId}
               ref={(el) => registerEmailRef(emailId, el)}
-              className={isRemoving ? 'email-item-removing' : 'email-item-active'}
+              className={`email-item-wrapper ${isRemoving ? 'email-item-removing' : ''}`}
             >
+              <div>
               <SwipeableEmailItem
                 emailId={emailId}
                 sender={email.sender}
@@ -811,6 +812,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
                 onMouseEnterWhileDragging={() => handleMouseEnterWhileDragging(emailId)}
                 formatTime={formatEmailTime}
               />
+              </div>
             </div>
           );
         })}

@@ -510,35 +510,19 @@
   animation: mobileSlideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
-.email-item-active {
-  transform: scale(1);
+.email-item-wrapper {
+  display: grid;
+  grid-template-rows: 1fr;
   opacity: 1;
+  transition: grid-template-rows 0.18s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease-out;
+}
+
+.email-item-wrapper > div {
   overflow: hidden;
 }
 
 .email-item-removing {
-  animation: emailRemove 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+  grid-template-rows: 0fr;
+  opacity: 0;
   pointer-events: none;
-}
-
-@keyframes emailRemove {
-  0% {
-    opacity: 1;
-    max-height: 120px;
-    transform: scale(1);
-  }
-  40% {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-  100% {
-    opacity: 0;
-    max-height: 0px;
-    transform: scale(0.97);
-    padding-top: 0;
-    padding-bottom: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-    overflow: hidden;
-  }
 }
