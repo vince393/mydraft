@@ -720,13 +720,12 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
             onOpenAssistant={onOpenAssistant}
             mobileNavLeft={
               <Button
-                size="icon"
                 variant="ghost"
                 onClick={toggleSidebar}
-                className="flex-shrink-0"
+                className="flex-shrink-0 w-11 h-11 p-0 rounded-full"
                 data-testid="button-sidebar-toggle"
               >
-                <Menu className="w-[22px] h-[22px]" />
+                <Menu className="w-6 h-6" />
               </Button>
             }
           />

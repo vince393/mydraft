@@ -660,8 +660,8 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         {screen.isMobile && (hasConnectedAccount && activeFolder === "inbox" || onOpenAssistant) && (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="flex-shrink-0" data-testid="button-ai-mobile-menu">
-                <Sparkles className="w-5 h-5 text-indigo-300/80" />
+              <Button variant="ghost" className="flex-shrink-0 w-11 h-11 p-0 rounded-full" data-testid="button-ai-mobile-menu">
+                <Sparkles className="w-6 h-6 text-indigo-300/80" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" data-testid="dropdown-ai-mobile-menu">
