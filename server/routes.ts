@@ -3362,6 +3362,10 @@ Reply:`;
         draft = await storage.createDraft({
           emailId: numericEmailId,
           content: generatedContent,
+          subject: emailData.subject.startsWith("Re:") ? emailData.subject : `Re: ${emailData.subject}`,
+          recipientEmail: emailData.senderEmail || emailData.sender || "",
+          recipientName: emailData.sender || null,
+          userId: req.session.userId!,
           isAiGenerated: true,
           status: "draft",
         });
@@ -3371,6 +3375,10 @@ Reply:`;
           id: 0,
           emailId: 0,
           content: generatedContent,
+          subject: emailData.subject.startsWith("Re:") ? emailData.subject : `Re: ${emailData.subject}`,
+          recipientEmail: emailData.senderEmail || emailData.sender || "",
+          recipientName: emailData.sender || null,
+          userId: req.session.userId!,
           isAiGenerated: true,
           status: "draft",
           createdAt: new Date(),
