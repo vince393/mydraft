@@ -342,6 +342,35 @@
     z-index: 40;
     background: hsl(var(--background));
     padding-bottom: 0;
+    animation: slideInFromRight 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+
+  .email-detail-panel.hide-mobile {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: hsl(var(--background));
+    padding-bottom: 0;
+    animation: slideOutToRight 0.22s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+
+  @keyframes slideInFromRight {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOutToRight {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
   }
 
   @media (min-width: 768px) {

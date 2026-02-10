@@ -63,6 +63,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
+  const [hidingMobileDetail, setHidingMobileDetail] = useState(false);
   const [optimisticStars, setOptimisticStars] = useState<Map<string | number, boolean>>(new Map());
   const [optimisticRemovals, setOptimisticRemovals] = useState<Set<string | number>>(new Set());
   const [, setLocation] = useLocation();
@@ -497,7 +498,11 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   };
 
   const handleBackToList = () => {
-    setShowMobileDetail(false);
+    setHidingMobileDetail(true);
+    setTimeout(() => {
+      setShowMobileDetail(false);
+      setHidingMobileDetail(false);
+    }, 220);
   };
 
   const handleAiReply = () => {
@@ -735,11 +740,11 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
       </div>
       
       {/* Email Detail Panel - full screen overlay on mobile, side panel on desktop */}
-      {(!screen.isMobile || showMobileDetail) && (
-        <div className={`email-detail-panel ${screen.isMobile && showMobileDetail ? 'show-mobile' : ''}`}>
+      {(!screen.isMobile || showMobileDetail || hidingMobileDetail) && (
+        <div className={`email-detail-panel ${screen.isMobile && showMobileDetail && !hidingMobileDetail ? 'show-mobile' : ''} ${screen.isMobile && hidingMobileDetail ? 'hide-mobile' : ''}`}>
           <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
             {/* Mobile back button */}
-            {screen.isMobile && showMobileDetail && (
+            {screen.isMobile && (showMobileDetail || hidingMobileDetail) && (
               <Button
                 size="icon"
                 variant="ghost"
@@ -750,7 +755,7 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             )}
-            <div className={`flex items-center gap-2 ${screen.isMobile && showMobileDetail ? '' : 'ml-auto'}`}>
+            <div className={`flex items-center gap-2 ${screen.isMobile && (showMobileDetail || hidingMobileDetail) ? '' : 'ml-auto'}`}>
               {!userData?.user?.connectedEmail && !screen.isMobile && (
                 <Button
                   variant="outline"

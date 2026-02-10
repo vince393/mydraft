@@ -96,6 +96,8 @@ export function SwipeableEmailItem({
   const isHorizontalSwipe = useRef<boolean | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const wasScrolling = useRef(false);
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const revealThreshold = (containerWidth * REVEAL_PERCENT) / 100;
   const deleteThreshold = (containerWidth * DELETE_PERCENT) / 100;
@@ -123,7 +125,18 @@ export function SwipeableEmailItem({
     };
     updateWidth();
     window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    return () => {
+      window.removeEventListener('resize', updateWidth);
+      if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    };
+  }, []);
+
+  const handleWheel = useCallback(() => {
+    wasScrolling.current = true;
+    if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    scrollTimer.current = setTimeout(() => {
+      wasScrolling.current = false;
+    }, 150);
   }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -131,6 +144,7 @@ export function SwipeableEmailItem({
     if (isSelectionMode) return;
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
+    wasScrolling.current = false;
     currentX.current = isRevealed ? -revealThreshold : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
@@ -142,6 +156,10 @@ export function SwipeableEmailItem({
     const touchY = e.touches[0].clientY;
     const deltaX = touchX - startX.current;
     const deltaY = touchY - startY.current;
+
+    if (Math.abs(deltaY) > 8) {
+      wasScrolling.current = true;
+    }
 
     if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
       onLongPressEnd();
@@ -187,6 +205,7 @@ export function SwipeableEmailItem({
     if (isSelectionMode) return;
     startX.current = e.clientX;
     startY.current = e.clientY;
+    wasScrolling.current = false;
     currentX.current = isRevealed ? -revealThreshold : 0;
     isHorizontalSwipe.current = null;
     setIsSwiping(true);
@@ -229,6 +248,7 @@ export function SwipeableEmailItem({
   }, [isSwiping, handleTouchEnd, isSelectionMode, onLongPressEnd]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
+    if (wasScrolling.current) return;
     if (Math.abs(swipeX) > 5 && !isRevealed) return;
     if (isRevealed) {
       setSwipeX(0);
@@ -474,6 +494,7 @@ export function SwipeableEmailItem({
   return (
     <div
       ref={wrapperRef}
+      onWheel={handleWheel}
       style={{
         height: exitHeight !== null ? exitHeight : undefined,
         opacity: isExiting ? 0 : 1,
