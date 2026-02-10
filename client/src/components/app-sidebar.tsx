@@ -900,7 +900,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <NotificationBell />
+          {isMobile && <NotificationBell />}
         </div>
       </SidebarFooter>
     </>

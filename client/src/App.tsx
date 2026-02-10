@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { NotificationBell } from "@/components/notification-bell";
 import { AssistantModal } from "@/components/assistant-modal";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { useScreenSize } from "@/hooks/use-screen-size";
@@ -156,7 +157,12 @@ function AuthenticatedApp() {
           onCompose={handleCompose}
           onDropEmail={handleDropEmail}
         />
-        <SidebarInset className="flex flex-1 min-w-0 overflow-hidden">
+        <SidebarInset className="flex flex-1 min-w-0 overflow-hidden relative">
+          {!screen.isMobile && (
+            <div className="absolute top-3 right-3 z-50">
+              <NotificationBell />
+            </div>
+          )}
           <Inbox 
             activeFolder={activeFolder} 
             showComposeDialog={showComposeDialog}

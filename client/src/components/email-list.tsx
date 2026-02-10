@@ -695,7 +695,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       {/* Email list */}
       <div 
         ref={scrollContainerRef}
-        className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative ${screen.isMobile ? 'pt-[52px]' : 'pt-16'}`}
+        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative pt-[52px]"
         onTouchStart={(e) => {
           if (scrollContainerRef.current?.scrollTop === 0) {
             setIsPulling(true);
