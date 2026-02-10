@@ -191,7 +191,8 @@ export function SwipeableEmailItem({
       return;
     }
 
-    if (swipeX <= -revealThreshold / 2) {
+    const minSwipeDistance = 30;
+    if (swipeX <= -revealThreshold / 2 && Math.abs(swipeX) >= minSwipeDistance) {
       setSwipeX(-revealThreshold);
       setIsRevealed(true);
     } else {
@@ -573,24 +574,24 @@ export function SwipeableEmailItem({
               )}
               <span className="flex-1" />
               <div className="flex-shrink-0 flex items-center gap-1">
-                <span className={`text-[11px] whitespace-nowrap group-hover:hidden ${!isRead ? "font-medium text-foreground" : "text-muted-foreground/70"}`}>
+                <span className={`text-[11px] whitespace-nowrap md:group-hover:hidden ${!isRead ? "font-medium text-foreground" : "text-muted-foreground/70"}`}>
                   {formatTime(new Date(receivedAt))}
                 </span>
                 {isStarred && (
                   <button
                     onClick={handleStarClick}
-                    className="p-1 rounded-md text-yellow-500 group-hover:hidden"
+                    className="p-1 rounded-md text-yellow-500 md:group-hover:hidden"
                     data-testid={`starred-icon-${emailId}`}
                   >
                     <Star className="w-4 h-4 fill-current" />
                   </button>
                 )}
                 {isFlagged && !isStarred && (
-                  <span className="p-1 text-orange-500 group-hover:hidden">
+                  <span className="p-1 text-orange-500 md:group-hover:hidden">
                     <Flag className="w-3.5 h-3.5 fill-current" />
                   </span>
                 )}
-                <div className="hidden group-hover:flex items-center gap-0.5">
+                <div className="hidden md:group-hover:flex items-center gap-0.5">
                   {isTrashFolder ? (
                     <>
                       <button
