@@ -695,7 +695,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       {/* Email list */}
       <div 
         ref={scrollContainerRef}
-        className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative ${screen.isMobile ? 'pt-14' : 'pt-16'}`}
+        className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative ${screen.isMobile ? 'pt-[52px]' : 'pt-16'}`}
         onTouchStart={(e) => {
           if (scrollContainerRef.current?.scrollTop === 0) {
             setIsPulling(true);
@@ -738,7 +738,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </div>
         )}
         {isSyncing && (
-          <div className="flex items-center justify-center gap-2 py-2 px-3 border-b border-border/10" data-testid="syncing-banner">
+          <div className="flex items-center justify-center gap-2 py-1 px-3" data-testid="syncing-banner">
             <Loader2 className="w-3.5 h-3.5 text-muted-foreground/60 animate-spin" />
             <span className="text-xs text-muted-foreground/60">Checking for new emails...</span>
           </div>

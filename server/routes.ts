@@ -1,4 +1,4 @@
-  import type { Express, Request, Response, NextFunction } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -16,13 +16,30 @@ import { registerImageRoutes } from "./replit_integrations/image";
 import { sendVerificationEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
 import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
-import { authLimiter, passwordResetLimiter, twoFactorLimiter, apiLimiter, aiGenerationLimiter, emailSendLimiter, fileLimiter } from "./rate-limiter";
+import {
+  authLimiter,
+  passwordResetLimiter,
+  twoFactorLimiter,
+  apiLimiter,
+  aiGenerationLimiter,
+  emailSendLimiter,
+  fileLimiter,
+} from "./rate-limiter";
 
 // Pending registrations waiting for email verification
-const pendingRegistrations: Map<string, { email: string; hashedPassword: string; expiresAt: number; referralCode?: string }> = new Map();
+const pendingRegistrations: Map<
+  string,
+  {
+    email: string;
+    hashedPassword: string;
+    expiresAt: number;
+    referralCode?: string;
+  }
+> = new Map();
 
-// Pending login sessions waiting for 2FA verification  
-const pending2FALogins: Map<string, { userId: string; expiresAt: number }> = new Map();
+// Pending login sessions waiting for 2FA verification
+const pending2FALogins: Map<string, { userId: string; expiresAt: number }> =
+  new Map();
 
 // Cleanup expired pending items
 function cleanupPendingItems(): void {
@@ -41,25 +58,27 @@ function cleanupPendingItems(): void {
 
 // Helper to get client IP
 function getClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string") {
+    return forwarded.split(",")[0].trim();
   }
   if (Array.isArray(forwarded)) {
     return forwarded[0];
   }
-  return req.socket?.remoteAddress || req.ip || 'unknown';
+  return req.socket?.remoteAddress || req.ip || "unknown";
 }
 
-const assistantPermissionsUpdateSchema = z.object({
-  canReadEmails: z.boolean().optional(),
-  canSendEmails: z.boolean().optional(),
-  canArchive: z.boolean().optional(),
-  canTrash: z.boolean().optional(),
-  canSearch: z.boolean().optional(),
-  requireConfirmation: z.boolean().optional(),
-  maxEmailsPerDay: z.number().int().min(0).max(100).optional()
-}).strict();
+const assistantPermissionsUpdateSchema = z
+  .object({
+    canReadEmails: z.boolean().optional(),
+    canSendEmails: z.boolean().optional(),
+    canArchive: z.boolean().optional(),
+    canTrash: z.boolean().optional(),
+    canSearch: z.boolean().optional(),
+    requireConfirmation: z.boolean().optional(),
+    maxEmailsPerDay: z.number().int().min(0).max(100).optional(),
+  })
+  .strict();
 
 const scryptAsync = promisify(scrypt);
 
@@ -68,17 +87,23 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${salt}:${buf.toString("hex")}`;
 }
 
-async function verifyPassword(storedPassword: string, suppliedPassword: string): Promise<boolean> {
+async function verifyPassword(
+  storedPassword: string,
+  suppliedPassword: string,
+): Promise<boolean> {
   const [salt, hashedPassword] = storedPassword.split(":");
   const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
-  const suppliedPasswordBuf = (await scryptAsync(suppliedPassword, salt, 64)) as Buffer;
+  const suppliedPasswordBuf = (await scryptAsync(
+    suppliedPassword,
+    salt,
+    64,
+  )) as Buffer;
   return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
 }
 
@@ -101,21 +126,27 @@ async function requireOwner(req: Request, res: Response, next: NextFunction) {
     console.log("[requireOwner] No session userId");
     return res.status(401).json({ error: "Unauthorized" });
   }
-  
+
   const user = await storage.getUser(req.session.userId);
   if (!user) {
     console.log("[requireOwner] User not found for id:", req.session.userId);
     return res.status(401).json({ error: "User not found" });
   }
-  
+
   const ownerEmail = process.env.OWNER_EMAIL?.toLowerCase().trim();
   const userEmail = user.email.toLowerCase().trim();
-  console.log("[requireOwner] Checking:", { userEmail, ownerEmail, match: userEmail === ownerEmail });
-  
+  console.log("[requireOwner] Checking:", {
+    userEmail,
+    ownerEmail,
+    match: userEmail === ownerEmail,
+  });
+
   if (!ownerEmail || userEmail !== ownerEmail) {
-    return res.status(403).json({ error: "Access denied. Owner privileges required." });
+    return res
+      .status(403)
+      .json({ error: "Access denied. Owner privileges required." });
   }
-  
+
   next();
 }
 
@@ -125,24 +156,28 @@ async function requirePlan(minPlan: "pro" | "premium") {
     if (!req.session.userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
-    
+
     const user = await storage.getUser(req.session.userId);
     if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
-    
-    const planHierarchy: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+
+    const planHierarchy: Record<string, number> = {
+      free: 0,
+      pro: 1,
+      premium: 2,
+    };
     const userPlanLevel = planHierarchy[user.plan || "free"] || 0;
     const requiredLevel = planHierarchy[minPlan];
-    
+
     if (userPlanLevel < requiredLevel) {
-      return res.status(403).json({ 
-        error: "Plan upgrade required", 
+      return res.status(403).json({
+        error: "Plan upgrade required",
         requiredPlan: minPlan,
-        currentPlan: user.plan || "free"
+        currentPlan: user.plan || "free",
       });
     }
-    
+
     next();
   };
 }
@@ -160,17 +195,22 @@ function hasPlan(userPlan: string, minPlan: "pro" | "premium"): boolean {
 }
 
 function getRedirectUri(req: any): string {
-  const protocol = req.headers['x-forwarded-proto'] || 'https';
+  const protocol = req.headers["x-forwarded-proto"] || "https";
   const host = req.headers.host;
   return `${protocol}://${host}/api/nylas/callback`;
 }
 
-const pendingOAuthStates: Map<string, { userId: string; provider: string; expiresAt: number }> = new Map();
+const pendingOAuthStates: Map<
+  string,
+  { userId: string; provider: string; expiresAt: number }
+> = new Map();
 
 function generateStateToken(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function cleanupExpiredStates(): void {
@@ -191,9 +231,27 @@ interface ResponseTimeCache {
 
 const responseTimeCache: Map<string, ResponseTimeCache> = new Map();
 
-const formattedBodyCache: Map<string, { body: string; timestamp: number }> = new Map();
-const translationCache: Map<string, { detectedLanguage: string; translatedSubject: string; translatedBody: string; culturalNotes?: string; timestamp: number }> = new Map();
-const summaryCache: Map<string, { summary: string; keyPoints: string[]; actionItems: string[]; timestamp: number }> = new Map();
+const formattedBodyCache: Map<string, { body: string; timestamp: number }> =
+  new Map();
+const translationCache: Map<
+  string,
+  {
+    detectedLanguage: string;
+    translatedSubject: string;
+    translatedBody: string;
+    culturalNotes?: string;
+    timestamp: number;
+  }
+> = new Map();
+const summaryCache: Map<
+  string,
+  {
+    summary: string;
+    keyPoints: string[];
+    actionItems: string[];
+    timestamp: number;
+  }
+> = new Map();
 const CACHE_MAX_SIZE = 100;
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -205,8 +263,9 @@ function cleanupFormattedBodyCache() {
     }
   }
   if (formattedBodyCache.size > CACHE_MAX_SIZE) {
-    const entries = Array.from(formattedBodyCache.entries())
-      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const entries = Array.from(formattedBodyCache.entries()).sort(
+      (a, b) => a[1].timestamp - b[1].timestamp,
+    );
     const toRemove = entries.slice(0, formattedBodyCache.size - CACHE_MAX_SIZE);
     toRemove.forEach(([key]) => formattedBodyCache.delete(key));
   }
@@ -220,8 +279,9 @@ function cleanupTranslationCache() {
     }
   }
   if (translationCache.size > CACHE_MAX_SIZE) {
-    const entries = Array.from(translationCache.entries())
-      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const entries = Array.from(translationCache.entries()).sort(
+      (a, b) => a[1].timestamp - b[1].timestamp,
+    );
     const toRemove = entries.slice(0, translationCache.size - CACHE_MAX_SIZE);
     toRemove.forEach(([key]) => translationCache.delete(key));
   }
@@ -233,9 +293,8 @@ function generateUnreadSignature(unreadEmailIds: number[]): string {
 
 export async function registerRoutes(
   httpServer: Server,
-  app: Express
+  app: Express,
 ): Promise<Server> {
-
   registerAudioRoutes(app);
   registerImageRoutes(app);
 
@@ -243,9 +302,11 @@ export async function registerRoutes(
   app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {
       const { email, password, referralCode } = req.body;
-      
+
       if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
+        return res
+          .status(400)
+          .json({ error: "Email and password are required" });
       }
 
       // Normalize email to prevent duplicate accounts
@@ -258,10 +319,13 @@ export async function registerRoutes(
 
       // Hash password and store pending registration
       const hashedPassword = await hashPassword(password);
-      
+
       // Create verification code
-      const verificationCode = await storage.createVerificationCode(normalizedEmail, "signup");
-      
+      const verificationCode = await storage.createVerificationCode(
+        normalizedEmail,
+        "signup",
+      );
+
       // Store pending registration with optional referral code
       pendingRegistrations.set(normalizedEmail, {
         email: normalizedEmail,
@@ -269,19 +333,27 @@ export async function registerRoutes(
         expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
         referralCode: referralCode || undefined,
       });
-      
+
       // Send verification email
-      const emailSent = await sendVerificationEmail(normalizedEmail, verificationCode.code, "signup");
-      
+      const emailSent = await sendVerificationEmail(
+        normalizedEmail,
+        verificationCode.code,
+        "signup",
+      );
+
       if (!emailSent) {
         pendingRegistrations.delete(normalizedEmail);
-        return res.status(500).json({ error: "Failed to send verification email. Please try again." });
+        return res
+          .status(500)
+          .json({
+            error: "Failed to send verification email. Please try again.",
+          });
       }
-      
-      res.json({ 
+
+      res.json({
         requiresVerification: true,
         email: normalizedEmail,
-        message: "Verification code sent to your email" 
+        message: "Verification code sent to your email",
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -290,135 +362,173 @@ export async function registerRoutes(
   });
 
   // Step 2: Verify email and complete registration
-  app.post("/api/auth/verify-registration", twoFactorLimiter, async (req, res) => {
-    try {
-      const { email, code } = req.body;
-      
-      if (!email || !code) {
-        return res.status(400).json({ error: "Email and verification code are required" });
-      }
+  app.post(
+    "/api/auth/verify-registration",
+    twoFactorLimiter,
+    async (req, res) => {
+      try {
+        const { email, code } = req.body;
 
-      const normalizedEmail = email.toLowerCase().trim();
-      
-      // Check pending registration exists
-      const pending = pendingRegistrations.get(normalizedEmail);
-      if (!pending || pending.expiresAt < Date.now()) {
-        pendingRegistrations.delete(normalizedEmail);
-        return res.status(400).json({ error: "Registration expired. Please start again." });
-      }
-      
-      // Verify code
-      const verificationCode = await storage.getVerificationCode(normalizedEmail, code, "signup");
-      if (!verificationCode) {
-        return res.status(400).json({ error: "Invalid or expired verification code" });
-      }
-      
-      // Mark code as used
-      await storage.markVerificationCodeUsed(verificationCode.id);
-      
-      // Create the user
-      const user = await storage.createUser({ 
-        email: normalizedEmail, 
-        password: pending.hashedPassword 
-      });
-      
-      // Mark email as verified
-      await storage.updateUser(user.id, { emailVerified: true });
-      
-      // Process referral link if present
-      if (pending.referralCode) {
-        try {
-          const referrer = await storage.getUserByReferralCode(pending.referralCode);
-          if (referrer && referrer.id !== user.id) {
-            await storage.createReferral(referrer.id, user.id);
-            await storage.updateUser(user.id, { referredByUserId: referrer.id });
-          }
-        } catch (refErr) {
-          console.error("Error processing referral:", refErr);
+        if (!email || !code) {
+          return res
+            .status(400)
+            .json({ error: "Email and verification code are required" });
         }
-      }
-      
-      // Clean up pending registration
-      pendingRegistrations.delete(normalizedEmail);
-      
-      // Log signup activity
-      await storage.createActivityLog(user.id, normalizedEmail, "signup", "New user registered with email verification");
 
-      // Create session
-      req.session.regenerate((err) => {
-        if (err) {
-          console.error("Session regeneration error:", err);
-          return res.status(500).json({ error: "Session error" });
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Check pending registration exists
+        const pending = pendingRegistrations.get(normalizedEmail);
+        if (!pending || pending.expiresAt < Date.now()) {
+          pendingRegistrations.delete(normalizedEmail);
+          return res
+            .status(400)
+            .json({ error: "Registration expired. Please start again." });
         }
-        req.session.userId = user.id;
-        
-        // Create login session record
-        const clientIp = getClientIp(req);
-        storage.createLoginSession({
-          userId: user.id,
-          sessionId: req.sessionID,
-          ipAddress: clientIp,
-          userAgent: req.headers['user-agent'] || null,
-          city: null,
-          region: null,
-          country: null,
-        }).catch(err => console.error("Failed to create login session:", err));
-        
-        res.json({ 
-          user: { 
-            id: user.id, 
-            email: user.email, 
-            plan: user.plan,
-            onboardingCompleted: user.onboardingCompleted,
-            emailVerified: true,
-            twoFactorEnabled: false
-          } 
+
+        // Verify code
+        const verificationCode = await storage.getVerificationCode(
+          normalizedEmail,
+          code,
+          "signup",
+        );
+        if (!verificationCode) {
+          return res
+            .status(400)
+            .json({ error: "Invalid or expired verification code" });
+        }
+
+        // Mark code as used
+        await storage.markVerificationCodeUsed(verificationCode.id);
+
+        // Create the user
+        const user = await storage.createUser({
+          email: normalizedEmail,
+          password: pending.hashedPassword,
         });
-      });
-    } catch (error) {
-      console.error("Verification error:", error);
-      res.status(500).json({ error: "Verification failed" });
-    }
-  });
+
+        // Mark email as verified
+        await storage.updateUser(user.id, { emailVerified: true });
+
+        // Process referral link if present
+        if (pending.referralCode) {
+          try {
+            const referrer = await storage.getUserByReferralCode(
+              pending.referralCode,
+            );
+            if (referrer && referrer.id !== user.id) {
+              await storage.createReferral(referrer.id, user.id);
+              await storage.updateUser(user.id, {
+                referredByUserId: referrer.id,
+              });
+            }
+          } catch (refErr) {
+            console.error("Error processing referral:", refErr);
+          }
+        }
+
+        // Clean up pending registration
+        pendingRegistrations.delete(normalizedEmail);
+
+        // Log signup activity
+        await storage.createActivityLog(
+          user.id,
+          normalizedEmail,
+          "signup",
+          "New user registered with email verification",
+        );
+
+        // Create session
+        req.session.regenerate((err) => {
+          if (err) {
+            console.error("Session regeneration error:", err);
+            return res.status(500).json({ error: "Session error" });
+          }
+          req.session.userId = user.id;
+
+          // Create login session record
+          const clientIp = getClientIp(req);
+          storage
+            .createLoginSession({
+              userId: user.id,
+              sessionId: req.sessionID,
+              ipAddress: clientIp,
+              userAgent: req.headers["user-agent"] || null,
+              city: null,
+              region: null,
+              country: null,
+            })
+            .catch((err) =>
+              console.error("Failed to create login session:", err),
+            );
+
+          res.json({
+            user: {
+              id: user.id,
+              email: user.email,
+              plan: user.plan,
+              onboardingCompleted: user.onboardingCompleted,
+              emailVerified: true,
+              twoFactorEnabled: false,
+            },
+          });
+        });
+      } catch (error) {
+        console.error("Verification error:", error);
+        res.status(500).json({ error: "Verification failed" });
+      }
+    },
+  );
 
   // Resend verification code (supports both endpoint names)
   const resendCodeHandler = async (req: any, res: any) => {
     try {
       const { email, type } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ error: "Email is required" });
       }
 
       const normalizedEmail = email.toLowerCase().trim();
       const codeType = type || "signup";
-      
+
       // Create new verification code
-      const verificationCode = await storage.createVerificationCode(normalizedEmail, codeType);
-      
+      const verificationCode = await storage.createVerificationCode(
+        normalizedEmail,
+        codeType,
+      );
+
       // Send verification email
-      const emailSent = await sendVerificationEmail(normalizedEmail, verificationCode.code, codeType as any);
-      
+      const emailSent = await sendVerificationEmail(
+        normalizedEmail,
+        verificationCode.code,
+        codeType as any,
+      );
+
       if (!emailSent) {
-        return res.status(500).json({ error: "Failed to send verification email" });
+        return res
+          .status(500)
+          .json({ error: "Failed to send verification email" });
       }
-      
+
       res.json({ success: true, message: "Verification code sent" });
     } catch (error) {
       console.error("Resend verification error:", error);
       res.status(500).json({ error: "Failed to resend verification code" });
     }
   };
-  
+
   app.post("/api/auth/resend-code", authLimiter, resendCodeHandler);
   app.post("/api/auth/resend-verification", authLimiter, resendCodeHandler);
 
   app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
       const { email, password } = req.body;
-      
+
       if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
+        return res
+          .status(400)
+          .json({ error: "Email and password are required" });
       }
 
       // Normalize email for consistent lookup
@@ -426,53 +536,64 @@ export async function registerRoutes(
 
       const user = await storage.getUserByEmail(normalizedEmail);
       const clientIp = getClientIp(req);
-      const userAgent = req.headers['user-agent'] || null;
-      
+      const userAgent = req.headers["user-agent"] || null;
+
       if (!user) {
         // Log failed login attempt
-        storage.createSecurityAuditLog({
-          userId: null,
-          eventType: "login_failed",
-          ipAddress: clientIp,
-          userAgent,
-          outcome: "failure",
-          details: `Failed login attempt for: ${normalizedEmail}`
-        }).catch(err => console.warn("Failed to log security event:", err));
+        storage
+          .createSecurityAuditLog({
+            userId: null,
+            eventType: "login_failed",
+            ipAddress: clientIp,
+            userAgent,
+            outcome: "failure",
+            details: `Failed login attempt for: ${normalizedEmail}`,
+          })
+          .catch((err) => console.warn("Failed to log security event:", err));
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
       const isValid = await verifyPassword(user.password, password);
       if (!isValid) {
         // Log failed login attempt
-        storage.createSecurityAuditLog({
-          userId: user.id,
-          eventType: "login_failed",
-          ipAddress: clientIp,
-          userAgent,
-          outcome: "failure",
-          details: "Invalid password"
-        }).catch(err => console.warn("Failed to log security event:", err));
+        storage
+          .createSecurityAuditLog({
+            userId: user.id,
+            eventType: "login_failed",
+            ipAddress: clientIp,
+            userAgent,
+            outcome: "failure",
+            details: "Invalid password",
+          })
+          .catch((err) => console.warn("Failed to log security event:", err));
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
       // Check if 2FA is enabled
       if (user.twoFactorEnabled) {
         // Create verification code and send
-        const verificationCode = await storage.createVerificationCode(normalizedEmail, "login");
-        
+        const verificationCode = await storage.createVerificationCode(
+          normalizedEmail,
+          "login",
+        );
+
         // Store pending 2FA login
         pending2FALogins.set(normalizedEmail, {
           userId: user.id,
           expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
         });
-        
+
         // Send verification email
-        await sendVerificationEmail(normalizedEmail, verificationCode.code, "login");
-        
+        await sendVerificationEmail(
+          normalizedEmail,
+          verificationCode.code,
+          "login",
+        );
+
         return res.json({
           requires2FA: true,
           email: normalizedEmail,
-          message: "2FA code sent to your email"
+          message: "2FA code sent to your email",
         });
       }
 
@@ -483,37 +604,43 @@ export async function registerRoutes(
           return res.status(500).json({ error: "Session error" });
         }
         req.session.userId = user.id;
-        
+
         // Create login session record
-        storage.createLoginSession({
-          userId: user.id,
-          sessionId: req.sessionID,
-          ipAddress: clientIp,
-          userAgent,
-          city: null,
-          region: null,
-          country: null,
-        }).catch(err => console.error("Failed to create login session:", err));
-        
+        storage
+          .createLoginSession({
+            userId: user.id,
+            sessionId: req.sessionID,
+            ipAddress: clientIp,
+            userAgent,
+            city: null,
+            region: null,
+            country: null,
+          })
+          .catch((err) =>
+            console.error("Failed to create login session:", err),
+          );
+
         // Log successful login (CASA Q52)
-        storage.createSecurityAuditLog({
-          userId: user.id,
-          eventType: "login",
-          ipAddress: clientIp,
-          userAgent,
-          outcome: "success",
-          details: "Successful login without 2FA"
-        }).catch(err => console.warn("Failed to log security event:", err));
-        
-        res.json({ 
-          user: { 
-            id: user.id, 
-            email: user.email, 
+        storage
+          .createSecurityAuditLog({
+            userId: user.id,
+            eventType: "login",
+            ipAddress: clientIp,
+            userAgent,
+            outcome: "success",
+            details: "Successful login without 2FA",
+          })
+          .catch((err) => console.warn("Failed to log security event:", err));
+
+        res.json({
+          user: {
+            id: user.id,
+            email: user.email,
             plan: user.plan,
             onboardingCompleted: user.onboardingCompleted,
             emailVerified: user.emailVerified,
-            twoFactorEnabled: user.twoFactorEnabled
-          } 
+            twoFactorEnabled: user.twoFactorEnabled,
+          },
         });
       });
     } catch (error) {
@@ -526,35 +653,45 @@ export async function registerRoutes(
   app.post("/api/auth/verify-2fa", twoFactorLimiter, async (req, res) => {
     try {
       const { email, code } = req.body;
-      
+
       if (!email || !code) {
-        return res.status(400).json({ error: "Email and verification code are required" });
+        return res
+          .status(400)
+          .json({ error: "Email and verification code are required" });
       }
 
       const normalizedEmail = email.toLowerCase().trim();
-      
+
       // Check pending 2FA login exists
       const pending = pending2FALogins.get(normalizedEmail);
       if (!pending || pending.expiresAt < Date.now()) {
         pending2FALogins.delete(normalizedEmail);
-        return res.status(400).json({ error: "Login session expired. Please try again." });
+        return res
+          .status(400)
+          .json({ error: "Login session expired. Please try again." });
       }
-      
+
       // Verify code
-      const verificationCode = await storage.getVerificationCode(normalizedEmail, code, "login");
+      const verificationCode = await storage.getVerificationCode(
+        normalizedEmail,
+        code,
+        "login",
+      );
       if (!verificationCode) {
-        return res.status(400).json({ error: "Invalid or expired verification code" });
+        return res
+          .status(400)
+          .json({ error: "Invalid or expired verification code" });
       }
-      
+
       // Mark code as used
       await storage.markVerificationCodeUsed(verificationCode.id);
-      
+
       // Get user
       const user = await storage.getUser(pending.userId);
       if (!user) {
         return res.status(400).json({ error: "User not found" });
       }
-      
+
       // Clean up pending 2FA
       pending2FALogins.delete(normalizedEmail);
 
@@ -565,28 +702,32 @@ export async function registerRoutes(
           return res.status(500).json({ error: "Session error" });
         }
         req.session.userId = user.id;
-        
+
         // Create login session record
         const clientIp = getClientIp(req);
-        storage.createLoginSession({
-          userId: user.id,
-          sessionId: req.sessionID,
-          ipAddress: clientIp,
-          userAgent: req.headers['user-agent'] || null,
-          city: null,
-          region: null,
-          country: null,
-        }).catch(err => console.error("Failed to create login session:", err));
-        
-        res.json({ 
-          user: { 
-            id: user.id, 
-            email: user.email, 
+        storage
+          .createLoginSession({
+            userId: user.id,
+            sessionId: req.sessionID,
+            ipAddress: clientIp,
+            userAgent: req.headers["user-agent"] || null,
+            city: null,
+            region: null,
+            country: null,
+          })
+          .catch((err) =>
+            console.error("Failed to create login session:", err),
+          );
+
+        res.json({
+          user: {
+            id: user.id,
+            email: user.email,
             plan: user.plan,
             onboardingCompleted: user.onboardingCompleted,
             emailVerified: user.emailVerified,
-            twoFactorEnabled: user.twoFactorEnabled
-          } 
+            twoFactorEnabled: user.twoFactorEnabled,
+          },
         });
       });
     } catch (error) {
@@ -598,14 +739,14 @@ export async function registerRoutes(
   app.post("/api/auth/logout", async (req, res) => {
     const sessionId = req.sessionID;
     const userId = req.session.userId;
-    
+
     // Delete login session record
     if (userId && sessionId) {
-      await storage.deleteLoginSession(sessionId).catch(err => 
-        console.error("Failed to delete login session:", err)
-      );
+      await storage
+        .deleteLoginSession(sessionId)
+        .catch((err) => console.error("Failed to delete login session:", err));
     }
-    
+
     req.session.destroy((err) => {
       if (err) {
         console.error("Logout error:", err);
@@ -620,18 +761,20 @@ export async function registerRoutes(
     try {
       const userId = req.session.userId!;
       const linkedAccounts = await storage.getLinkedAccounts(userId);
-      
+
       // Also get current user info
       const currentUser = await storage.getUser(userId);
-      
-      res.json({ 
+
+      res.json({
         linkedAccounts,
-        currentUser: currentUser ? {
-          id: currentUser.id,
-          email: currentUser.email,
-          displayName: currentUser.displayName,
-          plan: currentUser.plan,
-        } : null
+        currentUser: currentUser
+          ? {
+              id: currentUser.id,
+              email: currentUser.email,
+              displayName: currentUser.displayName,
+              plan: currentUser.plan,
+            }
+          : null,
       });
     } catch (error) {
       console.error("Failed to get linked accounts:", error);
@@ -643,45 +786,52 @@ export async function registerRoutes(
     try {
       const primaryUserId = req.session.userId!;
       const { email, password } = req.body;
-      
+
       if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
+        return res
+          .status(400)
+          .json({ error: "Email and password are required" });
       }
-      
+
       const normalizedEmail = email.toLowerCase().trim();
-      
+
       // Find the account to link
       const linkedUser = await storage.getUserByEmail(normalizedEmail);
       if (!linkedUser) {
         return res.status(404).json({ error: "Account not found" });
       }
-      
+
       // Verify password
       const isValid = await verifyPassword(linkedUser.password, password);
       if (!isValid) {
         return res.status(401).json({ error: "Invalid password" });
       }
-      
+
       // Check if already linked
-      const alreadyLinked = await storage.isAccountLinked(primaryUserId, linkedUser.id);
+      const alreadyLinked = await storage.isAccountLinked(
+        primaryUserId,
+        linkedUser.id,
+      );
       if (alreadyLinked) {
         return res.status(400).json({ error: "Account already linked" });
       }
-      
+
       // Can't link to self
       if (linkedUser.id === primaryUserId) {
-        return res.status(400).json({ error: "Cannot link to your own account" });
+        return res
+          .status(400)
+          .json({ error: "Cannot link to your own account" });
       }
-    
+
       // Add linked account
       const linkedAccount = await storage.addLinkedAccount(
         primaryUserId,
         linkedUser.id,
         linkedUser.email,
         linkedUser.displayName || undefined,
-        linkedUser.plan || undefined
+        linkedUser.plan || undefined,
       );
-      
+
       res.json({ success: true, linkedAccount });
     } catch (error) {
       console.error("Failed to link account:", error);
@@ -693,58 +843,70 @@ export async function registerRoutes(
     try {
       const currentUserId = req.session.userId!;
       const { targetUserId } = req.body;
-      
+
       if (!targetUserId) {
         return res.status(400).json({ error: "Target user ID required" });
       }
-      
+
       // Check if this account is linked (from either direction)
-      const isLinkedFromCurrent = await storage.isAccountLinked(currentUserId, targetUserId);
-      const isLinkedFromTarget = await storage.isAccountLinked(targetUserId, currentUserId);
-      
+      const isLinkedFromCurrent = await storage.isAccountLinked(
+        currentUserId,
+        targetUserId,
+      );
+      const isLinkedFromTarget = await storage.isAccountLinked(
+        targetUserId,
+        currentUserId,
+      );
+
       if (!isLinkedFromCurrent && !isLinkedFromTarget) {
         return res.status(403).json({ error: "Account not linked" });
       }
-      
+
       // Get target user
       const targetUser = await storage.getUser(targetUserId);
       if (!targetUser) {
         return res.status(404).json({ error: "Target account not found" });
       }
-      
+
       // Switch session to target user (skip 2FA for linked accounts)
       req.session.regenerate((err) => {
         if (err) {
           console.error("Session regeneration error:", err);
           return res.status(500).json({ error: "Session error" });
         }
-        
+
         req.session.userId = targetUser.id;
-        
+
         // Create login session record
         const clientIp = getClientIp(req);
-        const userAgent = req.headers['user-agent'] || null;
-        
-        storage.createLoginSession({
-          userId: targetUser.id,
-          sessionId: req.sessionID,
-          ipAddress: clientIp,
-          userAgent,
-          city: null,
-          region: null,
-          country: null,
-        }).catch(err => console.error("Failed to create login session:", err));
-        
+        const userAgent = req.headers["user-agent"] || null;
+
+        storage
+          .createLoginSession({
+            userId: targetUser.id,
+            sessionId: req.sessionID,
+            ipAddress: clientIp,
+            userAgent,
+            city: null,
+            region: null,
+            country: null,
+          })
+          .catch((err) =>
+            console.error("Failed to create login session:", err),
+          );
+
         // Log account switch
-        storage.createSecurityAuditLog({
-          userId: targetUser.id,
-          eventType: "account_switch",
-          ipAddress: clientIp,
-          userAgent,
-          outcome: "success",
-          details: `Switched from account ${currentUserId}`
-        }).catch(err => console.warn("Failed to log security event:", err));
-        
+        storage
+          .createSecurityAuditLog({
+            userId: targetUser.id,
+            eventType: "account_switch",
+            ipAddress: clientIp,
+            userAgent,
+            outcome: "success",
+            details: `Switched from account ${currentUserId}`,
+          })
+          .catch((err) => console.warn("Failed to log security event:", err));
+
         res.json({
           success: true,
           user: {
@@ -753,7 +915,7 @@ export async function registerRoutes(
             displayName: targetUser.displayName,
             plan: targetUser.plan,
             onboardingCompleted: targetUser.onboardingCompleted,
-          }
+          },
         });
       });
     } catch (error) {
@@ -762,28 +924,38 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/auth/linked-accounts/:linkedUserId", requireAuth, async (req, res) => {
-    try {
-      const primaryUserId = req.session.userId!;
-      const { linkedUserId } = req.params;
-      
-      await storage.removeLinkedAccount(primaryUserId, linkedUserId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Failed to remove linked account:", error);
-      res.status(500).json({ error: "Failed to remove linked account" });
-    }
-  });
+  app.delete(
+    "/api/auth/linked-accounts/:linkedUserId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const primaryUserId = req.session.userId!;
+        const { linkedUserId } = req.params;
+
+        await storage.removeLinkedAccount(primaryUserId, linkedUserId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Failed to remove linked account:", error);
+        res.status(500).json({ error: "Failed to remove linked account" });
+      }
+    },
+  );
 
   app.post("/api/support/contact", async (req, res) => {
     try {
       const { name, email, message } = req.body;
-      
+
       if (!name || !email || !message) {
-        return res.status(400).json({ error: "Name, email, and message are required" });
+        return res
+          .status(400)
+          .json({ error: "Name, email, and message are required" });
       }
 
-      if (typeof name !== "string" || typeof email !== "string" || typeof message !== "string") {
+      if (
+        typeof name !== "string" ||
+        typeof email !== "string" ||
+        typeof message !== "string"
+      ) {
         return res.status(400).json({ error: "Invalid input format" });
       }
 
@@ -797,9 +969,9 @@ export async function registerRoutes(
       }
 
       await storage.createSupportMessage({ name, email, message });
-      
+
       console.log(`Support message received from ${email}: ${name}`);
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Support contact error:", error);
@@ -811,9 +983,11 @@ export async function registerRoutes(
   app.post("/api/feedback", requireAuth, async (req, res) => {
     try {
       const { feedbackType, message } = req.body;
-      
+
       if (!feedbackType || !message) {
-        return res.status(400).json({ error: "Feedback type and message are required" });
+        return res
+          .status(400)
+          .json({ error: "Feedback type and message are required" });
       }
 
       const validTypes = ["feature_request", "bug_report", "general"];
@@ -867,11 +1041,11 @@ export async function registerRoutes(
     }
 
     const grant = await storage.getNylasGrant(user.id);
-    
-    res.json({ 
-      user: { 
-        id: user.id, 
-        email: user.email, 
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
         displayName: user.displayName,
         avatarUrl: user.avatarUrl,
         plan: user.plan,
@@ -883,7 +1057,7 @@ export async function registerRoutes(
         createdAt: user.createdAt,
         emailSignature: user.emailSignature,
         signatureEnabled: user.signatureEnabled,
-      } 
+      },
     });
   });
 
@@ -892,7 +1066,7 @@ export async function registerRoutes(
     try {
       const userId = req.session.userId!;
       const { displayName, avatarUrl } = req.body;
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -900,15 +1074,15 @@ export async function registerRoutes(
 
       const updatedUser = await storage.updateUser(userId, {
         displayName: displayName !== undefined ? displayName : user.displayName,
-        avatarUrl: avatarUrl !== undefined ? avatarUrl : user.avatarUrl
+        avatarUrl: avatarUrl !== undefined ? avatarUrl : user.avatarUrl,
       });
 
-      res.json({ 
+      res.json({
         success: true,
         user: {
           displayName: updatedUser?.displayName,
-          avatarUrl: updatedUser?.avatarUrl
-        }
+          avatarUrl: updatedUser?.avatarUrl,
+        },
       });
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -927,49 +1101,68 @@ export async function registerRoutes(
 
       const currentUser = await storage.getUser(req.session.userId!);
       const oldPlan = currentUser?.plan || "free";
-      
+
       // SECURITY: Only allow direct plan changes to "free" (downgrade/cancel)
       // Upgrades to pro/premium must go through Stripe checkout and webhooks
       if (plan !== "free" && plan !== oldPlan) {
-        return res.status(403).json({ 
-          error: "Plan upgrades require payment. Please use the checkout process.",
+        return res.status(403).json({
+          error:
+            "Plan upgrades require payment. Please use the checkout process.",
           requiresPayment: true,
-          requestedPlan: plan
+          requestedPlan: plan,
         });
       }
-      
+
       // Only process if downgrading to free
       if (plan === "free" && oldPlan !== "free") {
         // Cancel the Stripe subscription if one exists
         if (currentUser?.stripeSubscriptionId) {
           try {
-            const { getUncachableStripeClient } = await import("./stripeClient");
+            const { getUncachableStripeClient } = await import(
+              "./stripeClient"
+            );
             const stripe = await getUncachableStripeClient();
             await stripe.subscriptions.cancel(currentUser.stripeSubscriptionId);
           } catch (stripeErr: any) {
-            console.error("Error canceling Stripe subscription during plan downgrade:", stripeErr);
+            console.error(
+              "Error canceling Stripe subscription during plan downgrade:",
+              stripeErr,
+            );
             // If Stripe cancel fails, don't downgrade - keep subscription consistent
-            return res.status(500).json({ error: "Failed to cancel your subscription. Please try again or contact support." });
+            return res
+              .status(500)
+              .json({
+                error:
+                  "Failed to cancel your subscription. Please try again or contact support.",
+              });
           }
         }
-        
-        const user = await storage.updateUser(req.session.userId!, { 
+
+        const user = await storage.updateUser(req.session.userId!, {
           plan: "free",
           stripeSubscriptionId: null,
         });
-        
+
         await storage.createActivityLog(
-          user!.id, 
-          user!.email, 
-          "plan_downgrade", 
-          `Plan cancelled: changed from ${oldPlan} to free, Stripe subscription canceled`
+          user!.id,
+          user!.email,
+          "plan_downgrade",
+          `Plan cancelled: changed from ${oldPlan} to free, Stripe subscription canceled`,
         );
-        
-        return res.json({ user: { id: user!.id, email: user!.email, plan: user!.plan } });
+
+        return res.json({
+          user: { id: user!.id, email: user!.email, plan: user!.plan },
+        });
       }
-      
+
       // No change needed
-      res.json({ user: { id: currentUser!.id, email: currentUser!.email, plan: currentUser!.plan } });
+      res.json({
+        user: {
+          id: currentUser!.id,
+          email: currentUser!.email,
+          plan: currentUser!.plan,
+        },
+      });
     } catch (error) {
       console.error("Plan update error:", error);
       res.status(500).json({ error: "Failed to update plan" });
@@ -984,11 +1177,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid AI preferences" });
       }
 
-      const user = await storage.updateUser(req.session.userId!, { 
+      const user = await storage.updateUser(req.session.userId!, {
         aiPreferences: parsed.data,
-        onboardingCompleted: true 
+        onboardingCompleted: true,
       });
-      res.json({ user: { id: user!.id, email: user!.email, onboardingCompleted: user!.onboardingCompleted } });
+      res.json({
+        user: {
+          id: user!.id,
+          email: user!.email,
+          onboardingCompleted: user!.onboardingCompleted,
+        },
+      });
     } catch (error) {
       console.error("Onboarding error:", error);
       res.status(500).json({ error: "Failed to save onboarding" });
@@ -1008,7 +1207,9 @@ export async function registerRoutes(
         aiPreferences: user.aiPreferences,
         emailSignature: user.emailSignature,
         signatureEnabled: user.signatureEnabled,
-        connectedEmail: grant ? { email: grant.email, provider: grant.provider } : null,
+        connectedEmail: grant
+          ? { email: grant.email, provider: grant.provider }
+          : null,
         emailVerified: user.emailVerified,
         twoFactorEnabled: user.twoFactorEnabled,
       });
@@ -1025,13 +1226,13 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       const sessions = await storage.getLoginSessions(req.session.userId!);
       const currentSessionId = req.sessionID;
-      
+
       res.json({
         twoFactorEnabled: user.twoFactorEnabled,
-        sessions: sessions.map(s => ({
+        sessions: sessions.map((s) => ({
           id: s.id,
           ipAddress: s.ipAddress,
           city: s.city,
@@ -1062,26 +1263,44 @@ export async function registerRoutes(
       if (!enable && user.twoFactorEnabled) {
         if (!code) {
           // Send verification code
-          const verificationCode = await storage.createVerificationCode(user.email, "action");
-          await sendVerificationEmail(user.email, verificationCode.code, "action");
-          return res.json({ requiresVerification: true, message: "Verification code sent" });
+          const verificationCode = await storage.createVerificationCode(
+            user.email,
+            "action",
+          );
+          await sendVerificationEmail(
+            user.email,
+            verificationCode.code,
+            "action",
+          );
+          return res.json({
+            requiresVerification: true,
+            message: "Verification code sent",
+          });
         }
-        
+
         // Verify code
-        const verificationCode = await storage.getVerificationCode(user.email, code, "action");
+        const verificationCode = await storage.getVerificationCode(
+          user.email,
+          code,
+          "action",
+        );
         if (!verificationCode) {
-          return res.status(400).json({ error: "Invalid or expired verification code" });
+          return res
+            .status(400)
+            .json({ error: "Invalid or expired verification code" });
         }
         await storage.markVerificationCodeUsed(verificationCode.id);
       }
 
       // Update 2FA setting
       await storage.updateUser(user.id, { twoFactorEnabled: enable });
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         twoFactorEnabled: enable,
-        message: enable ? "Two-factor authentication enabled" : "Two-factor authentication disabled"
+        message: enable
+          ? "Two-factor authentication enabled"
+          : "Two-factor authentication disabled",
       });
     } catch (error) {
       console.error("2FA toggle error:", error);
@@ -1094,9 +1313,9 @@ export async function registerRoutes(
     try {
       const sessions = await storage.getLoginSessions(req.session.userId!);
       const currentSessionId = req.sessionID;
-      
+
       res.json({
-        sessions: sessions.map(s => ({
+        sessions: sessions.map((s) => ({
           id: s.id,
           ipAddress: s.ipAddress,
           city: s.city,
@@ -1115,40 +1334,60 @@ export async function registerRoutes(
   });
 
   // Logout all other devices (requires 2FA if enabled)
-  app.post("/api/settings/sessions/logout-all", requireAuth, async (req, res) => {
-    try {
-      const { code } = req.body;
-      const user = await storage.getUser(req.session.userId!);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // If 2FA is enabled, require verification
-      if (user.twoFactorEnabled) {
-        if (!code) {
-          // Send verification code
-          const verificationCode = await storage.createVerificationCode(user.email, "action");
-          await sendVerificationEmail(user.email, verificationCode.code, "action");
-          return res.json({ requiresVerification: true, message: "Verification code sent" });
+  app.post(
+    "/api/settings/sessions/logout-all",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { code } = req.body;
+        const user = await storage.getUser(req.session.userId!);
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
         }
-        
-        // Verify code
-        const verificationCode = await storage.getVerificationCode(user.email, code, "action");
-        if (!verificationCode) {
-          return res.status(400).json({ error: "Invalid or expired verification code" });
-        }
-        await storage.markVerificationCodeUsed(verificationCode.id);
-      }
 
-      // Delete all sessions except current
-      await storage.deleteAllUserSessions(user.id, req.sessionID);
-      
-      res.json({ success: true, message: "Logged out of all other devices" });
-    } catch (error) {
-      console.error("Logout all error:", error);
-      res.status(500).json({ error: "Failed to logout other devices" });
-    }
-  });
+        // If 2FA is enabled, require verification
+        if (user.twoFactorEnabled) {
+          if (!code) {
+            // Send verification code
+            const verificationCode = await storage.createVerificationCode(
+              user.email,
+              "action",
+            );
+            await sendVerificationEmail(
+              user.email,
+              verificationCode.code,
+              "action",
+            );
+            return res.json({
+              requiresVerification: true,
+              message: "Verification code sent",
+            });
+          }
+
+          // Verify code
+          const verificationCode = await storage.getVerificationCode(
+            user.email,
+            code,
+            "action",
+          );
+          if (!verificationCode) {
+            return res
+              .status(400)
+              .json({ error: "Invalid or expired verification code" });
+          }
+          await storage.markVerificationCodeUsed(verificationCode.id);
+        }
+
+        // Delete all sessions except current
+        await storage.deleteAllUserSessions(user.id, req.sessionID);
+
+        res.json({ success: true, message: "Logged out of all other devices" });
+      } catch (error) {
+        console.error("Logout all error:", error);
+        res.status(500).json({ error: "Failed to logout other devices" });
+      }
+    },
+  );
 
   // Send 2FA code for sensitive actions
   app.post("/api/auth/send-action-code", requireAuth, async (req, res) => {
@@ -1162,9 +1401,12 @@ export async function registerRoutes(
         return res.json({ required: false });
       }
 
-      const verificationCode = await storage.createVerificationCode(user.email, "action");
+      const verificationCode = await storage.createVerificationCode(
+        user.email,
+        "action",
+      );
       await sendVerificationEmail(user.email, verificationCode.code, "action");
-      
+
       res.json({ success: true, message: "Verification code sent" });
     } catch (error) {
       console.error("Send action code error:", error);
@@ -1172,71 +1414,89 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/settings/password", requireAuth, passwordResetLimiter, async (req, res) => {
-    try {
-      const { currentPassword, newPassword } = req.body;
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ error: "Current and new password are required" });
-      }
-      if (newPassword.length < 8) {
-        return res.status(400).json({ error: "Password must be at least 8 characters" });
-      }
-      const user = await storage.getUser(req.session.userId!);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      const isValid = await verifyPassword(user.password, currentPassword);
-      if (!isValid) {
-        return res.status(400).json({ error: "Current password is incorrect" });
-      }
-      const hashedPassword = await hashPassword(newPassword);
-      await storage.updateUser(req.session.userId!, { password: hashedPassword });
-      
-      // Security: Terminate all other sessions after password change (CASA Q27)
-      const currentSessionId = req.sessionID;
-      await storage.deleteAllUserSessions(req.session.userId!, currentSessionId);
-      
-      // Clear any pending 2FA logins for this user (CASA Q27 extended)
-      for (const [key, data] of pending2FALogins.entries()) {
-        if (data.userId === req.session.userId!) {
-          pending2FALogins.delete(key);
-        }
-      }
-      
-      // Also invalidate express-sessions in database (except current)
+  app.put(
+    "/api/settings/password",
+    requireAuth,
+    passwordResetLimiter,
+    async (req, res) => {
       try {
-        await db.execute(sql`
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+          return res
+            .status(400)
+            .json({ error: "Current and new password are required" });
+        }
+        if (newPassword.length < 8) {
+          return res
+            .status(400)
+            .json({ error: "Password must be at least 8 characters" });
+        }
+        const user = await storage.getUser(req.session.userId!);
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        const isValid = await verifyPassword(user.password, currentPassword);
+        if (!isValid) {
+          return res
+            .status(400)
+            .json({ error: "Current password is incorrect" });
+        }
+        const hashedPassword = await hashPassword(newPassword);
+        await storage.updateUser(req.session.userId!, {
+          password: hashedPassword,
+        });
+
+        // Security: Terminate all other sessions after password change (CASA Q27)
+        const currentSessionId = req.sessionID;
+        await storage.deleteAllUserSessions(
+          req.session.userId!,
+          currentSessionId,
+        );
+
+        // Clear any pending 2FA logins for this user (CASA Q27 extended)
+        for (const [key, data] of pending2FALogins.entries()) {
+          if (data.userId === req.session.userId!) {
+            pending2FALogins.delete(key);
+          }
+        }
+
+        // Also invalidate express-sessions in database (except current)
+        try {
+          await db.execute(sql`
           DELETE FROM user_sessions 
           WHERE sess->>'userId' = ${req.session.userId!} 
           AND sid != ${currentSessionId}
         `);
-      } catch (err) {
-        console.warn("Could not clear express sessions:", err);
+        } catch (err) {
+          console.warn("Could not clear express sessions:", err);
+        }
+
+        // Log password change event (CASA Q52)
+        storage
+          .createSecurityAuditLog({
+            userId: req.session.userId!,
+            eventType: "password_change",
+            ipAddress: getClientIp(req),
+            userAgent: req.headers["user-agent"] || null,
+            outcome: "success",
+            details: "Password changed, all other sessions terminated",
+          })
+          .catch((err) => console.warn("Failed to log security event:", err));
+
+        res.json({ success: true, sessionsTerminated: true });
+      } catch (error) {
+        console.error("Password change error:", error);
+        res.status(500).json({ error: "Failed to change password" });
       }
-      
-      // Log password change event (CASA Q52)
-      storage.createSecurityAuditLog({
-        userId: req.session.userId!,
-        eventType: "password_change",
-        ipAddress: getClientIp(req),
-        userAgent: req.headers['user-agent'] || null,
-        outcome: "success",
-        details: "Password changed, all other sessions terminated"
-      }).catch(err => console.warn("Failed to log security event:", err));
-      
-      res.json({ success: true, sessionsTerminated: true });
-    } catch (error) {
-      console.error("Password change error:", error);
-      res.status(500).json({ error: "Failed to change password" });
-    }
-  });
+    },
+  );
 
   app.put("/api/settings/signature", requireAuth, async (req, res) => {
     try {
       const { emailSignature, signatureEnabled } = req.body;
-      await storage.updateUser(req.session.userId!, { 
+      await storage.updateUser(req.session.userId!, {
         emailSignature: emailSignature ?? null,
-        signatureEnabled: signatureEnabled ?? false
+        signatureEnabled: signatureEnabled ?? false,
       });
       res.json({ success: true });
     } catch (error) {
@@ -1252,7 +1512,9 @@ export async function registerRoutes(
       if (!parsed.success) {
         return res.status(400).json({ error: "Invalid AI preferences" });
       }
-      await storage.updateUser(req.session.userId!, { aiPreferences: parsed.data });
+      await storage.updateUser(req.session.userId!, {
+        aiPreferences: parsed.data,
+      });
       res.json({ success: true });
     } catch (error) {
       console.error("AI preferences update error:", error);
@@ -1263,11 +1525,13 @@ export async function registerRoutes(
   app.get("/api/writing-style", requireAuth, async (req, res) => {
     try {
       const style = await storage.getLearnedWritingStyle(req.session.userId!);
-      const sampleCount = await storage.getWritingSampleCount(req.session.userId!);
-      res.json({ 
-        style: style || null, 
+      const sampleCount = await storage.getWritingSampleCount(
+        req.session.userId!,
+      );
+      res.json({
+        style: style || null,
         sampleCount,
-        hasLearnedStyle: !!(style && style.samplesAnalyzed > 0)
+        hasLearnedStyle: !!(style && style.samplesAnalyzed > 0),
       });
     } catch (error) {
       console.error("Error fetching writing style:", error);
@@ -1278,18 +1542,20 @@ export async function registerRoutes(
   app.post("/api/writing-style/analyze", requireAuth, async (req, res) => {
     try {
       const samples = await storage.getWritingSamples(req.session.userId!, 20);
-      
+
       if (samples.length < 3) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Not enough writing samples",
           message: "Send at least 3 emails to enable personalized AI drafts",
           sampleCount: samples.length,
-          required: 3
+          required: 3,
         });
       }
 
-      const sampleTexts = samples.map(s => s.originalContent).join("\n\n---\n\n");
-      
+      const sampleTexts = samples
+        .map((s) => s.originalContent)
+        .join("\n\n---\n\n");
+
       const prompt = `Analyze these email samples and extract the user's unique writing style. Return a JSON object with:
 1. "styleAnalysis": A 2-3 sentence description of their overall writing style
 2. "commonPhrases": Array of 5-10 phrases or expressions they commonly use
@@ -1308,41 +1574,47 @@ Return ONLY valid JSON, no other text.`;
         messages: [
           {
             role: "system",
-            content: "You are an expert at analyzing writing styles. Extract patterns from email samples to help personalize future AI-generated drafts."
+            content:
+              "You are an expert at analyzing writing styles. Extract patterns from email samples to help personalize future AI-generated drafts.",
           },
-          { role: "user", content: prompt }
+          { role: "user", content: prompt },
         ],
         max_tokens: 1000,
         temperature: 0.3,
       });
 
       const responseText = response.choices[0]?.message?.content || "{}";
-      
+
       let parsed;
       try {
-        parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
+        parsed = JSON.parse(
+          responseText.replace(/```json\n?|\n?```/g, "").trim(),
+        );
       } catch (parseError) {
         console.error("Failed to parse style analysis JSON:", parseError);
-        return res.status(422).json({ 
+        return res.status(422).json({
           error: "Failed to analyze writing style",
-          message: "AI returned invalid format. Please try again."
+          message: "AI returned invalid format. Please try again.",
         });
       }
 
-      const learnedStyle = await storage.upsertLearnedWritingStyle(req.session.userId!, {
-        styleAnalysis: parsed.styleAnalysis || "",
-        commonPhrases: parsed.commonPhrases || [],
-        greetingPatterns: parsed.greetingPatterns || [],
-        signOffPatterns: parsed.signOffPatterns || [],
-        toneDescription: parsed.toneDescription,
-        avgSentenceLength: parsed.avgSentenceLength,
-        samplesAnalyzed: samples.length,
-      });
+      const learnedStyle = await storage.upsertLearnedWritingStyle(
+        req.session.userId!,
+        {
+          styleAnalysis: parsed.styleAnalysis || "",
+          commonPhrases: parsed.commonPhrases || [],
+          greetingPatterns: parsed.greetingPatterns || [],
+          signOffPatterns: parsed.signOffPatterns || [],
+          toneDescription: parsed.toneDescription,
+          avgSentenceLength: parsed.avgSentenceLength,
+          samplesAnalyzed: samples.length,
+        },
+      );
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         style: learnedStyle,
-        message: `Analyzed ${samples.length} emails to learn your writing style`
+        message: `Analyzed ${samples.length} emails to learn your writing style`,
       });
     } catch (error) {
       console.error("Error analyzing writing style:", error);
@@ -1370,19 +1642,25 @@ Return ONLY valid JSON, no other text.`;
   app.get("/api/nylas/auth-url", requireAuth, async (req, res) => {
     try {
       const provider = req.query.provider as string;
-      if (!provider || !['google', 'microsoft'].includes(provider)) {
-        return res.status(400).json({ error: "Invalid provider. Use 'google' or 'microsoft'" });
+      if (!provider || !["google", "microsoft"].includes(provider)) {
+        return res
+          .status(400)
+          .json({ error: "Invalid provider. Use 'google' or 'microsoft'" });
       }
 
       cleanupExpiredStates();
-      
+
       const stateToken = generateStateToken();
       const expiresAt = Date.now() + 10 * 60 * 1000;
-      pendingOAuthStates.set(stateToken, { userId: req.session.userId!, provider, expiresAt });
-      
+      pendingOAuthStates.set(stateToken, {
+        userId: req.session.userId!,
+        provider,
+        expiresAt,
+      });
+
       const redirectUri = getRedirectUri(req);
       const authUrl = await nylas.getAuthUrl(provider, redirectUri, stateToken);
-      
+
       res.json({ url: authUrl });
     } catch (error) {
       console.error("Error generating auth URL:", error);
@@ -1393,38 +1671,40 @@ Return ONLY valid JSON, no other text.`;
   app.get("/api/nylas/callback", async (req, res) => {
     try {
       console.log("OAuth callback received:", JSON.stringify(req.query));
-      
+
       const { code, state, error, error_description } = req.query;
-      
+
       if (error) {
         console.error("OAuth error from provider:", error, error_description);
-        return res.redirect(`/connect-email?error=${encodeURIComponent(String(error_description || error))}`);
+        return res.redirect(
+          `/connect-email?error=${encodeURIComponent(String(error_description || error))}`,
+        );
       }
-      
-      if (!code || typeof code !== 'string') {
+
+      if (!code || typeof code !== "string") {
         console.error("Missing authorization code. Query params:", req.query);
         return res.status(400).send("Missing authorization code");
       }
 
-      if (!state || typeof state !== 'string') {
+      if (!state || typeof state !== "string") {
         console.error("Missing state token in OAuth callback");
-        return res.redirect('/?error=invalid_state');
+        return res.redirect("/?error=invalid_state");
       }
 
       const storedState = pendingOAuthStates.get(state);
       if (!storedState) {
         console.error("Unknown or expired state token");
-        return res.redirect('/?error=invalid_state');
+        return res.redirect("/?error=invalid_state");
       }
 
       if (storedState.expiresAt < Date.now()) {
         pendingOAuthStates.delete(state);
         console.error("State token expired");
-        return res.redirect('/?error=session_expired');
+        return res.redirect("/?error=session_expired");
       }
 
       pendingOAuthStates.delete(state);
-      
+
       const { userId, provider } = storedState;
 
       const redirectUri = getRedirectUri(req);
@@ -1434,13 +1714,14 @@ Return ONLY valid JSON, no other text.`;
       const normalizedEmail = grant.email.toLowerCase().trim();
 
       // Check if this OAuth email is already connected to a different user
-      const existingGrantByEmail = await storage.getNylasGrantByEmail(normalizedEmail);
-      
+      const existingGrantByEmail =
+        await storage.getNylasGrantByEmail(normalizedEmail);
+
       if (existingGrantByEmail && existingGrantByEmail.userId !== userId) {
         // This email is already connected to another account
         // Log the current user into that existing account instead
         const existingUser = await storage.getUser(existingGrantByEmail.userId);
-        
+
         if (existingUser) {
           // Update the grant with fresh OAuth tokens
           await storage.updateNylasGrant(existingGrantByEmail.userId, {
@@ -1448,7 +1729,7 @@ Return ONLY valid JSON, no other text.`;
             provider: grant.provider || provider,
             email: normalizedEmail,
           });
-          
+
           // Switch session to the existing account
           req.session.userId = existingUser.id;
           await new Promise<void>((resolve, reject) => {
@@ -1457,15 +1738,15 @@ Return ONLY valid JSON, no other text.`;
               else resolve();
             });
           });
-          
-          return res.redirect('/?connected=true&account_merged=true');
+
+          return res.redirect("/?connected=true&account_merged=true");
         }
       }
 
       // Normal flow: connect email to current user
       const existingGrant = await storage.getNylasGrant(userId);
       const currentUser = await storage.getUser(userId);
-      
+
       if (existingGrant) {
         await storage.updateNylasGrant(userId, {
           grantId: grant.id,
@@ -1479,21 +1760,20 @@ Return ONLY valid JSON, no other text.`;
           provider: grant.provider || provider,
           email: normalizedEmail,
         });
-        
+
         // Log email connection activity
         await storage.createActivityLog(
-          userId, 
-          currentUser?.email || normalizedEmail, 
-          "email_connected", 
-          `Connected ${grant.provider || provider} email: ${normalizedEmail}`
+          userId,
+          currentUser?.email || normalizedEmail,
+          "email_connected",
+          `Connected ${grant.provider || provider} email: ${normalizedEmail}`,
         );
-
       }
 
-      res.redirect('/?connected=true');
+      res.redirect("/?connected=true");
     } catch (error) {
       console.error("Error in OAuth callback:", error);
-      res.redirect('/?error=auth_failed');
+      res.redirect("/?error=auth_failed");
     }
   });
 
@@ -1501,7 +1781,11 @@ Return ONLY valid JSON, no other text.`;
     try {
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant) {
-        res.json({ connected: true, email: grant.email, provider: grant.provider });
+        res.json({
+          connected: true,
+          email: grant.email,
+          provider: grant.provider,
+        });
       } else {
         res.json({ connected: false });
       }
@@ -1520,7 +1804,7 @@ Return ONLY valid JSON, no other text.`;
       res.status(500).json({ error: "Failed to disconnect" });
     }
   });
-  
+
   app.get("/api/emails", requireAuth, async (req, res) => {
     try {
       const folder = req.query.folder as string | undefined;
@@ -1528,7 +1812,7 @@ Return ONLY valid JSON, no other text.`;
       const useCached = req.query.cached === "true";
       const userId = req.session.userId!;
       const userIdNum = parseInt(userId, 10);
-      
+
       const grant = await storage.getNylasGrant(userId);
       if (!grant) {
         // No email account connected - return empty array
@@ -1543,8 +1827,8 @@ Return ONLY valid JSON, no other text.`;
           const starredIds = await storage.getStarredEmailIds(userId);
           const starredSet = new Set(starredIds);
           const localStates = await storage.getAllLocalEmailStates(userId);
-          
-          const emails = cachedData.map(email => {
+
+          const emails = cachedData.map((email) => {
             const localFolder = localStates.get(email.nylasId);
             return {
               ...email,
@@ -1559,65 +1843,76 @@ Return ONLY valid JSON, no other text.`;
       // Fetch from Nylas
       nylas.prefetchFolderIds(grant.grantId);
       let allMessages: any[] = [];
-      
+
       // Get all local email states to apply folder overrides
       const localStates = await storage.getAllLocalEmailStates(userId);
-      
+
       if (allFolders) {
         // Fetch from all folders for threading
         const folders = ["inbox", "sent", "trash", "junk", "archived"] as const;
         const folderResults = await Promise.allSettled(
           folders.map(async (f) => {
             try {
-              const messages = await nylas.getMessages(grant.grantId, f, grant.provider);
-              return messages.map(m => ({ ...m, folder: f }));
+              const messages = await nylas.getMessages(
+                grant.grantId,
+                f,
+                grant.provider,
+              );
+              return messages.map((m) => ({ ...m, folder: f }));
             } catch {
               return [];
             }
-          })
+          }),
         );
-        
+
         for (const result of folderResults) {
           if (result.status === "fulfilled") {
             allMessages.push(...result.value);
           }
         }
-        
+
         // Deduplicate by message ID
         const seen = new Set<string>();
-        allMessages = allMessages.filter(msg => {
+        allMessages = allMessages.filter((msg) => {
           if (seen.has(msg.id)) return false;
           seen.add(msg.id);
           return true;
         });
       } else {
-        const messages = await nylas.getMessages(grant.grantId, folder || "inbox", grant.provider);
-        allMessages = messages.map(m => ({ ...m, folder: folder || "inbox" }));
+        const messages = await nylas.getMessages(
+          grant.grantId,
+          folder || "inbox",
+          grant.provider,
+        );
+        allMessages = messages.map((m) => ({
+          ...m,
+          folder: folder || "inbox",
+        }));
       }
-      
+
       // Apply local folder overrides for all states
-      allMessages = allMessages.map(msg => {
+      allMessages = allMessages.map((msg) => {
         const localFolder = localStates.get(msg.id);
         if (localFolder) {
           return { ...msg, folder: localFolder };
         }
         return msg;
       });
-      
+
       // Filter by requested folder (applies local overrides)
       if (!allFolders && folder) {
-        allMessages = allMessages.filter(msg => msg.folder === folder);
+        allMessages = allMessages.filter((msg) => msg.folder === folder);
       } else if (!allFolders) {
         // Default to inbox - exclude trashed and archived
-        allMessages = allMessages.filter(msg => 
-          msg.folder !== "trash" && msg.folder !== "archived"
+        allMessages = allMessages.filter(
+          (msg) => msg.folder !== "trash" && msg.folder !== "archived",
         );
       }
-      
+
       // Get starred emails from database (UI-only, not Nylas)
       const starredIds = await storage.getStarredEmailIds(userId);
       const starredSet = new Set(starredIds);
-      
+
       const emails = allMessages.map((msg, index) => ({
         id: index + 1,
         nylasId: msg.id,
@@ -1633,12 +1928,12 @@ Return ONLY valid JSON, no other text.`;
         threadId: msg.threadId,
         avatarColor: msg.avatarColor,
       }));
-      
+
       // Save to cache for instant loading next time (async, don't wait)
-      storage.saveCachedEmails(userIdNum, emails).catch(err => {
+      storage.saveCachedEmails(userIdNum, emails).catch((err) => {
         console.error("Failed to cache emails:", err);
       });
-      
+
       return res.json(emails);
     } catch (error) {
       console.error("Error fetching emails:", error);
@@ -1650,30 +1945,38 @@ Return ONLY valid JSON, no other text.`;
   app.get("/api/emails/unread-counts", requireAuth, async (req, res) => {
     try {
       const grant = await storage.getNylasGrant(req.session.userId!);
-      
+
       const counts: Record<string, number> = {
         inbox: 0,
         sent: 0,
         archived: 0,
         trash: 0,
         drafts: 0,
-        junk: 0
+        junk: 0,
       };
-      
+
       if (grant) {
         // Fetch from Nylas for all folders that can have unread messages
         const folders = ["inbox", "junk", "trash"] as const;
-        
-        await Promise.all(folders.map(async (folder) => {
-          try {
-            const messages = await nylas.getMessages(grant.grantId, folder, grant.provider);
-            counts[folder] = messages.filter((m: any) => !m.isRead && m.unread !== false).length;
-          } catch (err) {
-            // Silently ignore folder fetch errors (folder may not exist)
-            console.log(`Could not fetch ${folder} for unread count`);
-          }
-        }));
-        
+
+        await Promise.all(
+          folders.map(async (folder) => {
+            try {
+              const messages = await nylas.getMessages(
+                grant.grantId,
+                folder,
+                grant.provider,
+              );
+              counts[folder] = messages.filter(
+                (m: any) => !m.isRead && m.unread !== false,
+              ).length;
+            } catch (err) {
+              // Silently ignore folder fetch errors (folder may not exist)
+              console.log(`Could not fetch ${folder} for unread count`);
+            }
+          }),
+        );
+
         // Note: sent/drafts/archived don't have "unread" concept for user's own messages
       } else {
         // Fallback to local storage
@@ -1685,7 +1988,7 @@ Return ONLY valid JSON, no other text.`;
           }
         }
       }
-      
+
       res.json(counts);
     } catch (error) {
       console.error("Error fetching unread counts:", error);
@@ -1696,7 +1999,7 @@ Return ONLY valid JSON, no other text.`;
   app.get("/api/emails/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
-      
+
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         const message = await nylas.getMessage(grant.grantId, id);
@@ -1719,7 +2022,7 @@ Return ONLY valid JSON, no other text.`;
           attachments: message.attachments,
         });
       }
-      
+
       const numericId = parseInt(id);
       const email = await storage.getEmail(numericId);
       if (!email) {
@@ -1735,14 +2038,14 @@ Return ONLY valid JSON, no other text.`;
   app.patch("/api/emails/:id/read", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
-      
+
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         await nylas.markAsRead(grant.grantId, id);
         nylas.invalidateMessagesCache(grant.grantId);
         return res.json({ success: true });
       }
-      
+
       const numericId = parseInt(id);
       const email = await storage.updateEmail(numericId, { isRead: true });
       if (!email) {
@@ -1758,14 +2061,14 @@ Return ONLY valid JSON, no other text.`;
   app.patch("/api/emails/:id/unread", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
-      
+
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         await nylas.markAsUnread(grant.grantId, id);
         nylas.invalidateMessagesCache(grant.grantId);
         return res.json({ success: true });
       }
-      
+
       const numericId = parseInt(id);
       const email = await storage.updateEmail(numericId, { isRead: false });
       if (!email) {
@@ -1783,21 +2086,26 @@ Return ONLY valid JSON, no other text.`;
       const id = req.params.id;
       const { folder } = req.body;
       const userId = req.session.userId!;
-      
-      if (!folder || !["inbox", "archived", "trash", "sent", "drafts", "junk"].includes(folder)) {
+
+      if (
+        !folder ||
+        !["inbox", "archived", "trash", "sent", "drafts", "junk"].includes(
+          folder,
+        )
+      ) {
         return res.status(400).json({ error: "Invalid folder" });
       }
-      
+
       // Check if this is a Nylas message ID (long alphanumeric string)
       const isNylasId = id.length > 10 && !/^\d+$/.test(id);
-      
+
       if (isNylasId) {
         // Use local storage only - don't sync folder changes to Nylas
         await storage.setLocalEmailFolder(userId, id, folder);
-        
+
         // Return immediately for faster UX - record action asynchronously
         res.json({ success: true, folder });
-        
+
         // Record action for AI learning in background (only for trash/archive)
         if (folder === "trash" || folder === "archived") {
           (async () => {
@@ -1809,12 +2117,22 @@ Return ONLY valid JSON, no other text.`;
                 const senderEmail = message?.from?.[0]?.email;
                 const subject = message?.subject || "";
                 // Extract keywords from subject
-                const keywords = subject.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3).slice(0, 5);
+                const keywords = subject
+                  .toLowerCase()
+                  .split(/\s+/)
+                  .filter((w: string) => w.length > 3)
+                  .slice(0, 5);
                 // Detect newsletter patterns
-                const isNewsletter = /unsubscribe|newsletter|digest|weekly|monthly/i.test(subject) || 
-                                     /@.*mail\.|noreply|no-reply|notifications?@/i.test(senderEmail || "");
-                const isPromotion = /sale|discount|offer|promo|deal|off|save|free/i.test(subject);
-                
+                const isNewsletter =
+                  /unsubscribe|newsletter|digest|weekly|monthly/i.test(
+                    subject,
+                  ) ||
+                  /@.*mail\.|noreply|no-reply|notifications?@/i.test(
+                    senderEmail || "",
+                  );
+                const isPromotion =
+                  /sale|discount|offer|promo|deal|off|save|free/i.test(subject);
+
                 await storage.recordEmailAction(userId, {
                   messageId: id,
                   actionType: folder === "trash" ? "delete" : "archive",
@@ -1829,7 +2147,7 @@ Return ONLY valid JSON, no other text.`;
             }
           })();
         }
-        
+
         return;
       } else {
         // Local email storage for demo/test emails
@@ -1850,7 +2168,10 @@ Return ONLY valid JSON, no other text.`;
     try {
       const messageId = req.params.id;
       // Toggle star in database only (UI-only, not synced with Nylas)
-      const isStarred = await storage.toggleStarEmail(req.session.userId!, messageId);
+      const isStarred = await storage.toggleStarEmail(
+        req.session.userId!,
+        messageId,
+      );
       res.json({ success: true, isStarred });
     } catch (error) {
       console.error("Error toggling star:", error);
@@ -1861,14 +2182,14 @@ Return ONLY valid JSON, no other text.`;
   app.delete("/api/emails/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
-      
+
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (grant && id.length > 10) {
         await nylas.deleteMessage(grant.grantId, id);
         nylas.invalidateMessagesCache(grant.grantId);
         return res.status(204).send();
       }
-      
+
       const numericId = parseInt(id);
       const deleted = await storage.deleteEmail(numericId);
       if (!deleted) {
@@ -1884,7 +2205,10 @@ Return ONLY valid JSON, no other text.`;
   // Email notes (sticky notes for individual emails)
   app.get("/api/emails/:id/note", requireAuth, async (req, res) => {
     try {
-      const note = await storage.getEmailNote(req.session.userId!, req.params.id);
+      const note = await storage.getEmailNote(
+        req.session.userId!,
+        req.params.id,
+      );
       res.json({ note: note || null });
     } catch (error) {
       console.error("Error getting email note:", error);
@@ -1899,9 +2223,16 @@ Return ONLY valid JSON, no other text.`;
         return res.status(400).json({ error: "Content is required" });
       }
 
-      const existing = await storage.getEmailNote(req.session.userId!, req.params.id);
+      const existing = await storage.getEmailNote(
+        req.session.userId!,
+        req.params.id,
+      );
       if (existing) {
-        const updated = await storage.updateEmailNote(req.session.userId!, req.params.id, content);
+        const updated = await storage.updateEmailNote(
+          req.session.userId!,
+          req.params.id,
+          content,
+        );
         return res.json({ note: updated });
       }
 
@@ -1928,59 +2259,79 @@ Return ONLY valid JSON, no other text.`;
   });
 
   // Download email attachment (with antivirus scanning)
-  app.get("/api/emails/:messageId/attachments/:attachmentId", requireAuth, fileLimiter, async (req, res) => {
-    try {
-      const { messageId, attachmentId } = req.params;
-      const grant = await storage.getNylasGrant(req.session.userId!);
-      
-      if (!grant) {
-        return res.status(400).json({ error: "No email account connected" });
-      }
+  app.get(
+    "/api/emails/:messageId/attachments/:attachmentId",
+    requireAuth,
+    fileLimiter,
+    async (req, res) => {
+      try {
+        const { messageId, attachmentId } = req.params;
+        const grant = await storage.getNylasGrant(req.session.userId!);
 
-      const attachment = await nylas.downloadAttachment(grant.grantId, messageId, attachmentId);
-      
-      // Scan attachment for malware before serving
-      const scanResult = await scanFile(
-        attachment.data,
-        attachment.filename,
-        attachment.contentType
-      );
-      
-      if (!scanResult.isClean) {
-        console.warn(`Blocked malicious attachment: ${attachment.filename} - ${scanResult.malwareName}`);
-        return res.status(403).json({ 
-          error: "File blocked for security reasons",
-          reason: scanResult.malwareName 
-        });
+        if (!grant) {
+          return res.status(400).json({ error: "No email account connected" });
+        }
+
+        const attachment = await nylas.downloadAttachment(
+          grant.grantId,
+          messageId,
+          attachmentId,
+        );
+
+        // Scan attachment for malware before serving
+        const scanResult = await scanFile(
+          attachment.data,
+          attachment.filename,
+          attachment.contentType,
+        );
+
+        if (!scanResult.isClean) {
+          console.warn(
+            `Blocked malicious attachment: ${attachment.filename} - ${scanResult.malwareName}`,
+          );
+          return res.status(403).json({
+            error: "File blocked for security reasons",
+            reason: scanResult.malwareName,
+          });
+        }
+
+        // Sanitize SVG files to prevent XSS attacks (CASA Q40)
+        let fileData = attachment.data;
+        if (Buffer.isBuffer(fileData)) {
+          const { buffer: sanitizedBuffer } = sanitizeSVGBuffer(
+            fileData,
+            attachment.filename,
+            attachment.contentType,
+          );
+          fileData = sanitizedBuffer;
+        }
+
+        // Log attachment download (CASA Q52)
+        storage
+          .createSecurityAuditLog({
+            userId: req.session.userId!,
+            eventType: "attachment_download",
+            ipAddress: getClientIp(req),
+            userAgent: req.headers["user-agent"] || null,
+            resourceType: "attachment",
+            resourceId: attachmentId,
+            outcome: "success",
+            details: `Downloaded: ${attachment.filename} (${attachment.contentType})`,
+          })
+          .catch((err) => console.warn("Failed to log security event:", err));
+
+        res.setHeader("Content-Type", attachment.contentType);
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${attachment.filename}"`,
+        );
+        res.send(fileData);
+      } catch (error) {
+        console.error("Error downloading attachment:", error);
+        res.status(500).json({ error: "Failed to download attachment" });
       }
-      
-      // Sanitize SVG files to prevent XSS attacks (CASA Q40)
-      let fileData = attachment.data;
-      if (Buffer.isBuffer(fileData)) {
-        const { buffer: sanitizedBuffer } = sanitizeSVGBuffer(fileData, attachment.filename, attachment.contentType);
-        fileData = sanitizedBuffer;
-      }
-      
-      // Log attachment download (CASA Q52)
-      storage.createSecurityAuditLog({
-        userId: req.session.userId!,
-        eventType: "attachment_download",
-        ipAddress: getClientIp(req),
-        userAgent: req.headers['user-agent'] || null,
-        resourceType: "attachment",
-        resourceId: attachmentId,
-        outcome: "success",
-        details: `Downloaded: ${attachment.filename} (${attachment.contentType})`
-      }).catch(err => console.warn("Failed to log security event:", err));
-      
-      res.setHeader("Content-Type", attachment.contentType);
-      res.setHeader("Content-Disposition", `attachment; filename="${attachment.filename}"`);
-      res.send(fileData);
-    } catch (error) {
-      console.error("Error downloading attachment:", error);
-      res.status(500).json({ error: "Failed to download attachment" });
-    }
-  });
+    },
+  );
 
   // Custom folders CRUD
   app.get("/api/folders", requireAuth, async (req, res) => {
@@ -1993,10 +2344,15 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
-  const createFolderSchema = insertCustomFolderSchema.pick({ name: true, aiDescription: true }).extend({
-    name: z.string().min(1, "Folder name is required").max(50, "Folder name too long"),
-    aiDescription: z.string().max(200, "AI description too long").optional(),
-  });
+  const createFolderSchema = insertCustomFolderSchema
+    .pick({ name: true, aiDescription: true })
+    .extend({
+      name: z
+        .string()
+        .min(1, "Folder name is required")
+        .max(50, "Folder name too long"),
+      aiDescription: z.string().max(200, "AI description too long").optional(),
+    });
 
   const updateFolderSchema = z.object({
     name: z.string().min(1).max(50).optional(),
@@ -2014,7 +2370,7 @@ Return ONLY valid JSON, no other text.`;
       const folder = await storage.createCustomFolder(
         req.session.userId!,
         name.trim(),
-        aiDescription?.trim() || undefined
+        aiDescription?.trim() || undefined,
       );
       res.json({ folder });
     } catch (error) {
@@ -2034,12 +2390,18 @@ Return ONLY valid JSON, no other text.`;
         return res.status(400).json({ error: result.error.errors[0].message });
       }
       const { name, aiDescription, icon } = result.data;
-      const updates: { name?: string; aiDescription?: string; icon?: string } = {};
+      const updates: { name?: string; aiDescription?: string; icon?: string } =
+        {};
       if (name) updates.name = name.trim();
-      if (aiDescription !== undefined) updates.aiDescription = aiDescription?.trim() || undefined;
+      if (aiDescription !== undefined)
+        updates.aiDescription = aiDescription?.trim() || undefined;
       if (icon) updates.icon = icon.trim();
-      
-      const folder = await storage.updateCustomFolder(id, req.session.userId!, updates);
+
+      const folder = await storage.updateCustomFolder(
+        id,
+        req.session.userId!,
+        updates,
+      );
       if (!folder) {
         return res.status(404).json({ error: "Folder not found" });
       }
@@ -2054,13 +2416,21 @@ Return ONLY valid JSON, no other text.`;
     try {
       const id = parseInt(req.params.id);
       const userId = req.session.userId!;
-      console.log("[DELETE /api/folders/:id]", { id, userId, rawId: req.params.id });
+      console.log("[DELETE /api/folders/:id]", {
+        id,
+        userId,
+        rawId: req.params.id,
+      });
       if (isNaN(id)) {
         console.log("[DELETE /api/folders/:id] Invalid folder ID (NaN)");
         return res.status(400).json({ error: "Invalid folder ID" });
       }
       const deleted = await storage.deleteCustomFolder(id, userId);
-      console.log("[DELETE /api/folders/:id] Delete result:", { deleted, id, userId });
+      console.log("[DELETE /api/folders/:id] Delete result:", {
+        deleted,
+        id,
+        userId,
+      });
       if (!deleted) {
         return res.status(404).json({ error: "Folder not found" });
       }
@@ -2078,21 +2448,21 @@ Return ONLY valid JSON, no other text.`;
       if (isNaN(folderId)) {
         return res.status(400).json({ error: "Invalid folder ID" });
       }
-      
+
       const userId = req.session.userId!;
       const grant = await storage.getNylasGrant(userId);
-      
+
       // Get message IDs assigned to this folder
       const messageIds = await storage.getEmailsInFolder(userId, folderId);
-      
+
       if (!messageIds.length) {
         return res.json({ emails: [] });
       }
-      
+
       if (!grant) {
         return res.json({ emails: [] });
       }
-      
+
       // Fetch each email individually by ID to ensure we get all assigned emails
       const folderEmails: any[] = [];
       for (const messageId of messageIds) {
@@ -2103,13 +2473,15 @@ Return ONLY valid JSON, no other text.`;
           }
         } catch (err) {
           // Email may have been deleted, skip it
-          console.log(`Could not fetch message ${messageId}, may have been deleted`);
+          console.log(
+            `Could not fetch message ${messageId}, may have been deleted`,
+          );
         }
       }
-      
+
       // Sort by date (newest first)
       folderEmails.sort((a, b) => (b.date || 0) - (a.date || 0));
-      
+
       res.json({ emails: folderEmails });
     } catch (error) {
       console.error("Error getting folder emails:", error);
@@ -2127,22 +2499,26 @@ Return ONLY valid JSON, no other text.`;
 
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
-      
+
       // Check if user has Pro plan for AI features
       if (user?.plan === "free") {
-        return res.status(403).json({ error: "AI folder sorting requires a Pro or Business plan" });
+        return res
+          .status(403)
+          .json({ error: "AI folder sorting requires a Pro or Business plan" });
       }
 
       // Get the folder and its AI description
       const folders = await storage.getCustomFolders(userId);
-      const folder = folders.find(f => f.id === folderId);
-      
+      const folder = folders.find((f) => f.id === folderId);
+
       if (!folder) {
         return res.status(404).json({ error: "Folder not found" });
       }
-      
+
       if (!folder.aiDescription) {
-        return res.status(400).json({ error: "Folder does not have an AI description" });
+        return res
+          .status(400)
+          .json({ error: "Folder does not have an AI description" });
       }
 
       const grant = await storage.getNylasGrant(userId);
@@ -2151,8 +2527,11 @@ Return ONLY valid JSON, no other text.`;
       }
 
       // Fetch recent emails from inbox
-      const emails = await nylas.getMessages(grant.grantId, { in: "INBOX", limit: 50 });
-      
+      const emails = await nylas.getMessages(grant.grantId, {
+        in: "INBOX",
+        limit: 50,
+      });
+
       if (!emails.length) {
         return res.json({ suggestions: [] });
       }
@@ -2162,7 +2541,7 @@ Return ONLY valid JSON, no other text.`;
         id: e.id,
         sender: e.from?.[0]?.name || e.from?.[0]?.email || "Unknown",
         subject: e.subject || "(No subject)",
-        preview: e.snippet || ""
+        preview: e.snippet || "",
       }));
 
       const aiResponse = await openai.chat.completions.create({
@@ -2170,7 +2549,7 @@ Return ONLY valid JSON, no other text.`;
         messages: [
           {
             role: "system",
-            content: `You are an email sorting assistant. Analyze the provided emails and determine which ones match the folder description. Return a JSON array of email IDs that match the criteria.`
+            content: `You are an email sorting assistant. Analyze the provided emails and determine which ones match the folder description. Return a JSON array of email IDs that match the criteria.`,
           },
           {
             role: "user",
@@ -2181,19 +2560,21 @@ Emails to analyze:
 ${JSON.stringify(emailSummaries, null, 2)}
 
 Return ONLY a JSON array of email IDs that match this folder's criteria. Example: ["id1", "id2"]
-If no emails match, return an empty array: []`
-          }
+If no emails match, return an empty array: []`,
+          },
         ],
         temperature: 0.3,
-        max_tokens: 1000
+        max_tokens: 1000,
       });
 
       const responseText = aiResponse.choices[0]?.message?.content || "[]";
-      
+
       // Parse the AI response to get matching email IDs
       let matchingIds: string[] = [];
       try {
-        const cleanResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+        const cleanResponse = responseText
+          .replace(/```json\n?|\n?```/g, "")
+          .trim();
         matchingIds = JSON.parse(cleanResponse);
         if (!Array.isArray(matchingIds)) {
           matchingIds = [];
@@ -2204,14 +2585,16 @@ If no emails match, return an empty array: []`
       }
 
       // Filter emails to only include matches
-      const suggestions = emails.filter((e: any) => matchingIds.includes(e.id)).map((e: any) => ({
-        id: e.id,
-        sender: e.from?.[0]?.name || e.from?.[0]?.email || "Unknown",
-        senderEmail: e.from?.[0]?.email || "",
-        subject: e.subject || "(No subject)",
-        preview: e.snippet || "",
-        date: e.date ? new Date(e.date * 1000).toISOString() : null
-      }));
+      const suggestions = emails
+        .filter((e: any) => matchingIds.includes(e.id))
+        .map((e: any) => ({
+          id: e.id,
+          sender: e.from?.[0]?.name || e.from?.[0]?.email || "Unknown",
+          senderEmail: e.from?.[0]?.email || "",
+          subject: e.subject || "(No subject)",
+          preview: e.snippet || "",
+          date: e.date ? new Date(e.date * 1000).toISOString() : null,
+        }));
 
       res.json({ suggestions, folderName: folder.name });
     } catch (error) {
@@ -2234,11 +2617,11 @@ If no emails match, return an empty array: []`
       }
 
       const userId = req.session.userId!;
-      
+
       // Verify folder exists and belongs to user
       const folders = await storage.getCustomFolders(userId);
-      const folder = folders.find(f => f.id === folderId);
-      
+      const folder = folders.find((f) => f.id === folderId);
+
       if (!folder) {
         return res.status(404).json({ error: "Folder not found" });
       }
@@ -2262,42 +2645,54 @@ If no emails match, return an empty array: []`
       const userId = req.session.userId!;
       const grant = await storage.getNylasGrant(userId);
       console.log("[AI Inbox Refresh] Grant found:", !!grant);
-      
+
       if (!grant) {
         return res.status(400).json({ error: "No email account connected" });
       }
-      
+
       // Get recent emails for analysis
       console.log("[AI Inbox Refresh] Fetching messages...");
       const messages = await nylas.getMessages(grant.grantId, "inbox", 50);
-      console.log("[AI Inbox Refresh] Messages fetched:", messages?.length || 0);
-      
+      console.log(
+        "[AI Inbox Refresh] Messages fetched:",
+        messages?.length || 0,
+      );
+
       if (!messages || messages.length === 0) {
         console.log("[AI Inbox Refresh] No messages found");
-        return res.json({ suggestions: [], batchId: null, message: "No emails to analyze" });
+        return res.json({
+          suggestions: [],
+          batchId: null,
+          message: "No emails to analyze",
+        });
       }
-      
+
       // Get user's learned writing style and preferences for context
       const learnedStyle = await storage.getLearnedWritingStyle(userId);
       const user = await storage.getUser(userId);
-      
+
       // Get user's deletion/archive history patterns for smarter recommendations
       const actionPatterns = await storage.getEmailActionPatterns(userId);
-      console.log("[AI Inbox Refresh] Action patterns found:", JSON.stringify(actionPatterns));
-      
+      console.log(
+        "[AI Inbox Refresh] Action patterns found:",
+        JSON.stringify(actionPatterns),
+      );
+
       // Get user's custom folders with AI descriptions for auto-sorting (Pro+ feature only)
       const customFolders = await storage.getCustomFolders(userId);
       const userPlan = user?.plan || "free";
       const hasPro = userPlan === "pro" || userPlan === "premium";
       // Only include folder descriptions for Pro+ users
-      const foldersWithAiDesc = hasPro ? customFolders.filter(f => f.aiDescription) : [];
-      
+      const foldersWithAiDesc = hasPro
+        ? customFolders.filter((f) => f.aiDescription)
+        : [];
+
       // Clear old non-pending suggestions
       await storage.clearOldAiInboxSuggestions(userId);
-      
+
       // Generate unique batch ID
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-      
+
       // Prepare email summaries for AI analysis with better signals
       // Note: messages come from nylas.getMessages() which returns EmailListItem objects
       // with .from (display name), .fromEmail (email address), .preview (snippet), etc.
@@ -2305,7 +2700,9 @@ If no emails match, return an empty array: []`
         const fromEmail = msg.fromEmail || "";
         const fromName = msg.from || "";
         const domain = fromEmail.split("@")[1] || "";
-        const hasUnsubscribe = !!(msg.preview?.toLowerCase()?.includes("unsubscribe"));
+        const hasUnsubscribe = !!msg.preview
+          ?.toLowerCase()
+          ?.includes("unsubscribe");
         return {
           id: msg.id,
           subject: msg.subject || "(No subject)",
@@ -2320,21 +2717,28 @@ If no emails match, return an empty array: []`
           hasUnsubscribe,
         };
       });
-      
+
       // Build folder sorting section if user has custom folders with AI descriptions
-      const folderSortingSection = foldersWithAiDesc.length > 0 ? `
+      const folderSortingSection =
+        foldersWithAiDesc.length > 0
+          ? `
 CUSTOM FOLDER AUTO-SORTING (Pro Feature):
 The user has created custom folders with AI sorting rules. If an email matches a folder's description, suggest moving it there.
 
 Available folders:
-${foldersWithAiDesc.map(f => `- Folder ID ${f.id}: "${f.name}" - ${f.aiDescription}`).join("\n")}
+${foldersWithAiDesc.map((f) => `- Folder ID ${f.id}: "${f.name}" - ${f.aiDescription}`).join("\n")}
 
 To suggest moving to a folder, use action "move_to_folder" with folderId and folderName in the suggestion.
-` : "";
-      
+`
+          : "";
+
       // Build user deletion history section for smarter AI recommendations
-      const hasHistory = actionPatterns.deletedDomains.length > 0 || actionPatterns.deletedSenders.length > 0 || actionPatterns.archivedDomains.length > 0;
-      const userHistorySection = hasHistory ? `
+      const hasHistory =
+        actionPatterns.deletedDomains.length > 0 ||
+        actionPatterns.deletedSenders.length > 0 ||
+        actionPatterns.archivedDomains.length > 0;
+      const userHistorySection = hasHistory
+        ? `
 USER'S DELETION & ARCHIVE HISTORY (IMPORTANT - prioritize these patterns):
 Based on user's past behavior, they frequently delete or archive emails from:
 ${actionPatterns.deletedSenders.length > 0 ? `- Deleted senders: ${actionPatterns.deletedSenders.slice(0, 10).join(", ")}` : ""}
@@ -2343,7 +2747,8 @@ ${actionPatterns.archivedDomains.length > 0 ? `- Archived domains: ${actionPatte
 ${actionPatterns.newsletterPatterns.length > 0 ? `- Newsletter sources: ${actionPatterns.newsletterPatterns.slice(0, 10).join(", ")}` : ""}
 
 PRIORITY: Suggest deleting/archiving emails from senders/domains the user has historically deleted/archived.
-` : "";
+`
+        : "";
 
       // Call AI to analyze emails
       const systemPrompt = `You are a precise email inbox cleanup assistant. Analyze emails and categorize actionable ones.
@@ -2379,61 +2784,88 @@ RULES:
 5. Unread emails from real people = skip entirely
 6. When in doubt = skip. Return empty array if nothing is clearly actionable
 7. Maximum 8 suggestions, minimum confidence 60%
-${foldersWithAiDesc.length > 0 ? '8. For move_to_folder, include folderId and folderName' : ""}
+${foldersWithAiDesc.length > 0 ? "8. For move_to_folder, include folderId and folderName" : ""}
 
 JSON response only:
-{"suggestions":[{"messageId":"id","action":"spam|junk|archive|delete|star|mark_read${foldersWithAiDesc.length > 0 ? '|move_to_folder' : ""}","confidence":60-100,"reason":"1-sentence reason"${foldersWithAiDesc.length > 0 ? ',"folderId":0,"folderName":""' : ""}}]}`;
+{"suggestions":[{"messageId":"id","action":"spam|junk|archive|delete|star|mark_read${foldersWithAiDesc.length > 0 ? "|move_to_folder" : ""}","confidence":60-100,"reason":"1-sentence reason"${foldersWithAiDesc.length > 0 ? ',"folderId":0,"folderName":""' : ""}}]}`;
 
       const userPrompt = `Analyze these ${emailSummaries.length} emails:\n${JSON.stringify(emailSummaries)}`;
-      
+
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
+          { role: "user", content: userPrompt },
         ],
         temperature: 0.1,
         max_tokens: 2000,
       });
-      
+
       const responseText = completion.choices[0]?.message?.content || "{}";
-      console.log("[AI Inbox Refresh] AI response length:", responseText.length);
-      console.log("[AI Inbox Refresh] AI response preview:", responseText.substring(0, 500));
+      console.log(
+        "[AI Inbox Refresh] AI response length:",
+        responseText.length,
+      );
+      console.log(
+        "[AI Inbox Refresh] AI response preview:",
+        responseText.substring(0, 500),
+      );
       let aiSuggestions: any[] = [];
-      
+
       try {
-        const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
+        const parsed = JSON.parse(
+          responseText.replace(/```json\n?|\n?```/g, "").trim(),
+        );
         aiSuggestions = parsed.suggestions || [];
-        console.log("[AI Inbox Refresh] Parsed suggestions count:", aiSuggestions.length);
+        console.log(
+          "[AI Inbox Refresh] Parsed suggestions count:",
+          aiSuggestions.length,
+        );
       } catch (parseError) {
-        console.error("[AI Inbox Refresh] Failed to parse AI response:", parseError);
+        console.error(
+          "[AI Inbox Refresh] Failed to parse AI response:",
+          parseError,
+        );
         console.log("[AI Inbox Refresh] Raw response:", responseText);
-        return res.json({ suggestions: [], batchId: null, message: "Failed to analyze emails" });
+        return res.json({
+          suggestions: [],
+          batchId: null,
+          message: "Failed to analyze emails",
+        });
       }
-      
+
       // Create suggestions in database
       const createdSuggestions = [];
       for (const suggestion of aiSuggestions) {
         if (!suggestion.messageId || !suggestion.action) continue;
-        
-        const emailInfo = emailSummaries.find((e: any) => e.id === suggestion.messageId);
+
+        const emailInfo = emailSummaries.find(
+          (e: any) => e.id === suggestion.messageId,
+        );
         if (!emailInfo) continue;
-        
+
         // Build action data with reason and folder info if applicable
         const actionData: Record<string, any> = { reason: suggestion.reason };
-        if (suggestion.action === "move_to_folder" && suggestion.folderId && suggestion.folderName) {
+        if (
+          suggestion.action === "move_to_folder" &&
+          suggestion.folderId &&
+          suggestion.folderName
+        ) {
           actionData.folderId = suggestion.folderId;
           actionData.folderName = suggestion.folderName;
         }
-        
+
         const created = await storage.createAiInboxSuggestion({
           userId,
           batchId,
           messageId: suggestion.messageId,
           messageSubject: emailInfo.subject,
-          messageSender: emailInfo.fromName && emailInfo.fromName.trim()
-            ? (emailInfo.from && emailInfo.from !== "unknown" ? `${emailInfo.fromName} <${emailInfo.from}>` : emailInfo.fromName)
-            : (emailInfo.from || "Unknown"),
+          messageSender:
+            emailInfo.fromName && emailInfo.fromName.trim()
+              ? emailInfo.from && emailInfo.from !== "unknown"
+                ? `${emailInfo.fromName} <${emailInfo.from}>`
+                : emailInfo.fromName
+              : emailInfo.from || "Unknown",
           actionType: suggestion.action,
           actionData,
           confidence: Math.min(100, Math.max(0, suggestion.confidence || 50)),
@@ -2441,7 +2873,7 @@ JSON response only:
         });
         createdSuggestions.push(created);
       }
-      
+
       res.json({
         batchId,
         suggestions: createdSuggestions,
@@ -2452,18 +2884,20 @@ JSON response only:
       res.status(500).json({ error: "Failed to analyze inbox" });
     }
   });
-  
+
   // Get all active AI suggestions (pending + approved)
   app.get("/api/ai/inbox-suggestions", requireAuth, async (req, res) => {
     try {
-      const suggestions = await storage.getAllActiveAiInboxSuggestions(req.session.userId!);
+      const suggestions = await storage.getAllActiveAiInboxSuggestions(
+        req.session.userId!,
+      );
       res.json({ suggestions });
     } catch (error) {
       console.error("Error getting AI suggestions:", error);
       res.status(500).json({ error: "Failed to get suggestions" });
     }
   });
-  
+
   // Approve/reject a single suggestion
   app.patch("/api/ai/inbox-suggestions/:id", requireAuth, async (req, res) => {
     try {
@@ -2471,110 +2905,161 @@ JSON response only:
       if (!["approved", "rejected"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
-      
+
       const updated = await storage.updateAiInboxSuggestionStatus(
         parseInt(req.params.id),
-        status
+        status,
       );
-      
+
       if (!updated) {
         return res.status(404).json({ error: "Suggestion not found" });
       }
-      
+
       res.json({ suggestion: updated });
     } catch (error) {
       console.error("Error updating suggestion:", error);
       res.status(500).json({ error: "Failed to update suggestion" });
     }
   });
-  
+
   // Execute approved suggestions only
-  app.post("/api/ai/inbox-suggestions/execute", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const grant = await storage.getNylasGrant(userId);
-      
-      if (!grant) {
-        return res.status(400).json({ error: "No email account connected" });
-      }
-      
-      // Only get approved suggestions - this is the critical safety check
-      const approvedSuggestions = await storage.getApprovedAiInboxSuggestions(userId);
-      
-      if (approvedSuggestions.length === 0) {
-        return res.json({ executed: 0, failed: 0, errors: [], message: "No approved suggestions to execute" });
-      }
-      
-      const results = { executed: 0, failed: 0, errors: [] as string[] };
-      
-      for (const suggestion of approvedSuggestions) {
-        try {
-          switch (suggestion.actionType) {
-            case "spam":
-            case "junk":
-              // Use local storage for folder changes - faster and more reliable
-              await storage.setLocalEmailFolder(userId, suggestion.messageId, "junk");
-              break;
-            case "archive":
-              // Use local storage for folder changes - faster and more reliable
-              await storage.setLocalEmailFolder(userId, suggestion.messageId, "archived");
-              break;
-            case "delete":
-              // Use local storage for folder changes - faster and more reliable
-              await storage.setLocalEmailFolder(userId, suggestion.messageId, "trash");
-              break;
-            case "star":
-              // Star is a message property, try Nylas but don't fail if it errors
-              try {
-                await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                  starred: true,
-                });
-              } catch (nylasErr) {
-                console.log("Star via Nylas failed, continuing:", nylasErr);
-              }
-              break;
-            case "mark_read":
-              // Mark read is a message property, try Nylas but don't fail if it errors
-              try {
-                await nylas.updateMessage(grant.grantId, suggestion.messageId, {
-                  unread: false,
-                });
-              } catch (nylasErr) {
-                console.log("Mark read via Nylas failed, continuing:", nylasErr);
-              }
-              break;
-            case "move_to_folder":
-              // Move email to custom folder by assigning it in our database
-              const actionData = suggestion.actionData as { folderId?: number; folderName?: string } | null;
-              if (actionData?.folderId) {
-                await storage.assignEmailToFolder(userId, suggestion.messageId, actionData.folderId);
-              }
-              break;
-          }
-          
-          await storage.updateAiInboxSuggestionStatus(suggestion.id, "executed", new Date());
-          results.executed++;
-        } catch (err: any) {
-          results.failed++;
-          results.errors.push(`Failed to ${suggestion.actionType} email: ${err.message}`);
-          await storage.updateAiInboxSuggestionStatus(suggestion.id, "rejected");
+  app.post(
+    "/api/ai/inbox-suggestions/execute",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const userId = req.session.userId!;
+        const grant = await storage.getNylasGrant(userId);
+
+        if (!grant) {
+          return res.status(400).json({ error: "No email account connected" });
         }
+
+        // Only get approved suggestions - this is the critical safety check
+        const approvedSuggestions =
+          await storage.getApprovedAiInboxSuggestions(userId);
+
+        if (approvedSuggestions.length === 0) {
+          return res.json({
+            executed: 0,
+            failed: 0,
+            errors: [],
+            message: "No approved suggestions to execute",
+          });
+        }
+
+        const results = { executed: 0, failed: 0, errors: [] as string[] };
+
+        for (const suggestion of approvedSuggestions) {
+          try {
+            switch (suggestion.actionType) {
+              case "spam":
+              case "junk":
+                // Use local storage for folder changes - faster and more reliable
+                await storage.setLocalEmailFolder(
+                  userId,
+                  suggestion.messageId,
+                  "junk",
+                );
+                break;
+              case "archive":
+                // Use local storage for folder changes - faster and more reliable
+                await storage.setLocalEmailFolder(
+                  userId,
+                  suggestion.messageId,
+                  "archived",
+                );
+                break;
+              case "delete":
+                // Use local storage for folder changes - faster and more reliable
+                await storage.setLocalEmailFolder(
+                  userId,
+                  suggestion.messageId,
+                  "trash",
+                );
+                break;
+              case "star":
+                // Star is a message property, try Nylas but don't fail if it errors
+                try {
+                  await nylas.updateMessage(
+                    grant.grantId,
+                    suggestion.messageId,
+                    {
+                      starred: true,
+                    },
+                  );
+                } catch (nylasErr) {
+                  console.log("Star via Nylas failed, continuing:", nylasErr);
+                }
+                break;
+              case "mark_read":
+                // Mark read is a message property, try Nylas but don't fail if it errors
+                try {
+                  await nylas.updateMessage(
+                    grant.grantId,
+                    suggestion.messageId,
+                    {
+                      unread: false,
+                    },
+                  );
+                } catch (nylasErr) {
+                  console.log(
+                    "Mark read via Nylas failed, continuing:",
+                    nylasErr,
+                  );
+                }
+                break;
+              case "move_to_folder":
+                // Move email to custom folder by assigning it in our database
+                const actionData = suggestion.actionData as {
+                  folderId?: number;
+                  folderName?: string;
+                } | null;
+                if (actionData?.folderId) {
+                  await storage.assignEmailToFolder(
+                    userId,
+                    suggestion.messageId,
+                    actionData.folderId,
+                  );
+                }
+                break;
+            }
+
+            await storage.updateAiInboxSuggestionStatus(
+              suggestion.id,
+              "executed",
+              new Date(),
+            );
+            results.executed++;
+          } catch (err: any) {
+            results.failed++;
+            results.errors.push(
+              `Failed to ${suggestion.actionType} email: ${err.message}`,
+            );
+            await storage.updateAiInboxSuggestionStatus(
+              suggestion.id,
+              "rejected",
+            );
+          }
+        }
+
+        // Invalidate messages cache
+        nylas.invalidateMessagesCache(grant.grantId);
+
+        res.json(results);
+      } catch (error) {
+        console.error("Error executing suggestions:", error);
+        res.status(500).json({ error: "Failed to execute suggestions" });
       }
-      
-      // Invalidate messages cache
-      nylas.invalidateMessagesCache(grant.grantId);
-      
-      res.json(results);
-    } catch (error) {
-      console.error("Error executing suggestions:", error);
-      res.status(500).json({ error: "Failed to execute suggestions" });
-    }
-  });
-  
+    },
+  );
+
   // Dismiss all pending suggestions
   app.delete("/api/ai/inbox-suggestions", requireAuth, async (req, res) => {
     try {
-      const suggestions = await storage.getPendingAiInboxSuggestions(req.session.userId!);
+      const suggestions = await storage.getPendingAiInboxSuggestions(
+        req.session.userId!,
+      );
       for (const suggestion of suggestions) {
         await storage.updateAiInboxSuggestionStatus(suggestion.id, "rejected");
       }
@@ -2595,14 +3080,19 @@ JSON response only:
       }
     }
     if (summaryCache.size > CACHE_MAX_SIZE) {
-      const sortedEntries = entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      const toDelete = sortedEntries.slice(0, summaryCache.size - CACHE_MAX_SIZE);
+      const sortedEntries = entries.sort(
+        (a, b) => a[1].timestamp - b[1].timestamp,
+      );
+      const toDelete = sortedEntries.slice(
+        0,
+        summaryCache.size - CACHE_MAX_SIZE,
+      );
       for (const [key] of toDelete) {
         summaryCache.delete(key);
       }
     }
   }
-  
+
   app.post("/api/emails/:id/summary", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
@@ -2616,7 +3106,11 @@ JSON response only:
       cleanupSummaryCache();
       const cached = summaryCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-        return res.json({ summary: cached.summary, keyPoints: cached.keyPoints, actionItems: cached.actionItems });
+        return res.json({
+          summary: cached.summary,
+          keyPoints: cached.keyPoints,
+          actionItems: cached.actionItems,
+        });
       }
 
       const completion = await openai.chat.completions.create({
@@ -2641,12 +3135,12 @@ Rules:
 - Focus on the most important information
 - If there are no action items, return an empty array
 - If there are no notable key points, return fewer or none
-- Strip HTML tags when analyzing content`
+- Strip HTML tags when analyzing content`,
           },
           {
             role: "user",
-            content: `Subject: ${subject || "(No subject)"}\n\nBody:\n${body.replace(/<[^>]*>/g, " ").substring(0, 4000)}`
-          }
+            content: `Subject: ${subject || "(No subject)"}\n\nBody:\n${body.replace(/<[^>]*>/g, " ").substring(0, 4000)}`,
+          },
         ],
         temperature: 0.3,
         max_tokens: 500,
@@ -2654,15 +3148,21 @@ Rules:
 
       const responseText = completion.choices[0]?.message?.content || "{}";
       let parsed = { summary: "", keyPoints: [], actionItems: [] };
-      
+
       try {
-        parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
+        parsed = JSON.parse(
+          responseText.replace(/```json\n?|\n?```/g, "").trim(),
+        );
       } catch {
-        parsed = { summary: "Unable to summarize this email.", keyPoints: [], actionItems: [] };
+        parsed = {
+          summary: "Unable to summarize this email.",
+          keyPoints: [],
+          actionItems: [],
+        };
       }
 
       summaryCache.set(cacheKey, { ...parsed, timestamp: Date.now() });
-      
+
       res.json(parsed);
     } catch (error) {
       console.error("Error generating summary:", error);
@@ -2708,24 +3208,31 @@ Rules:
 - Remove any other HTML tags not mentioned above (tables, divs, spans, etc.)
 
 Output clean, well-formatted HTML that preserves bold, italic, and link formatting.
-IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code blocks like \`\`\`html. Do NOT include any markdown formatting.`
+IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code blocks like \`\`\`html. Do NOT include any markdown formatting.`,
           },
           {
             role: "user",
-            content: `Please clean up and format this email content:\n\n${body}`
-          }
+            content: `Please clean up and format this email content:\n\n${body}`,
+          },
         ],
         max_tokens: 2000,
         temperature: 0.3,
       });
 
       let formattedBody = completion.choices[0]?.message?.content || body;
-      
+
       // Strip markdown code block markers if present
-      formattedBody = formattedBody.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
-      
-      formattedBodyCache.set(cacheKey, { body: formattedBody, timestamp: Date.now() });
-      
+      formattedBody = formattedBody
+        .replace(/^```html\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+
+      formattedBodyCache.set(cacheKey, {
+        body: formattedBody,
+        timestamp: Date.now(),
+      });
+
       res.json({ formattedBody });
     } catch (error) {
       console.error("Error formatting email:", error);
@@ -2742,7 +3249,8 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
         return res.status(400).json({ error: "Email body is required" });
       }
 
-      const sampleText = (subject ? subject + "\n\n" : "") + body.slice(0, 1000);
+      const sampleText =
+        (subject ? subject + "\n\n" : "") + body.slice(0, 1000);
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -2755,31 +3263,43 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
 - confidence: number between 0 and 1
 
 If the text is primarily in English, return languageCode: "en".
-Return ONLY valid JSON, no other text.`
+Return ONLY valid JSON, no other text.`,
           },
           {
             role: "user",
-            content: sampleText
-          }
+            content: sampleText,
+          },
         ],
         max_tokens: 100,
         temperature: 0,
       });
 
-      const responseText = completion.choices[0]?.message?.content || '{"languageCode":"en","languageName":"English","confidence":0.5}';
-      
+      const responseText =
+        completion.choices[0]?.message?.content ||
+        '{"languageCode":"en","languageName":"English","confidence":0.5}';
+
       try {
-        const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, '').trim());
-        const languageCode = (parsed.languageCode || "en").toLowerCase().split('-')[0].split('_')[0];
+        const parsed = JSON.parse(
+          responseText.replace(/```json\n?|\n?```/g, "").trim(),
+        );
+        const languageCode = (parsed.languageCode || "en")
+          .toLowerCase()
+          .split("-")[0]
+          .split("_")[0];
         const isEnglish = languageCode === "en";
         res.json({
           languageCode,
           languageName: parsed.languageName || "English",
           confidence: parsed.confidence || 0.5,
-          isEnglish
+          isEnglish,
         });
       } catch {
-        res.json({ languageCode: "en", languageName: "English", confidence: 0.5, isEnglish: true });
+        res.json({
+          languageCode: "en",
+          languageName: "English",
+          confidence: 0.5,
+          isEnglish: true,
+        });
       }
     } catch (error) {
       console.error("Error detecting language:", error);
@@ -2787,30 +3307,126 @@ Return ONLY valid JSON, no other text.`
     }
   });
 
-  const REGION_CULTURAL_CONTEXT: Record<string, { culture: string; formality: string; tips: string }> = {
-    us: { culture: "American English", formality: "Direct and efficient. Use first names quickly.", tips: "Americans prefer concise, action-oriented emails. 'Best regards' or 'Thanks' are standard closings." },
-    gb: { culture: "British English", formality: "Polite and understated. Indirect phrasing common.", tips: "British emails often use hedging language ('I was wondering if...', 'Perhaps we could...'). Avoid being too direct." },
-    ca: { culture: "Canadian English", formality: "Friendly and polite. Similar to US but more formal.", tips: "Canadians appreciate politeness. 'Thank you' and 'Please' are important. Use both English and French greetings if appropriate." },
-    au: { culture: "Australian English", formality: "Casual and direct. Informal tone acceptable.", tips: "Australians prefer a relaxed tone. Overly formal language can seem stiff. 'Cheers' is a common closing." },
-    de: { culture: "German", formality: "Highly formal. Use titles (Herr/Frau) and last names.", tips: "German business emails start with 'Sehr geehrte/r'. Always use formal 'Sie' form. Get straight to the point." },
-    fr: { culture: "French", formality: "Very formal. Elaborate greetings and closings expected.", tips: "French emails require formal openings ('Madame/Monsieur') and lengthy closings ('Je vous prie d\\'agréer...'). Never use first names initially." },
-    es: { culture: "Spanish", formality: "Warm and personal. Relationship-building matters.", tips: "Spanish emails often include personal inquiries before business. Use 'Estimado/a' for formal, 'Hola' for casual." },
-    it: { culture: "Italian", formality: "Formal in business, warm in tone.", tips: "Italian emails use 'Gentile' or 'Egregio' for formal address. Personal warmth is valued even in business." },
-    pt: { culture: "Portuguese", formality: "Formal but friendly. Respect hierarchy.", tips: "Use 'Prezado/a' for formal address. Portuguese communication values courtesy and relationship." },
-    br: { culture: "Brazilian Portuguese", formality: "Warm and informal compared to Portugal.", tips: "Brazilians are generally more casual. 'Olá' and 'Abraços' are common. Personal connection matters." },
-    jp: { culture: "Japanese", formality: "Extremely formal. Honorifics and hierarchical language essential.", tips: "Japanese emails follow strict patterns: seasonal greeting, self-introduction, purpose, closing. Use keigo (polite form). Never be too direct." },
-    kr: { culture: "Korean", formality: "Formal and hierarchical. Age and position matter.", tips: "Korean emails use formal endings (-습니다). Address seniors with proper titles. Indirect refusals are preferred." },
-    cn: { culture: "Chinese", formality: "Formal in business. Respect for hierarchy.", tips: "Chinese emails value modesty and indirect communication. Use proper titles. Avoid saying 'no' directly." },
-    in: { culture: "Indian English", formality: "Formal and respectful. Titles important.", tips: "Indian business emails use 'Dear Sir/Madam' and 'Respected'. Be respectful of hierarchy and seniority." },
-    ae: { culture: "Arabic", formality: "Very formal. Religious and cultural phrases common.", tips: "Arabic emails often begin with 'Bismillah' or 'As-salamu alaykum'. Show respect and patience. Relationship-building is crucial." },
-    sa: { culture: "Arabic (Saudi)", formality: "Highly formal. Protocol and titles essential.", tips: "Saudi business communication is very formal. Use proper titles and show deep respect for tradition." },
-    il: { culture: "Hebrew/Israeli", formality: "Direct and informal. Get to the point.", tips: "Israeli communication is very direct. First names are used quickly. Formality is minimal." },
-    tr: { culture: "Turkish", formality: "Formal in business. Respect and warmth valued.", tips: "Turkish emails use 'Sayın' for formal address. Show respect for hierarchy while maintaining warmth." },
-    nl: { culture: "Dutch", formality: "Direct and efficient. Minimal small talk.", tips: "Dutch communication is very direct - this is cultural, not rude. Be concise and clear." },
-    se: { culture: "Swedish", formality: "Informal and egalitarian. First names common.", tips: "Swedish business culture is flat. Use first names. 'Lagom' (moderation) guides communication style." },
-    ru: { culture: "Russian", formality: "Formal in business. Patronymics used.", tips: "Russian business emails are formal. Use name + patronymic. Directness is valued but maintain respect." },
-    mx: { culture: "Mexican Spanish", formality: "Warm and personal. Relationship-focused.", tips: "Mexican communication values personal connection. Greetings and small talk before business. Use 'usted' for formal." },
-    other: { culture: "International", formality: "Professional and neutral.", tips: "Use clear, simple language. Avoid idioms and culturally specific references." }
+  const REGION_CULTURAL_CONTEXT: Record<
+    string,
+    { culture: string; formality: string; tips: string }
+  > = {
+    us: {
+      culture: "American English",
+      formality: "Direct and efficient. Use first names quickly.",
+      tips: "Americans prefer concise, action-oriented emails. 'Best regards' or 'Thanks' are standard closings.",
+    },
+    gb: {
+      culture: "British English",
+      formality: "Polite and understated. Indirect phrasing common.",
+      tips: "British emails often use hedging language ('I was wondering if...', 'Perhaps we could...'). Avoid being too direct.",
+    },
+    ca: {
+      culture: "Canadian English",
+      formality: "Friendly and polite. Similar to US but more formal.",
+      tips: "Canadians appreciate politeness. 'Thank you' and 'Please' are important. Use both English and French greetings if appropriate.",
+    },
+    au: {
+      culture: "Australian English",
+      formality: "Casual and direct. Informal tone acceptable.",
+      tips: "Australians prefer a relaxed tone. Overly formal language can seem stiff. 'Cheers' is a common closing.",
+    },
+    de: {
+      culture: "German",
+      formality: "Highly formal. Use titles (Herr/Frau) and last names.",
+      tips: "German business emails start with 'Sehr geehrte/r'. Always use formal 'Sie' form. Get straight to the point.",
+    },
+    fr: {
+      culture: "French",
+      formality: "Very formal. Elaborate greetings and closings expected.",
+      tips: "French emails require formal openings ('Madame/Monsieur') and lengthy closings ('Je vous prie d\\'agréer...'). Never use first names initially.",
+    },
+    es: {
+      culture: "Spanish",
+      formality: "Warm and personal. Relationship-building matters.",
+      tips: "Spanish emails often include personal inquiries before business. Use 'Estimado/a' for formal, 'Hola' for casual.",
+    },
+    it: {
+      culture: "Italian",
+      formality: "Formal in business, warm in tone.",
+      tips: "Italian emails use 'Gentile' or 'Egregio' for formal address. Personal warmth is valued even in business.",
+    },
+    pt: {
+      culture: "Portuguese",
+      formality: "Formal but friendly. Respect hierarchy.",
+      tips: "Use 'Prezado/a' for formal address. Portuguese communication values courtesy and relationship.",
+    },
+    br: {
+      culture: "Brazilian Portuguese",
+      formality: "Warm and informal compared to Portugal.",
+      tips: "Brazilians are generally more casual. 'Olá' and 'Abraços' are common. Personal connection matters.",
+    },
+    jp: {
+      culture: "Japanese",
+      formality:
+        "Extremely formal. Honorifics and hierarchical language essential.",
+      tips: "Japanese emails follow strict patterns: seasonal greeting, self-introduction, purpose, closing. Use keigo (polite form). Never be too direct.",
+    },
+    kr: {
+      culture: "Korean",
+      formality: "Formal and hierarchical. Age and position matter.",
+      tips: "Korean emails use formal endings (-습니다). Address seniors with proper titles. Indirect refusals are preferred.",
+    },
+    cn: {
+      culture: "Chinese",
+      formality: "Formal in business. Respect for hierarchy.",
+      tips: "Chinese emails value modesty and indirect communication. Use proper titles. Avoid saying 'no' directly.",
+    },
+    in: {
+      culture: "Indian English",
+      formality: "Formal and respectful. Titles important.",
+      tips: "Indian business emails use 'Dear Sir/Madam' and 'Respected'. Be respectful of hierarchy and seniority.",
+    },
+    ae: {
+      culture: "Arabic",
+      formality: "Very formal. Religious and cultural phrases common.",
+      tips: "Arabic emails often begin with 'Bismillah' or 'As-salamu alaykum'. Show respect and patience. Relationship-building is crucial.",
+    },
+    sa: {
+      culture: "Arabic (Saudi)",
+      formality: "Highly formal. Protocol and titles essential.",
+      tips: "Saudi business communication is very formal. Use proper titles and show deep respect for tradition.",
+    },
+    il: {
+      culture: "Hebrew/Israeli",
+      formality: "Direct and informal. Get to the point.",
+      tips: "Israeli communication is very direct. First names are used quickly. Formality is minimal.",
+    },
+    tr: {
+      culture: "Turkish",
+      formality: "Formal in business. Respect and warmth valued.",
+      tips: "Turkish emails use 'Sayın' for formal address. Show respect for hierarchy while maintaining warmth.",
+    },
+    nl: {
+      culture: "Dutch",
+      formality: "Direct and efficient. Minimal small talk.",
+      tips: "Dutch communication is very direct - this is cultural, not rude. Be concise and clear.",
+    },
+    se: {
+      culture: "Swedish",
+      formality: "Informal and egalitarian. First names common.",
+      tips: "Swedish business culture is flat. Use first names. 'Lagom' (moderation) guides communication style.",
+    },
+    ru: {
+      culture: "Russian",
+      formality: "Formal in business. Patronymics used.",
+      tips: "Russian business emails are formal. Use name + patronymic. Directness is valued but maintain respect.",
+    },
+    mx: {
+      culture: "Mexican Spanish",
+      formality: "Warm and personal. Relationship-focused.",
+      tips: "Mexican communication values personal connection. Greetings and small talk before business. Use 'usted' for formal.",
+    },
+    other: {
+      culture: "International",
+      formality: "Professional and neutral.",
+      tips: "Use clear, simple language. Avoid idioms and culturally specific references.",
+    },
   };
 
   app.post("/api/emails/:id/translate", requireAuth, async (req, res) => {
@@ -2821,23 +3437,28 @@ Return ONLY valid JSON, no other text.`
         return res.status(403).json({
           error: "Pro plan required for email translation",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
+
       const id = req.params.id;
-      const { subject, body, sourceLanguage, targetLanguage, formality } = req.body;
+      const { subject, body, sourceLanguage, targetLanguage, formality } =
+        req.body;
 
       if (!body) {
         return res.status(400).json({ error: "Email body is required" });
       }
 
       const userRegion = user?.aiPreferences?.region || "us";
-      const userLang = targetLanguage || user?.aiPreferences?.preferredLanguage || "en";
-      const userFormality = formality || user?.aiPreferences?.formalityLevel || "auto";
+      const userLang =
+        targetLanguage || user?.aiPreferences?.preferredLanguage || "en";
+      const userFormality =
+        formality || user?.aiPreferences?.formalityLevel || "auto";
 
-      const targetLangName = userLang === "auto" || userLang === "en" ? "English" : userLang;
-      const culturalContext = REGION_CULTURAL_CONTEXT[userRegion] || REGION_CULTURAL_CONTEXT["other"];
+      const targetLangName =
+        userLang === "auto" || userLang === "en" ? "English" : userLang;
+      const culturalContext =
+        REGION_CULTURAL_CONTEXT[userRegion] || REGION_CULTURAL_CONTEXT["other"];
 
       const cacheKey = `${req.session.userId}-${id}-${userLang}-${userFormality}`;
       cleanupTranslationCache();
@@ -2848,17 +3469,18 @@ Return ONLY valid JSON, no other text.`
           translatedBody: cached.translatedBody,
           detectedLanguage: cached.detectedLanguage,
           culturalNotes: cached.culturalNotes,
-          cached: true
+          cached: true,
         });
       }
 
-      const formalityInstruction = userFormality === "formal" 
-        ? "Use highly formal, professional language. Include proper honorifics and formal greetings/closings."
-        : userFormality === "casual"
-        ? "Use a relaxed, conversational tone. Keep it natural and approachable."
-        : userFormality === "neutral"
-        ? "Use a balanced, professional but approachable tone."
-        : `Adapt the formality to match ${culturalContext.culture} business norms: ${culturalContext.formality}`;
+      const formalityInstruction =
+        userFormality === "formal"
+          ? "Use highly formal, professional language. Include proper honorifics and formal greetings/closings."
+          : userFormality === "casual"
+            ? "Use a relaxed, conversational tone. Keep it natural and approachable."
+            : userFormality === "neutral"
+              ? "Use a balanced, professional but approachable tone."
+              : `Adapt the formality to match ${culturalContext.culture} business norms: ${culturalContext.formality}`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -2882,30 +3504,32 @@ Translation Rules:
   "subject": translated subject line,
   "body": translated body,
   "culturalNotes": a brief note (1-2 sentences) about any cultural nuances in the original email that the reader should be aware of (or empty string if none)
-- Return ONLY valid JSON, no other text`
+- Return ONLY valid JSON, no other text`,
           },
           {
             role: "user",
-            content: JSON.stringify({ subject: subject || "", body })
-          }
+            content: JSON.stringify({ subject: subject || "", body }),
+          },
         ],
         max_tokens: 4000,
         temperature: 0.3,
       });
 
-      const responseText = completion.choices[0]?.message?.content || '{}';
-      
+      const responseText = completion.choices[0]?.message?.content || "{}";
+
       try {
-        const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, '').trim());
+        const parsed = JSON.parse(
+          responseText.replace(/```json\n?|\n?```/g, "").trim(),
+        );
         const result = {
           translatedSubject: parsed.subject || subject || "",
           translatedBody: parsed.body || body,
           detectedLanguage: sourceLanguage || "unknown",
-          culturalNotes: parsed.culturalNotes || ""
+          culturalNotes: parsed.culturalNotes || "",
         };
-        
+
         translationCache.set(cacheKey, { ...result, timestamp: Date.now() });
-        
+
         res.json({ ...result, cached: false });
       } catch {
         res.status(500).json({ error: "Failed to parse translation" });
@@ -2919,24 +3543,43 @@ Translation Rules:
   app.post("/api/cultural-etiquette", requireAuth, async (req, res) => {
     try {
       const { senderEmail, senderName, recipientRegion } = req.body;
-      
+
       const user = await storage.getUser(req.session.userId!);
       const userRegion = recipientRegion || user?.aiPreferences?.region || "us";
-      
+
       const senderDomain = senderEmail?.split("@")[1]?.toLowerCase() || "";
-      
+
       const domainToRegion: Record<string, string> = {
-        "jp": "jp", "co.jp": "jp", "ne.jp": "jp",
-        "de": "de", "co.uk": "gb", "uk": "gb",
-        "fr": "fr", "co.kr": "kr", "kr": "kr",
-        "cn": "cn", "com.cn": "cn", "com.br": "br",
-        "br": "br", "in": "in", "co.in": "in",
-        "ru": "ru", "com.au": "au", "au": "au",
-        "mx": "mx", "com.mx": "mx", "es": "es",
-        "it": "it", "nl": "nl", "se": "se",
-        "ae": "ae", "sa": "sa", "il": "il", "tr": "tr",
+        jp: "jp",
+        "co.jp": "jp",
+        "ne.jp": "jp",
+        de: "de",
+        "co.uk": "gb",
+        uk: "gb",
+        fr: "fr",
+        "co.kr": "kr",
+        kr: "kr",
+        cn: "cn",
+        "com.cn": "cn",
+        "com.br": "br",
+        br: "br",
+        in: "in",
+        "co.in": "in",
+        ru: "ru",
+        "com.au": "au",
+        au: "au",
+        mx: "mx",
+        "com.mx": "mx",
+        es: "es",
+        it: "it",
+        nl: "nl",
+        se: "se",
+        ae: "ae",
+        sa: "sa",
+        il: "il",
+        tr: "tr",
       };
-      
+
       let detectedSenderRegion = "other";
       for (const [tld, region] of Object.entries(domainToRegion)) {
         if (senderDomain.endsWith(`.${tld}`)) {
@@ -2944,26 +3587,36 @@ Translation Rules:
           break;
         }
       }
-      
-      const senderCulture = REGION_CULTURAL_CONTEXT[detectedSenderRegion] || REGION_CULTURAL_CONTEXT["other"];
-      const recipientCulture = REGION_CULTURAL_CONTEXT[userRegion] || REGION_CULTURAL_CONTEXT["other"];
-      
-      if (detectedSenderRegion === userRegion || detectedSenderRegion === "other") {
+
+      const senderCulture =
+        REGION_CULTURAL_CONTEXT[detectedSenderRegion] ||
+        REGION_CULTURAL_CONTEXT["other"];
+      const recipientCulture =
+        REGION_CULTURAL_CONTEXT[userRegion] || REGION_CULTURAL_CONTEXT["other"];
+
+      if (
+        detectedSenderRegion === userRegion ||
+        detectedSenderRegion === "other"
+      ) {
         return res.json({ tips: [], senderRegion: detectedSenderRegion });
       }
-      
+
       const tips = [
         {
           type: "greeting" as const,
-          text: `${senderCulture.culture} emails: ${senderCulture.tips}`
+          text: `${senderCulture.culture} emails: ${senderCulture.tips}`,
         },
         {
           type: "formality" as const,
-          text: `Formality: ${senderCulture.formality}`
-        }
+          text: `Formality: ${senderCulture.formality}`,
+        },
       ];
-      
-      res.json({ tips, senderRegion: detectedSenderRegion, senderCulture: senderCulture.culture });
+
+      res.json({
+        tips,
+        senderRegion: detectedSenderRegion,
+        senderCulture: senderCulture.culture,
+      });
     } catch (error) {
       console.error("Error getting cultural etiquette:", error);
       res.status(500).json({ error: "Failed to get cultural etiquette tips" });
@@ -2972,41 +3625,63 @@ Translation Rules:
 
   app.post("/api/send", requireAuth, emailSendLimiter, async (req, res) => {
     try {
-      const { to, cc, bcc, subject, body, replyToMessageId, delaySeconds = 5, immediate = false, scheduledFor, attachments } = req.body;
-      
+      const {
+        to,
+        cc,
+        bcc,
+        subject,
+        body,
+        replyToMessageId,
+        delaySeconds = 5,
+        immediate = false,
+        scheduledFor,
+        attachments,
+      } = req.body;
+
       if (!to || !Array.isArray(to) || to.length === 0) {
         return res.status(400).json({ error: "Recipients required" });
       }
       if (!subject || !body) {
         return res.status(400).json({ error: "Subject and body required" });
       }
-      
+
       const grant = await storage.getNylasGrant(req.session.userId!);
       if (!grant) {
-        return res.status(401).json({ error: "Not connected to email provider" });
+        return res
+          .status(401)
+          .json({ error: "Not connected to email provider" });
       }
 
       // Check daily send limit for Free plan users
       const sendLimit = await storage.checkDailySendLimit(req.session.userId!);
       if (!sendLimit.canSend) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: "Free plan limit reached. Upgrade to send unlimited emails.",
           limitReached: true,
-          resetAt: sendLimit.resetAt
+          resetAt: sendLimit.resetAt,
         });
       }
-      
+
       // Check if user has Pro/Business plan for scheduled sends
       if (scheduledFor) {
         // Validate scheduledFor is a valid date
         const parsedDate = new Date(scheduledFor);
         if (isNaN(parsedDate.getTime())) {
-          return res.status(400).json({ error: "Invalid scheduled time format" });
+          return res
+            .status(400)
+            .json({ error: "Invalid scheduled time format" });
         }
-        
+
         const user = await storage.getUser(req.session.userId!);
-        if (!user || (user.plan !== "pro" && user.plan !== "premium" && user.plan !== "business")) {
-          return res.status(403).json({ error: "Schedule send is a Pro/Business feature" });
+        if (
+          !user ||
+          (user.plan !== "pro" &&
+            user.plan !== "premium" &&
+            user.plan !== "business")
+        ) {
+          return res
+            .status(403)
+            .json({ error: "Schedule send is a Pro/Business feature" });
         }
       }
 
@@ -3019,33 +3694,43 @@ Translation Rules:
               attachment.content,
               attachment.filename,
               attachment.contentType,
-              true // isBase64
+              true, // isBase64
             );
-            
+
             if (!scanResult.isClean) {
-              console.warn(`Blocked malicious attachment upload: ${attachment.filename} - ${scanResult.malwareName}`);
+              console.warn(
+                `Blocked malicious attachment upload: ${attachment.filename} - ${scanResult.malwareName}`,
+              );
               return res.status(403).json({
                 error: `Attachment "${attachment.filename}" blocked for security reasons`,
-                reason: scanResult.malwareName
+                reason: scanResult.malwareName,
               });
             }
-            
+
             // Sanitize SVG files on upload/send (CASA Q40 - defense in depth)
-            const isSVG = attachment.filename?.toLowerCase().endsWith('.svg') || 
-                          attachment.contentType?.includes('svg');
+            const isSVG =
+              attachment.filename?.toLowerCase().endsWith(".svg") ||
+              attachment.contentType?.includes("svg");
             if (isSVG) {
               try {
-                const originalBuffer = Buffer.from(attachment.content, 'base64');
-                const { buffer: sanitizedBuffer, wasSanitized } = sanitizeSVGBuffer(
-                  originalBuffer, 
-                  attachment.filename, 
-                  attachment.contentType
+                const originalBuffer = Buffer.from(
+                  attachment.content,
+                  "base64",
                 );
+                const { buffer: sanitizedBuffer, wasSanitized } =
+                  sanitizeSVGBuffer(
+                    originalBuffer,
+                    attachment.filename,
+                    attachment.contentType,
+                  );
                 if (wasSanitized) {
-                  attachments[i].content = sanitizedBuffer.toString('base64');
+                  attachments[i].content = sanitizedBuffer.toString("base64");
                 }
               } catch (err) {
-                console.warn(`Failed to sanitize SVG attachment: ${attachment.filename}`, err);
+                console.warn(
+                  `Failed to sanitize SVG attachment: ${attachment.filename}`,
+                  err,
+                );
               }
             }
           }
@@ -3054,48 +3739,61 @@ Translation Rules:
 
       // If immediate send is requested (e.g., from undo confirmation), send now
       if (immediate) {
-        await nylas.sendMessage(grant.grantId, to, subject, body, replyToMessageId, cc, bcc, attachments);
+        await nylas.sendMessage(
+          grant.grantId,
+          to,
+          subject,
+          body,
+          replyToMessageId,
+          cc,
+          bcc,
+          attachments,
+        );
         nylas.invalidateMessagesCache(grant.grantId);
         // Increment daily send count for Free plan users
         await storage.incrementDailySendCount(req.session.userId!);
-        
+
         // Save contacts for autocomplete
         const allRecipients = [
           ...(Array.isArray(to) ? to : [to]),
-          ...(Array.isArray(cc) ? cc : (cc ? [cc] : [])),
-          ...(Array.isArray(bcc) ? bcc : (bcc ? [bcc] : []))
+          ...(Array.isArray(cc) ? cc : cc ? [cc] : []),
+          ...(Array.isArray(bcc) ? bcc : bcc ? [bcc] : []),
         ];
         for (const email of allRecipients) {
           if (email) {
-            storage.saveContact(req.session.userId!, email).catch(err => 
-              console.warn("Failed to save contact:", err)
-            );
+            storage
+              .saveContact(req.session.userId!, email)
+              .catch((err) => console.warn("Failed to save contact:", err));
           }
         }
-        
+
         // Log email send for security audit (CASA Q52)
-        storage.createSecurityAuditLog({
-          userId: req.session.userId!,
-          eventType: "email_send",
-          ipAddress: getClientIp(req),
-          userAgent: req.headers['user-agent'] || null,
-          resourceType: "email",
-          outcome: "success",
-          details: `Sent to: ${Array.isArray(to) ? to.join(', ') : to}, Subject: ${subject?.substring(0, 50) || 'No subject'}`
-        }).catch(err => console.warn("Failed to log security event:", err));
-        
+        storage
+          .createSecurityAuditLog({
+            userId: req.session.userId!,
+            eventType: "email_send",
+            ipAddress: getClientIp(req),
+            userAgent: req.headers["user-agent"] || null,
+            resourceType: "email",
+            outcome: "success",
+            details: `Sent to: ${Array.isArray(to) ? to.join(", ") : to}, Subject: ${subject?.substring(0, 50) || "No subject"}`,
+          })
+          .catch((err) => console.warn("Failed to log security event:", err));
+
         return res.json({ success: true, sent: true });
       }
-      
+
       // Determine scheduled send time
       let scheduledSendAt: Date;
       let isScheduledSend = false;
-      
+
       if (scheduledFor) {
         // Future scheduled send (Pro/Business feature)
         scheduledSendAt = new Date(scheduledFor);
         if (scheduledSendAt <= new Date()) {
-          return res.status(400).json({ error: "Scheduled time must be in the future" });
+          return res
+            .status(400)
+            .json({ error: "Scheduled time must be in the future" });
         }
         isScheduledSend = true;
       } else {
@@ -3103,36 +3801,42 @@ Translation Rules:
         const delay = Math.min(Math.max(delaySeconds, 1), 30); // Clamp between 1-30 seconds
         scheduledSendAt = new Date(Date.now() + delay * 1000);
       }
-      
+
       const pendingSend = await storage.createPendingSend({
         userId: req.session.userId!,
         grantId: grant.grantId,
         payload: { to, cc, bcc, subject, body, replyToMessageId, attachments },
         scheduledSendAt,
-        delaySeconds: isScheduledSend ? 0 : Math.min(Math.max(delaySeconds, 1), 30),
+        delaySeconds: isScheduledSend
+          ? 0
+          : Math.min(Math.max(delaySeconds, 1), 30),
         status: "pending",
       });
 
       // Increment daily send count for Free plan users when queuing
       await storage.incrementDailySendCount(req.session.userId!);
-      
+
       // Log email queue for security audit (CASA Q52)
-      storage.createSecurityAuditLog({
-        userId: req.session.userId!,
-        eventType: isScheduledSend ? "email_schedule" : "email_queue",
-        ipAddress: getClientIp(req),
-        userAgent: req.headers['user-agent'] || null,
-        resourceType: "email",
-        outcome: "success",
-        details: `Queued for: ${Array.isArray(to) ? to.join(', ') : to}, Subject: ${subject?.substring(0, 50) || 'No subject'}`
-      }).catch(err => console.warn("Failed to log security event:", err));
-      
-      res.json({ 
-        success: true, 
-        pendingSendId: pendingSend.id, 
+      storage
+        .createSecurityAuditLog({
+          userId: req.session.userId!,
+          eventType: isScheduledSend ? "email_schedule" : "email_queue",
+          ipAddress: getClientIp(req),
+          userAgent: req.headers["user-agent"] || null,
+          resourceType: "email",
+          outcome: "success",
+          details: `Queued for: ${Array.isArray(to) ? to.join(", ") : to}, Subject: ${subject?.substring(0, 50) || "No subject"}`,
+        })
+        .catch((err) => console.warn("Failed to log security event:", err));
+
+      res.json({
+        success: true,
+        pendingSendId: pendingSend.id,
         scheduledSendAt: pendingSend.scheduledSendAt,
-        delaySeconds: isScheduledSend ? 0 : Math.min(Math.max(delaySeconds, 1), 30),
-        isScheduledSend
+        delaySeconds: isScheduledSend
+          ? 0
+          : Math.min(Math.max(delaySeconds, 1), 30),
+        isScheduledSend,
       });
     } catch (error) {
       console.error("Error scheduling email:", error);
@@ -3155,9 +3859,14 @@ Translation Rules:
   app.post("/api/pending-sends/:id/cancel", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const cancelled = await storage.cancelPendingSend(req.session.userId!, id);
+      const cancelled = await storage.cancelPendingSend(
+        req.session.userId!,
+        id,
+      );
       if (!cancelled) {
-        return res.status(404).json({ error: "Pending send not found or already sent" });
+        return res
+          .status(404)
+          .json({ error: "Pending send not found or already sent" });
       }
       res.json({ success: true });
     } catch (error) {
@@ -3178,99 +3887,119 @@ Translation Rules:
   });
 
   // AI draft generation - all plans can use, free plan has 5/day limit
-  app.post("/api/drafts/generate", requireAuth, aiGenerationLimiter, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.session.userId!);
-      const userPlan = user?.plan || "free";
-      
-      // Feature flag check: is AI draft enabled for this user?
-      const aiDraftEnabled = await storage.isFeatureEnabled("ai_draft", user?.email || "");
-      if (!aiDraftEnabled) {
-        return res.status(403).json({ 
-          error: "AI Draft feature is currently disabled",
-          featureDisabled: true
-        });
-      }
-      
-      // Check free plan daily limit
-      const FREE_DAILY_LIMIT = 5;
-      if (userPlan === "free") {
-        const todayUsage = await storage.getAiUsageToday(req.session.userId!);
-        if (todayUsage >= FREE_DAILY_LIMIT) {
+  app.post(
+    "/api/drafts/generate",
+    requireAuth,
+    aiGenerationLimiter,
+    async (req, res) => {
+      try {
+        const user = await storage.getUser(req.session.userId!);
+        const userPlan = user?.plan || "free";
+
+        // Feature flag check: is AI draft enabled for this user?
+        const aiDraftEnabled = await storage.isFeatureEnabled(
+          "ai_draft",
+          user?.email || "",
+        );
+        if (!aiDraftEnabled) {
           return res.status(403).json({
-            error: "Daily AI draft limit reached",
-            limitReached: true,
-            used: todayUsage,
-            limit: FREE_DAILY_LIMIT,
-            remaining: 0,
-            currentPlan: userPlan
+            error: "AI Draft feature is currently disabled",
+            featureDisabled: true,
           });
         }
-      }
-      
-      const { emailId, tone = "professional", emailContent } = req.body;
-      
-      // Can provide either emailId to look up, or emailContent directly
-      let emailData: { sender: string; senderEmail: string; subject: string; body: string; preview?: string } | null = null;
-      
-      if (emailContent) {
-        // Direct email content provided (for multi-email responses)
-        emailData = emailContent;
-      } else if (emailId) {
-        // Try to find email by numeric ID first
-        const numericId = parseInt(emailId);
-        if (!isNaN(numericId) && numericId > 0) {
-          const email = await storage.getEmail(numericId);
-          if (email) {
-            emailData = email;
+
+        // Check free plan daily limit
+        const FREE_DAILY_LIMIT = 5;
+        if (userPlan === "free") {
+          const todayUsage = await storage.getAiUsageToday(req.session.userId!);
+          if (todayUsage >= FREE_DAILY_LIMIT) {
+            return res.status(403).json({
+              error: "Daily AI draft limit reached",
+              limitReached: true,
+              used: todayUsage,
+              limit: FREE_DAILY_LIMIT,
+              remaining: 0,
+              currentPlan: userPlan,
+            });
           }
         }
-        
-        // If not found and looks like a Nylas ID (longer string), fetch from Nylas
-        if (!emailData && emailId.length > 10) {
-          const grant = await storage.getNylasGrant(req.session.userId!);
-          if (grant) {
-            try {
-              const message = await nylas.getMessage(grant.grantId, emailId);
-              if (message) {
-                emailData = {
-                  sender: message.from,
-                  senderEmail: message.fromEmail,
-                  subject: message.subject,
-                  body: message.body,
-                  preview: "",
-                };
+
+        const { emailId, tone = "professional", emailContent } = req.body;
+
+        // Can provide either emailId to look up, or emailContent directly
+        let emailData: {
+          sender: string;
+          senderEmail: string;
+          subject: string;
+          body: string;
+          preview?: string;
+        } | null = null;
+
+        if (emailContent) {
+          // Direct email content provided (for multi-email responses)
+          emailData = emailContent;
+        } else if (emailId) {
+          // Try to find email by numeric ID first
+          const numericId = parseInt(emailId);
+          if (!isNaN(numericId) && numericId > 0) {
+            const email = await storage.getEmail(numericId);
+            if (email) {
+              emailData = email;
+            }
+          }
+
+          // If not found and looks like a Nylas ID (longer string), fetch from Nylas
+          if (!emailData && emailId.length > 10) {
+            const grant = await storage.getNylasGrant(req.session.userId!);
+            if (grant) {
+              try {
+                const message = await nylas.getMessage(grant.grantId, emailId);
+                if (message) {
+                  emailData = {
+                    sender: message.from,
+                    senderEmail: message.fromEmail,
+                    subject: message.subject,
+                    body: message.body,
+                    preview: "",
+                  };
+                }
+              } catch (nylasError) {
+                console.error("Error fetching email from Nylas:", nylasError);
               }
-            } catch (nylasError) {
-              console.error("Error fetching email from Nylas:", nylasError);
             }
           }
         }
-      }
-      
-      if (!emailData) {
-        return res.status(400).json({ error: "Email ID or content is required" });
-      }
 
-      // Use preview or body - some emails only have preview
-      const emailBody = emailData.body || emailData.preview || "";
+        if (!emailData) {
+          return res
+            .status(400)
+            .json({ error: "Email ID or content is required" });
+        }
 
-      const toneDescriptions: Record<string, string> = {
-        professional: "professional, courteous, and business-appropriate",
-        friendly: "warm, friendly, and approachable while remaining respectful",
-        casual: "relaxed, conversational, and informal",
-        formal: "highly formal, respectful, and traditional business communication",
-        concise: "brief, direct, and to-the-point with minimal pleasantries",
-      };
+        // Use preview or body - some emails only have preview
+        const emailBody = emailData.body || emailData.preview || "";
 
-      const toneDesc = toneDescriptions[tone] || toneDescriptions.professional;
+        const toneDescriptions: Record<string, string> = {
+          professional: "professional, courteous, and business-appropriate",
+          friendly:
+            "warm, friendly, and approachable while remaining respectful",
+          casual: "relaxed, conversational, and informal",
+          formal:
+            "highly formal, respectful, and traditional business communication",
+          concise: "brief, direct, and to-the-point with minimal pleasantries",
+        };
 
-      // Fetch user's learned writing style for personalization
-      const learnedStyle = await storage.getLearnedWritingStyle(req.session.userId!);
-      let styleContext = "";
-      
-      if (learnedStyle && learnedStyle.samplesAnalyzed > 0) {
-        styleContext = `
+        const toneDesc =
+          toneDescriptions[tone] || toneDescriptions.professional;
+
+        // Fetch user's learned writing style for personalization
+        const learnedStyle = await storage.getLearnedWritingStyle(
+          req.session.userId!,
+        );
+        let styleContext = "";
+
+        if (learnedStyle && learnedStyle.samplesAnalyzed > 0) {
+          styleContext = `
 IMPORTANT - Match the user's personal writing style:
 - Style: ${learnedStyle.styleAnalysis || "Direct and clear"}
 - Tone: ${learnedStyle.toneDescription || tone}
@@ -3278,9 +4007,9 @@ IMPORTANT - Match the user's personal writing style:
 - Sentence length: ${learnedStyle.avgSentenceLength || "medium"}
 Try to naturally incorporate their writing patterns while maintaining the requested ${tone} tone.
 `;
-      }
+        }
 
-      const prompt = `You are an email assistant. Generate a reply to the following email. The reply should be ${toneDesc}.
+        const prompt = `You are an email assistant. Generate a reply to the following email. The reply should be ${toneDesc}.
 ${styleContext}
 From: ${emailData.sender} <${emailData.senderEmail}>
 Subject: ${emailData.subject}
@@ -3297,202 +4026,241 @@ Please write a reply that:
 
 Reply:`;
 
-      const systemPrompt = learnedStyle && learnedStyle.samplesAnalyzed > 0
-        ? `You are an email assistant that writes replies matching the user's personal writing style. The user tends to write in a ${learnedStyle.toneDescription || tone} manner with ${learnedStyle.avgSentenceLength || "medium"} sentences. Mimic their natural voice while maintaining the requested ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`
-        : `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`;
+        const systemPrompt =
+          learnedStyle && learnedStyle.samplesAnalyzed > 0
+            ? `You are an email assistant that writes replies matching the user's personal writing style. The user tends to write in a ${learnedStyle.toneDescription || tone} manner with ${learnedStyle.avgSentenceLength || "medium"} sentences. Mimic their natural voice while maintaining the requested ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`
+            : `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 1024,
-      });
-
-      let generatedContent = response.choices[0]?.message?.content;
-      
-      if (!generatedContent || generatedContent.trim().length === 0) {
-        return res.status(422).json({ 
-          error: "Unable to generate AI response",
-          reason: "The email format or content could not be processed. This may be due to unusual formatting, empty content, or unsupported characters.",
-          canRetry: true
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          max_tokens: 1024,
         });
-      }
 
-      // Clean body - remove any subject-like prefixes the AI may have incorrectly included
-      const subjectPrefixes = [
-        /^Re:\s*/i,
-        /^Fwd:\s*/i,
-        /^Subject:\s*/i,
-      ];
-      for (const regex of subjectPrefixes) {
-        generatedContent = generatedContent.replace(regex, '');
-      }
-      
-      // If the content starts with the subject text, remove it
-      const originalSubject = emailData.subject || "";
-      if (originalSubject && generatedContent.toLowerCase().startsWith(originalSubject.toLowerCase())) {
-        generatedContent = generatedContent.substring(originalSubject.length).replace(/^[\s\n:,-]+/, '');
-      }
-      if (originalSubject && generatedContent.toLowerCase().startsWith(`re: ${originalSubject.toLowerCase()}`)) {
-        generatedContent = generatedContent.substring(originalSubject.length + 4).replace(/^[\s\n:,-]+/, '');
-      }
+        let generatedContent = response.choices[0]?.message?.content;
 
-      // Append email signature if enabled
-      if (user?.signatureEnabled && user?.emailSignature) {
-        generatedContent = `${generatedContent}\n\n${user.emailSignature}`;
-      }
-
-      // If emailId was numeric, save the draft
-      const numericEmailId = parseInt(emailId);
-      let draft = null;
-      if (!isNaN(numericEmailId)) {
-        const existingDraft = await storage.getDraftByEmailId(numericEmailId);
-        if (existingDraft) {
-          await storage.deleteDraft(existingDraft.id);
+        if (!generatedContent || generatedContent.trim().length === 0) {
+          return res.status(422).json({
+            error: "Unable to generate AI response",
+            reason:
+              "The email format or content could not be processed. This may be due to unusual formatting, empty content, or unsupported characters.",
+            canRetry: true,
+          });
         }
-        
-        draft = await storage.createDraft({
-          emailId: numericEmailId,
-          content: generatedContent,
-          subject: emailData.subject.startsWith("Re:") ? emailData.subject : `Re: ${emailData.subject}`,
-          recipientEmail: emailData.senderEmail || emailData.sender || "",
-          recipientName: emailData.sender || null,
-          userId: req.session.userId!,
-          isAiGenerated: true,
-          status: "draft",
-        });
-      } else {
-        // For Nylas IDs, just return the content without saving
-        draft = {
-          id: 0,
-          emailId: 0,
-          content: generatedContent,
-          subject: emailData.subject.startsWith("Re:") ? emailData.subject : `Re: ${emailData.subject}`,
-          recipientEmail: emailData.senderEmail || emailData.sender || "",
-          recipientName: emailData.sender || null,
-          userId: req.session.userId!,
-          isAiGenerated: true,
-          status: "draft",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      }
 
-      // Increment usage for free plan users
-      if (userPlan === "free") {
-        await storage.incrementAiUsage(req.session.userId!);
-      }
+        // Clean body - remove any subject-like prefixes the AI may have incorrectly included
+        const subjectPrefixes = [/^Re:\s*/i, /^Fwd:\s*/i, /^Subject:\s*/i];
+        for (const regex of subjectPrefixes) {
+          generatedContent = generatedContent.replace(regex, "");
+        }
 
-      res.json(draft);
-    } catch (error: any) {
-      console.error("Error generating draft:", error);
-      
-      // Provide more specific error messages based on the error type
-      let errorMessage = "Unable to generate AI response";
-      let reason = "An unexpected error occurred while processing your request.";
-      
-      if (error?.code === "content_filter") {
-        reason = "The email content was flagged by content filters and cannot be processed.";
-      } else if (error?.code === "context_length_exceeded") {
-        reason = "The email is too long to process. Try with a shorter email.";
-      } else if (error?.message?.includes("rate limit")) {
-        reason = "Too many requests. Please wait a moment and try again.";
-      } else if (error?.message?.includes("timeout")) {
-        reason = "The request timed out. Please try again.";
+        // If the content starts with the subject text, remove it
+        const originalSubject = emailData.subject || "";
+        if (
+          originalSubject &&
+          generatedContent
+            .toLowerCase()
+            .startsWith(originalSubject.toLowerCase())
+        ) {
+          generatedContent = generatedContent
+            .substring(originalSubject.length)
+            .replace(/^[\s\n:,-]+/, "");
+        }
+        if (
+          originalSubject &&
+          generatedContent
+            .toLowerCase()
+            .startsWith(`re: ${originalSubject.toLowerCase()}`)
+        ) {
+          generatedContent = generatedContent
+            .substring(originalSubject.length + 4)
+            .replace(/^[\s\n:,-]+/, "");
+        }
+
+        // Append email signature if enabled
+        if (user?.signatureEnabled && user?.emailSignature) {
+          generatedContent = `${generatedContent}\n\n${user.emailSignature}`;
+        }
+
+        // If emailId was numeric, save the draft
+        const numericEmailId = parseInt(emailId);
+        let draft = null;
+        if (!isNaN(numericEmailId)) {
+          const existingDraft = await storage.getDraftByEmailId(numericEmailId);
+          if (existingDraft) {
+            await storage.deleteDraft(existingDraft.id);
+          }
+
+          draft = await storage.createDraft({
+            emailId: numericEmailId,
+            content: generatedContent,
+            subject: emailData.subject.startsWith("Re:")
+              ? emailData.subject
+              : `Re: ${emailData.subject}`,
+            recipientEmail: emailData.senderEmail || emailData.sender || "",
+            recipientName: emailData.sender || null,
+            userId: req.session.userId!,
+            isAiGenerated: true,
+            status: "draft",
+          });
+        } else {
+          // For Nylas IDs, just return the content without saving
+          draft = {
+            id: 0,
+            emailId: 0,
+            content: generatedContent,
+            subject: emailData.subject.startsWith("Re:")
+              ? emailData.subject
+              : `Re: ${emailData.subject}`,
+            recipientEmail: emailData.senderEmail || emailData.sender || "",
+            recipientName: emailData.sender || null,
+            userId: req.session.userId!,
+            isAiGenerated: true,
+            status: "draft",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+        }
+
+        // Increment usage for free plan users
+        if (userPlan === "free") {
+          await storage.incrementAiUsage(req.session.userId!);
+        }
+
+        res.json(draft);
+      } catch (error: any) {
+        console.error("Error generating draft:", error);
+
+        // Provide more specific error messages based on the error type
+        let errorMessage = "Unable to generate AI response";
+        let reason =
+          "An unexpected error occurred while processing your request.";
+
+        if (error?.code === "content_filter") {
+          reason =
+            "The email content was flagged by content filters and cannot be processed.";
+        } else if (error?.code === "context_length_exceeded") {
+          reason =
+            "The email is too long to process. Try with a shorter email.";
+        } else if (error?.message?.includes("rate limit")) {
+          reason = "Too many requests. Please wait a moment and try again.";
+        } else if (error?.message?.includes("timeout")) {
+          reason = "The request timed out. Please try again.";
+        }
+
+        res.status(500).json({ error: errorMessage, reason, canRetry: true });
       }
-      
-      res.status(500).json({ error: errorMessage, reason, canRetry: true });
-    }
-  });
+    },
+  );
 
   // AI Polish - improves existing text
-  app.post("/api/ai/polish", requireAuth, aiGenerationLimiter, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.session.userId!);
-      const userPlan = user?.plan || "free";
-      
-      // Feature flag check: is AI polish enabled for this user?
-      const aiPolishEnabled = await storage.isFeatureEnabled("ai_polish", user?.email || "");
-      if (!aiPolishEnabled) {
-        return res.status(403).json({ 
-          error: "AI Polish feature is currently disabled",
-          featureDisabled: true
+  app.post(
+    "/api/ai/polish",
+    requireAuth,
+    aiGenerationLimiter,
+    async (req, res) => {
+      try {
+        const user = await storage.getUser(req.session.userId!);
+        const userPlan = user?.plan || "free";
+
+        // Feature flag check: is AI polish enabled for this user?
+        const aiPolishEnabled = await storage.isFeatureEnabled(
+          "ai_polish",
+          user?.email || "",
+        );
+        if (!aiPolishEnabled) {
+          return res.status(403).json({
+            error: "AI Polish feature is currently disabled",
+            featureDisabled: true,
+          });
+        }
+
+        const { text, mode = "basic" } = req.body;
+
+        if (!text || text.trim().length === 0) {
+          return res.status(400).json({ error: "Text is required" });
+        }
+
+        // Advanced polish modes are only for Pro+ users (basic and casual free for all)
+        const advancedModes = [
+          "formal",
+          "concise",
+          "persuasive",
+          "empathetic",
+          "executive",
+        ];
+        if (advancedModes.includes(mode) && userPlan === "free") {
+          return res.status(403).json({
+            error: "Advanced polish modes require Pro or Business plan",
+            currentPlan: userPlan,
+            requiredPlan: "pro",
+          });
+        }
+
+        const modeInstructions: Record<string, string> = {
+          basic:
+            "Fix grammar, spelling, and punctuation. Improve clarity while keeping the original tone and meaning.",
+          formal:
+            "Make the text more formal and professional. Use proper business language.",
+          casual:
+            "Make the text more casual and friendly while remaining professional.",
+          concise:
+            "Shorten the text while preserving key information. Remove redundancy.",
+          persuasive: "Make the text more compelling and persuasive.",
+          empathetic: "Add more empathetic and understanding language.",
+          executive:
+            "Rewrite for an executive audience - brief, impactful, and action-oriented.",
+        };
+
+        const instruction = modeInstructions[mode] || modeInstructions.basic;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: `You are an email writing assistant. Your task: ${instruction}. Return ONLY the improved text without any explanations or quotes around it.`,
+            },
+            {
+              role: "user",
+              content: text,
+            },
+          ],
+          max_tokens: 1024,
         });
+
+        const polishedText = response.choices[0]?.message?.content;
+
+        if (!polishedText || polishedText.trim().length === 0) {
+          return res.status(422).json({ error: "Unable to polish text" });
+        }
+
+        res.json({ polished: polishedText.trim() });
+      } catch (error) {
+        console.error("Error polishing text:", error);
+        res.status(500).json({ error: "Failed to polish text" });
       }
-      
-      const { text, mode = "basic" } = req.body;
-      
-      if (!text || text.trim().length === 0) {
-        return res.status(400).json({ error: "Text is required" });
-      }
-
-      // Advanced polish modes are only for Pro+ users (basic and casual free for all)
-      const advancedModes = ["formal", "concise", "persuasive", "empathetic", "executive"];
-      if (advancedModes.includes(mode) && userPlan === "free") {
-        return res.status(403).json({ 
-          error: "Advanced polish modes require Pro or Business plan",
-          currentPlan: userPlan,
-          requiredPlan: "pro"
-        });
-      }
-
-      const modeInstructions: Record<string, string> = {
-        basic: "Fix grammar, spelling, and punctuation. Improve clarity while keeping the original tone and meaning.",
-        formal: "Make the text more formal and professional. Use proper business language.",
-        casual: "Make the text more casual and friendly while remaining professional.",
-        concise: "Shorten the text while preserving key information. Remove redundancy.",
-        persuasive: "Make the text more compelling and persuasive.",
-        empathetic: "Add more empathetic and understanding language.",
-        executive: "Rewrite for an executive audience - brief, impactful, and action-oriented.",
-      };
-
-      const instruction = modeInstructions[mode] || modeInstructions.basic;
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are an email writing assistant. Your task: ${instruction}. Return ONLY the improved text without any explanations or quotes around it.`
-          },
-          {
-            role: "user",
-            content: text
-          }
-        ],
-        max_tokens: 1024,
-      });
-
-      const polishedText = response.choices[0]?.message?.content;
-      
-      if (!polishedText || polishedText.trim().length === 0) {
-        return res.status(422).json({ error: "Unable to polish text" });
-      }
-
-      res.json({ polished: polishedText.trim() });
-    } catch (error) {
-      console.error("Error polishing text:", error);
-      res.status(500).json({ error: "Failed to polish text" });
-    }
-  });
+    },
+  );
 
   // AI Refine - modify existing response based on instructions
   app.post("/api/ai/refine", requireAuth, async (req, res) => {
     try {
       const { text, instruction, originalEmail } = req.body;
-      
+
       if (!text || text.trim().length === 0) {
         return res.status(400).json({ error: "Text is required" });
       }
-      
+
       if (!instruction || instruction.trim().length === 0) {
         return res.status(400).json({ error: "Instruction is required" });
       }
@@ -3513,7 +4281,7 @@ ${originalEmail.body || originalEmail.preview || ""}
         messages: [
           {
             role: "system",
-            content: `You are an email writing assistant. Modify the given email response based on the user's instruction. Return ONLY the modified text without explanations.${contextPrompt}`
+            content: `You are an email writing assistant. Modify the given email response based on the user's instruction. Return ONLY the modified text without explanations.${contextPrompt}`,
           },
           {
             role: "user",
@@ -3522,29 +4290,33 @@ ${text}
 
 Instruction: ${instruction}
 
-Please modify the response according to the instruction.`
-          }
+Please modify the response according to the instruction.`,
+          },
         ],
         max_tokens: 1024,
       });
 
       const refinedText = response.choices[0]?.message?.content;
-      
+
       if (!refinedText || refinedText.trim().length === 0) {
         return res.status(422).json({ error: "Unable to refine text" });
       }
 
       // Capture draft edit as writing sample for personalization
-      const wordCount = refinedText.split(/\s+/).filter((w: string) => w.length > 0).length;
+      const wordCount = refinedText
+        .split(/\s+/)
+        .filter((w: string) => w.length > 0).length;
       if (wordCount >= 10) {
-        storage.createWritingSample({
-          userId: req.session.userId!,
-          sampleType: "draft_edit",
-          originalContent: text,
-          finalContent: refinedText.trim(),
-          context: instruction,
-          wordCount,
-        }).catch(err => console.error("Failed to capture draft edit:", err));
+        storage
+          .createWritingSample({
+            userId: req.session.userId!,
+            sampleType: "draft_edit",
+            originalContent: text,
+            finalContent: refinedText.trim(),
+            context: instruction,
+            wordCount,
+          })
+          .catch((err) => console.error("Failed to capture draft edit:", err));
       }
 
       res.json({ refined: refinedText.trim() });
@@ -3556,60 +4328,74 @@ Please modify the response according to the instruction.`
 
   // Quick AI draft generation for compose dialog (returns subject + body)
   // All plans can use AI drafts - free plan has 5/day limit
-  app.post("/api/drafts/quick-generate", requireAuth, aiGenerationLimiter, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.session.userId!);
-      const userPlan = user?.plan || "free";
-      
-      // Check free plan daily limit
-      const FREE_DAILY_LIMIT = 5;
-      if (userPlan === "free") {
-        const todayUsage = await storage.getAiUsageToday(req.session.userId!);
-        if (todayUsage >= FREE_DAILY_LIMIT) {
-          return res.status(403).json({
-            error: "Daily AI draft limit reached",
-            limitReached: true,
-            used: todayUsage,
-            limit: FREE_DAILY_LIMIT,
-            remaining: 0,
-            currentPlan: userPlan
-          });
+  app.post(
+    "/api/drafts/quick-generate",
+    requireAuth,
+    aiGenerationLimiter,
+    async (req, res) => {
+      try {
+        const user = await storage.getUser(req.session.userId!);
+        const userPlan = user?.plan || "free";
+
+        // Check free plan daily limit
+        const FREE_DAILY_LIMIT = 5;
+        if (userPlan === "free") {
+          const todayUsage = await storage.getAiUsageToday(req.session.userId!);
+          if (todayUsage >= FREE_DAILY_LIMIT) {
+            return res.status(403).json({
+              error: "Daily AI draft limit reached",
+              limitReached: true,
+              used: todayUsage,
+              limit: FREE_DAILY_LIMIT,
+              remaining: 0,
+              currentPlan: userPlan,
+            });
+          }
         }
-      }
-      
-      const { mode, originalEmail, instructions, tone: requestedTone, existingBody } = req.body;
-      
-      // Use requested tone or fall back to user's AI preferences
-      const aiPrefs = user?.aiPreferences as { replyTone?: string } | undefined;
-      const tone = requestedTone || aiPrefs?.replyTone || "professional";
-      
-      const toneDescriptions: Record<string, string> = {
-        professional: "professional, courteous, and business-appropriate",
-        friendly: "warm, friendly, and approachable while remaining respectful",
-        concise: "brief, direct, and to-the-point with minimal pleasantries",
-        casual: "casual, relaxed, and conversational",
-        formal: "formal, respectful, and traditional business style",
-        custom: "professional and thoughtful",
-      };
-      const toneDesc = toneDescriptions[tone] || toneDescriptions.professional;
 
-      let prompt: string;
-      let systemMessage: string;
+        const {
+          mode,
+          originalEmail,
+          instructions,
+          tone: requestedTone,
+          existingBody,
+        } = req.body;
 
-      if (mode === "reply" || mode === "replyAll") {
-        systemMessage = `You are an email assistant that writes clear, concise email replies. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Re:", or any subject prefix in the body.`;
-        
-        // If there's existing body content, user wants to refine/tweak it
-        const existingContent = existingBody?.trim() || "";
-        
-        if (existingContent) {
-          prompt = `Improve and refine this draft reply with a ${toneDesc} tone.
+        // Use requested tone or fall back to user's AI preferences
+        const aiPrefs = user?.aiPreferences as
+          | { replyTone?: string }
+          | undefined;
+        const tone = requestedTone || aiPrefs?.replyTone || "professional";
+
+        const toneDescriptions: Record<string, string> = {
+          professional: "professional, courteous, and business-appropriate",
+          friendly:
+            "warm, friendly, and approachable while remaining respectful",
+          concise: "brief, direct, and to-the-point with minimal pleasantries",
+          casual: "casual, relaxed, and conversational",
+          formal: "formal, respectful, and traditional business style",
+          custom: "professional and thoughtful",
+        };
+        const toneDesc =
+          toneDescriptions[tone] || toneDescriptions.professional;
+
+        let prompt: string;
+        let systemMessage: string;
+
+        if (mode === "reply" || mode === "replyAll") {
+          systemMessage = `You are an email assistant that writes clear, concise email replies. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Re:", or any subject prefix in the body.`;
+
+          // If there's existing body content, user wants to refine/tweak it
+          const existingContent = existingBody?.trim() || "";
+
+          if (existingContent) {
+            prompt = `Improve and refine this draft reply with a ${toneDesc} tone.
 
 Original email being replied to:
 From: ${originalEmail?.from || "Unknown"} <${originalEmail?.fromEmail || ""}>
 Subject: ${originalEmail?.subject || "No subject"}
 
-${originalEmail?.body?.replace(/<[^>]*>/g, '').substring(0, 1500) || ""}
+${originalEmail?.body?.replace(/<[^>]*>/g, "").substring(0, 1500) || ""}
 
 Current draft reply:
 ${existingContent}
@@ -3622,15 +4408,15 @@ Provide an improved version that:
 3. Is clear and well-structured
 4. IMPORTANT: The body should contain ONLY the email content - do NOT include "Re:", subject line text, or any subject prefix in the body
 
-Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ''}", "body": "Your improved reply text here (no subject line in body)..."}`;
-        } else {
-          prompt = `Generate a reply to this email with a ${toneDesc} tone.
+Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ""}", "body": "Your improved reply text here (no subject line in body)..."}`;
+          } else {
+            prompt = `Generate a reply to this email with a ${toneDesc} tone.
 
 Original email:
 From: ${originalEmail?.from || "Unknown"} <${originalEmail?.fromEmail || ""}>
 Subject: ${originalEmail?.subject || "No subject"}
 
-${originalEmail?.body?.replace(/<[^>]*>/g, '').substring(0, 2000) || ""}
+${originalEmail?.body?.replace(/<[^>]*>/g, "").substring(0, 2000) || ""}
 
 ${instructions ? `Additional instructions: ${instructions}` : ""}
 
@@ -3641,15 +4427,15 @@ Write a reply that:
 4. Is concise (2-3 paragraphs max)
 5. IMPORTANT: The body should contain ONLY the email content - do NOT include "Re:", subject line text, or any subject prefix in the body
 
-Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ''}", "body": "Your reply text here (no subject line in body)..."}`;
-        }
-      } else if (mode === "forward") {
-        systemMessage = `You are an email assistant. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Fwd:", or any subject prefix in the body.`;
-        
-        const existingContent = existingBody?.trim() || "";
-        
-        if (existingContent) {
-          prompt = `Improve this forwarding message with a ${toneDesc} tone.
+Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ""}", "body": "Your reply text here (no subject line in body)..."}`;
+          }
+        } else if (mode === "forward") {
+          systemMessage = `You are an email assistant. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Fwd:", or any subject prefix in the body.`;
+
+          const existingContent = existingBody?.trim() || "";
+
+          if (existingContent) {
+            prompt = `Improve this forwarding message with a ${toneDesc} tone.
 
 Original email being forwarded:
 From: ${originalEmail?.from || "Unknown"}
@@ -3660,9 +4446,9 @@ ${existingContent}
 
 ${instructions ? `User instructions for changes: ${instructions}` : "Improve the clarity and tone of this forwarding message."}
 
-Respond with JSON only: {"subject": "Fwd: ${originalEmail?.subject || ''}", "body": "Your improved forwarding message here..."}`;
-        } else {
-          prompt = `Generate a brief forwarding message for this email with a ${toneDesc} tone.
+Respond with JSON only: {"subject": "Fwd: ${originalEmail?.subject || ""}", "body": "Your improved forwarding message here..."}`;
+          } else {
+            prompt = `Generate a brief forwarding message for this email with a ${toneDesc} tone.
 
 Original email being forwarded:
 From: ${originalEmail?.from || "Unknown"}
@@ -3670,16 +4456,16 @@ Subject: ${originalEmail?.subject || "No subject"}
 
 ${instructions ? `Additional instructions: ${instructions}` : "Write a brief message to introduce why you're forwarding this email. Keep it to 1-2 sentences."}
 
-Respond with JSON only: {"subject": "Fwd: ${originalEmail?.subject || ''}", "body": "Your forwarding message here..."}`;
-        }
-      } else {
-        // New email
-        systemMessage = `You are an email assistant that helps compose professional emails. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line or any subject prefix in the body.`;
-        
-        const existingContent = existingBody?.trim() || "";
-        
-        if (existingContent) {
-          prompt = `Improve and refine this email draft with a ${toneDesc} tone.
+Respond with JSON only: {"subject": "Fwd: ${originalEmail?.subject || ""}", "body": "Your forwarding message here..."}`;
+          }
+        } else {
+          // New email
+          systemMessage = `You are an email assistant that helps compose professional emails. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line or any subject prefix in the body.`;
+
+          const existingContent = existingBody?.trim() || "";
+
+          if (existingContent) {
+            prompt = `Improve and refine this email draft with a ${toneDesc} tone.
 
 Current draft:
 ${existingContent}
@@ -3692,8 +4478,8 @@ Provide an improved version that:
 3. Is clear and well-structured
 
 Respond with JSON only: {"subject": "Appropriate subject for this email", "body": "Your improved email text here..."}`;
-        } else if (instructions) {
-          prompt = `Write a new email with a ${toneDesc} tone.
+          } else if (instructions) {
+            prompt = `Write a new email with a ${toneDesc} tone.
 
 Instructions: ${instructions}
 
@@ -3703,8 +4489,8 @@ Write a clear, well-structured email that:
 3. Is appropriately detailed
 
 Respond with JSON only: {"subject": "Your subject here", "body": "Your email body here..."}`;
-        } else {
-          prompt = `Generate a new email with a ${toneDesc} tone. Since no specific context is provided, create a professional template email that the user can customize.
+          } else {
+            prompt = `Generate a new email with a ${toneDesc} tone. Since no specific context is provided, create a professional template email that the user can customize.
 
 Write a brief, customizable email template that:
 1. Has a clear, professional subject line
@@ -3712,115 +4498,135 @@ Write a brief, customizable email template that:
 3. Is concise and easy to customize
 
 Respond with JSON only: {"subject": "Your subject here", "body": "Your email body here..."}`;
+          }
         }
-      }
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemMessage },
-          { role: "user", content: prompt }
-        ],
-        max_tokens: 512,
-        response_format: { type: "json_object" },
-      });
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemMessage },
+            { role: "user", content: prompt },
+          ],
+          max_tokens: 512,
+          response_format: { type: "json_object" },
+        });
 
-      const content = response.choices[0]?.message?.content;
-      
-      if (!content || content.trim().length === 0) {
-        return res.status(422).json({ 
-          error: "Unable to generate AI response",
-          reason: "The email format or content could not be processed. This may be due to unusual formatting or unsupported content.",
-          canRetry: true
-        });
+        const content = response.choices[0]?.message?.content;
+
+        if (!content || content.trim().length === 0) {
+          return res.status(422).json({
+            error: "Unable to generate AI response",
+            reason:
+              "The email format or content could not be processed. This may be due to unusual formatting or unsupported content.",
+            canRetry: true,
+          });
+        }
+
+        // Increment usage for free plan users
+        if (userPlan === "free") {
+          await storage.incrementAiUsage(req.session.userId!);
+        }
+
+        try {
+          const parsed = JSON.parse(content);
+
+          // Clean body - remove any subject-like prefixes the AI may have incorrectly included
+          let body = parsed.body || "";
+          const originalSubject = originalEmail?.subject || "";
+
+          // Remove common subject-like prefixes from body start
+          const subjectPrefixes = [/^Re:\s*/i, /^Fwd:\s*/i, /^Subject:\s*/i];
+          for (const regex of subjectPrefixes) {
+            body = body.replace(regex, "");
+          }
+
+          // If the body starts with the subject text, remove it
+          if (
+            originalSubject &&
+            body.toLowerCase().startsWith(originalSubject.toLowerCase())
+          ) {
+            body = body
+              .substring(originalSubject.length)
+              .replace(/^[\s\n:,-]+/, "");
+          }
+          if (
+            originalSubject &&
+            body
+              .toLowerCase()
+              .startsWith(`re: ${originalSubject.toLowerCase()}`)
+          ) {
+            body = body
+              .substring(originalSubject.length + 4)
+              .replace(/^[\s\n:,-]+/, "");
+          }
+
+          // Append email signature if enabled
+          if (user?.signatureEnabled && user?.emailSignature) {
+            body = `${body}\n\n${user.emailSignature}`;
+          }
+
+          // Get remaining count for free users
+          const todayUsage =
+            userPlan === "free"
+              ? await storage.getAiUsageToday(req.session.userId!)
+              : 0;
+          const remaining =
+            userPlan === "free" ? Math.max(0, 5 - todayUsage) : null;
+
+          res.json({
+            subject: parsed.subject || "",
+            body,
+            usage:
+              userPlan === "free"
+                ? { used: todayUsage, limit: 5, remaining }
+                : null,
+          });
+        } catch {
+          // Append signature even in fallback case
+          let fallbackBody = content;
+          if (user?.signatureEnabled && user?.emailSignature) {
+            fallbackBody = `${fallbackBody}\n\n${user.emailSignature}`;
+          }
+          res.json({ subject: "", body: fallbackBody });
+        }
+      } catch (error: any) {
+        console.error("Error generating quick draft:", error);
+
+        let errorMessage = "Unable to generate AI response";
+        let reason =
+          "An unexpected error occurred while processing your request.";
+
+        if (error?.code === "content_filter") {
+          reason =
+            "The email content was flagged by content filters and cannot be processed.";
+        } else if (error?.code === "context_length_exceeded") {
+          reason =
+            "The email is too long to process. Try with a shorter email.";
+        } else if (error?.message?.includes("rate limit")) {
+          reason = "Too many requests. Please wait a moment and try again.";
+        } else if (error?.message?.includes("timeout")) {
+          reason = "The request timed out. Please try again.";
+        }
+
+        res.status(500).json({ error: errorMessage, reason, canRetry: true });
       }
-      
-      // Increment usage for free plan users
-      if (userPlan === "free") {
-        await storage.incrementAiUsage(req.session.userId!);
-      }
-      
-      try {
-        const parsed = JSON.parse(content);
-        
-        // Clean body - remove any subject-like prefixes the AI may have incorrectly included
-        let body = parsed.body || "";
-        const originalSubject = originalEmail?.subject || "";
-        
-        // Remove common subject-like prefixes from body start
-        const subjectPrefixes = [
-          /^Re:\s*/i,
-          /^Fwd:\s*/i,
-          /^Subject:\s*/i,
-        ];
-        for (const regex of subjectPrefixes) {
-          body = body.replace(regex, '');
-        }
-        
-        // If the body starts with the subject text, remove it
-        if (originalSubject && body.toLowerCase().startsWith(originalSubject.toLowerCase())) {
-          body = body.substring(originalSubject.length).replace(/^[\s\n:,-]+/, '');
-        }
-        if (originalSubject && body.toLowerCase().startsWith(`re: ${originalSubject.toLowerCase()}`)) {
-          body = body.substring(originalSubject.length + 4).replace(/^[\s\n:,-]+/, '');
-        }
-        
-        // Append email signature if enabled
-        if (user?.signatureEnabled && user?.emailSignature) {
-          body = `${body}\n\n${user.emailSignature}`;
-        }
-        
-        // Get remaining count for free users
-        const todayUsage = userPlan === "free" ? await storage.getAiUsageToday(req.session.userId!) : 0;
-        const remaining = userPlan === "free" ? Math.max(0, 5 - todayUsage) : null;
-        
-        res.json({
-          subject: parsed.subject || "",
-          body,
-          usage: userPlan === "free" ? { used: todayUsage, limit: 5, remaining } : null,
-        });
-      } catch {
-        // Append signature even in fallback case
-        let fallbackBody = content;
-        if (user?.signatureEnabled && user?.emailSignature) {
-          fallbackBody = `${fallbackBody}\n\n${user.emailSignature}`;
-        }
-        res.json({ subject: "", body: fallbackBody });
-      }
-    } catch (error: any) {
-      console.error("Error generating quick draft:", error);
-      
-      let errorMessage = "Unable to generate AI response";
-      let reason = "An unexpected error occurred while processing your request.";
-      
-      if (error?.code === "content_filter") {
-        reason = "The email content was flagged by content filters and cannot be processed.";
-      } else if (error?.code === "context_length_exceeded") {
-        reason = "The email is too long to process. Try with a shorter email.";
-      } else if (error?.message?.includes("rate limit")) {
-        reason = "Too many requests. Please wait a moment and try again.";
-      } else if (error?.message?.includes("timeout")) {
-        reason = "The request timed out. Please try again.";
-      }
-      
-      res.status(500).json({ error: errorMessage, reason, canRetry: true });
-    }
-  });
+    },
+  );
 
   // Get AI usage status for current user
   app.get("/api/ai-usage", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
       const userPlan = user?.plan || "free";
-      
+
       if (userPlan !== "free") {
         return res.json({ unlimited: true, plan: userPlan });
       }
-      
+
       const todayUsage = await storage.getAiUsageToday(req.session.userId!);
       const limit = 5;
       const remaining = Math.max(0, limit - todayUsage);
-      
+
       res.json({
         unlimited: false,
         plan: userPlan,
@@ -3840,29 +4646,36 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
     try {
       const user = await storage.getUser(req.session.userId!);
       const userPlan = user?.plan || "free";
-      const isPro = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
-      
+      const isPro =
+        userPlan === "pro" || userPlan === "premium" || userPlan === "business";
+
       const { content, polishType = "polish", subject } = req.body;
-      
+
       if (!content || !content.trim()) {
         return res.status(400).json({ error: "Content is required" });
       }
-      
+
       // Check if user has access to advanced polish options
-      if ((polishType === "longer" || polishType === "shorter" || polishType === "concise") && !isPro) {
+      if (
+        (polishType === "longer" ||
+          polishType === "shorter" ||
+          polishType === "concise") &&
+        !isPro
+      ) {
         return res.status(403).json({
           error: "Pro plan required for advanced polish options",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
+
       let prompt: string;
       let systemMessage: string;
-      
+
       switch (polishType) {
         case "longer":
-          systemMessage = "You are an expert editor. Expand the given text while maintaining its core message and tone.";
+          systemMessage =
+            "You are an expert editor. Expand the given text while maintaining its core message and tone.";
           prompt = `Expand this email text to be longer and more detailed. Add more context, examples, or explanations while keeping the same professional tone. Do not add unnecessary fluff - make the additions meaningful.
 
 Original text:
@@ -3872,9 +4685,10 @@ ${subject ? `Context - Email subject: ${subject}` : ""}
 
 Return only the expanded text, nothing else.`;
           break;
-          
+
         case "shorter":
-          systemMessage = "You are an expert editor. Shorten the given text while preserving key information.";
+          systemMessage =
+            "You are an expert editor. Shorten the given text while preserving key information.";
           prompt = `Make this email text shorter while keeping the essential message. Remove redundancy and unnecessary words.
 
 Original text:
@@ -3884,9 +4698,10 @@ ${subject ? `Context - Email subject: ${subject}` : ""}
 
 Return only the shortened text, nothing else.`;
           break;
-          
+
         case "concise":
-          systemMessage = "You are an expert editor. Make the text more concise and direct.";
+          systemMessage =
+            "You are an expert editor. Make the text more concise and direct.";
           prompt = `Rewrite this email text to be more concise and direct. Get straight to the point while maintaining professionalism.
 
 Original text:
@@ -3896,9 +4711,10 @@ ${subject ? `Context - Email subject: ${subject}` : ""}
 
 Return only the concise version, nothing else.`;
           break;
-          
+
         default: // "polish" - basic improvement
-          systemMessage = "You are an expert editor. Improve the given text for clarity, grammar, and professionalism.";
+          systemMessage =
+            "You are an expert editor. Improve the given text for clarity, grammar, and professionalism.";
           prompt = `Improve this email text for better clarity, grammar, and professional tone. Fix any errors and enhance readability while keeping the original meaning.
 
 Original text:
@@ -3908,18 +4724,18 @@ ${subject ? `Context - Email subject: ${subject}` : ""}
 
 Return only the improved text, nothing else.`;
       }
-      
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemMessage },
-          { role: "user", content: prompt }
+          { role: "user", content: prompt },
         ],
         max_tokens: 1024,
       });
-      
+
       const polishedContent = response.choices[0]?.message?.content || content;
-      
+
       res.json({ content: polishedContent.trim() });
     } catch (error) {
       console.error("Error polishing content:", error);
@@ -3931,16 +4747,16 @@ Return only the improved text, nothing else.`;
     try {
       const id = parseInt(req.params.id);
       const { content } = req.body;
-      
-      const draft = await storage.updateDraft(id, { 
+
+      const draft = await storage.updateDraft(id, {
         content,
-        isAiGenerated: false 
+        isAiGenerated: false,
       });
-      
+
       if (!draft) {
         return res.status(404).json({ error: "Draft not found" });
       }
-      
+
       res.json(draft);
     } catch (error) {
       console.error("Error updating draft:", error);
@@ -3952,14 +4768,21 @@ Return only the improved text, nothing else.`;
     try {
       const id = parseInt(req.params.id);
       const draft = await storage.getDraft(id);
-      
+
       if (!draft) {
         return res.status(404).json({ error: "Draft not found" });
       }
 
-      const updated = await storage.updateDraft(id, { status: "sent", scheduledAt: null });
-      
-      res.json({ success: true, message: "Reply sent successfully", draft: updated });
+      const updated = await storage.updateDraft(id, {
+        status: "sent",
+        scheduledAt: null,
+      });
+
+      res.json({
+        success: true,
+        message: "Reply sent successfully",
+        draft: updated,
+      });
     } catch (error) {
       console.error("Error sending draft:", error);
       res.status(500).json({ error: "Failed to send draft" });
@@ -3970,28 +4793,34 @@ Return only the improved text, nothing else.`;
     try {
       const id = parseInt(req.params.id);
       const { scheduledAt } = req.body;
-      
+
       if (!scheduledAt) {
         return res.status(400).json({ error: "scheduledAt is required" });
       }
 
       const draft = await storage.getDraft(id);
-      
+
       if (!draft) {
         return res.status(404).json({ error: "Draft not found" });
       }
 
       const scheduledDate = new Date(scheduledAt);
       if (scheduledDate <= new Date()) {
-        return res.status(400).json({ error: "Scheduled time must be in the future" });
+        return res
+          .status(400)
+          .json({ error: "Scheduled time must be in the future" });
       }
 
-      const updated = await storage.updateDraft(id, { 
-        status: "scheduled", 
-        scheduledAt: scheduledDate 
+      const updated = await storage.updateDraft(id, {
+        status: "scheduled",
+        scheduledAt: scheduledDate,
       });
-      
-      res.json({ success: true, message: "Reply scheduled successfully", draft: updated });
+
+      res.json({
+        success: true,
+        message: "Reply scheduled successfully",
+        draft: updated,
+      });
     } catch (error) {
       console.error("Error scheduling draft:", error);
       res.status(500).json({ error: "Failed to schedule draft" });
@@ -4002,7 +4831,7 @@ Return only the improved text, nothing else.`;
     try {
       const id = parseInt(req.params.id);
       const draft = await storage.getDraft(id);
-      
+
       if (!draft) {
         return res.status(404).json({ error: "Draft not found" });
       }
@@ -4011,12 +4840,16 @@ Return only the improved text, nothing else.`;
         return res.status(400).json({ error: "Draft is not scheduled" });
       }
 
-      const updated = await storage.updateDraft(id, { 
-        status: "draft", 
-        scheduledAt: null 
+      const updated = await storage.updateDraft(id, {
+        status: "draft",
+        scheduledAt: null,
       });
-      
-      res.json({ success: true, message: "Schedule cancelled", draft: updated });
+
+      res.json({
+        success: true,
+        message: "Schedule cancelled",
+        draft: updated,
+      });
     } catch (error) {
       console.error("Error cancelling schedule:", error);
       res.status(500).json({ error: "Failed to cancel schedule" });
@@ -4045,12 +4878,19 @@ Return only the improved text, nothing else.`;
 
   app.post("/api/drafts", requireAuth, async (req, res) => {
     try {
-      const { recipientEmail, recipientName, subject, content, emailId, isAiGenerated } = req.body;
-      
+      const {
+        recipientEmail,
+        recipientName,
+        subject,
+        content,
+        emailId,
+        isAiGenerated,
+      } = req.body;
+
       if (!recipientEmail || !subject || !content) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-      
+
       const draft = await storage.createDraft({
         userId: req.session.userId!,
         emailId: emailId || null,
@@ -4061,7 +4901,7 @@ Return only the improved text, nothing else.`;
         isAiGenerated: isAiGenerated || false,
         status: "draft",
       });
-      
+
       res.json(draft);
     } catch (error) {
       console.error("Error saving draft:", error);
@@ -4073,18 +4913,18 @@ Return only the improved text, nothing else.`;
     try {
       const id = parseInt(req.params.id);
       const { subject, content } = req.body;
-      
+
       const draft = await storage.getDraft(id);
       if (!draft) {
         return res.status(404).json({ error: "Draft not found" });
       }
-      
+
       const updated = await storage.updateDraft(id, {
         subject: subject !== undefined ? subject : draft.subject,
         content: content !== undefined ? content : draft.content,
         updatedAt: new Date(),
       });
-      
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating draft:", error);
@@ -4096,11 +4936,11 @@ Return only the improved text, nothing else.`;
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteDraft(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "Draft not found" });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting draft:", error);
@@ -4112,50 +4952,59 @@ Return only the improved text, nothing else.`;
     try {
       const folder = req.query.folder as string | undefined;
       const targetFolder = folder || "inbox";
-      
+
       // Try to get emails from Nylas first, fall back to storage
       const grant = await storage.getNylasGrant(req.session.userId!);
       let unreadCount = 0;
-      
+
       if (grant) {
         try {
-          const messages = await nylas.getMessages(grant.grantId, targetFolder, grant.provider);
-          unreadCount = messages.filter((m: any) => !m.isRead && m.unread !== false).length;
+          const messages = await nylas.getMessages(
+            grant.grantId,
+            targetFolder,
+            grant.provider,
+          );
+          unreadCount = messages.filter(
+            (m: any) => !m.isRead && m.unread !== false,
+          ).length;
         } catch (err) {
           console.log(`Could not fetch ${targetFolder} for response time`);
         }
       } else {
         const emails = await storage.getEmails(targetFolder);
-        unreadCount = emails.filter(e => !e.isRead).length;
+        unreadCount = emails.filter((e) => !e.isRead).length;
       }
-      
+
       if (unreadCount === 0) {
-        return res.json({ 
-          estimatedMinutes: 0, 
+        return res.json({
+          estimatedMinutes: 0,
           unreadCount: 0,
-          message: "All caught up!" 
+          message: "All caught up!",
         });
       }
 
       // Fast calculation: ~3 minutes per email (reading + thinking + replying)
       const estimatedMinutes = Math.max(1, Math.round(unreadCount * 3));
 
-      res.json({ 
+      res.json({
         estimatedMinutes,
-        unreadCount
+        unreadCount,
       });
     } catch (error) {
       console.error("Error estimating response time:", error);
       const emails = await storage.getEmails("inbox");
-      const unreadEmails = emails.filter(e => !e.isRead);
+      const unreadEmails = emails.filter((e) => !e.isRead);
       const totalWords = unreadEmails.reduce((sum, email) => {
-        return sum + email.body.split(/\s+/).filter(w => w.length > 0).length;
+        return sum + email.body.split(/\s+/).filter((w) => w.length > 0).length;
       }, 0);
-      const fallbackMinutes = Math.max(1, Math.round(unreadEmails.length * 3 + totalWords / 200));
-      res.json({ 
+      const fallbackMinutes = Math.max(
+        1,
+        Math.round(unreadEmails.length * 3 + totalWords / 200),
+      );
+      res.json({
         estimatedMinutes: fallbackMinutes,
         unreadCount: unreadEmails.length,
-        totalWords
+        totalWords,
       });
     }
   });
@@ -4197,7 +5046,11 @@ Return only the improved text, nothing else.`;
       if (!email) {
         return res.status(400).json({ error: "Email is required" });
       }
-      const contact = await storage.saveContact(req.session.userId!, email, name);
+      const contact = await storage.saveContact(
+        req.session.userId!,
+        email,
+        name,
+      );
       res.json(contact);
     } catch (error) {
       console.error("Error saving contact:", error);
@@ -4212,12 +5065,12 @@ Return only the improved text, nothing else.`;
     try {
       const settings = await storage.getAssistantSettings(req.session.userId!);
       if (!settings) {
-        return res.json({ 
-          selectedVoice: "vince", 
+        return res.json({
+          selectedVoice: "vince",
           voiceOutputEnabled: false,
           canReadEmails: false,
           canDraftEmails: false,
-          canSendEmails: false
+          canSendEmails: false,
         });
       }
       res.json(settings);
@@ -4230,14 +5083,23 @@ Return only the improved text, nothing else.`;
   // Update assistant settings
   app.post("/api/assistant/settings", requireAuth, async (req, res) => {
     try {
-      const { selectedVoice, voiceOutputEnabled, canReadEmails, canDraftEmails, canSendEmails } = req.body;
-      const settings = await storage.upsertAssistantSettings(req.session.userId!, {
+      const {
         selectedVoice,
         voiceOutputEnabled,
         canReadEmails,
         canDraftEmails,
-        canSendEmails
-      });
+        canSendEmails,
+      } = req.body;
+      const settings = await storage.upsertAssistantSettings(
+        req.session.userId!,
+        {
+          selectedVoice,
+          voiceOutputEnabled,
+          canReadEmails,
+          canDraftEmails,
+          canSendEmails,
+        },
+      );
       res.json(settings);
     } catch (error) {
       console.error("Error updating assistant settings:", error);
@@ -4248,8 +5110,13 @@ Return only the improved text, nothing else.`;
   // Get assistant conversation history
   app.get("/api/assistant/messages", requireAuth, async (req, res) => {
     try {
-      const sessionId = req.query.sessionId ? parseInt(req.query.sessionId as string) : undefined;
-      const messages = await storage.getAssistantMessages(req.session.userId!, sessionId);
+      const sessionId = req.query.sessionId
+        ? parseInt(req.query.sessionId as string)
+        : undefined;
+      const messages = await storage.getAssistantMessages(
+        req.session.userId!,
+        sessionId,
+      );
       res.json(messages);
     } catch (error) {
       console.error("Error fetching assistant messages:", error);
@@ -4272,7 +5139,10 @@ Return only the improved text, nothing else.`;
   app.post("/api/assistant/sessions", requireAuth, async (req, res) => {
     try {
       const { title } = req.body;
-      const session = await storage.createChatSession(req.session.userId!, title);
+      const session = await storage.createChatSession(
+        req.session.userId!,
+        title,
+      );
       res.json(session);
     } catch (error) {
       console.error("Error creating chat session:", error);
@@ -4281,50 +5151,69 @@ Return only the improved text, nothing else.`;
   });
 
   // Switch to a different chat session
-  app.post("/api/assistant/sessions/:sessionId/activate", requireAuth, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.sessionId);
-      await storage.setActiveSession(req.session.userId!, sessionId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error switching chat session:", error);
-      res.status(500).json({ error: "Failed to switch chat session" });
-    }
-  });
+  app.post(
+    "/api/assistant/sessions/:sessionId/activate",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const sessionId = parseInt(req.params.sessionId);
+        await storage.setActiveSession(req.session.userId!, sessionId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error switching chat session:", error);
+        res.status(500).json({ error: "Failed to switch chat session" });
+      }
+    },
+  );
 
   // Delete a chat session
-  app.delete("/api/assistant/sessions/:sessionId", requireAuth, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.sessionId);
-      const deleted = await storage.deleteSession(req.session.userId!, sessionId);
-      if (!deleted) {
-        return res.status(404).json({ error: "Chat session not found" });
+  app.delete(
+    "/api/assistant/sessions/:sessionId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const sessionId = parseInt(req.params.sessionId);
+        const deleted = await storage.deleteSession(
+          req.session.userId!,
+          sessionId,
+        );
+        if (!deleted) {
+          return res.status(404).json({ error: "Chat session not found" });
+        }
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting chat session:", error);
+        res.status(500).json({ error: "Failed to delete chat session" });
       }
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting chat session:", error);
-      res.status(500).json({ error: "Failed to delete chat session" });
-    }
-  });
-  
+    },
+  );
+
   // Rename a chat session
-  app.patch("/api/assistant/sessions/:sessionId", requireAuth, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.sessionId);
-      const { title } = req.body;
-      if (!title || typeof title !== "string") {
-        return res.status(400).json({ error: "Title is required" });
+  app.patch(
+    "/api/assistant/sessions/:sessionId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const sessionId = parseInt(req.params.sessionId);
+        const { title } = req.body;
+        if (!title || typeof title !== "string") {
+          return res.status(400).json({ error: "Title is required" });
+        }
+        const updated = await storage.updateSessionTitle(
+          req.session.userId!,
+          sessionId,
+          title,
+        );
+        if (!updated) {
+          return res.status(404).json({ error: "Chat session not found" });
+        }
+        res.json(updated);
+      } catch (error) {
+        console.error("Error renaming chat session:", error);
+        res.status(500).json({ error: "Failed to rename chat session" });
       }
-      const updated = await storage.updateSessionTitle(req.session.userId!, sessionId, title);
-      if (!updated) {
-        return res.status(404).json({ error: "Chat session not found" });
-      }
-      res.json(updated);
-    } catch (error) {
-      console.error("Error renaming chat session:", error);
-      res.status(500).json({ error: "Failed to rename chat session" });
-    }
-  });
+    },
+  );
 
   // Chat with assistant - Full email capabilities (requires Pro+)
   app.post("/api/assistant/chat", requireAuth, async (req, res) => {
@@ -4335,10 +5224,10 @@ Return only the improved text, nothing else.`;
       // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
       if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
+        return res.status(403).json({
+          error: "Plan upgrade required",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
 
@@ -4353,7 +5242,7 @@ Return only the improved text, nothing else.`;
       const user = await storage.getUser(userId);
       const grant = await storage.getNylasGrant(userId);
       const settings = await storage.getAssistantSettings(userId);
-      
+
       // Use the new unified settings permissions (canReadEmails, canDraftEmails, canSendEmails)
       const perms = {
         canReadEmails: settings?.canReadEmails ?? false,
@@ -4362,37 +5251,47 @@ Return only the improved text, nothing else.`;
         canArchive: true, // Archive doesn't require special permission
         canTrash: true, // Trash doesn't require special permission
         canSearch: true,
-        requireConfirmation: true
+        requireConfirmation: true,
       };
-      
+
       // Fetch real emails from Nylas if connected
       let nylasMessages: any[] = [];
       let emailContext = "";
-      
+
       if (grant && perms.canReadEmails) {
         try {
           nylasMessages = await nylas.getMessages(grant.grantId);
           // Log the read action
-          await storage.createAuditLog(userId, "read", "executed", undefined, `Fetched ${nylasMessages.length} emails for context`);
-          
+          await storage.createAuditLog(
+            userId,
+            "read",
+            "executed",
+            undefined,
+            `Fetched ${nylasMessages.length} emails for context`,
+          );
+
           // Build detailed email context
           const recentEmails = nylasMessages.slice(0, 15);
-          emailContext = recentEmails.map((m: any, i: number) => {
-            const from = m.from?.[0]?.email || "unknown";
-            const name = m.from?.[0]?.name || from;
-            const subject = m.subject || "(no subject)";
-            const date = m.date ? new Date(m.date * 1000).toLocaleString() : "unknown date";
-            const unread = m.unread ? "[UNREAD]" : "";
-            const starred = m.starred ? "[STARRED]" : "";
-            const snippet = m.snippet?.substring(0, 150) || "";
-            return `${i + 1}. ${unread}${starred} FROM: ${name} <${from}>\n   SUBJECT: ${subject}\n   DATE: ${date}\n   PREVIEW: ${snippet}...`;
-          }).join("\n\n");
+          emailContext = recentEmails
+            .map((m: any, i: number) => {
+              const from = m.from?.[0]?.email || "unknown";
+              const name = m.from?.[0]?.name || from;
+              const subject = m.subject || "(no subject)";
+              const date = m.date
+                ? new Date(m.date * 1000).toLocaleString()
+                : "unknown date";
+              const unread = m.unread ? "[UNREAD]" : "";
+              const starred = m.starred ? "[STARRED]" : "";
+              const snippet = m.snippet?.substring(0, 150) || "";
+              return `${i + 1}. ${unread}${starred} FROM: ${name} <${from}>\n   SUBJECT: ${subject}\n   DATE: ${date}\n   PREVIEW: ${snippet}...`;
+            })
+            .join("\n\n");
         } catch (e) {
           console.error("Error fetching Nylas messages:", e);
           emailContext = "Unable to fetch emails at this time.";
         }
       }
-      
+
       const assistantName = "Vince";
 
       // Build stats from Nylas data
@@ -4400,13 +5299,15 @@ Return only the improved text, nothing else.`;
       const starredCount = nylasMessages.filter((m: any) => m.starred).length;
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
-      const todayEmails = nylasMessages.filter((m: any) => m.date && new Date(m.date * 1000) >= todayStart);
+      const todayEmails = nylasMessages.filter(
+        (m: any) => m.date && new Date(m.date * 1000) >= todayStart,
+      );
 
       // Get recent conversation history for context
       const recentMessages = await storage.getAssistantMessages(userId);
-      const conversationHistory = recentMessages.slice(-10).map(m => ({
+      const conversationHistory = recentMessages.slice(-10).map((m) => ({
         role: m.role as "user" | "assistant",
-        content: m.content
+        content: m.content,
       }));
 
       const systemPrompt = `You are ${assistantName}, a helpful AI email assistant for MyDraft. You can only perform actions the user has granted you permission for.
@@ -4448,8 +5349,12 @@ INBOX STATUS:
 - Starred emails: ${starredCount}
 - Emails today: ${todayEmails.length}
 
-${emailContext ? `CURRENT INBOX (most recent 15 emails):
-${emailContext}` : "No emails loaded - user may need to connect their email account."}
+${
+  emailContext
+    ? `CURRENT INBOX (most recent 15 emails):
+${emailContext}`
+    : "No emails loaded - user may need to connect their email account."
+}
 
 RESPONSE STYLE:
 - Be specific when discussing emails - reference senders, subjects, and content
@@ -4460,62 +5365,88 @@ RESPONSE STYLE:
 
       // Add a brief thinking delay for more natural conversation feel (800-1500ms)
       const thinkingDelay = 800 + Math.random() * 700;
-      await new Promise(resolve => setTimeout(resolve, thinkingDelay));
+      await new Promise((resolve) => setTimeout(resolve, thinkingDelay));
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           ...conversationHistory,
-          { role: "user", content: message }
+          { role: "user", content: message },
         ],
         max_tokens: 800,
         temperature: 0.8,
       });
 
-      let responseContent = completion.choices[0]?.message?.content || "I apologize, I couldn't process that request.";
-      
+      let responseContent =
+        completion.choices[0]?.message?.content ||
+        "I apologize, I couldn't process that request.";
+
       // Check for action commands in the response and create pending actions
-      const actionMatch = responseContent.match(/\[ACTION:(SEND|ARCHIVE|TRASH)(?::([^\]]+))?\]/);
+      const actionMatch = responseContent.match(
+        /\[ACTION:(SEND|ARCHIVE|TRASH)(?::([^\]]+))?\]/,
+      );
       if (actionMatch) {
         const actionType = actionMatch[1].toLowerCase();
         const messageId = actionMatch[2];
-        
+
         // Create pending action for user confirmation
         if (actionType === "send" && perms.canSendEmails) {
           // Extract draft content from response
-          const draftMatch = responseContent.match(/(?:draft|email):\s*([\s\S]*?)(?:\[ACTION|$)/i);
+          const draftMatch = responseContent.match(
+            /(?:draft|email):\s*([\s\S]*?)(?:\[ACTION|$)/i,
+          );
           const draftBody = draftMatch?.[1]?.trim() || "";
-          
+
           await storage.createAssistantAction({
             userId,
             actionType: "send",
             status: "pending",
-            metadata: { body: draftBody }
+            metadata: { body: draftBody },
           });
-          await storage.createAuditLog(userId, "send", "initiated", undefined, "Draft created for user confirmation");
+          await storage.createAuditLog(
+            userId,
+            "send",
+            "initiated",
+            undefined,
+            "Draft created for user confirmation",
+          );
         } else if (actionType === "archive" && messageId && perms.canArchive) {
           await storage.createAssistantAction({
             userId,
             actionType: "archive",
             status: "pending",
-            metadata: { messageId }
+            metadata: { messageId },
           });
-          await storage.createAuditLog(userId, "archive", "initiated", messageId, "Archive action pending confirmation");
+          await storage.createAuditLog(
+            userId,
+            "archive",
+            "initiated",
+            messageId,
+            "Archive action pending confirmation",
+          );
         } else if (actionType === "trash" && messageId && perms.canTrash) {
           await storage.createAssistantAction({
             userId,
             actionType: "trash",
             status: "pending",
-            metadata: { messageId }
+            metadata: { messageId },
           });
-          await storage.createAuditLog(userId, "trash", "initiated", messageId, "Trash action pending confirmation");
+          await storage.createAuditLog(
+            userId,
+            "trash",
+            "initiated",
+            messageId,
+            "Trash action pending confirmation",
+          );
         }
-        
+
         // Remove action tags from displayed response
-        responseContent = responseContent.replace(/\[ACTION:[^\]]+\]/g, "").trim();
+        responseContent = responseContent
+          .replace(/\[ACTION:[^\]]+\]/g, "")
+          .trim();
       }
-      
+
       // Save assistant response
       await storage.addAssistantMessage(userId, "assistant", responseContent);
 
@@ -4541,19 +5472,19 @@ RESPONSE STYLE:
   app.post("/api/assistant/transcribe", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+
       // Plan gating: voice features require Premium
       const userPlan = await getUserPlan(userId);
       if (!hasPlan(userPlan, "premium")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
+        return res.status(403).json({
+          error: "Plan upgrade required",
           requiredPlan: "premium",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
+
       const { audio, mimeType } = req.body;
-      
+
       if (!audio || typeof audio !== "string") {
         return res.status(400).json({ error: "Audio data required" });
       }
@@ -4563,7 +5494,7 @@ RESPONSE STYLE:
       if (!base64Regex.test(audio)) {
         return res.status(400).json({ error: "Invalid audio format" });
       }
-      
+
       const maxSizeBytes = 25 * 1024 * 1024; // 25MB limit
       const estimatedSize = (audio.length * 3) / 4;
       if (estimatedSize > maxSizeBytes) {
@@ -4571,13 +5502,21 @@ RESPONSE STYLE:
       }
 
       // Validate mime type
-      const allowedMimeTypes = ["audio/webm", "audio/mp3", "audio/wav", "audio/m4a", "audio/ogg"];
-      const safeMimeType = allowedMimeTypes.includes(mimeType) ? mimeType : "audio/webm";
+      const allowedMimeTypes = [
+        "audio/webm",
+        "audio/mp3",
+        "audio/wav",
+        "audio/m4a",
+        "audio/ogg",
+      ];
+      const safeMimeType = allowedMimeTypes.includes(mimeType)
+        ? mimeType
+        : "audio/webm";
 
       // Convert base64 to buffer and create a File object for Whisper
       const audioBuffer = Buffer.from(audio, "base64");
-      const audioFile = new File([audioBuffer], "audio.webm", { 
-        type: safeMimeType 
+      const audioFile = new File([audioBuffer], "audio.webm", {
+        type: safeMimeType,
       });
 
       const transcription = await openai.audio.transcriptions.create({
@@ -4588,7 +5527,7 @@ RESPONSE STYLE:
       });
 
       const transcript = (transcription as any).text?.trim() || "";
-      
+
       res.json({ transcript });
     } catch (error) {
       console.error("Error transcribing audio:", error);
@@ -4602,23 +5541,23 @@ RESPONSE STYLE:
   app.get("/api/ai/context", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+
       // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
       if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
+        return res.status(403).json({
+          error: "Plan upgrade required",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
+
       const user = await storage.getUser(userId);
       const grant = await storage.getNylasGrant(userId);
       const styleProfile = await storage.getUserStyleProfile(userId);
       const pendingActions = await storage.getPendingAssistantActions(userId);
       const settings = await storage.getAssistantSettings(userId);
-      
+
       const defaultProfile = {
         tone: "professional",
         length: "medium",
@@ -4626,7 +5565,7 @@ RESPONSE STYLE:
         signOff: "Best regards",
         formattingPreference: "paragraphs",
         allowedActions: "draft-only",
-        customInstructions: undefined
+        customInstructions: undefined,
       };
 
       res.json({
@@ -4635,15 +5574,15 @@ RESPONSE STYLE:
           email: user?.email,
           plan: user?.plan,
           connectedEmail: grant?.email,
-          provider: grant?.provider
+          provider: grant?.provider,
         },
         styleProfile: styleProfile?.profile || defaultProfile,
-        pendingActions: pendingActions.map(a => ({
+        pendingActions: pendingActions.map((a) => ({
           id: a.id,
           actionType: a.actionType,
           status: a.status,
           metadata: a.metadata,
-          createdAt: a.createdAt
+          createdAt: a.createdAt,
         })),
         capabilities: {
           canRead: settings?.canReadEmails ?? false,
@@ -4651,13 +5590,13 @@ RESPONSE STYLE:
           canSend: (settings?.canSendEmails ?? false) && !!grant,
           canArchive: !!grant,
           canTrash: !!grant,
-          canSearch: !!grant
+          canSearch: !!grant,
         },
         permissions: {
           canReadEmails: settings?.canReadEmails ?? false,
           canDraftEmails: settings?.canDraftEmails ?? false,
-          canSendEmails: settings?.canSendEmails ?? false
-        }
+          canSendEmails: settings?.canSendEmails ?? false,
+        },
       });
     } catch (error) {
       console.error("Error fetching AI context:", error);
@@ -4669,19 +5608,27 @@ RESPONSE STYLE:
   app.post("/api/ai/style-profile", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+
       // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
       if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
+        return res.status(403).json({
+          error: "Plan upgrade required",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
-      const { tone, length, greetingStyle, signOff, formattingPreference, allowedActions, customInstructions } = req.body;
-      
+
+      const {
+        tone,
+        length,
+        greetingStyle,
+        signOff,
+        formattingPreference,
+        allowedActions,
+        customInstructions,
+      } = req.body;
+
       const profile = await storage.upsertUserStyleProfile(userId, {
         tone,
         length,
@@ -4689,9 +5636,9 @@ RESPONSE STYLE:
         signOff,
         formattingPreference,
         allowedActions,
-        customInstructions
+        customInstructions,
       });
-      
+
       res.json(profile);
     } catch (error) {
       console.error("Error updating style profile:", error);
@@ -4704,14 +5651,14 @@ RESPONSE STYLE:
     try {
       const userId = req.session.userId!;
       const perms = await storage.getAssistantPermissions(userId);
-      const defaultPerms = { 
-        canReadEmails: true, 
-        canSendEmails: false, 
-        canArchive: false, 
-        canTrash: false, 
-        canSearch: true, 
+      const defaultPerms = {
+        canReadEmails: true,
+        canSendEmails: false,
+        canArchive: false,
+        canTrash: false,
+        canSearch: true,
         requireConfirmation: true,
-        maxEmailsPerDay: 10
+        maxEmailsPerDay: 10,
       };
       res.json(perms?.permissions || defaultPerms);
     } catch (error) {
@@ -4724,23 +5671,25 @@ RESPONSE STYLE:
   app.post("/api/ai/permissions", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+
       // Validate request body with strict schema
       const parseResult = assistantPermissionsUpdateSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Invalid permissions data",
-          details: parseResult.error.errors.map(e => e.message)
+          details: parseResult.error.errors.map((e) => e.message),
         });
       }
-      
+
       const validatedData = parseResult.data;
-      
+
       // Reject empty updates
       if (Object.keys(validatedData).length === 0) {
-        return res.status(400).json({ error: "No permission updates provided" });
+        return res
+          .status(400)
+          .json({ error: "No permission updates provided" });
       }
-      
+
       // Get current permissions to merge with updates
       const currentPerms = await storage.getAssistantPermissions(userId);
       const defaultPerms = {
@@ -4750,42 +5699,61 @@ RESPONSE STYLE:
         canTrash: false,
         canSearch: true,
         requireConfirmation: true,
-        maxEmailsPerDay: 10
+        maxEmailsPerDay: 10,
       };
-      
+
       const currentPermissions = currentPerms?.permissions || defaultPerms;
-      
+
       // SECURITY: Enforce that requireConfirmation cannot be disabled if destructive permissions are enabled
-      const sensitivePerms = ['canSendEmails', 'canArchive', 'canTrash'];
-      const hasDestructiveEnabled = sensitivePerms.some(p => 
-        (validatedData as any)[p] === true || 
-        (currentPermissions as any)[p] === true && (validatedData as any)[p] !== false
+      const sensitivePerms = ["canSendEmails", "canArchive", "canTrash"];
+      const hasDestructiveEnabled = sensitivePerms.some(
+        (p) =>
+          (validatedData as any)[p] === true ||
+          ((currentPermissions as any)[p] === true &&
+            (validatedData as any)[p] !== false),
       );
-      
-      if (validatedData.requireConfirmation === false && hasDestructiveEnabled) {
-        return res.status(403).json({ 
-          error: "Security policy requires confirmation for accounts with send, archive, or trash permissions enabled",
-          code: "CONFIRMATION_REQUIRED"
+
+      if (
+        validatedData.requireConfirmation === false &&
+        hasDestructiveEnabled
+      ) {
+        return res.status(403).json({
+          error:
+            "Security policy requires confirmation for accounts with send, archive, or trash permissions enabled",
+          code: "CONFIRMATION_REQUIRED",
         });
       }
-      
+
       // SECURITY: When enabling destructive permissions, ensure confirmation stays on
-      const enablingDestructive = sensitivePerms.some(p => (validatedData as any)[p] === true);
+      const enablingDestructive = sensitivePerms.some(
+        (p) => (validatedData as any)[p] === true,
+      );
       const newPermissions = { ...currentPermissions, ...validatedData };
-      
+
       if (enablingDestructive && !newPermissions.requireConfirmation) {
         newPermissions.requireConfirmation = true;
       }
-      
-      const result = await storage.upsertAssistantPermissions(userId, newPermissions);
-      
+
+      const result = await storage.upsertAssistantPermissions(
+        userId,
+        newPermissions,
+      );
+
       // Log permission changes with before/after values for security audit
       const changes = Object.entries(validatedData)
-        .map(([key, value]) => `${key}: ${(currentPermissions as any)[key]} → ${value}`)
+        .map(
+          ([key, value]) =>
+            `${key}: ${(currentPermissions as any)[key]} → ${value}`,
+        )
         .join(", ");
-      await storage.createAuditLog(userId, "permissions_update", "executed", undefined, 
-        `Permission changes: ${changes}`);
-      
+      await storage.createAuditLog(
+        userId,
+        "permissions_update",
+        "executed",
+        undefined,
+        `Permission changes: ${changes}`,
+      );
+
       res.json(result.permissions);
     } catch (error) {
       console.error("Error updating permissions:", error);
@@ -4811,33 +5779,47 @@ RESPONSE STYLE:
     try {
       const userId = req.session.userId!;
       const logs = await storage.getRecentAuditLogs(userId, 1000);
-      
+
       // Calculate time saved based on action types
       // Assumptions:
       // - Draft generation: saves 5 minutes per draft
-      // - Email summary: saves 2 minutes per summary  
+      // - Email summary: saves 2 minutes per summary
       // - Inbox refresh/suggestion: saves 3 minutes per action
       // - Read context: saves 1 minute per read
       // - Send/archive/trash: saves 1 minute per action
-      
+
       let minutesSaved = 0;
       let draftCount = 0;
       let summaryCount = 0;
       let actionCount = 0;
-      
+
       for (const log of logs) {
         const actionType = log.actionType?.toLowerCase() || "";
-        
-        if (actionType.includes("draft") || actionType.includes("compose") || actionType.includes("reply")) {
+
+        if (
+          actionType.includes("draft") ||
+          actionType.includes("compose") ||
+          actionType.includes("reply")
+        ) {
           minutesSaved += 5;
           draftCount++;
-        } else if (actionType.includes("summary") || actionType.includes("summarize")) {
+        } else if (
+          actionType.includes("summary") ||
+          actionType.includes("summarize")
+        ) {
           minutesSaved += 2;
           summaryCount++;
-        } else if (actionType.includes("refresh") || actionType.includes("suggest")) {
+        } else if (
+          actionType.includes("refresh") ||
+          actionType.includes("suggest")
+        ) {
           minutesSaved += 3;
           actionCount++;
-        } else if (actionType.includes("send") || actionType.includes("archive") || actionType.includes("trash")) {
+        } else if (
+          actionType.includes("send") ||
+          actionType.includes("archive") ||
+          actionType.includes("trash")
+        ) {
           minutesSaved += 1;
           actionCount++;
         } else if (actionType.includes("read")) {
@@ -4845,13 +5827,13 @@ RESPONSE STYLE:
           actionCount++;
         }
       }
-      
+
       // Calculate money saved
       // Average email assistant/VA costs ~$25/hour
       const hourlyRate = 25;
       const hoursSaved = minutesSaved / 60;
       const moneySaved = hoursSaved * hourlyRate;
-      
+
       res.json({
         minutesSaved,
         hoursSaved: Math.round(hoursSaved * 10) / 10,
@@ -4859,7 +5841,7 @@ RESPONSE STYLE:
         draftCount,
         summaryCount,
         actionCount,
-        totalActions: logs.length
+        totalActions: logs.length,
       });
     } catch (error) {
       console.error("Error calculating savings:", error);
@@ -4871,29 +5853,29 @@ RESPONSE STYLE:
   app.post("/api/ai/quick-suggestion", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+
       // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
       if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
+        return res.status(403).json({
+          error: "Plan upgrade required",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
+
       const { subject, sender, preview } = req.body;
-      
+
       if (!subject || !sender) {
         return res.status(400).json({ error: "Subject and sender required" });
       }
 
       const user = await storage.getUser(userId);
       const styleProfile = await storage.getUserStyleProfile(userId);
-      
+
       const profile = styleProfile?.profile || {
         tone: "professional",
-        length: "medium"
+        length: "medium",
       };
 
       // Generate a very brief suggestion using AI
@@ -4917,7 +5899,9 @@ Respond with ONLY a brief suggestion, like:
         temperature: 0.7,
       });
 
-      const suggestion = completion.choices[0]?.message?.content?.trim() || "Click to draft a response with AI";
+      const suggestion =
+        completion.choices[0]?.message?.content?.trim() ||
+        "Click to draft a response with AI";
 
       res.json({ suggestion });
     } catch (error) {
@@ -4927,96 +5911,117 @@ Respond with ONLY a brief suggestion, like:
   });
 
   // Generate AI draft (compose/reply/reply-all/forward) (requires Pro+)
-  app.post("/api/ai/draft", requireAuth, aiGenerationLimiter, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const user = await storage.getUser(userId);
-      
-      // Feature flag check: is AI draft enabled for this user?
-      const aiDraftEnabled = await storage.isFeatureEnabled("ai_draft", user?.email || "");
-      if (!aiDraftEnabled) {
-        return res.status(403).json({ 
-          error: "AI Draft feature is currently disabled",
-          featureDisabled: true
-        });
-      }
-      
-      // Plan gating: requires Pro or Premium
-      const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
-          requiredPlan: "pro",
-          currentPlan: userPlan
-        });
-      }
-      
-      const { actionType, messageId, instructions, to, cc, bcc, subject } = req.body;
-      
-      if (!actionType || !["compose", "reply", "reply-all", "forward"].includes(actionType)) {
-        return res.status(400).json({ error: "Valid actionType required: compose, reply, reply-all, forward" });
-      }
+  app.post(
+    "/api/ai/draft",
+    requireAuth,
+    aiGenerationLimiter,
+    async (req, res) => {
+      try {
+        const userId = req.session.userId!;
+        const user = await storage.getUser(userId);
 
-      // user already fetched above for feature flag check
-      const grant = await storage.getNylasGrant(userId);
-      const styleProfile = await storage.getUserStyleProfile(userId);
-      
-      const profile = styleProfile?.profile || {
-        tone: "professional",
-        length: "medium",
-        greetingStyle: "hi",
-        signOff: "Best regards",
-        formattingPreference: "paragraphs"
-      };
+        // Feature flag check: is AI draft enabled for this user?
+        const aiDraftEnabled = await storage.isFeatureEnabled(
+          "ai_draft",
+          user?.email || "",
+        );
+        if (!aiDraftEnabled) {
+          return res.status(403).json({
+            error: "AI Draft feature is currently disabled",
+            featureDisabled: true,
+          });
+        }
 
-      let originalMessage: any = null;
-      let originalBody = "";
-      let recipientEmail = "";
-      let recipientName = "";
-      let originalSubject = "";
+        // Plan gating: requires Pro or Premium
+        const userPlan = await getUserPlan(userId);
+        if (!hasPlan(userPlan, "pro")) {
+          return res.status(403).json({
+            error: "Plan upgrade required",
+            requiredPlan: "pro",
+            currentPlan: userPlan,
+          });
+        }
 
-      // For reply/forward, fetch the original message
-      if (messageId && actionType !== "compose") {
-        if (grant) {
-          try {
-            const messages = await nylas.getMessages(grant.grantId);
-            originalMessage = messages.find((m: any) => m.id === messageId);
-            if (originalMessage) {
-              originalBody = typeof originalMessage.body === "string" ? originalMessage.body : "";
-              recipientEmail = originalMessage.from?.[0]?.email || "";
-              recipientName = originalMessage.from?.[0]?.name || "";
-              originalSubject = originalMessage.subject || "";
+        const { actionType, messageId, instructions, to, cc, bcc, subject } =
+          req.body;
+
+        if (
+          !actionType ||
+          !["compose", "reply", "reply-all", "forward"].includes(actionType)
+        ) {
+          return res
+            .status(400)
+            .json({
+              error:
+                "Valid actionType required: compose, reply, reply-all, forward",
+            });
+        }
+
+        // user already fetched above for feature flag check
+        const grant = await storage.getNylasGrant(userId);
+        const styleProfile = await storage.getUserStyleProfile(userId);
+
+        const profile = styleProfile?.profile || {
+          tone: "professional",
+          length: "medium",
+          greetingStyle: "hi",
+          signOff: "Best regards",
+          formattingPreference: "paragraphs",
+        };
+
+        let originalMessage: any = null;
+        let originalBody = "";
+        let recipientEmail = "";
+        let recipientName = "";
+        let originalSubject = "";
+
+        // For reply/forward, fetch the original message
+        if (messageId && actionType !== "compose") {
+          if (grant) {
+            try {
+              const messages = await nylas.getMessages(grant.grantId);
+              originalMessage = messages.find((m: any) => m.id === messageId);
+              if (originalMessage) {
+                originalBody =
+                  typeof originalMessage.body === "string"
+                    ? originalMessage.body
+                    : "";
+                recipientEmail = originalMessage.from?.[0]?.email || "";
+                recipientName = originalMessage.from?.[0]?.name || "";
+                originalSubject = originalMessage.subject || "";
+              }
+            } catch (e) {
+              console.error("Error fetching original message:", e);
             }
-          } catch (e) {
-            console.error("Error fetching original message:", e);
           }
         }
-      }
 
-      // Build the draft prompt
-      const profileWithCustom = profile as typeof profile & { customInstructions?: string };
-      const toneGuide = {
-        professional: "formal, business-appropriate language",
-        friendly: "warm and approachable tone",
-        concise: "brief and to-the-point",
-        casual: "relaxed and conversational",
-        custom: profileWithCustom.customInstructions || "professional tone"
-      };
+        // Build the draft prompt
+        const profileWithCustom = profile as typeof profile & {
+          customInstructions?: string;
+        };
+        const toneGuide = {
+          professional: "formal, business-appropriate language",
+          friendly: "warm and approachable tone",
+          concise: "brief and to-the-point",
+          casual: "relaxed and conversational",
+          custom: profileWithCustom.customInstructions || "professional tone",
+        };
 
-      const lengthGuide = {
-        short: "1-2 short paragraphs maximum",
-        medium: "2-3 paragraphs",
-        long: "detailed response with multiple paragraphs"
-      };
+        const lengthGuide = {
+          short: "1-2 short paragraphs maximum",
+          medium: "2-3 paragraphs",
+          long: "detailed response with multiple paragraphs",
+        };
 
-      const greetingGuide = {
-        none: "No greeting, start directly with content",
-        hi: "Start with 'Hi' or 'Hello'",
-        name: `Start with 'Hi ${recipientName}' or 'Hello ${recipientName}'`,
-        formal: `Start with 'Dear ${recipientName || "Sir/Madam"}'`
-      };
+        const greetingGuide = {
+          none: "No greeting, start directly with content",
+          hi: "Start with 'Hi' or 'Hello'",
+          name: `Start with 'Hi ${recipientName}' or 'Hello ${recipientName}'`,
+          formal: `Start with 'Dear ${recipientName || "Sir/Madam"}'`,
+        };
 
-      let systemPrompt = `You are an email drafting assistant. Generate a professional email draft.
+        let systemPrompt = `You are an email drafting assistant. Generate a professional email draft.
 
 STYLE REQUIREMENTS:
 - Tone: ${toneGuide[profile.tone as keyof typeof toneGuide] || toneGuide.professional}
@@ -5031,13 +6036,13 @@ RULES:
 - Be direct and clear
 - Match the context and intent provided`;
 
-      let userPrompt = "";
-      
-      if (actionType === "compose") {
-        userPrompt = `Write a new email${to ? ` to ${to}` : ""}${subject ? ` about "${subject}"` : ""}.
+        let userPrompt = "";
+
+        if (actionType === "compose") {
+          userPrompt = `Write a new email${to ? ` to ${to}` : ""}${subject ? ` about "${subject}"` : ""}.
 ${instructions ? `\nInstructions: ${instructions}` : ""}`;
-      } else if (actionType === "reply" || actionType === "reply-all") {
-        userPrompt = `Write a reply to this email:
+        } else if (actionType === "reply" || actionType === "reply-all") {
+          userPrompt = `Write a reply to this email:
 
 FROM: ${recipientName} <${recipientEmail}>
 SUBJECT: ${originalSubject}
@@ -5045,8 +6050,8 @@ BODY:
 ${originalBody.substring(0, 2000)}
 
 ${instructions ? `\nInstructions: ${instructions}` : ""}`;
-      } else if (actionType === "forward") {
-        userPrompt = `Write a forwarding message for this email${to ? ` to ${to}` : ""}:
+        } else if (actionType === "forward") {
+          userPrompt = `Write a forwarding message for this email${to ? ` to ${to}` : ""}:
 
 ORIGINAL EMAIL:
 FROM: ${recipientName} <${recipientEmail}>
@@ -5055,82 +6060,92 @@ BODY:
 ${originalBody.substring(0, 1500)}
 
 ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note explaining why you're forwarding this."}`;
-      }
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        max_tokens: 800,
-        temperature: 0.7,
-      });
-
-      let draftBody = completion.choices[0]?.message?.content || "";
-
-      // Append email signature if enabled
-      if (user?.signatureEnabled && user?.emailSignature) {
-        draftBody = `${draftBody}\n\n${user.emailSignature}`;
-      }
-
-      // Create a pending action for this draft
-      const action = await storage.createAssistantAction({
-        userId,
-        actionType: actionType === "compose" ? "send" : actionType,
-        status: "pending",
-        metadata: {
-          messageId: messageId || undefined,
-          to: to ? [to] : (recipientEmail ? [recipientEmail] : undefined),
-          cc: cc || undefined,
-          bcc: bcc || undefined,
-          subject: subject || (actionType === "reply" || actionType === "reply-all" ? `Re: ${originalSubject}` : actionType === "forward" ? `Fwd: ${originalSubject}` : undefined),
-          body: draftBody,
-          originalMessageId: messageId || undefined
         }
-      });
 
-      res.json({
-        actionId: action.id,
-        actionType,
-        draft: {
-          to: to || recipientEmail,
-          cc,
-          bcc,
-          subject: action.metadata?.subject,
-          body: draftBody
-        },
-        status: "pending"
-      });
-    } catch (error) {
-      console.error("Error generating AI draft:", error);
-      res.status(500).json({ error: "Failed to generate draft" });
-    }
-  });
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          max_tokens: 800,
+          temperature: 0.7,
+        });
+
+        let draftBody = completion.choices[0]?.message?.content || "";
+
+        // Append email signature if enabled
+        if (user?.signatureEnabled && user?.emailSignature) {
+          draftBody = `${draftBody}\n\n${user.emailSignature}`;
+        }
+
+        // Create a pending action for this draft
+        const action = await storage.createAssistantAction({
+          userId,
+          actionType: actionType === "compose" ? "send" : actionType,
+          status: "pending",
+          metadata: {
+            messageId: messageId || undefined,
+            to: to ? [to] : recipientEmail ? [recipientEmail] : undefined,
+            cc: cc || undefined,
+            bcc: bcc || undefined,
+            subject:
+              subject ||
+              (actionType === "reply" || actionType === "reply-all"
+                ? `Re: ${originalSubject}`
+                : actionType === "forward"
+                  ? `Fwd: ${originalSubject}`
+                  : undefined),
+            body: draftBody,
+            originalMessageId: messageId || undefined,
+          },
+        });
+
+        res.json({
+          actionId: action.id,
+          actionType,
+          draft: {
+            to: to || recipientEmail,
+            cc,
+            bcc,
+            subject: action.metadata?.subject,
+            body: draftBody,
+          },
+          status: "pending",
+        });
+      } catch (error) {
+        console.error("Error generating AI draft:", error);
+        res.status(500).json({ error: "Failed to generate draft" });
+      }
+    },
+  );
 
   // Review/improve an existing draft (requires Pro+)
   app.post("/api/ai/review", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+
       // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
       if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
+        return res.status(403).json({
+          error: "Plan upgrade required",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
+
       const { draft, improvementType, customInstructions } = req.body;
-      
+
       if (!draft || typeof draft !== "string") {
         return res.status(400).json({ error: "Draft content is required" });
       }
 
       const styleProfile = await storage.getUserStyleProfile(userId);
-      const profile = styleProfile?.profile || { tone: "professional", length: "medium" };
+      const profile = styleProfile?.profile || {
+        tone: "professional",
+        length: "medium",
+      };
 
       const improvementPrompts: Record<string, string> = {
         shorter: "Make this email more concise while keeping the key points.",
@@ -5140,22 +6155,24 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         clearer: "Improve the clarity and readability of this email.",
         grammar: "Fix any grammar, spelling, or punctuation errors.",
         tone: `Adjust the tone to be more ${profile.tone}.`,
-        custom: customInstructions || "Improve this email."
+        custom: customInstructions || "Improve this email.",
       };
 
-      const instruction = improvementPrompts[improvementType] || improvementPrompts.clearer;
+      const instruction =
+        improvementPrompts[improvementType] || improvementPrompts.clearer;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { 
-            role: "system", 
-            content: "You are an email editing assistant. Improve the provided email draft according to the instructions. Return only the improved email body, no explanations." 
+          {
+            role: "system",
+            content:
+              "You are an email editing assistant. Improve the provided email draft according to the instructions. Return only the improved email body, no explanations.",
           },
-          { 
-            role: "user", 
-            content: `${instruction}\n\nOriginal draft:\n${draft}` 
-          }
+          {
+            role: "user",
+            content: `${instruction}\n\nOriginal draft:\n${draft}`,
+          },
         ],
         max_tokens: 800,
         temperature: 0.7,
@@ -5166,7 +6183,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       res.json({
         original: draft,
         improved: improvedDraft,
-        improvementType
+        improvementType,
       });
     } catch (error) {
       console.error("Error reviewing draft:", error);
@@ -5178,19 +6195,19 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.post("/api/ai/confirm-action", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+
       // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
       if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
+        return res.status(403).json({
+          error: "Plan upgrade required",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
+
       const { actionId, modifications } = req.body;
-      
+
       if (!actionId) {
         return res.status(400).json({ error: "actionId is required" });
       }
@@ -5205,7 +6222,9 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       }
 
       if (action.status !== "pending") {
-        return res.status(400).json({ error: `Action already ${action.status}` });
+        return res
+          .status(400)
+          .json({ error: `Action already ${action.status}` });
       }
 
       const grant = await storage.getNylasGrant(userId);
@@ -5218,7 +6237,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const canSend = settings?.canSendEmails ?? false;
 
       // Apply any modifications to the action metadata
-      const finalMetadata = modifications 
+      const finalMetadata = modifications
         ? { ...action.metadata, ...modifications }
         : action.metadata;
 
@@ -5232,7 +6251,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           case "forward":
             // Verify user has granted send permission
             if (!canSend) {
-              result = { success: false, error: "Send permission not granted. Enable 'Send emails' in assistant permissions." };
+              result = {
+                success: false,
+                error:
+                  "Send permission not granted. Enable 'Send emails' in assistant permissions.",
+              };
               break;
             }
             // Send the email via Nylas
@@ -5242,26 +6265,40 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
                 finalMetadata.to as string[],
                 finalMetadata.subject || "",
                 finalMetadata.body as string,
-                action.actionType !== "send" ? finalMetadata.originalMessageId : undefined,
+                action.actionType !== "send"
+                  ? finalMetadata.originalMessageId
+                  : undefined,
                 finalMetadata.cc as string[] | undefined,
-                finalMetadata.bcc as string[] | undefined
+                finalMetadata.bcc as string[] | undefined,
               );
               nylas.invalidateMessagesCache(grant.grantId);
-              
+
               // Save contacts for autocomplete
               const allRecipients = [
-                ...(Array.isArray(finalMetadata.to) ? finalMetadata.to : [finalMetadata.to]),
-                ...(Array.isArray(finalMetadata.cc) ? finalMetadata.cc : (finalMetadata.cc ? [finalMetadata.cc] : [])),
-                ...(Array.isArray(finalMetadata.bcc) ? finalMetadata.bcc : (finalMetadata.bcc ? [finalMetadata.bcc] : []))
+                ...(Array.isArray(finalMetadata.to)
+                  ? finalMetadata.to
+                  : [finalMetadata.to]),
+                ...(Array.isArray(finalMetadata.cc)
+                  ? finalMetadata.cc
+                  : finalMetadata.cc
+                    ? [finalMetadata.cc]
+                    : []),
+                ...(Array.isArray(finalMetadata.bcc)
+                  ? finalMetadata.bcc
+                  : finalMetadata.bcc
+                    ? [finalMetadata.bcc]
+                    : []),
               ];
               for (const email of allRecipients) {
                 if (email) {
-                  storage.saveContact(userId, String(email)).catch(err => 
-                    console.warn("Failed to save contact:", err)
-                  );
+                  storage
+                    .saveContact(userId, String(email))
+                    .catch((err) =>
+                      console.warn("Failed to save contact:", err),
+                    );
                 }
               }
-              
+
               result = { success: true, message: "Email sent successfully" };
             } else {
               result = { success: false, error: "Missing recipient or body" };
@@ -5271,7 +6308,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           case "trash":
             if (finalMetadata?.messageId) {
               // Use local storage - don't sync to Nylas
-              await storage.setLocalEmailFolder(userId, finalMetadata.messageId, "trash");
+              await storage.setLocalEmailFolder(
+                userId,
+                finalMetadata.messageId,
+                "trash",
+              );
               result = { success: true, message: "Email moved to trash" };
             } else {
               result = { success: false, error: "Missing messageId" };
@@ -5281,7 +6322,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           case "archive":
             if (finalMetadata?.messageId) {
               // Use local storage - don't sync to Nylas
-              await storage.setLocalEmailFolder(userId, finalMetadata.messageId, "archived");
+              await storage.setLocalEmailFolder(
+                userId,
+                finalMetadata.messageId,
+                "archived",
+              );
               result = { success: true, message: "Email archived" };
             } else {
               result = { success: false, error: "Missing messageId" };
@@ -5292,7 +6337,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           case "move_to_inbox":
             if (finalMetadata?.messageId) {
               // Use local storage - restore to inbox
-              await storage.restoreEmailToInbox(userId, finalMetadata.messageId);
+              await storage.restoreEmailToInbox(
+                userId,
+                finalMetadata.messageId,
+              );
               result = { success: true, message: "Email restored to inbox" };
             } else {
               result = { success: false, error: "Missing messageId" };
@@ -5300,7 +6348,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             break;
 
           default:
-            result = { success: false, error: `Unknown action type: ${action.actionType}` };
+            result = {
+              success: false,
+              error: `Unknown action type: ${action.actionType}`,
+            };
         }
       } catch (nylasError) {
         console.error("Nylas action error:", nylasError);
@@ -5310,15 +6361,15 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       // Update action status
       const newStatus = result.success ? "executed" : "pending";
       await storage.updateAssistantActionStatus(
-        actionId, 
-        newStatus, 
-        result.success ? new Date() : undefined
+        actionId,
+        newStatus,
+        result.success ? new Date() : undefined,
       );
 
       res.json({
         ...result,
         actionId,
-        status: newStatus
+        status: newStatus,
       });
     } catch (error) {
       console.error("Error confirming action:", error);
@@ -5330,19 +6381,19 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.post("/api/ai/cancel-action", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+
       // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
       if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
+        return res.status(403).json({
+          error: "Plan upgrade required",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
+
       const { actionId } = req.body;
-      
+
       if (!actionId) {
         return res.status(400).json({ error: "actionId is required" });
       }
@@ -5368,21 +6419,23 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.post("/api/ai/feedback", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+
       // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
       if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({ 
-          error: "Plan upgrade required", 
+        return res.status(403).json({
+          error: "Plan upgrade required",
           requiredPlan: "pro",
-          currentPlan: userPlan
+          currentPlan: userPlan,
         });
       }
-      
+
       const { assistantMessageId, rating, tags, comment } = req.body;
-      
+
       if (!assistantMessageId) {
-        return res.status(400).json({ error: "assistantMessageId is required" });
+        return res
+          .status(400)
+          .json({ error: "assistantMessageId is required" });
       }
 
       // Create feedback record
@@ -5391,7 +6444,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         assistantMessageId,
         rating: rating || null,
         tags: tags || null,
-        comment: comment || null
+        comment: comment || null,
       });
 
       // Update style profile based on feedback tags
@@ -5425,7 +6478,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   // =====================
   // NOTIFICATIONS ROUTES
   // =====================
-  
+
   // Get all notifications for current user
   app.get("/api/notifications", requireAuth, async (req, res) => {
     try {
@@ -5458,7 +6511,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       if (isNaN(notificationId)) {
         return res.status(400).json({ error: "Invalid notification ID" });
       }
-      const notification = await storage.markNotificationAsRead(userId, notificationId);
+      const notification = await storage.markNotificationAsRead(
+        userId,
+        notificationId,
+      );
       if (!notification) {
         return res.status(404).json({ error: "Notification not found" });
       }
@@ -5470,16 +6526,20 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   });
 
   // Mark all notifications as read
-  app.post("/api/notifications/mark-all-read", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      await storage.markAllNotificationsAsRead(userId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error marking all notifications as read:", error);
-      res.status(500).json({ error: "Failed to mark notifications as read" });
-    }
-  });
+  app.post(
+    "/api/notifications/mark-all-read",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const userId = req.session.userId!;
+        await storage.markAllNotificationsAsRead(userId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error marking all notifications as read:", error);
+        res.status(500).json({ error: "Failed to mark notifications as read" });
+      }
+    },
+  );
 
   // =====================
   // TEAM INVITES ROUTES (Business plan only)
@@ -5498,26 +6558,46 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       // Check if user has Business plan
       const user = await storage.getUser(userId);
       if (!user || user.plan !== "premium") {
-        return res.status(403).json({ error: "Team invites are only available on the Business plan" });
+        return res
+          .status(403)
+          .json({
+            error: "Team invites are only available on the Business plan",
+          });
       }
 
       // Check team member limit (max 1 member = 2 total including owner)
       const memberCount = await storage.getTeamMemberCount(userId);
       if (memberCount >= 1) {
-        return res.status(400).json({ error: "Team limit reached. Business plan allows 1 additional team member." });
+        return res
+          .status(400)
+          .json({
+            error:
+              "Team limit reached. Business plan allows 1 additional team member.",
+          });
       }
 
       // Check if pending invites already exist
       const sentInvites = await storage.getSentInvites(userId);
-      const pendingCount = sentInvites.filter(i => i.status === "pending").length;
+      const pendingCount = sentInvites.filter(
+        (i) => i.status === "pending",
+      ).length;
       if (pendingCount + memberCount >= 1) {
-        return res.status(400).json({ error: "You already have a pending invite or team member." });
+        return res
+          .status(400)
+          .json({ error: "You already have a pending invite or team member." });
       }
 
       // Find the invitee user
-      const invitee = await storage.getUserByEmail(inviteeEmail.toLowerCase().trim());
+      const invitee = await storage.getUserByEmail(
+        inviteeEmail.toLowerCase().trim(),
+      );
       if (!invitee) {
-        return res.status(404).json({ error: "User not found. They must have an account to receive an invite." });
+        return res
+          .status(404)
+          .json({
+            error:
+              "User not found. They must have an account to receive an invite.",
+          });
       }
 
       // Can't invite yourself
@@ -5528,22 +6608,28 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       // Check if invitee is already a team member somewhere
       const existingMembership = await storage.getTeamMembership(invitee.id);
       if (existingMembership) {
-        return res.status(400).json({ error: "This user is already on another team" });
+        return res
+          .status(400)
+          .json({ error: "This user is already on another team" });
       }
 
       // Check if there's already a pending invite
-      const existingInvites = sentInvites.filter(i => i.inviteeId === invitee.id && i.status === "pending");
+      const existingInvites = sentInvites.filter(
+        (i) => i.inviteeId === invitee.id && i.status === "pending",
+      );
       if (existingInvites.length > 0) {
-        return res.status(400).json({ error: "You already have a pending invite to this user" });
+        return res
+          .status(400)
+          .json({ error: "You already have a pending invite to this user" });
       }
 
       // Create the invite
       const invite = await storage.createTeamInvite({
         inviterId: userId,
         inviteeId: invitee.id,
-        status: "pending"
+        status: "pending",
       });
-      
+
       // Create notification for invitee
       await storage.createNotification({
         userId: invitee.id,
@@ -5551,11 +6637,20 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         title: "Team Invite Received",
         message: `${user.email} invited you to join their team`,
         isRead: false,
-        data: { inviteId: invite.id, inviterId: userId, inviterEmail: user.email }
+        data: {
+          inviteId: invite.id,
+          inviterId: userId,
+          inviterEmail: user.email,
+        },
       });
 
       // Log activity
-      await storage.createActivityLog(userId, user.email, "team_invite_sent", `Invited ${inviteeEmail} to team`);
+      await storage.createActivityLog(
+        userId,
+        user.email,
+        "team_invite_sent",
+        `Invited ${inviteeEmail} to team`,
+      );
 
       res.json({ success: true, invite });
     } catch (error) {
@@ -5569,16 +6664,18 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
       const invites = await storage.getSentInvites(userId);
-      
+
       // Enrich with invitee email
-      const enrichedInvites = await Promise.all(invites.map(async (invite) => {
-        const invitee = await storage.getUser(invite.inviteeId);
-        return {
-          ...invite,
-          inviteeEmail: invitee?.email || "Unknown"
-        };
-      }));
-      
+      const enrichedInvites = await Promise.all(
+        invites.map(async (invite) => {
+          const invitee = await storage.getUser(invite.inviteeId);
+          return {
+            ...invite,
+            inviteeEmail: invitee?.email || "Unknown",
+          };
+        }),
+      );
+
       res.json(enrichedInvites);
     } catch (error) {
       console.error("Error fetching sent invites:", error);
@@ -5591,16 +6688,18 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
       const invites = await storage.getPendingInvitesForUser(userId);
-      
+
       // Enrich with inviter email
-      const enrichedInvites = await Promise.all(invites.map(async (invite) => {
-        const inviter = await storage.getUser(invite.inviterId);
-        return {
-          ...invite,
-          inviterEmail: inviter?.email || "Unknown"
-        };
-      }));
-      
+      const enrichedInvites = await Promise.all(
+        invites.map(async (invite) => {
+          const inviter = await storage.getUser(invite.inviterId);
+          return {
+            ...invite,
+            inviterEmail: inviter?.email || "Unknown",
+          };
+        }),
+      );
+
       res.json(enrichedInvites);
     } catch (error) {
       console.error("Error fetching pending invites:", error);
@@ -5613,7 +6712,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
       const inviteId = parseInt(req.params.id);
-      
+
       if (isNaN(inviteId)) {
         return res.status(400).json({ error: "Invalid invite ID" });
       }
@@ -5628,7 +6727,9 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       }
 
       if (invite.status !== "pending") {
-        return res.status(400).json({ error: "This invite has already been responded to" });
+        return res
+          .status(400)
+          .json({ error: "This invite has already been responded to" });
       }
 
       // Check if user is already on a team
@@ -5651,7 +6752,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         title: "Team Invite Accepted",
         message: `${user?.email || "Someone"} accepted your team invite`,
         isRead: false,
-        data: { inviteId }
+        data: { inviteId },
       });
 
       res.json({ success: true });
@@ -5666,7 +6767,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
       const inviteId = parseInt(req.params.id);
-      
+
       if (isNaN(inviteId)) {
         return res.status(400).json({ error: "Invalid invite ID" });
       }
@@ -5681,7 +6782,9 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       }
 
       if (invite.status !== "pending") {
-        return res.status(400).json({ error: "This invite has already been responded to" });
+        return res
+          .status(400)
+          .json({ error: "This invite has already been responded to" });
       }
 
       // Update invite status
@@ -5695,7 +6798,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         title: "Team Invite Declined",
         message: `${user?.email || "Someone"} declined your team invite`,
         isRead: false,
-        data: { inviteId }
+        data: { inviteId },
       });
 
       res.json({ success: true });
@@ -5710,16 +6813,18 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
       const members = await storage.getTeamMembers(userId);
-      
+
       // Enrich with member email
-      const enrichedMembers = await Promise.all(members.map(async (member) => {
-        const memberUser = await storage.getUser(member.memberId);
-        return {
-          ...member,
-          memberEmail: memberUser?.email || "Unknown"
-        };
-      }));
-      
+      const enrichedMembers = await Promise.all(
+        members.map(async (member) => {
+          const memberUser = await storage.getUser(member.memberId);
+          return {
+            ...member,
+            memberEmail: memberUser?.email || "Unknown",
+          };
+        }),
+      );
+
       res.json(enrichedMembers);
     } catch (error) {
       console.error("Error fetching team members:", error);
@@ -5732,7 +6837,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
       const memberId = req.params.memberId;
-      
+
       const success = await storage.removeTeamMember(userId, memberId);
       if (!success) {
         return res.status(404).json({ error: "Team member not found" });
@@ -5746,7 +6851,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         title: "Removed from Team",
         message: `You have been removed from ${user?.email || "someone"}'s team`,
         isRead: false,
-        data: {}
+        data: {},
       });
 
       res.json({ success: true });
@@ -5761,7 +6866,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
       const membership = await storage.getTeamMembership(userId);
-      
+
       if (membership) {
         const owner = await storage.getUser(membership.ownerId);
         return res.json({
@@ -5769,10 +6874,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           ownerId: membership.ownerId,
           ownerEmail: owner?.email || "Unknown",
           role: membership.role,
-          joinedAt: membership.joinedAt
+          joinedAt: membership.joinedAt,
         });
       }
-      
+
       res.json({ isMember: false });
     } catch (error) {
       console.error("Error fetching membership:", error);
@@ -5787,14 +6892,15 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.json({ isOwner: false });
       }
-      
+
       const ownerEmail = process.env.OWNER_EMAIL?.toLowerCase().trim();
-      const isOwner = ownerEmail && user.email.toLowerCase().trim() === ownerEmail;
-      
+      const isOwner =
+        ownerEmail && user.email.toLowerCase().trim() === ownerEmail;
+
       res.json({ isOwner });
     } catch (error) {
       console.error("Error checking owner status:", error);
@@ -5807,36 +6913,49 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userStats = await storage.getUserStats();
       const allUsers = await storage.getAllUsers();
-      
+
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-      
+      const thirtyDaysAgo = new Date(
+        today.getTime() - 30 * 24 * 60 * 60 * 1000,
+      );
+
       // Calculate signups
-      const signupsToday = allUsers.filter(u => new Date(u.createdAt) >= today).length;
-      const signupsThisWeek = allUsers.filter(u => new Date(u.createdAt) >= sevenDaysAgo).length;
-      
+      const signupsToday = allUsers.filter(
+        (u) => new Date(u.createdAt) >= today,
+      ).length;
+      const signupsThisWeek = allUsers.filter(
+        (u) => new Date(u.createdAt) >= sevenDaysAgo,
+      ).length;
+
       // Active users (simplified - users created in timeframe for now)
-      const activeUsers7Days = allUsers.filter(u => new Date(u.createdAt) >= sevenDaysAgo).length;
-      const activeUsers30Days = allUsers.filter(u => new Date(u.createdAt) >= thirtyDaysAgo).length;
-      
+      const activeUsers7Days = allUsers.filter(
+        (u) => new Date(u.createdAt) >= sevenDaysAgo,
+      ).length;
+      const activeUsers30Days = allUsers.filter(
+        (u) => new Date(u.createdAt) >= thirtyDaysAgo,
+      ).length;
+
       // Get connected email accounts count
       const usersWithGrants = await Promise.all(
         allUsers.map(async (user) => {
           const grant = await storage.getNylasGrant(user.id);
           return grant ? 1 : 0;
-        })
+        }),
       );
-      const connectedAccounts = usersWithGrants.reduce((sum: number, val: number) => sum + val, 0 as number);
-      
+      const connectedAccounts = usersWithGrants.reduce(
+        (sum: number, val: number) => sum + val,
+        0 as number,
+      );
+
       // AI usage totals (from audit logs)
       const aiUsageTotals = {
         draftsGenerated: 0,
         emailsSent: 0,
         polishUsed: 0,
       };
-      
+
       res.json({
         totalUsers: userStats.total,
         activeUsers7Days,
@@ -5848,7 +6967,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         signupsToday,
         signupsThisWeek,
         aiUsage: aiUsageTotals,
-        estimatedMRR: (userStats.pro * 24) + (userStats.premium * 49)
+        estimatedMRR: userStats.pro * 24 + userStats.premium * 49,
       });
     } catch (error) {
       console.error("Error fetching owner stats:", error);
@@ -5857,37 +6976,45 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   });
 
   // Suspend/unsuspend user
-  app.post("/api/owner/users/:userId/suspend", requireOwner, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { suspended } = req.body;
-      // TODO: Add suspended field to users table and implement
-      res.json({ success: true, userId, suspended });
-    } catch (error) {
-      console.error("Error suspending user:", error);
-      res.status(500).json({ error: "Failed to update user status" });
-    }
-  });
+  app.post(
+    "/api/owner/users/:userId/suspend",
+    requireOwner,
+    async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const { suspended } = req.body;
+        // TODO: Add suspended field to users table and implement
+        res.json({ success: true, userId, suspended });
+      } catch (error) {
+        console.error("Error suspending user:", error);
+        res.status(500).json({ error: "Failed to update user status" });
+      }
+    },
+  );
 
   // Reset user AI usage limits
-  app.post("/api/owner/users/:userId/reset-limits", requireOwner, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
+  app.post(
+    "/api/owner/users/:userId/reset-limits",
+    requireOwner,
+    async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        // Reset dailyAICount to 0 and clear lastAICountReset
+        await storage.updateUser(userId, {
+          dailyAICount: 0,
+          lastAICountReset: new Date(),
+        });
+        res.json({ success: true, message: "Usage limits reset" });
+      } catch (error) {
+        console.error("Error resetting limits:", error);
+        res.status(500).json({ error: "Failed to reset limits" });
       }
-      // Reset dailyAICount to 0 and clear lastAICountReset
-      await storage.updateUser(userId, { 
-        dailyAICount: 0, 
-        lastAICountReset: new Date() 
-      });
-      res.json({ success: true, message: "Usage limits reset" });
-    } catch (error) {
-      console.error("Error resetting limits:", error);
-      res.status(500).json({ error: "Failed to reset limits" });
-    }
-  });
+    },
+  );
 
   // Get system status
   app.get("/api/owner/system-status", requireOwner, async (req, res) => {
@@ -5897,7 +7024,9 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         database: "healthy",
         nylas: process.env.NYLAS_API_KEY ? "configured" : "not_configured",
         stripe: process.env.STRIPE_SECRET_KEY ? "configured" : "not_configured",
-        openai: process.env.AI_INTEGRATIONS_OPENAI_API_KEY ? "configured" : "not_configured",
+        openai: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
+          ? "configured"
+          : "not_configured",
         lastChecked: new Date().toISOString(),
       };
       res.json(status);
@@ -5911,25 +7040,55 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.get("/api/owner/feature-flags", requireOwner, async (req, res) => {
     try {
       const flags = await storage.getAllFeatureFlags();
-      
+
       // If no flags exist yet, initialize defaults
       if (flags.length === 0) {
         const defaults = [
-          { key: "ai_chat", description: "AI Chat & Voice Assistant", enabled: true, allowedEmails: [] },
-          { key: "ai_draft", description: "AI Draft Generation", enabled: true, allowedEmails: [] },
-          { key: "ai_polish", description: "AI Polish Feature", enabled: true, allowedEmails: [] },
-          { key: "voice_assistant", description: "Voice Assistant", enabled: true, allowedEmails: [] },
-          { key: "show_testimonials", description: "Show Testimonials on Landing Page", enabled: false, allowedEmails: [] },
+          {
+            key: "ai_chat",
+            description: "AI Chat & Voice Assistant",
+            enabled: true,
+            allowedEmails: [],
+          },
+          {
+            key: "ai_draft",
+            description: "AI Draft Generation",
+            enabled: true,
+            allowedEmails: [],
+          },
+          {
+            key: "ai_polish",
+            description: "AI Polish Feature",
+            enabled: true,
+            allowedEmails: [],
+          },
+          {
+            key: "voice_assistant",
+            description: "Voice Assistant",
+            enabled: true,
+            allowedEmails: [],
+          },
+          {
+            key: "show_testimonials",
+            description: "Show Testimonials on Landing Page",
+            enabled: false,
+            allowedEmails: [],
+          },
         ];
-        
+
         for (const flag of defaults) {
-          await storage.setFeatureFlag(flag.key, flag.enabled, flag.allowedEmails, flag.description);
+          await storage.setFeatureFlag(
+            flag.key,
+            flag.enabled,
+            flag.allowedEmails,
+            flag.description,
+          );
         }
-        
+
         const newFlags = await storage.getAllFeatureFlags();
         return res.json(newFlags);
       }
-      
+
       res.json(flags);
     } catch (error) {
       console.error("Error fetching feature flags:", error);
@@ -5942,8 +7101,13 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const { key } = req.params;
       const { enabled, allowedEmails, description } = req.body;
-      
-      const updated = await storage.setFeatureFlag(key, enabled, allowedEmails, description);
+
+      const updated = await storage.setFeatureFlag(
+        key,
+        enabled,
+        allowedEmails,
+        description,
+      );
       res.json(updated);
     } catch (error) {
       console.error("Error updating feature flag:", error);
@@ -5957,11 +7121,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { key } = req.params;
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       const enabled = await storage.isFeatureEnabled(key, user.email);
       res.json({ key, enabled });
     } catch (error) {
@@ -5990,7 +7154,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.get("/api/owner/users", requireOwner, async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
-      
+
       // Enrich with connected email provider
       const enrichedUsers = await Promise.all(
         allUsers.map(async (user) => {
@@ -6002,11 +7166,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             onboardingCompleted: user.onboardingCompleted,
             createdAt: user.createdAt,
             connectedProvider: grant?.provider || null,
-            connectedEmail: grant?.email || null
+            connectedEmail: grant?.email || null,
           };
-        })
+        }),
       );
-      
+
       res.json(enrichedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -6026,26 +7190,30 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   });
 
   // Update feedback status
-  app.patch("/api/owner/feedback/:id/status", requireOwner, async (req, res) => {
-    try {
-      const feedbackId = parseInt(req.params.id);
-      const { status } = req.body;
-      
-      if (!["pending", "reviewed", "resolved"].includes(status)) {
-        return res.status(400).json({ error: "Invalid status" });
+  app.patch(
+    "/api/owner/feedback/:id/status",
+    requireOwner,
+    async (req, res) => {
+      try {
+        const feedbackId = parseInt(req.params.id);
+        const { status } = req.body;
+
+        if (!["pending", "reviewed", "resolved"].includes(status)) {
+          return res.status(400).json({ error: "Invalid status" });
+        }
+
+        const updated = await storage.updateFeedbackStatus(feedbackId, status);
+        if (!updated) {
+          return res.status(404).json({ error: "Feedback not found" });
+        }
+
+        res.json(updated);
+      } catch (error) {
+        console.error("Error updating feedback:", error);
+        res.status(500).json({ error: "Failed to update feedback" });
       }
-      
-      const updated = await storage.updateFeedbackStatus(feedbackId, status);
-      if (!updated) {
-        return res.status(404).json({ error: "Feedback not found" });
-      }
-        
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating feedback:", error);
-      res.status(500).json({ error: "Failed to update feedback" });
-    }
-  });
+    },
+  );
 
   // Get activity logs for owner
   app.get("/api/owner/activity-logs", requireOwner, async (req, res) => {
@@ -6063,32 +7231,34 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.post("/api/owner/notifications/send", requireOwner, async (req, res) => {
     try {
       const { target, targetPlan, userIds, title, message, type } = req.body;
-      
+
       if (!title || !message) {
-        return res.status(400).json({ error: "Title and message are required" });
+        return res
+          .status(400)
+          .json({ error: "Title and message are required" });
       }
-      
+
       let targetUserIds: string[] = [];
-      
+
       if (target === "all") {
         const allUsers = await storage.getAllUsers();
-        targetUserIds = allUsers.map(u => u.id);
+        targetUserIds = allUsers.map((u) => u.id);
       } else if (target === "plan" && targetPlan) {
         const planUsers = await storage.getUsersByPlan(targetPlan);
-        targetUserIds = planUsers.map(u => u.id);
+        targetUserIds = planUsers.map((u) => u.id);
       } else if (target === "specific" && userIds && Array.isArray(userIds)) {
         targetUserIds = userIds;
       } else {
         return res.status(400).json({ error: "Invalid target specification" });
       }
-      
+
       await storage.sendNotificationToUsers(
         targetUserIds,
         type || "admin_notification",
         title,
-        message
+        message,
       );
-      
+
       res.json({ success: true, sentTo: targetUserIds.length });
     } catch (error) {
       console.error("Error sending notifications:", error);
@@ -6101,37 +7271,43 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const { userId } = req.params;
       const { plan } = req.body;
-      
+
       if (!plan || !["free", "pro", "premium", "business"].includes(plan)) {
-        return res.status(400).json({ error: "Invalid plan. Must be free, pro, premium, or business" });
+        return res
+          .status(400)
+          .json({
+            error: "Invalid plan. Must be free, pro, premium, or business",
+          });
       }
-      
+
       // Map business to premium for internal storage
       const storedPlan = plan === "business" ? "premium" : plan;
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       const oldPlan = user.plan;
-      const updatedUser = await storage.updateUser(userId, { plan: storedPlan });
-      
+      const updatedUser = await storage.updateUser(userId, {
+        plan: storedPlan,
+      });
+
       // Log the plan change
       await storage.createActivityLog(
         userId,
         user.email,
         storedPlan === "free" ? "plan_downgrade" : "plan_upgrade",
-        `Plan changed from ${oldPlan} to ${storedPlan} by owner`
+        `Plan changed from ${oldPlan} to ${storedPlan} by owner`,
       );
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         user: {
           id: updatedUser?.id,
           email: updatedUser?.email,
-          plan: updatedUser?.plan
-        }
+          plan: updatedUser?.plan,
+        },
       });
     } catch (error) {
       console.error("Error updating user plan:", error);
@@ -6146,14 +7322,16 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       if (!["free", "pro", "premium"].includes(plan)) {
         return res.status(400).json({ error: "Invalid plan" });
       }
-      
+
       const users = await storage.getUsersByPlan(plan);
-      res.json(users.map(u => ({
-        id: u.id,
-        email: u.email,
-        plan: u.plan,
-        createdAt: u.createdAt
-      })));
+      res.json(
+        users.map((u) => ({
+          id: u.id,
+          email: u.email,
+          plan: u.plan,
+          createdAt: u.createdAt,
+        })),
+      );
     } catch (error) {
       console.error("Error fetching users by plan:", error);
       res.status(500).json({ error: "Failed to fetch users" });
@@ -6178,27 +7356,33 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(401).json({ error: "User not found" });
       }
-      
+
       // Check if user already has a testimonial
       const existing = await storage.getUserTestimonial(userId);
       if (existing) {
-        return res.status(400).json({ error: "You have already submitted a testimonial" });
+        return res
+          .status(400)
+          .json({ error: "You have already submitted a testimonial" });
       }
-      
+
       const { content, rating } = req.body;
-      
+
       if (!content || content.trim().length < 10) {
-        return res.status(400).json({ error: "Testimonial must be at least 10 characters" });
+        return res
+          .status(400)
+          .json({ error: "Testimonial must be at least 10 characters" });
       }
-      
+
       if (!rating || rating < 1 || rating > 5) {
-        return res.status(400).json({ error: "Rating must be between 1 and 5" });
+        return res
+          .status(400)
+          .json({ error: "Rating must be between 1 and 5" });
       }
-      
+
       const testimonial = await storage.createTestimonial({
         userId,
         userName: user.displayName || user.email.split("@")[0],
@@ -6208,7 +7392,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         status: "pending",
         isFounder: false,
       });
-      
+
       res.json(testimonial);
     } catch (error) {
       console.error("Error submitting testimonial:", error);
@@ -6240,37 +7424,41 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   });
 
   // Owner: Update testimonial status (approve/deny)
-  app.patch("/api/owner/testimonials/:id/status", requireOwner, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { status } = req.body;
-      
-      if (!["pending", "approved", "denied"].includes(status)) {
-        return res.status(400).json({ error: "Invalid status" });
+  app.patch(
+    "/api/owner/testimonials/:id/status",
+    requireOwner,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const { status } = req.body;
+
+        if (!["pending", "approved", "denied"].includes(status)) {
+          return res.status(400).json({ error: "Invalid status" });
+        }
+
+        const updated = await storage.updateTestimonialStatus(id, status);
+        if (!updated) {
+          return res.status(404).json({ error: "Testimonial not found" });
+        }
+
+        res.json(updated);
+      } catch (error) {
+        console.error("Error updating testimonial:", error);
+        res.status(500).json({ error: "Failed to update testimonial" });
       }
-      
-      const updated = await storage.updateTestimonialStatus(id, status);
-      if (!updated) {
-        return res.status(404).json({ error: "Testimonial not found" });
-      }
-      
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating testimonial:", error);
-      res.status(500).json({ error: "Failed to update testimonial" });
-    }
-  });
+    },
+  );
 
   // Owner: Delete testimonial
   app.delete("/api/owner/testimonials/:id", requireOwner, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteTestimonial(id);
-      
+
       if (!success) {
         return res.status(404).json({ error: "Testimonial not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting testimonial:", error);
@@ -6286,10 +7474,14 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { period = "month" } = req.query;
       const now = new Date();
       let startDate: Date;
-      
+
       switch (period) {
         case "day":
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          startDate = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+          );
           break;
         case "week":
           startDate = new Date(now);
@@ -6307,7 +7499,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         default:
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       }
-      
+
       const summary = await storage.getFinancialSummary(startDate, now);
       res.json(summary);
     } catch (error) {
@@ -6323,7 +7515,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
       const cat = category as any;
-      
+
       const expensesList = await storage.getExpenses(start, end, cat);
       res.json(expensesList);
     } catch (error) {
@@ -6335,12 +7527,22 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   // Create expense
   app.post("/api/owner/finances/expenses", requireOwner, async (req, res) => {
     try {
-      const { category, serviceName, amount, description, billingPeriod, isRecurring, metadata } = req.body;
-      
+      const {
+        category,
+        serviceName,
+        amount,
+        description,
+        billingPeriod,
+        isRecurring,
+        metadata,
+      } = req.body;
+
       if (!category || !serviceName || amount === undefined) {
-        return res.status(400).json({ error: "Category, service name, and amount are required" });
+        return res
+          .status(400)
+          .json({ error: "Category, service name, and amount are required" });
       }
-      
+
       const expense = await storage.createExpense({
         category,
         serviceName,
@@ -6350,7 +7552,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         isRecurring: isRecurring || false,
         metadata,
       });
-      
+
       res.json(expense);
     } catch (error) {
       console.error("Error creating expense:", error);
@@ -6359,37 +7561,45 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   });
 
   // Update expense
-  app.patch("/api/owner/finances/expenses/:id", requireOwner, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updates = req.body;
-      
-      if (updates.amount !== undefined) {
-        updates.amount = Math.round(updates.amount * 100);
+  app.patch(
+    "/api/owner/finances/expenses/:id",
+    requireOwner,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const updates = req.body;
+
+        if (updates.amount !== undefined) {
+          updates.amount = Math.round(updates.amount * 100);
+        }
+
+        const expense = await storage.updateExpense(id, updates);
+        if (!expense) {
+          return res.status(404).json({ error: "Expense not found" });
+        }
+        res.json(expense);
+      } catch (error) {
+        console.error("Error updating expense:", error);
+        res.status(500).json({ error: "Failed to update expense" });
       }
-      
-      const expense = await storage.updateExpense(id, updates);
-      if (!expense) {
-        return res.status(404).json({ error: "Expense not found" });
-      }
-      res.json(expense);
-    } catch (error) {
-      console.error("Error updating expense:", error);
-      res.status(500).json({ error: "Failed to update expense" });
-    }
-  });
+    },
+  );
 
   // Delete expense
-  app.delete("/api/owner/finances/expenses/:id", requireOwner, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      await storage.deleteExpense(id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting expense:", error);
-      res.status(500).json({ error: "Failed to delete expense" });
-    }
-  });
+  app.delete(
+    "/api/owner/finances/expenses/:id",
+    requireOwner,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        await storage.deleteExpense(id);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting expense:", error);
+        res.status(500).json({ error: "Failed to delete expense" });
+      }
+    },
+  );
 
   // Get all revenue
   app.get("/api/owner/finances/revenue", requireOwner, async (req, res) => {
@@ -6397,7 +7607,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { startDate, endDate } = req.query;
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
-      
+
       const revenueList = await storage.getRevenue(start, end);
       res.json(revenueList);
     } catch (error) {
@@ -6409,12 +7619,20 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   // Create revenue entry
   app.post("/api/owner/finances/revenue", requireOwner, async (req, res) => {
     try {
-      const { userId, userEmail, plan, amount, type, description, revenueDate } = req.body;
-      
+      const {
+        userId,
+        userEmail,
+        plan,
+        amount,
+        type,
+        description,
+        revenueDate,
+      } = req.body;
+
       if (!plan || amount === undefined) {
         return res.status(400).json({ error: "Plan and amount are required" });
       }
-      
+
       const rev = await storage.createRevenue({
         userId,
         userEmail,
@@ -6424,7 +7642,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         description,
         revenueDate: revenueDate ? new Date(revenueDate) : new Date(),
       });
-      
+
       res.json(rev);
     } catch (error) {
       console.error("Error creating revenue:", error);
@@ -6439,7 +7657,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(endDate.getDate() - parseInt(days as string));
-      
+
       const dailyData = await storage.getDailyFinancials(startDate, endDate);
       res.json(dailyData);
     } catch (error) {
@@ -6449,72 +7667,79 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   });
 
   // ==================== OWNER NOTES ROUTES ====================
-  
+
   // Get all owner notes
   app.get("/api/owner/notes", requireOwner, async (req, res) => {
     try {
-      const notes = await db.select().from(ownerNotes).orderBy(desc(ownerNotes.isPinned), desc(ownerNotes.updatedAt));
+      const notes = await db
+        .select()
+        .from(ownerNotes)
+        .orderBy(desc(ownerNotes.isPinned), desc(ownerNotes.updatedAt));
       res.json(notes);
     } catch (error) {
       console.error("Error fetching owner notes:", error);
       res.status(500).json({ error: "Failed to fetch notes" });
     }
   });
-  
+
   // Create a new owner note
   app.post("/api/owner/notes", requireOwner, async (req, res) => {
     try {
       const { content, category = "general", isPinned = false } = req.body;
-      
+
       if (!content || content.trim() === "") {
         return res.status(400).json({ error: "Note content is required" });
       }
-      
-      const [note] = await db.insert(ownerNotes).values({
-        content: content.trim(),
-        category,
-        isPinned,
-      }).returning();
-      
+
+      const [note] = await db
+        .insert(ownerNotes)
+        .values({
+          content: content.trim(),
+          category,
+          isPinned,
+        })
+        .returning();
+
       res.json(note);
     } catch (error) {
       console.error("Error creating owner note:", error);
       res.status(500).json({ error: "Failed to create note" });
     }
   });
-  
+
   // Update an owner note
   app.patch("/api/owner/notes/:id", requireOwner, async (req, res) => {
     try {
       const { id } = req.params;
       const { content, category, isPinned } = req.body;
-      
+
       const updates: any = { updatedAt: new Date() };
       if (content !== undefined) updates.content = content.trim();
       if (category !== undefined) updates.category = category;
       if (isPinned !== undefined) updates.isPinned = isPinned;
-      
-      const [note] = await db.update(ownerNotes)
+
+      const [note] = await db
+        .update(ownerNotes)
         .set(updates)
         .where(eq(ownerNotes.id, parseInt(id)))
         .returning();
-      
+
       if (!note) {
         return res.status(404).json({ error: "Note not found" });
       }
-      
+
       res.json(note);
     } catch (error) {
       console.error("Error updating owner note:", error);
       res.status(500).json({ error: "Failed to update note" });
     }
   });
-  
+
   // Delete an owner note
   app.delete("/api/owner/notes/:id", requireOwner, async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       await db.delete(ownerNotes).where(eq(ownerNotes.id, parseInt(id)));
       res.json({ success: true });
     } catch (error) {
@@ -6565,7 +7790,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   });
 
   // ==================== STRIPE PAYMENT ROUTES ====================
-  
+
   // Get Stripe publishable key for frontend
   app.get("/api/stripe/publishable-key", async (req, res) => {
     try {
@@ -6598,9 +7823,9 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           LEFT JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
           WHERE p.active = true
           ORDER BY pr.unit_amount ASC
-        `
+        `,
       );
-      
+
       // Group prices by product
       const productsMap = new Map();
       for (const row of result.rows as any[]) {
@@ -6611,7 +7836,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             description: row.product_description,
             active: row.product_active,
             metadata: row.product_metadata,
-            prices: []
+            prices: [],
           });
         }
         if (row.price_id) {
@@ -6624,7 +7849,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           });
         }
       }
-      
+
       res.json({ products: Array.from(productsMap.values()) });
     } catch (error) {
       console.error("Error fetching Stripe products:", error);
@@ -6636,23 +7861,23 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.post("/api/stripe/create-setup-intent", requireAuth, async (req, res) => {
     try {
       const { plan, interval } = req.body;
-      
+
       if (!plan || !["pro", "business"].includes(plan)) {
         return res.status(400).json({ error: "Valid plan is required" });
       }
-      
+
       if (!interval || !["annual", "monthly"].includes(interval)) {
         return res.status(400).json({ error: "Valid interval is required" });
       }
-      
+
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
-      
+
       // Create or get customer
       let customerId = user.stripeCustomerId;
       if (!customerId) {
@@ -6663,21 +7888,21 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         await storage.updateUser(user.id, { stripeCustomerId: customer.id });
         customerId = customer.id;
       }
-      
+
       // Create a SetupIntent to collect payment method
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
-        payment_method_types: ['card'],
-        metadata: { 
-          userId: user.id, 
+        payment_method_types: ["card"],
+        metadata: {
+          userId: user.id,
           plan: plan === "business" ? "premium" : plan,
-          interval 
+          interval,
         },
       });
-      
-      res.json({ 
+
+      res.json({
         clientSecret: setupIntent.client_secret,
-        customerId 
+        customerId,
       });
     } catch (error) {
       console.error("Error creating setup intent:", error);
@@ -6686,194 +7911,215 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   });
 
   // Confirm subscription after payment method is collected (handles both new subs and upgrades)
-  app.post("/api/stripe/confirm-subscription", requireAuth, async (req, res) => {
-    try {
-      const { plan, interval, paymentMethodId } = req.body;
-      
-      if (!plan || !["pro", "business"].includes(plan)) {
-        return res.status(400).json({ error: "Valid plan is required" });
-      }
-      
-      if (!interval || !["annual", "monthly"].includes(interval)) {
-        return res.status(400).json({ error: "Valid interval is required" });
-      }
-      
-      if (!paymentMethodId) {
-        return res.status(400).json({ error: "Payment method is required" });
-      }
-      
-      const user = await storage.getUser(req.session.userId!);
-      if (!user || !user.stripeCustomerId) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      
-      const { getUncachableStripeClient } = await import("./stripeClient");
-      const stripe = await getUncachableStripeClient();
-      
-      const internalPlan = plan === "business" ? "premium" : plan;
-      
-      // Define pricing
-      const pricing: Record<string, Record<string, number>> = {
-        pro: { monthly: 1000, annual: 9900 },
-        business: { monthly: 2900, annual: 29900 },
-      };
-      
-      const amount = pricing[plan][interval];
-      const recurringInterval = interval === "annual" ? "year" : "month";
-      const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
-      
-      // Attach payment method to customer
+  app.post(
+    "/api/stripe/confirm-subscription",
+    requireAuth,
+    async (req, res) => {
       try {
-        await stripe.paymentMethods.attach(paymentMethodId, {
-          customer: user.stripeCustomerId,
-        });
-      } catch (attachErr: any) {
-        // Payment method might already be attached - that's okay
-        if (!attachErr.message?.includes('already been attached')) {
-          throw attachErr;
+        const { plan, interval, paymentMethodId } = req.body;
+
+        if (!plan || !["pro", "business"].includes(plan)) {
+          return res.status(400).json({ error: "Valid plan is required" });
         }
-      }
-      
-      // Set as default payment method
-      await stripe.customers.update(user.stripeCustomerId, {
-        invoice_settings: { default_payment_method: paymentMethodId },
-      });
-      
-      // Find or create the product
-      let product;
-      const existingProducts = await stripe.products.list({ limit: 100 });
-      product = existingProducts.data.find(p => p.name === productName && p.active);
-      
-      if (!product) {
-        product = await stripe.products.create({
-          name: productName,
-          metadata: { plan: internalPlan },
+
+        if (!interval || !["annual", "monthly"].includes(interval)) {
+          return res.status(400).json({ error: "Valid interval is required" });
+        }
+
+        if (!paymentMethodId) {
+          return res.status(400).json({ error: "Payment method is required" });
+        }
+
+        const user = await storage.getUser(req.session.userId!);
+        if (!user || !user.stripeCustomerId) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        const { getUncachableStripeClient } = await import("./stripeClient");
+        const stripe = await getUncachableStripeClient();
+
+        const internalPlan = plan === "business" ? "premium" : plan;
+
+        // Define pricing
+        const pricing: Record<string, Record<string, number>> = {
+          pro: { monthly: 1000, annual: 9900 },
+          business: { monthly: 2900, annual: 29900 },
+        };
+
+        const amount = pricing[plan][interval];
+        const recurringInterval = interval === "annual" ? "year" : "month";
+        const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
+
+        // Attach payment method to customer
+        try {
+          await stripe.paymentMethods.attach(paymentMethodId, {
+            customer: user.stripeCustomerId,
+          });
+        } catch (attachErr: any) {
+          // Payment method might already be attached - that's okay
+          if (!attachErr.message?.includes("already been attached")) {
+            throw attachErr;
+          }
+        }
+
+        // Set as default payment method
+        await stripe.customers.update(user.stripeCustomerId, {
+          invoice_settings: { default_payment_method: paymentMethodId },
         });
-      }
-      
-      // Find or create the price
-      const existingPrices = await stripe.prices.list({ product: product.id, limit: 100 });
-      let price = existingPrices.data.find(p => 
-        p.active && 
-        p.unit_amount === amount && 
-        p.recurring?.interval === recurringInterval
-      );
-      
-      if (!price) {
-        price = await stripe.prices.create({
+
+        // Find or create the product
+        let product;
+        const existingProducts = await stripe.products.list({ limit: 100 });
+        product = existingProducts.data.find(
+          (p) => p.name === productName && p.active,
+        );
+
+        if (!product) {
+          product = await stripe.products.create({
+            name: productName,
+            metadata: { plan: internalPlan },
+          });
+        }
+
+        // Find or create the price
+        const existingPrices = await stripe.prices.list({
           product: product.id,
-          unit_amount: amount,
-          currency: 'usd',
-          recurring: { interval: recurringInterval },
-          metadata: { plan: internalPlan },
+          limit: 100,
         });
-      }
-      
-      // Check for existing active subscription
-      const existingSubscriptions = await stripe.subscriptions.list({
-        customer: user.stripeCustomerId,
-        status: 'all',
-        limit: 10,
-      });
-      
-      const activeSubscription = existingSubscriptions.data.find(
-        sub => ['active', 'trialing'].includes(sub.status)
-      );
-      
-      if (activeSubscription) {
-        // UPGRADE: Update existing subscription to the new plan/price
-        const currentItem = activeSubscription.items.data[0];
-        const updateParams: any = {
-          items: [{ id: currentItem.id, price: price.id }],
-          proration_behavior: 'create_prorations',
+        let price = existingPrices.data.find(
+          (p) =>
+            p.active &&
+            p.unit_amount === amount &&
+            p.recurring?.interval === recurringInterval,
+        );
+
+        if (!price) {
+          price = await stripe.prices.create({
+            product: product.id,
+            unit_amount: amount,
+            currency: "usd",
+            recurring: { interval: recurringInterval },
+            metadata: { plan: internalPlan },
+          });
+        }
+
+        // Check for existing active subscription
+        const existingSubscriptions = await stripe.subscriptions.list({
+          customer: user.stripeCustomerId,
+          status: "all",
+          limit: 10,
+        });
+
+        const activeSubscription = existingSubscriptions.data.find((sub) =>
+          ["active", "trialing"].includes(sub.status),
+        );
+
+        if (activeSubscription) {
+          // UPGRADE: Update existing subscription to the new plan/price
+          const currentItem = activeSubscription.items.data[0];
+          const updateParams: any = {
+            items: [{ id: currentItem.id, price: price.id }],
+            proration_behavior: "create_prorations",
+            default_payment_method: paymentMethodId,
+            metadata: { userId: user.id, plan: internalPlan },
+          };
+
+          if (activeSubscription.cancel_at_period_end) {
+            updateParams.cancel_at_period_end = false;
+          }
+
+          const updatedSub = await stripe.subscriptions.update(
+            activeSubscription.id,
+            updateParams,
+          );
+
+          await storage.updateUser(user.id, {
+            stripeSubscriptionId: updatedSub.id,
+            plan: internalPlan as any,
+            onboardingCompleted: true,
+          });
+
+          await storage.createActivityLog(
+            user.id,
+            user.email,
+            "plan_upgraded",
+            `Plan changed to ${internalPlan} (${interval})`,
+          );
+
+          return res.json({
+            success: true,
+            subscriptionId: updatedSub.id,
+            upgraded: true,
+            message: `Plan updated to ${productName}`,
+          });
+        }
+
+        // NEW SUBSCRIPTION: Create with 14-day trial
+        const subscription = await stripe.subscriptions.create({
+          customer: user.stripeCustomerId,
+          items: [{ price: price.id }],
+          trial_period_days: 14,
           default_payment_method: paymentMethodId,
           metadata: { userId: user.id, plan: internalPlan },
-        };
-        
-        if (activeSubscription.cancel_at_period_end) {
-          updateParams.cancel_at_period_end = false;
-        }
-        
-        const updatedSub = await stripe.subscriptions.update(activeSubscription.id, updateParams);
-        
-        await storage.updateUser(user.id, { 
-          stripeSubscriptionId: updatedSub.id,
+        });
+
+        await storage.updateUser(user.id, {
+          stripeSubscriptionId: subscription.id,
           plan: internalPlan as any,
-          onboardingCompleted: true
+          onboardingCompleted: true,
         });
-        
-        await storage.createActivityLog(
-          user.id, user.email, "plan_upgraded",
-          `Plan changed to ${internalPlan} (${interval})`
-        );
-        
-        return res.json({ 
-          success: true, 
-          subscriptionId: updatedSub.id,
-          upgraded: true,
-          message: `Plan updated to ${productName}`,
+
+        res.json({
+          success: true,
+          subscriptionId: subscription.id,
+          trialEnd: subscription.trial_end,
         });
+      } catch (error: any) {
+        console.error("Error confirming subscription:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to create subscription" });
       }
-      
-      // NEW SUBSCRIPTION: Create with 14-day trial
-      const subscription = await stripe.subscriptions.create({
-        customer: user.stripeCustomerId,
-        items: [{ price: price.id }],
-        trial_period_days: 14,
-        default_payment_method: paymentMethodId,
-        metadata: { userId: user.id, plan: internalPlan },
-      });
-      
-      await storage.updateUser(user.id, { 
-        stripeSubscriptionId: subscription.id,
-        plan: internalPlan as any,
-        onboardingCompleted: true
-      });
-      
-      res.json({ 
-        success: true, 
-        subscriptionId: subscription.id,
-        trialEnd: subscription.trial_end 
-      });
-    } catch (error: any) {
-      console.error("Error confirming subscription:", error);
-      res.status(500).json({ error: error.message || "Failed to create subscription" });
-    }
-  });
+    },
+  );
 
   // Legacy: Create checkout session for subscription (redirect to Stripe)
   app.post("/api/stripe/checkout", requireAuth, async (req, res) => {
     try {
       const { plan, interval } = req.body;
-      
+
       if (!plan || !["pro", "business"].includes(plan)) {
-        return res.status(400).json({ error: "Valid plan (pro or business) is required" });
+        return res
+          .status(400)
+          .json({ error: "Valid plan (pro or business) is required" });
       }
-      
+
       if (!interval || !["annual", "monthly"].includes(interval)) {
-        return res.status(400).json({ error: "Valid interval (annual or monthly) is required" });
+        return res
+          .status(400)
+          .json({ error: "Valid interval (annual or monthly) is required" });
       }
-      
+
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
-      
+
       // Define pricing (in cents)
       const pricing: Record<string, Record<string, number>> = {
         pro: {
-          monthly: 1000,  // $10.00 in cents
-          annual: 9900,   // $99.00 in cents
+          monthly: 1000, // $10.00 in cents
+          annual: 9900, // $99.00 in cents
         },
         business: {
-          monthly: 2900,  // $29.00 in cents
-          annual: 29900,  // $299.00 in cents
+          monthly: 2900, // $29.00 in cents
+          annual: 29900, // $299.00 in cents
         },
       };
-      
+
       const amount = pricing[plan][interval];
       const recurringInterval = interval === "annual" ? "year" : "month";
       const productNames: Record<string, string> = {
@@ -6881,7 +8127,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         business: "MyDraft Business",
       };
       const productName = productNames[plan];
-      
+
       // Create or get customer
       let customerId = user.stripeCustomerId;
       if (!customerId) {
@@ -6892,62 +8138,91 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         await storage.updateUser(user.id, { stripeCustomerId: customer.id });
         customerId = customer.id;
       }
-      
+
       // Find or create the product
       let product;
       const existingProducts = await stripe.products.list({ limit: 100 });
-      product = existingProducts.data.find(p => p.name === productName && p.active);
-      
+      product = existingProducts.data.find(
+        (p) => p.name === productName && p.active,
+      );
+
       if (!product) {
         product = await stripe.products.create({
           name: productName,
           metadata: { plan: plan === "business" ? "premium" : plan },
         });
       }
-      
+
       // Find or create the price for this interval
-      const existingPrices = await stripe.prices.list({ product: product.id, limit: 100 });
-      let price = existingPrices.data.find(p => 
-        p.active && 
-        p.unit_amount === amount && 
-        p.recurring?.interval === recurringInterval
+      const existingPrices = await stripe.prices.list({
+        product: product.id,
+        limit: 100,
+      });
+      let price = existingPrices.data.find(
+        (p) =>
+          p.active &&
+          p.unit_amount === amount &&
+          p.recurring?.interval === recurringInterval,
       );
-      
+
       if (!price) {
         price = await stripe.prices.create({
           product: product.id,
           unit_amount: amount,
-          currency: 'usd',
+          currency: "usd",
           recurring: { interval: recurringInterval },
           metadata: { plan: plan === "business" ? "premium" : plan },
         });
       }
-      
+
       // Create checkout session with trial: 14 days for yearly, 7 days for monthly
       const trialDays = interval === "annual" ? 14 : 7;
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
-      
-      console.log("Creating checkout session for user:", user.id, "plan:", plan, "interval:", interval, "price:", price.id);
-      
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+
+      console.log(
+        "Creating checkout session for user:",
+        user.id,
+        "plan:",
+        plan,
+        "interval:",
+        interval,
+        "price:",
+        price.id,
+      );
+
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         line_items: [{ price: price.id, quantity: 1 }],
-        mode: 'subscription',
-        billing_address_collection: 'required',
+        mode: "subscription",
+        billing_address_collection: "required",
         subscription_data: {
           trial_period_days: trialDays,
-          metadata: { userId: String(user.id), plan: plan === "business" ? "premium" : plan },
+          metadata: {
+            userId: String(user.id),
+            plan: plan === "business" ? "premium" : plan,
+          },
         },
         success_url: `${baseUrl}/select-plan?success=true`,
         cancel_url: `${baseUrl}/select-plan?canceled=true`,
-        metadata: { userId: String(user.id), plan: plan === "business" ? "premium" : plan },
+        metadata: {
+          userId: String(user.id),
+          plan: plan === "business" ? "premium" : plan,
+        },
       });
-      
+
       res.json({ url: session.url });
     } catch (error: any) {
-      console.error("Error creating checkout session:", error?.message || error);
+      console.error(
+        "Error creating checkout session:",
+        error?.message || error,
+      );
       console.error("Full error:", JSON.stringify(error, null, 2));
-      res.status(500).json({ error: "Failed to create checkout session", details: error?.message });
+      res
+        .status(500)
+        .json({
+          error: "Failed to create checkout session",
+          details: error?.message,
+        });
     }
   });
 
@@ -6958,15 +8233,15 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       if (!user.stripeSubscriptionId) {
         return res.json({ subscription: null, plan: user.plan });
       }
-      
+
       const result = await db.execute(
-        sql`SELECT * FROM stripe.subscriptions WHERE id = ${user.stripeSubscriptionId}`
+        sql`SELECT * FROM stripe.subscriptions WHERE id = ${user.stripeSubscriptionId}`,
       );
-      
+
       const subscription = result.rows[0] || null;
       res.json({ subscription, plan: user.plan });
     } catch (error) {
@@ -6980,17 +8255,17 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const user = await storage.getUser(req.session.userId!);
       if (!user || !user.stripeCustomerId) {
-        return res.json({ 
+        return res.json({
           hasSubscription: false,
           nextBillDate: null,
           invoices: [],
-          paymentMethod: null
+          paymentMethod: null,
         });
       }
-      
+
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
-      
+
       // Get subscription details for next bill date
       let nextBillDate = null;
       let currentPeriodEnd = null;
@@ -7000,23 +8275,29 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       let planInterval = null;
       let cancelAtPeriodEnd = false;
       let cancelAt = null;
-      
+
       if (user.stripeSubscriptionId) {
         try {
-          const subscriptionResponse = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          const subscriptionResponse = await stripe.subscriptions.retrieve(
+            user.stripeSubscriptionId,
+          );
           const subscription = subscriptionResponse as any;
           currentPeriodEnd = subscription.current_period_end;
-          nextBillDate = new Date(subscription.current_period_end * 1000).toISOString();
+          nextBillDate = new Date(
+            subscription.current_period_end * 1000,
+          ).toISOString();
           subscriptionStatus = subscription.status;
           cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
-          cancelAt = subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null;
-          
+          cancelAt = subscription.cancel_at
+            ? new Date(subscription.cancel_at * 1000).toISOString()
+            : null;
+
           // Get plan details from subscription items
           if (subscription.items.data.length > 0) {
             const price = subscription.items.data[0].price;
             planAmount = price.unit_amount;
             planInterval = price.recurring?.interval;
-            if (price.product && typeof price.product === 'string') {
+            if (price.product && typeof price.product === "string") {
               const product = await stripe.products.retrieve(price.product);
               planName = product.name;
             }
@@ -7025,7 +8306,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           console.error("Error fetching subscription:", e);
         }
       }
-      
+
       // Get past invoices
       let invoices: any[] = [];
       try {
@@ -7033,7 +8314,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           customer: user.stripeCustomerId,
           limit: 10,
         });
-        invoices = invoiceList.data.map(inv => ({
+        invoices = invoiceList.data.map((inv) => ({
           id: inv.id,
           number: inv.number,
           amount: inv.amount_paid,
@@ -7046,13 +8327,13 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       } catch (e) {
         console.error("Error fetching invoices:", e);
       }
-      
+
       // Get payment method (last 4 digits of card)
       let paymentMethod = null;
       try {
         const paymentMethods = await stripe.paymentMethods.list({
           customer: user.stripeCustomerId,
-          type: 'card',
+          type: "card",
           limit: 1,
         });
         if (paymentMethods.data.length > 0) {
@@ -7067,7 +8348,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       } catch (e) {
         console.error("Error fetching payment methods:", e);
       }
-      
+
       res.json({
         hasSubscription: !!user.stripeSubscriptionId,
         nextBillDate,
@@ -7095,16 +8376,16 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       if (!user.stripeSubscriptionId || !user.stripeCustomerId) {
         // No active subscription - just ensure plan is free
         await storage.updateUser(user.id, { plan: "free" });
         return res.json({ success: true, message: "Plan set to free" });
       }
-      
+
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
-      
+
       if (immediately) {
         // Cancel immediately - downgrade locally only after Stripe succeeds
         await stripe.subscriptions.cancel(user.stripeSubscriptionId);
@@ -7112,35 +8393,49 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           plan: "free",
           stripeSubscriptionId: null,
         });
-        
+
         await storage.createActivityLog(
-          user.id, user.email, "subscription_canceled",
-          `Subscription canceled immediately`
+          user.id,
+          user.email,
+          "subscription_canceled",
+          `Subscription canceled immediately`,
         );
-        
-        res.json({ success: true, message: "Subscription canceled immediately" });
+
+        res.json({
+          success: true,
+          message: "Subscription canceled immediately",
+        });
       } else {
         // Cancel at end of billing period - keep current plan until period ends
         await stripe.subscriptions.update(user.stripeSubscriptionId, {
           cancel_at_period_end: true,
         });
-        
-        const sub = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
-        
-        await storage.createActivityLog(
-          user.id, user.email, "subscription_cancel_scheduled",
-          `Subscription set to cancel at period end`
+
+        const sub = await stripe.subscriptions.retrieve(
+          user.stripeSubscriptionId,
         );
-        
-        res.json({ 
-          success: true, 
-          message: "Your subscription will remain active until the end of your billing period, then it will be canceled.",
-          cancelAt: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+
+        await storage.createActivityLog(
+          user.id,
+          user.email,
+          "subscription_cancel_scheduled",
+          `Subscription set to cancel at period end`,
+        );
+
+        res.json({
+          success: true,
+          message:
+            "Your subscription will remain active until the end of your billing period, then it will be canceled.",
+          cancelAt: sub.current_period_end
+            ? new Date(sub.current_period_end * 1000).toISOString()
+            : null,
         });
       }
     } catch (error: any) {
       console.error("Error canceling subscription:", error);
-      res.status(500).json({ error: error.message || "Failed to cancel subscription" });
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to cancel subscription" });
     }
   });
 
@@ -7148,108 +8443,135 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.post("/api/stripe/change-plan", requireAuth, async (req, res) => {
     try {
       const { plan, interval } = req.body;
-      
+
       if (!plan || !["pro", "business"].includes(plan)) {
-        return res.status(400).json({ error: "Valid plan (pro or business) is required" });
+        return res
+          .status(400)
+          .json({ error: "Valid plan (pro or business) is required" });
       }
-      
+
       if (!interval || !["annual", "monthly"].includes(interval)) {
-        return res.status(400).json({ error: "Valid interval (annual or monthly) is required" });
+        return res
+          .status(400)
+          .json({ error: "Valid interval (annual or monthly) is required" });
       }
-      
+
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       if (!user.stripeSubscriptionId || !user.stripeCustomerId) {
-        return res.status(400).json({ error: "No active subscription to change. Please subscribe first." });
+        return res
+          .status(400)
+          .json({
+            error: "No active subscription to change. Please subscribe first.",
+          });
       }
-      
+
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
-      
+
       // Get existing subscription
-      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
-      if (!subscription || !['active', 'trialing'].includes(subscription.status)) {
-        return res.status(400).json({ error: "No active subscription found. Please subscribe first." });
+      const subscription = await stripe.subscriptions.retrieve(
+        user.stripeSubscriptionId,
+      );
+      if (
+        !subscription ||
+        !["active", "trialing"].includes(subscription.status)
+      ) {
+        return res
+          .status(400)
+          .json({
+            error: "No active subscription found. Please subscribe first.",
+          });
       }
-      
+
       // Pricing
       const pricing: Record<string, Record<string, number>> = {
         pro: { monthly: 1000, annual: 9900 },
         business: { monthly: 2900, annual: 29900 },
       };
-      
+
       const amount = pricing[plan][interval];
       const recurringInterval = interval === "annual" ? "year" : "month";
       const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
       const internalPlan = plan === "business" ? "premium" : plan;
-      
+
       // Find or create product
       let product;
       const existingProducts = await stripe.products.list({ limit: 100 });
-      product = existingProducts.data.find(p => p.name === productName && p.active);
-      
+      product = existingProducts.data.find(
+        (p) => p.name === productName && p.active,
+      );
+
       if (!product) {
         product = await stripe.products.create({
           name: productName,
           metadata: { plan: internalPlan },
         });
       }
-      
+
       // Find or create price
-      const existingPrices = await stripe.prices.list({ product: product.id, limit: 100 });
-      let price = existingPrices.data.find(p => 
-        p.active && 
-        p.unit_amount === amount && 
-        p.recurring?.interval === recurringInterval
+      const existingPrices = await stripe.prices.list({
+        product: product.id,
+        limit: 100,
+      });
+      let price = existingPrices.data.find(
+        (p) =>
+          p.active &&
+          p.unit_amount === amount &&
+          p.recurring?.interval === recurringInterval,
       );
-      
+
       if (!price) {
         price = await stripe.prices.create({
           product: product.id,
           unit_amount: amount,
-          currency: 'usd',
+          currency: "usd",
           recurring: { interval: recurringInterval },
           metadata: { plan: internalPlan },
         });
       }
-      
+
       // Update the subscription's item to the new price (Stripe handles proration automatically)
       const currentItem = subscription.items.data[0];
-      
+
       // Also undo any pending cancellation
       const updateParams: any = {
-        items: [{
-          id: currentItem.id,
-          price: price.id,
-        }],
-        proration_behavior: 'create_prorations',
+        items: [
+          {
+            id: currentItem.id,
+            price: price.id,
+          },
+        ],
+        proration_behavior: "create_prorations",
         metadata: { userId: user.id, plan: internalPlan },
       };
-      
+
       // If subscription was set to cancel at period end, undo that
       if (subscription.cancel_at_period_end) {
         updateParams.cancel_at_period_end = false;
       }
-      
+
       const updatedSubscription = await stripe.subscriptions.update(
         user.stripeSubscriptionId,
-        updateParams
+        updateParams,
       );
-      
+
       // Update local plan
       const oldPlan = user.plan;
       await storage.updateUser(user.id, { plan: internalPlan as any });
-      
+
       await storage.createActivityLog(
-        user.id, user.email, "plan_changed",
-        `Plan changed from ${oldPlan} to ${internalPlan} (${interval})`
+        user.id,
+        user.email,
+        "plan_changed",
+        `Plan changed from ${oldPlan} to ${internalPlan} (${interval})`,
       );
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         plan: internalPlan,
         subscriptionId: updatedSubscription.id,
         message: `Plan changed to ${productName} (${interval})`,
@@ -7267,16 +8589,16 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       if (!user || !user.stripeCustomerId) {
         return res.status(400).json({ error: "No subscription to manage" });
       }
-      
+
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
-      
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
       const session = await stripe.billingPortal.sessions.create({
         customer: user.stripeCustomerId,
         return_url: `${baseUrl}/settings`,
       });
-      
+
       res.json({ url: session.url });
     } catch (error) {
       console.error("Error creating portal session:", error);
@@ -7287,7 +8609,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   // ==================== EMAIL CAMPAIGN ROUTES (Business Plan Only) ====================
 
   // Middleware to check if user has Business plan
-  async function requireBusinessPlan(req: Request, res: Response, next: NextFunction) {
+  async function requireBusinessPlan(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
     if (!req.session?.userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -7296,391 +8622,506 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       return res.status(401).json({ error: "User not found" });
     }
     if (user.plan !== "premium") {
-      return res.status(403).json({ error: "Email campaigns require a Business plan" });
+      return res
+        .status(403)
+        .json({ error: "Email campaigns require a Business plan" });
     }
     next();
   }
-  
+
   // Get all campaigns for the current user
-  app.get("/api/campaigns", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const campaigns = await storage.getCampaigns(req.session.userId!);
-      res.json(campaigns);
-    } catch (error) {
-      console.error("Error fetching campaigns:", error);
-      res.status(500).json({ error: "Failed to fetch campaigns" });
-    }
-  });
+  app.get(
+    "/api/campaigns",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const campaigns = await storage.getCampaigns(req.session.userId!);
+        res.json(campaigns);
+      } catch (error) {
+        console.error("Error fetching campaigns:", error);
+        res.status(500).json({ error: "Failed to fetch campaigns" });
+      }
+    },
+  );
 
   // Get a single campaign
-  app.get("/api/campaigns/:id", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
+  app.get(
+    "/api/campaigns/:id",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        const recipients = await storage.getCampaignRecipients(id);
+        res.json({ ...campaign, recipients });
+      } catch (error) {
+        console.error("Error fetching campaign:", error);
+        res.status(500).json({ error: "Failed to fetch campaign" });
       }
-      
-      const recipients = await storage.getCampaignRecipients(id);
-      res.json({ ...campaign, recipients });
-    } catch (error) {
-      console.error("Error fetching campaign:", error);
-      res.status(500).json({ error: "Failed to fetch campaign" });
-    }
-  });
+    },
+  );
 
   // Create a new campaign
-  app.post("/api/campaigns", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const { name, subject, body, recipients } = req.body;
-      
-      if (!name || !subject || !body) {
-        return res.status(400).json({ error: "Name, subject, and body are required" });
+  app.post(
+    "/api/campaigns",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const { name, subject, body, recipients } = req.body;
+
+        if (!name || !subject || !body) {
+          return res
+            .status(400)
+            .json({ error: "Name, subject, and body are required" });
+        }
+
+        const campaign = await storage.createCampaign({
+          userId: req.session.userId!,
+          name,
+          subject,
+          body,
+          status: "draft",
+          totalRecipients: 0,
+        });
+
+        // Add recipients if provided
+        if (recipients && Array.isArray(recipients) && recipients.length > 0) {
+          await storage.addCampaignRecipients(campaign.id, recipients);
+        }
+
+        const updatedCampaign = await storage.getCampaign(campaign.id);
+        res.json(updatedCampaign);
+      } catch (error) {
+        console.error("Error creating campaign:", error);
+        res.status(500).json({ error: "Failed to create campaign" });
       }
-      
-      const campaign = await storage.createCampaign({
-        userId: req.session.userId!,
-        name,
-        subject,
-        body,
-        status: "draft",
-        totalRecipients: 0,
-      });
-      
-      // Add recipients if provided
-      if (recipients && Array.isArray(recipients) && recipients.length > 0) {
-        await storage.addCampaignRecipients(campaign.id, recipients);
-      }
-      
-      const updatedCampaign = await storage.getCampaign(campaign.id);
-      res.json(updatedCampaign);
-    } catch (error) {
-      console.error("Error creating campaign:", error);
-      res.status(500).json({ error: "Failed to create campaign" });
-    }
-  });
+    },
+  );
 
   // Update a campaign
-  app.patch("/api/campaigns/:id", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
+  app.patch(
+    "/api/campaigns/:id",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        if (campaign.status === "sending" || campaign.status === "completed") {
+          return res
+            .status(400)
+            .json({
+              error: "Cannot edit a campaign that is sending or completed",
+            });
+        }
+
+        const { name, subject, body, status } = req.body;
+        const updates: Record<string, any> = {};
+
+        if (name !== undefined) updates.name = name;
+        if (subject !== undefined) updates.subject = subject;
+        if (body !== undefined) updates.body = body;
+        if (status !== undefined) updates.status = status;
+
+        const updated = await storage.updateCampaign(id, updates);
+        res.json(updated);
+      } catch (error) {
+        console.error("Error updating campaign:", error);
+        res.status(500).json({ error: "Failed to update campaign" });
       }
-      
-      if (campaign.status === "sending" || campaign.status === "completed") {
-        return res.status(400).json({ error: "Cannot edit a campaign that is sending or completed" });
-      }
-      
-      const { name, subject, body, status } = req.body;
-      const updates: Record<string, any> = {};
-      
-      if (name !== undefined) updates.name = name;
-      if (subject !== undefined) updates.subject = subject;
-      if (body !== undefined) updates.body = body;
-      if (status !== undefined) updates.status = status;
-      
-      const updated = await storage.updateCampaign(id, updates);
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating campaign:", error);
-      res.status(500).json({ error: "Failed to update campaign" });
-    }
-  });
+    },
+  );
 
   // Delete a campaign
-  app.delete("/api/campaigns/:id", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
+  app.delete(
+    "/api/campaigns/:id",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        if (campaign.status === "sending") {
+          return res
+            .status(400)
+            .json({
+              error: "Cannot delete a campaign that is currently sending",
+            });
+        }
+
+        await storage.deleteCampaign(id);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting campaign:", error);
+        res.status(500).json({ error: "Failed to delete campaign" });
       }
-      
-      if (campaign.status === "sending") {
-        return res.status(400).json({ error: "Cannot delete a campaign that is currently sending" });
-      }
-      
-      await storage.deleteCampaign(id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting campaign:", error);
-      res.status(500).json({ error: "Failed to delete campaign" });
-    }
-  });
+    },
+  );
 
   // Add recipients to a campaign
-  app.post("/api/campaigns/:id/recipients", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
+  app.post(
+    "/api/campaigns/:id/recipients",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        if (campaign.status !== "draft") {
+          return res
+            .status(400)
+            .json({ error: "Can only add recipients to draft campaigns" });
+        }
+
+        const { recipients } = req.body;
+
+        if (
+          !recipients ||
+          !Array.isArray(recipients) ||
+          recipients.length === 0
+        ) {
+          return res
+            .status(400)
+            .json({ error: "Recipients array is required" });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const validRecipients = recipients.filter(
+          (r: any) => r.email && emailRegex.test(r.email),
+        );
+
+        if (validRecipients.length === 0) {
+          return res
+            .status(400)
+            .json({ error: "No valid email addresses provided" });
+        }
+
+        const added = await storage.addCampaignRecipients(id, validRecipients);
+        res.json({ added: added.length, recipients: added });
+      } catch (error) {
+        console.error("Error adding recipients:", error);
+        res.status(500).json({ error: "Failed to add recipients" });
       }
-      
-      if (campaign.status !== "draft") {
-        return res.status(400).json({ error: "Can only add recipients to draft campaigns" });
-      }
-      
-      const { recipients } = req.body;
-      
-      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
-        return res.status(400).json({ error: "Recipients array is required" });
-      }
-      
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const validRecipients = recipients.filter((r: any) => 
-        r.email && emailRegex.test(r.email)
-      );
-      
-      if (validRecipients.length === 0) {
-        return res.status(400).json({ error: "No valid email addresses provided" });
-      }
-      
-      const added = await storage.addCampaignRecipients(id, validRecipients);
-      res.json({ added: added.length, recipients: added });
-    } catch (error) {
-      console.error("Error adding recipients:", error);
-      res.status(500).json({ error: "Failed to add recipients" });
-    }
-  });
+    },
+  );
 
   // Get recipients for a campaign
-  app.get("/api/campaigns/:id/recipients", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
+  app.get(
+    "/api/campaigns/:id/recipients",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        const recipients = await storage.getCampaignRecipients(id);
+        res.json(recipients);
+      } catch (error) {
+        console.error("Error fetching recipients:", error);
+        res.status(500).json({ error: "Failed to fetch recipients" });
       }
-      
-      const recipients = await storage.getCampaignRecipients(id);
-      res.json(recipients);
-    } catch (error) {
-      console.error("Error fetching recipients:", error);
-      res.status(500).json({ error: "Failed to fetch recipients" });
-    }
-  });
+    },
+  );
 
   // Clear all recipients from a campaign
-  app.delete("/api/campaigns/:id/recipients", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
+  app.delete(
+    "/api/campaigns/:id/recipients",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        if (campaign.status !== "draft") {
+          return res
+            .status(400)
+            .json({ error: "Can only clear recipients from draft campaigns" });
+        }
+
+        await storage.clearCampaignRecipients(id);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error clearing recipients:", error);
+        res.status(500).json({ error: "Failed to clear recipients" });
       }
-      
-      if (campaign.status !== "draft") {
-        return res.status(400).json({ error: "Can only clear recipients from draft campaigns" });
-      }
-      
-      await storage.clearCampaignRecipients(id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error clearing recipients:", error);
-      res.status(500).json({ error: "Failed to clear recipients" });
-    }
-  });
+    },
+  );
 
   // Delete a single recipient
-  app.delete("/api/campaigns/:id/recipients/:recipientId", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const recipientId = parseInt(req.params.recipientId);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
+  app.delete(
+    "/api/campaigns/:id/recipients/:recipientId",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const recipientId = parseInt(req.params.recipientId);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        if (campaign.status !== "draft") {
+          return res
+            .status(400)
+            .json({ error: "Can only remove recipients from draft campaigns" });
+        }
+
+        await storage.deleteCampaignRecipient(recipientId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting recipient:", error);
+        res.status(500).json({ error: "Failed to delete recipient" });
       }
-      
-      if (campaign.status !== "draft") {
-        return res.status(400).json({ error: "Can only remove recipients from draft campaigns" });
-      }
-      
-      await storage.deleteCampaignRecipient(recipientId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting recipient:", error);
-      res.status(500).json({ error: "Failed to delete recipient" });
-    }
-  });
+    },
+  );
 
   // Helper: replace personalization variables in text
-  function replaceVariables(text: string, recipient: { email: string; name?: string | null }): string {
-    const firstName = recipient.name ? recipient.name.split(' ')[0] : '';
-    const lastName = recipient.name ? recipient.name.split(' ').slice(1).join(' ') : '';
+  function replaceVariables(
+    text: string,
+    recipient: { email: string; name?: string | null },
+  ): string {
+    const firstName = recipient.name ? recipient.name.split(" ")[0] : "";
+    const lastName = recipient.name
+      ? recipient.name.split(" ").slice(1).join(" ")
+      : "";
     return text
-      .replace(/\{name\}/gi, recipient.name || '')
+      .replace(/\{name\}/gi, recipient.name || "")
       .replace(/\{first_name\}/gi, firstName)
       .replace(/\{last_name\}/gi, lastName)
       .replace(/\{email\}/gi, recipient.email)
-      .replace(/\{company\}/gi, recipient.email.split('@')[1]?.split('.')[0] || '');
+      .replace(
+        /\{company\}/gi,
+        recipient.email.split("@")[1]?.split(".")[0] || "",
+      );
   }
 
   // Send test campaign email to self
-  app.post("/api/campaigns/:id/test", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
+  app.post(
+    "/api/campaigns/:id/test",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        const nylasGrant = await storage.getNylasGrant(req.session.userId!);
+        if (!nylasGrant) {
+          return res
+            .status(400)
+            .json({ error: "Please connect your email account first" });
+        }
+
+        const user = await storage.getUser(req.session.userId!);
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        // Use sample data for test with user's own info
+        const testRecipient = {
+          email: user.email,
+          name: user.email.split("@")[0].replace(/[._]/g, " "),
+        };
+
+        const personalizedSubject = replaceVariables(
+          campaign.subject,
+          testRecipient,
+        );
+        const personalizedBody = replaceVariables(campaign.body, testRecipient);
+
+        const testSubject = `[TEST] ${personalizedSubject}`;
+
+        await nylas.sendMessage(
+          nylasGrant.grantId,
+          [user.email],
+          testSubject,
+          personalizedBody,
+        );
+
+        res.json({ message: "Test email sent to your inbox" });
+      } catch (error) {
+        console.error("Error sending test campaign:", error);
+        res.status(500).json({ error: "Failed to send test email" });
       }
-      
-      const nylasGrant = await storage.getNylasGrant(req.session.userId!);
-      if (!nylasGrant) {
-        return res.status(400).json({ error: "Please connect your email account first" });
-      }
-      
-      const user = await storage.getUser(req.session.userId!);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      
-      // Use sample data for test with user's own info
-      const testRecipient = { 
-        email: user.email, 
-        name: user.email.split('@')[0].replace(/[._]/g, ' ')
-      };
-      
-      const personalizedSubject = replaceVariables(campaign.subject, testRecipient);
-      const personalizedBody = replaceVariables(campaign.body, testRecipient);
-      
-      const testSubject = `[TEST] ${personalizedSubject}`;
-      
-      await nylas.sendMessage(
-        nylasGrant.grantId,
-        [user.email],
-        testSubject,
-        personalizedBody
-      );
-      
-      res.json({ message: "Test email sent to your inbox" });
-    } catch (error) {
-      console.error("Error sending test campaign:", error);
-      res.status(500).json({ error: "Failed to send test email" });
-    }
-  });
+    },
+  );
 
   // Preview campaign with variable replacement
-  app.post("/api/campaigns/:id/preview", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
+  app.post(
+    "/api/campaigns/:id/preview",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        const { recipientEmail, recipientName } = req.body;
+        const testRecipient = {
+          email: recipientEmail || "john@example.com",
+          name: recipientName || "John Doe",
+        };
+
+        res.json({
+          subject: replaceVariables(campaign.subject, testRecipient),
+          body: replaceVariables(campaign.body, testRecipient),
+          recipient: testRecipient,
+        });
+      } catch (error) {
+        console.error("Error previewing campaign:", error);
+        res.status(500).json({ error: "Failed to preview campaign" });
       }
-      
-      const { recipientEmail, recipientName } = req.body;
-      const testRecipient = { 
-        email: recipientEmail || "john@example.com", 
-        name: recipientName || "John Doe" 
-      };
-      
-      res.json({
-        subject: replaceVariables(campaign.subject, testRecipient),
-        body: replaceVariables(campaign.body, testRecipient),
-        recipient: testRecipient
-      });
-    } catch (error) {
-      console.error("Error previewing campaign:", error);
-      res.status(500).json({ error: "Failed to preview campaign" });
-    }
-  });
+    },
+  );
 
   // Send a campaign (start sending emails)
-  app.post("/api/campaigns/:id/send", requireAuth, requireBusinessPlan, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const campaign = await storage.getCampaign(id);
-      
-      if (!campaign || campaign.userId !== req.session.userId) {
-        return res.status(404).json({ error: "Campaign not found" });
-      }
-      
-      if (campaign.status !== "draft") {
-        return res.status(400).json({ error: "Can only send draft campaigns" });
-      }
-      
-      const recipients = await storage.getCampaignRecipients(id);
-      
-      if (recipients.length === 0) {
-        return res.status(400).json({ error: "No recipients in this campaign" });
-      }
-      
-      const nylasGrant = await storage.getNylasGrant(req.session.userId!);
-      if (!nylasGrant) {
-        return res.status(400).json({ error: "Please connect your email account first" });
-      }
-      
-      await storage.updateCampaign(id, { 
-        status: "sending", 
-        startedAt: new Date() 
-      });
-      
-      // Send emails in the background with variable replacement
-      (async () => {
-        let sentCount = 0;
-        let failedCount = 0;
-        
-        for (const recipient of recipients) {
-          try {
-            const personalizedSubject = replaceVariables(campaign.subject, recipient);
-            const personalizedBody = replaceVariables(campaign.body, recipient);
-            
-            await nylas.sendMessage(
-              nylasGrant.grantId,
-              [recipient.email],
-              personalizedSubject,
-              personalizedBody
-            );
-            
-            storage.saveContact(req.session.userId!, recipient.email, recipient.name || undefined).catch(err => 
-              console.warn("Failed to save contact:", err)
-            );
-            
-            await storage.updateCampaignRecipientStatus(recipient.id, "sent");
-            sentCount++;
-          } catch (error: any) {
-            console.error(`Failed to send to ${recipient.email}:`, error);
-            await storage.updateCampaignRecipientStatus(
-              recipient.id, 
-              "failed", 
-              error.message || "Unknown error"
-            );
-            failedCount++;
-          }
-          
-          await new Promise(resolve => setTimeout(resolve, 500));
+  app.post(
+    "/api/campaigns/:id/send",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
         }
-        
+
+        if (campaign.status !== "draft") {
+          return res
+            .status(400)
+            .json({ error: "Can only send draft campaigns" });
+        }
+
+        const recipients = await storage.getCampaignRecipients(id);
+
+        if (recipients.length === 0) {
+          return res
+            .status(400)
+            .json({ error: "No recipients in this campaign" });
+        }
+
+        const nylasGrant = await storage.getNylasGrant(req.session.userId!);
+        if (!nylasGrant) {
+          return res
+            .status(400)
+            .json({ error: "Please connect your email account first" });
+        }
+
         await storage.updateCampaign(id, {
-          status: "completed",
-          sentCount,
-          failedCount,
-          completedAt: new Date()
+          status: "sending",
+          startedAt: new Date(),
         });
-      })();
-      
-      res.json({ 
-        message: "Campaign started", 
-        totalRecipients: recipients.length 
-      });
-    } catch (error) {
-      console.error("Error starting campaign:", error);
-      res.status(500).json({ error: "Failed to start campaign" });
-    }
-  });
+
+        // Send emails in the background with variable replacement
+        (async () => {
+          let sentCount = 0;
+          let failedCount = 0;
+
+          for (const recipient of recipients) {
+            try {
+              const personalizedSubject = replaceVariables(
+                campaign.subject,
+                recipient,
+              );
+              const personalizedBody = replaceVariables(
+                campaign.body,
+                recipient,
+              );
+
+              await nylas.sendMessage(
+                nylasGrant.grantId,
+                [recipient.email],
+                personalizedSubject,
+                personalizedBody,
+              );
+
+              storage
+                .saveContact(
+                  req.session.userId!,
+                  recipient.email,
+                  recipient.name || undefined,
+                )
+                .catch((err) => console.warn("Failed to save contact:", err));
+
+              await storage.updateCampaignRecipientStatus(recipient.id, "sent");
+              sentCount++;
+            } catch (error: any) {
+              console.error(`Failed to send to ${recipient.email}:`, error);
+              await storage.updateCampaignRecipientStatus(
+                recipient.id,
+                "failed",
+                error.message || "Unknown error",
+              );
+              failedCount++;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+
+          await storage.updateCampaign(id, {
+            status: "completed",
+            sentCount,
+            failedCount,
+            completedAt: new Date(),
+          });
+        })();
+
+        res.json({
+          message: "Campaign started",
+          totalRecipients: recipients.length,
+        });
+      } catch (error) {
+        console.error("Error starting campaign:", error);
+        res.status(500).json({ error: "Failed to start campaign" });
+      }
+    },
+  );
 
   return httpServer;
 }
