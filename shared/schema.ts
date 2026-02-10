@@ -628,7 +628,7 @@ export const notifications = pgTable("notifications", {
   title: text("title").notNull(),
   message: text("message").notNull(),
   isRead: boolean("is_read").default(false).notNull(),
-  data: jsonb("data").$type<{ inviteId?: number; inviterId?: string; inviterEmail?: string }>(),
+  data: jsonb("data").$type<{ inviteId?: number; inviterId?: string; inviterEmail?: string; emailId?: string; senderEmail?: string; subject?: string; count?: number }>(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 

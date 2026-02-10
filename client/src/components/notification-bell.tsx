@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Check, Users, X } from "lucide-react";
+import { Bell, Check, Users, X, Mail, Mails } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -8,7 +8,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 
@@ -19,24 +18,76 @@ interface Notification {
   title: string;
   message: string;
   isRead: boolean;
-  data: { inviteId?: number; inviterId?: string; inviterEmail?: string };
+  data: { inviteId?: number; inviterId?: string; inviterEmail?: string; emailId?: string; senderEmail?: string; subject?: string; count?: number };
   createdAt: string;
+}
+
+function requestBrowserNotificationPermission() {
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+function showBrowserNotification(title: string, body: string) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      const notification = new Notification(title, {
+        body,
+        icon: "/favicon.ico",
+        tag: "mydraft-email",
+        renotify: true,
+      });
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+      setTimeout(() => notification.close(), 8000);
+    } catch {
+      // Silent fail for environments that don't support notifications
+    }
+  }
 }
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const prevUnreadCount = useRef<number | null>(null);
+  const hasRequestedPermission = useRef(false);
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
+    refetchInterval: 15000,
   });
 
   const { data: unreadData } = useQuery<{ count: number }>({
     queryKey: ["/api/notifications/unread-count"],
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
 
   const unreadCount = unreadData?.count || 0;
+
+  useEffect(() => {
+    if (!hasRequestedPermission.current) {
+      hasRequestedPermission.current = true;
+      requestBrowserNotificationPermission();
+    }
+  }, []);
+
+  const lastNotifiedId = useRef<number>(0);
+
+  useEffect(() => {
+    if (prevUnreadCount.current !== null && unreadCount > prevUnreadCount.current) {
+      const emailNotifications = notifications.filter(
+        n => !n.isRead && (n.type === "new_email" || n.type === "new_email_batch") && n.id > lastNotifiedId.current
+      );
+      if (emailNotifications.length > 0) {
+        const latest = emailNotifications[0];
+        lastNotifiedId.current = latest.id;
+        showBrowserNotification(latest.title, latest.message);
+      }
+    }
+    prevUnreadCount.current = unreadCount;
+  }, [unreadCount, notifications]);
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
@@ -79,14 +130,18 @@ export function NotificationBell() {
     },
   });
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = useCallback((notification: Notification) => {
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
     }
-  };
+  }, [markAsReadMutation]);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case "new_email":
+        return <Mail className="h-4 w-4 text-primary" />;
+      case "new_email_batch":
+        return <Mails className="h-4 w-4 text-primary" />;
       case "team_invite_received":
       case "team_invite_accepted":
       case "team_invite_declined":
@@ -108,7 +163,7 @@ export function NotificationBell() {
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center animate-in fade-in zoom-in duration-200">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -159,7 +214,7 @@ export function NotificationBell() {
                           <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-0.5">
+                      <p className="text-sm text-muted-foreground mt-0.5 truncate">
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">

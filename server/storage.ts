@@ -2354,6 +2354,62 @@ Business Development`,
   }
 
   async saveCachedEmails(userId: number, emails: any[]): Promise<void> {
+    const userIdStr = String(userId);
+
+    // Get existing cached email IDs to detect new emails
+    const existingCached = await db.select({ nylasId: cachedEmails.nylasId })
+      .from(cachedEmails)
+      .where(eq(cachedEmails.userId, userId));
+    const existingIds = new Set(existingCached.map(e => e.nylasId));
+
+    // Only detect new emails if we have a previous cache baseline
+    if (existingIds.size > 0) {
+      // Find new unread inbox emails not already in cache
+      const newEmails = emails.filter(e => 
+        e.nylasId && !existingIds.has(e.nylasId) && !e.isRead && (e.folder === "inbox" || !e.folder)
+      );
+
+      if (newEmails.length > 0) {
+        // Check which email IDs already have notifications to avoid duplicates
+        const recentNotifications = await db.select()
+          .from(notifications)
+          .where(and(
+            eq(notifications.userId, userIdStr),
+            sql`${notifications.type} IN ('new_email', 'new_email_batch')`,
+            sql`${notifications.createdAt} > NOW() - INTERVAL '1 hour'`
+          ));
+        const notifiedEmailIds = new Set(
+          recentNotifications
+            .filter(n => n.data && (n.data as any).emailId)
+            .map(n => (n.data as any).emailId)
+        );
+
+        const trulyNewEmails = newEmails.filter(e => !notifiedEmailIds.has(e.nylasId));
+
+        if (trulyNewEmails.length > 0 && trulyNewEmails.length <= 5) {
+          for (const email of trulyNewEmails) {
+            await this.createNotification({
+              userId: userIdStr,
+              type: "new_email",
+              title: email.sender || "New Email",
+              message: email.subject || "No subject",
+              isRead: false,
+              data: { emailId: email.nylasId, senderEmail: email.senderEmail, subject: email.subject },
+            });
+          }
+        } else if (trulyNewEmails.length > 5) {
+          await this.createNotification({
+            userId: userIdStr,
+            type: "new_email_batch",
+            title: `${trulyNewEmails.length} new emails`,
+            message: `You have ${trulyNewEmails.length} new emails in your inbox`,
+            isRead: false,
+            data: { count: trulyNewEmails.length },
+          });
+        }
+      }
+    }
+
     // Clear existing cache for user
     await db.delete(cachedEmails).where(eq(cachedEmails.userId, userId));
     
