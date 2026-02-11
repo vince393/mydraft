@@ -165,6 +165,7 @@ function AuthenticatedApp() {
           )}
           <Inbox 
             activeFolder={activeFolder} 
+            onFolderChange={setActiveFolder}
             showComposeDialog={showComposeDialog}
             setShowComposeDialog={setShowComposeDialog}
             composeMode={composeMode}

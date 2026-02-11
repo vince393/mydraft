@@ -40,6 +40,7 @@ interface EmailWithNylasId extends Email {
 
 interface InboxProps {
   activeFolder: string;
+  onFolderChange?: (folder: string) => void;
   showComposeDialog: boolean;
   setShowComposeDialog: (show: boolean) => void;
   composeMode: "new" | "reply" | "replyAll" | "forward";
@@ -53,7 +54,7 @@ function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
 }
 
-export default function Inbox({ activeFolder, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode, onOpenAssistant, onCompose, isAIChatEnabled = true }: InboxProps) {
+export default function Inbox({ activeFolder, onFolderChange, showComposeDialog, setShowComposeDialog, composeMode, setComposeMode, onOpenAssistant, onCompose, isAIChatEnabled = true }: InboxProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | number | null>(null);
   const [selectedThreadEmails, setSelectedThreadEmails] = useState<EmailWithNylasId[]>([]);
   const [generatedDraft, setGeneratedDraft] = useState<Draft | null>(null);
@@ -171,6 +172,22 @@ export default function Inbox({ activeFolder, showComposeDialog, setShowComposeD
   const customFolderId = isCustomFolder ? parseInt(activeFolder.replace("custom-", "")) : null;
   const isCategoryView = isCategoryFolder(activeFolder);
   const effectiveFolder = isCategoryView ? "inbox" : activeFolder;
+
+  // Validate custom folder still exists - redirect to inbox if deleted
+  interface FoldersResponse { folders: { id: number; title: string; }[]; }
+  const { data: foldersData } = useQuery<FoldersResponse>({
+    queryKey: ["/api/folders"],
+    enabled: isCustomFolder,
+  });
+
+  useEffect(() => {
+    if (isCustomFolder && customFolderId && foldersData?.folders) {
+      const folderExists = foldersData.folders.some(f => f.id === customFolderId);
+      if (!folderExists) {
+        onFolderChange?.("inbox");
+      }
+    }
+  }, [isCustomFolder, customFolderId, foldersData, onFolderChange]);
 
   // Step 1: Fetch cached emails from DB for instant display
   const { data: cachedEmails = [], isFetching: isFetchingCached, isSuccess: hasCachedData } = useQuery<EmailWithNylasId[]>({

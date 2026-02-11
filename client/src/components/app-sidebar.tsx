@@ -459,7 +459,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const handleDeleteFolder = useCallback(() => {
     if (deleteFolderId !== null) {
       deleteFolderMutation.mutate(deleteFolderId);
-      if (activeFolder.toLowerCase() === deleteFolderTitle.toLowerCase()) {
+      if (activeFolder === `custom-${deleteFolderId}`) {
         onFolderChange("inbox");
       }
       setIsDeleteOpen(false);
@@ -468,7 +468,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
       setDeleteFolderId(null);
       setDeleteFolderTitle("");
     }
-  }, [deleteFolderId, deleteFolderTitle, activeFolder, onFolderChange, deleteFolderMutation]);
+  }, [deleteFolderId, activeFolder, onFolderChange, deleteFolderMutation]);
 
   const handleOpenIconPicker = useCallback((folder: FolderItem) => {
     setSelectedFolder(folder);

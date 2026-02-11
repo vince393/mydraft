@@ -2022,11 +2022,13 @@ Business Development`,
   }
 
   async deleteCustomFolder(id: number, userId: string): Promise<boolean> {
-    // Use .returning() to get deleted rows since rowCount can be undefined in Drizzle
     const deleted = await db.delete(customFolders)
       .where(and(eq(customFolders.id, id), eq(customFolders.userId, userId)))
       .returning();
-    console.log("[deleteCustomFolder] Delete result:", { deletedCount: deleted.length, id, userId });
+    if (deleted.length > 0) {
+      await db.delete(emailFolderAssignments)
+        .where(and(eq(emailFolderAssignments.userId, userId), eq(emailFolderAssignments.folderId, id)));
+    }
     return deleted.length > 0;
   }
 
