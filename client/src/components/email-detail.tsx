@@ -542,7 +542,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-x-hidden">
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border/20">
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
           <h1 className="text-[15px] sm:text-base font-medium truncate pr-2 sm:pr-4 tracking-tight" data-testid="email-subject">

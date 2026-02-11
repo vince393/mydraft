@@ -486,6 +486,9 @@
   line-height: 1.65;
   letter-spacing: -0.01em;
   color: hsl(var(--foreground));
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
 }
 
 /* Email iframe wrapper */
@@ -494,6 +497,8 @@
   overflow: hidden;
   border: 1px solid hsl(var(--border) / 0.15);
   background: #ffffff;
+  max-width: 100%;
+  width: 100%;
 }
 
 .dark .email-iframe-wrapper {

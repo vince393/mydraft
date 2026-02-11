@@ -173,16 +173,27 @@ export function EmailIframeRenderer({
     line-height: 1.58;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  * {
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
   img {
-    max-width: 100%;
-    height: auto;
+    max-width: 100% !important;
+    height: auto !important;
   }
   table {
-    max-width: 100%;
+    max-width: 100% !important;
     border-collapse: collapse;
+    table-layout: fixed;
+    width: 100% !important;
+  }
+  td, th {
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
   body > table,
   body > div > table,
@@ -373,7 +384,8 @@ ${headContent}
           height: `${height}px`,
           border: "none",
           display: "block",
-          overflow: "auto",
+          overflowX: "hidden",
+          overflowY: "hidden",
           background: isDark ? "#1a1a1e" : "#ffffff",
         }}
         title="Email content"
