@@ -2537,9 +2537,10 @@ Return ONLY valid JSON, no other text.`;
       }
 
       // Use OpenAI to analyze which emails match the folder's AI description
-      const emailSummaries = emails.slice(0, 30).map((e: any) => ({
+      const emailSummaries = emails.slice(0, 50).map((e: any) => ({
         id: e.id,
         sender: e.from?.[0]?.name || e.from?.[0]?.email || "Unknown",
+        senderEmail: e.from?.[0]?.email || "",
         subject: e.subject || "(No subject)",
         preview: e.snippet || "",
       }));
@@ -2549,22 +2550,34 @@ Return ONLY valid JSON, no other text.`;
         messages: [
           {
             role: "system",
-            content: `You are an email sorting assistant. Analyze the provided emails and determine which ones match the folder description. Return a JSON array of email IDs that match the criteria.`,
+            content: `You are an expert email sorting assistant. Your job is to find ALL emails that could reasonably belong in a user's custom folder based on its name and description.
+
+Be INCLUSIVE and BROAD in your matching - it's better to suggest too many emails than too few. The user can always deselect ones they don't want.
+
+Matching criteria (use ALL of these):
+- Subject line keywords related to the folder topic
+- Sender names/domains associated with the topic (e.g., food delivery services, restaurant newsletters, recipe sites)
+- Preview/snippet text mentioning relevant terms
+- Industry or category associations (e.g., a folder called "Food" should match: restaurant receipts, food delivery confirmations, recipe newsletters, grocery orders, cooking tips, meal kit subscriptions, food coupons, dining reservations, etc.)
+- Related and adjacent topics (e.g., "Food" also matches: UberEats, DoorDash, Grubhub, HelloFresh, grocery store emails, Yelp restaurant reviews, OpenTable reservations)
+
+Think broadly about what the user INTENDED when they created this folder. A "Food" folder means anything food-related. A "Shopping" folder means any purchase/order/retail email. Cast a wide net.`,
           },
           {
             role: "user",
-            content: `Folder: "${folder.name}"
+            content: `Folder Name: "${folder.name}"
 Folder Description: "${folder.aiDescription}"
 
-Emails to analyze:
+Analyze ALL of these emails and find every one that could belong in this folder:
 ${JSON.stringify(emailSummaries, null, 2)}
 
-Return ONLY a JSON array of email IDs that match this folder's criteria. Example: ["id1", "id2"]
-If no emails match, return an empty array: []`,
+Return ONLY a JSON array of matching email IDs. Be generous - include anything that could reasonably fit.
+Example: ["id1", "id2", "id3"]
+If truly nothing matches, return: []`,
           },
         ],
-        temperature: 0.3,
-        max_tokens: 1000,
+        temperature: 0.4,
+        max_tokens: 2000,
       });
 
       const responseText = aiResponse.choices[0]?.message?.content || "[]";

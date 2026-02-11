@@ -930,14 +930,14 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
 
       {/* Create Folder Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] h-full sm:h-auto flex flex-col">
           <DialogHeader>
             <DialogTitle>Create New Folder</DialogTitle>
             <DialogDescription>
               Enter a name for your new folder.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="flex-1 py-4 space-y-4">
             <div>
               <Label htmlFor="folder-name" className="text-sm font-medium">
                 Folder Name
@@ -957,7 +957,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
               />
             </div>
             
-            {/* AI Auto-Sort Description - Pro+ only */}
             {hasPro && (
               <div>
                 <Label htmlFor="folder-ai-description" className="text-sm font-medium flex items-center gap-2">
@@ -968,17 +967,17 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   id="folder-ai-description"
                   value={newFolderAiDescription}
                   onChange={(e) => setNewFolderAiDescription(e.target.value)}
-                  placeholder="Describe what emails should go here, e.g. 'Newsletters and marketing emails'"
+                  placeholder="Describe what emails should go here, e.g. 'Newsletters and marketing emails' or 'Food delivery orders and restaurant emails'"
                   className="mt-2 min-h-[80px] resize-none"
                   data-testid="input-folder-ai-description"
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  AI will automatically sort matching emails into this folder.
+                  AI will scan your inbox and suggest matching emails to add.
                 </p>
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 pt-2 border-t border-white/[0.06]">
             <Button variant="outline" onClick={() => { setIsCreateOpen(false); setNewFolderAiDescription(""); }}>
               Cancel
             </Button>
@@ -991,7 +990,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
 
       {/* Rename Folder Dialog */}
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] h-full sm:h-auto flex flex-col">
           <DialogHeader>
             <DialogTitle>Rename Folder</DialogTitle>
             <DialogDescription>
@@ -1035,7 +1034,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
           setDeleteFolderTitle("");
         }
       }}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] h-full sm:h-auto flex flex-col justify-center">
           <DialogHeader>
             <DialogTitle>Delete Folder</DialogTitle>
             <DialogDescription>
@@ -1060,7 +1059,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
 
       {/* Icon Picker Dialog */}
       <Dialog open={isIconPickerOpen} onOpenChange={setIsIconPickerOpen}>
-        <DialogContent className="sm:max-w-[320px]">
+        <DialogContent className="sm:max-w-[320px] h-full sm:h-auto flex flex-col">
           <DialogHeader>
             <DialogTitle>Choose Icon</DialogTitle>
             <DialogDescription>
@@ -1094,44 +1093,66 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
           setSuggestionFolderName("");
         }
       }}>
-        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-[500px] h-full sm:h-auto sm:max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Sparkles className="w-5 h-5 text-primary" />
               AI Found Matching Emails
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               {isLoadingSuggestions 
                 ? "Analyzing your emails..."
                 : suggestedEmails.length > 0
-                  ? `These emails match your "${suggestionFolderName}" folder criteria. Select which ones to add.`
+                  ? `These emails match your "${suggestionFolderName}" folder. Select which ones to add.`
                   : "No matching emails were found in your inbox."
               }
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto py-2 space-y-2">
+          {suggestedEmails.length > 0 && !isLoadingSuggestions && (
+            <div className="flex items-center justify-between px-1">
+              <button
+                onClick={() => {
+                  if (selectedSuggestions.size === suggestedEmails.length) {
+                    setSelectedSuggestions(new Set());
+                  } else {
+                    setSelectedSuggestions(new Set(suggestedEmails.map(e => e.id)));
+                  }
+                }}
+                className="text-xs text-primary font-medium"
+                data-testid="button-select-all-suggestions"
+              >
+                {selectedSuggestions.size === suggestedEmails.length ? "Deselect All" : "Select All"}
+              </button>
+              <span className="text-xs text-muted-foreground">
+                {selectedSuggestions.size} of {suggestedEmails.length} selected
+              </span>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto -mx-6 px-6 py-2 space-y-2 min-h-0">
             {isLoadingSuggestions ? (
-              <div className="flex items-center justify-center py-8">
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-sm text-muted-foreground">Scanning your inbox...</p>
               </div>
             ) : suggestedEmails.length > 0 ? (
               suggestedEmails.map((email) => (
                 <div 
                   key={email.id}
                   onClick={() => toggleSuggestionSelection(email.id)}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                  className={`p-3 sm:p-3 rounded-xl cursor-pointer transition-all border ${
                     selectedSuggestions.has(email.id)
-                      ? "bg-primary/10 border-primary/50"
-                      : "bg-white/[0.03] border-transparent hover:bg-white/[0.06]"
+                      ? "bg-primary/10 border-primary/40"
+                      : "bg-white/[0.03] border-white/[0.06] active:bg-white/[0.08]"
                   }`}
                   data-testid={`suggestion-email-${email.id}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors ${
                       selectedSuggestions.has(email.id)
                         ? "bg-primary border-primary text-primary-foreground"
-                        : "border-muted-foreground/50"
+                        : "border-muted-foreground/40"
                     }`}>
                       {selectedSuggestions.has(email.id) && (
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -1141,20 +1162,25 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{email.sender}</div>
-                      <div className="text-sm text-foreground truncate">{email.subject}</div>
+                      <div className="text-sm text-foreground/80 truncate">{email.subject}</div>
                       <div className="text-xs text-muted-foreground truncate mt-1">{email.preview}</div>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No matching emails found. New emails that match this folder's criteria will be suggested in the future.
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center mb-3">
+                  <Sparkles className="w-5 h-5 text-muted-foreground/40" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  No matching emails found. New emails that match this folder's criteria will be suggested automatically.
+                </p>
               </div>
             )}
           </div>
           
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 pt-2 border-t border-white/[0.06]">
             <Button variant="outline" onClick={() => setIsSuggestionOpen(false)}>
               {suggestedEmails.length > 0 ? "Skip" : "Close"}
             </Button>
