@@ -29,7 +29,10 @@ import {
   Search,
   RefreshCw,
   Globe,
-  Languages
+  Languages,
+  UserPlus,
+  FolderOpen,
+  MousePointerClick
 } from "lucide-react";
 
 interface AuthResponse {
@@ -55,6 +58,7 @@ export default function LandingPage() {
       <MarketingNav />
       <HeroSection getStartedHref={getStartedHref()} />
       <DemoSection />
+      <HowItWorksSection getStartedHref={getStartedHref()} />
       <BenefitsSection />
       <ComparisonSection />
       <TestimonialsSection />
@@ -518,6 +522,159 @@ function DemoOrganize() {
         </div>
       </div>
     </div>
+  );
+}
+
+function HowItWorksSection({ getStartedHref }: { getStartedHref: string }) {
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.15 });
+
+  const steps = [
+    {
+      number: "01",
+      icon: <UserPlus className="w-6 h-6" />,
+      title: "Create your account",
+      description: "Pick a plan that fits your needs and tell the AI how you like to write. It takes less than two minutes.",
+    },
+    {
+      number: "02",
+      icon: <Mail className="w-6 h-6" />,
+      title: "Connect Gmail or Outlook",
+      description: "One-click OAuth sign-in. We never see your password. Your emails sync instantly.",
+    },
+    {
+      number: "03",
+      icon: <FolderOpen className="w-6 h-6" />,
+      title: "Organize with smart folders",
+      description: "Create folders and let AI automatically sort incoming emails by topic, sender, or custom rules.",
+    },
+    {
+      number: "04",
+      icon: <Sparkles className="w-6 h-6" />,
+      title: "Reply in seconds",
+      description: "Open any email and get an AI-drafted reply that sounds like you. Edit, send, done.",
+    },
+  ];
+
+  return (
+    <section className="py-32 px-6 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+      </div>
+
+      <div className="max-w-5xl mx-auto w-full" ref={ref}>
+        <div
+          className="text-center mb-20 transition-all duration-1000 ease-out"
+          style={{
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
+          }}
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-muted-foreground text-sm mb-6">
+            <MousePointerClick className="w-3.5 h-3.5" />
+            Up and running in minutes
+          </div>
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight mb-6">
+            How it works
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-lg mx-auto">
+            Four steps to a calmer, faster inbox.
+          </p>
+        </div>
+
+        <div className="relative">
+          {/* Vertical connector line - desktop only */}
+          <div
+            className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 transition-all duration-[1.5s] ease-out"
+            style={{
+              background: 'linear-gradient(to bottom, transparent, hsl(var(--primary) / 0.2) 10%, hsl(var(--primary) / 0.2) 90%, transparent)',
+              opacity: isVisible ? 1 : 0,
+            }}
+          />
+
+          <div className="space-y-8 md:space-y-0">
+            {steps.map((step, i) => {
+              const isEven = i % 2 === 0;
+              return (
+                <div
+                  key={step.number}
+                  className="transition-all duration-700 ease-out"
+                  style={{
+                    opacity: isVisible ? 1 : 0,
+                    transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
+                    transitionDelay: `${200 + i * 150}ms`
+                  }}
+                >
+                  {/* Mobile layout */}
+                  <div className="md:hidden">
+                    <div className="flex gap-4 items-start">
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                          {step.icon}
+                        </div>
+                        {i < steps.length - 1 && (
+                          <div className="w-px h-8 bg-gradient-to-b from-primary/20 to-transparent mt-2" />
+                        )}
+                      </div>
+                      <div className="pt-1 pb-4">
+                        <span className="text-[11px] font-mono text-primary/60 tracking-widest uppercase">Step {step.number}</span>
+                        <h3 className="text-lg font-medium mt-1 mb-1.5">{step.title}</h3>
+                        <p className="text-sm text-muted-foreground/70 leading-relaxed">{step.description}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desktop layout - alternating sides */}
+                  <div className="hidden md:grid md:grid-cols-[1fr,auto,1fr] md:gap-8 md:items-center md:min-h-[160px]">
+                    <div className={`${isEven ? 'text-right pr-4' : ''}`}>
+                      {isEven && (
+                        <div className="inline-block">
+                          <span className="text-xs font-mono text-primary/50 tracking-widest uppercase">Step {step.number}</span>
+                          <h3 className="text-xl font-medium mt-1 mb-2">{step.title}</h3>
+                          <p className="text-sm text-muted-foreground/70 leading-relaxed max-w-sm ml-auto">{step.description}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="relative flex items-center justify-center z-10">
+                      <div className="w-14 h-14 rounded-2xl bg-card border border-white/[0.1] flex items-center justify-center text-primary shadow-lg shadow-black/20">
+                        {step.icon}
+                      </div>
+                    </div>
+
+                    <div className={`${!isEven ? 'pl-4' : ''}`}>
+                      {!isEven && (
+                        <div>
+                          <span className="text-xs font-mono text-primary/50 tracking-widest uppercase">Step {step.number}</span>
+                          <h3 className="text-xl font-medium mt-1 mb-2">{step.title}</h3>
+                          <p className="text-sm text-muted-foreground/70 leading-relaxed max-w-sm">{step.description}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div
+          className="text-center mt-16 transition-all duration-700 ease-out"
+          style={{
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+            transitionDelay: '900ms'
+          }}
+        >
+          <Link href={getStartedHref}>
+            <Button size="lg" className="rounded-full px-8 gap-2" data-testid="button-how-it-works-cta">
+              Get started free
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 
