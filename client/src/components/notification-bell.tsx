@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Check, Users, X, Mail, Mails } from "lucide-react";
+import { Bell, Check, Users, X, Mail, Mails, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -43,7 +43,6 @@ function showBrowserNotification(title: string, body: string) {
       };
       setTimeout(() => notification.close(), 8000);
     } catch {
-      // Silent fail for environments that don't support notifications
     }
   }
 }
@@ -89,24 +88,37 @@ export function NotificationBell() {
     prevUnreadCount.current = unreadCount;
   }, [unreadCount, notifications]);
 
+  const invalidateNotifications = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+  };
+
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
       return apiRequest("POST", `/api/notifications/${notificationId}/read`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
-    },
+    onSuccess: invalidateNotifications,
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("POST", "/api/notifications/mark-all-read");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+    onSuccess: invalidateNotifications,
+  });
+
+  const deleteNotificationMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      return apiRequest("DELETE", `/api/notifications/${notificationId}`);
     },
+    onSuccess: invalidateNotifications,
+  });
+
+  const clearAllMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/notifications");
+    },
+    onSuccess: invalidateNotifications,
   });
 
   const acceptInviteMutation = useMutation({
@@ -170,7 +182,7 @@ export function NotificationBell() {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
           <h4 className="font-semibold">Notifications</h4>
           {unreadCount > 0 && (
             <Button
@@ -195,7 +207,7 @@ export function NotificationBell() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 cursor-pointer hover-elevate ${
+                  className={`group relative p-4 cursor-pointer hover-elevate ${
                     !notification.isRead ? "bg-muted/50" : ""
                   }`}
                   onClick={() => handleNotificationClick(notification)}
@@ -253,12 +265,40 @@ export function NotificationBell() {
                           </div>
                         )}
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 flex-shrink-0 invisible group-hover:visible"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotificationMutation.mutate(notification.id);
+                      }}
+                      disabled={deleteNotificationMutation.isPending}
+                      data-testid={`button-delete-notification-${notification.id}`}
+                    >
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </ScrollArea>
+        {notifications.length > 0 && (
+          <div className="border-t px-4 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground"
+              onClick={() => clearAllMutation.mutate()}
+              disabled={clearAllMutation.isPending}
+              data-testid="button-clear-all-notifications"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Clear all
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

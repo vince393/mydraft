@@ -126,6 +126,8 @@ export interface IStorage {
   getUnreadNotificationCount(userId: string): Promise<number>;
   markNotificationAsRead(userId: string, notificationId: number): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
+  deleteNotification(userId: string, notificationId: number): Promise<boolean>;
+  clearAllNotifications(userId: string): Promise<void>;
 
   // Owner panel methods
   getAllUsers(): Promise<User[]>;
@@ -1485,6 +1487,18 @@ Business Development`,
   async markAllNotificationsAsRead(userId: string): Promise<void> {
     await db.update(notifications)
       .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
+  }
+
+  async deleteNotification(userId: string, notificationId: number): Promise<boolean> {
+    const deleted = await db.delete(notifications)
+      .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)))
+      .returning();
+    return deleted.length > 0;
+  }
+
+  async clearAllNotifications(userId: string): Promise<void> {
+    await db.delete(notifications)
       .where(eq(notifications.userId, userId));
   }
 

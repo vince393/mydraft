@@ -6554,6 +6554,35 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     },
   );
 
+  app.delete("/api/notifications/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const notificationId = parseInt(req.params.id);
+      if (isNaN(notificationId)) {
+        return res.status(400).json({ error: "Invalid notification ID" });
+      }
+      const deleted = await storage.deleteNotification(userId, notificationId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ error: "Failed to delete notification" });
+    }
+  });
+
+  app.delete("/api/notifications", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      await storage.clearAllNotifications(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error clearing notifications:", error);
+      res.status(500).json({ error: "Failed to clear notifications" });
+    }
+  });
+
   // =====================
   // TEAM INVITES ROUTES (Business plan only)
   // =====================
