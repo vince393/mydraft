@@ -785,6 +785,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
                   Connect Account
                 </Button>
               )}
+              {!screen.isMobile && <NotificationBell />}
             </div>
           </header>
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
