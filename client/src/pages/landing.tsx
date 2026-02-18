@@ -22,10 +22,10 @@ import {
   Shield,
 } from "lucide-react";
 
-import inboxPreview from "@assets/images/inbox-preview.png";
-import aiReplyPreview from "@assets/images/ai-reply-preview.png";
-import summaryPreview from "@assets/images/summary-preview.png";
-import globalPreview from "@assets/images/global-preview.png";
+import inboxPreview from "../assets/images/inbox-preview.png";
+import aiReplyPreview from "../assets/images/ai-reply-preview.png";
+import summaryPreview from "../assets/images/summary-preview.png";
+import globalPreview from "../assets/images/global-preview.png";
 
 interface AuthResponse {
   user: { id: string; plan?: string; onboardingCompleted?: boolean; emailConnected?: boolean } | null;
