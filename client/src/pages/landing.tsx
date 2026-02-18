@@ -22,10 +22,6 @@ import {
   Shield,
 } from "lucide-react";
 
-import inboxPreview from "../assets/images/inbox-preview.png";
-import aiReplyPreview from "../assets/images/ai-reply-preview.png";
-import summaryPreview from "../assets/images/summary-preview.png";
-import globalPreview from "../assets/images/global-preview.png";
 
 interface AuthResponse {
   user: { id: string; plan?: string; onboardingCompleted?: boolean; emailConnected?: boolean } | null;
@@ -259,29 +255,111 @@ function HeroEmailItem({ from, subject, time, unread = false, selected = false }
   );
 }
 
+function FeatureMockupReply() {
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/30">
+      <div className="bg-white/[0.02] px-4 py-2.5 border-b border-white/[0.06] flex items-center gap-2">
+        <Sparkles className="w-3.5 h-3.5 text-primary" />
+        <span className="text-xs font-medium text-muted-foreground">AI Draft</span>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white text-[10px] font-medium flex-shrink-0">L</div>
+          <div className="flex-1 p-3 rounded-lg bg-white/[0.03] border border-white/[0.04]">
+            <p className="text-[11px] text-muted-foreground/60 mb-1">Lisa Martinez</p>
+            <p className="text-xs text-foreground/70">Can we reschedule our meeting to Thursday? I have a conflict on Wednesday afternoon.</p>
+          </div>
+        </div>
+        <div className="p-3 rounded-xl bg-primary/[0.06] border border-primary/20">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Sparkles className="w-3 h-3 text-primary" />
+            <span className="text-[10px] font-medium text-primary">Suggested reply</span>
+          </div>
+          <p className="text-xs text-foreground/80 mb-3">
+            Hi Lisa, Thursday works perfectly for me. Same time? Let me know if you need to adjust. Thanks!
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" data-testid="mockup-send">Send</Button>
+            <Button size="sm" variant="ghost" data-testid="mockup-edit">Edit</Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeatureMockupSummary() {
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/30">
+      <div className="bg-white/[0.02] px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Brain className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-medium text-muted-foreground">Thread Summary</span>
+        </div>
+        <span className="text-[10px] text-muted-foreground/40">18 messages</span>
+      </div>
+      <div className="p-5 space-y-3">
+        <div className="flex items-start gap-2.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-1.5" />
+          <p className="text-xs text-foreground/80">Budget approved for Q4 marketing campaign</p>
+        </div>
+        <div className="flex items-start gap-2.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-1.5" />
+          <p className="text-xs text-foreground/70">Waiting on vendor pricing by Friday</p>
+        </div>
+        <div className="flex items-start gap-2.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-1.5" />
+          <p className="text-xs text-foreground/70">Team agreed on launch date: Nov 15</p>
+        </div>
+        <div className="flex items-start gap-2.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
+          <p className="text-xs text-foreground/60">Sarah to send revised timeline Monday</p>
+        </div>
+        <div className="mt-3 pt-3 border-t border-white/[0.04]">
+          <p className="text-[10px] text-muted-foreground/40">Action items: 2 pending, 2 completed</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeatureMockupGlobal() {
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/30">
+      <div className="bg-white/[0.02] px-4 py-2.5 border-b border-white/[0.06] flex items-center gap-2">
+        <Languages className="w-3.5 h-3.5 text-primary" />
+        <span className="text-xs font-medium text-muted-foreground">Translation</span>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.04]">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="text-[10px] text-muted-foreground/60">Original (Japanese)</span>
+          </div>
+          <p className="text-xs text-foreground/60 font-light" style={{ fontFamily: 'sans-serif' }}>
+            山田様、お忙しいところ恐れ入りますが、来週の会議の件についてご確認いただけますでしょうか。
+          </p>
+        </div>
+        <div className="p-3 rounded-lg bg-primary/[0.06] border border-primary/15">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="text-[10px] text-primary/70">Translated to English</span>
+          </div>
+          <p className="text-xs text-foreground/80">
+            Mr. Yamada, I apologize for the intrusion on your busy schedule. Could you please confirm the details regarding next week's meeting?
+          </p>
+        </div>
+        <div className="p-2.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/15">
+          <div className="flex items-center gap-1.5">
+            <Globe className="w-3 h-3 text-amber-500/70" />
+            <span className="text-[10px] text-amber-500/70">Cultural note: Formal keigo style, use respectful tone in reply</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FeaturesSection() {
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.1 });
-
-  const features = [
-    {
-      icon: Sparkles,
-      title: "AI-drafted replies",
-      description: "Replies written in your tone, ready to review and send.",
-      image: aiReplyPreview,
-    },
-    {
-      icon: Brain,
-      title: "Thread summaries",
-      description: "Key decisions extracted from long threads instantly.",
-      image: summaryPreview,
-    },
-    {
-      icon: Languages,
-      title: "Multilingual support",
-      description: "Translate and reply across 50+ languages with cultural context.",
-      image: globalPreview,
-    },
-  ];
 
   return (
     <section className="py-24 sm:py-32 px-6 relative">
@@ -305,45 +383,84 @@ function FeaturesSection() {
           </p>
         </div>
 
-        <div className="space-y-20 sm:space-y-28">
-          {features.map((feature, i) => (
-            <div 
-              key={i}
-              className="transition-all duration-1000 ease-out"
-              style={{ 
-                opacity: isVisible ? 1 : 0, 
-                transform: isVisible ? 'translateY(0)' : 'translateY(60px)',
-                transitionDelay: `${300 + i * 200}ms`
-              }}
-            >
-              <div className={`flex flex-col gap-10 lg:gap-16 items-center ${i % 2 === 1 ? 'lg:flex-row-reverse' : 'lg:flex-row'}`}>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                      <feature.icon className="w-5 h-5 text-primary" />
-                    </div>
-                    <h3 className="text-2xl sm:text-3xl font-semibold">{feature.title}</h3>
+        <div className="space-y-24 sm:space-y-32">
+          <div 
+            className="transition-all duration-1000 ease-out"
+            style={{ 
+              opacity: isVisible ? 1 : 0, 
+              transform: isVisible ? 'translateY(0)' : 'translateY(60px)',
+              transitionDelay: '300ms'
+            }}
+          >
+            <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-center">
+              <div className="flex-1 text-center lg:text-left">
+                <div className="flex items-center gap-3 mb-4 justify-center lg:justify-start">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-primary" />
                   </div>
-                  <p className="text-lg text-muted-foreground leading-relaxed">
-                    {feature.description}
-                  </p>
+                  <h3 className="text-2xl sm:text-3xl font-semibold" data-testid="text-feature-ai-replies">AI-drafted replies</h3>
                 </div>
-                <div className="flex-1">
-                  <div className="relative group">
-                    <div className="absolute -inset-4 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                    <div className="relative rounded-2xl border border-white/[0.08] overflow-hidden shadow-xl shadow-black/20">
-                      <img 
-                        src={feature.image} 
-                        alt={feature.title}
-                        className="w-full h-auto"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto lg:mx-0">
+                  Replies written in your tone, ready to review and send with one click.
+                </p>
+              </div>
+              <div className="flex-1 w-full max-w-md lg:max-w-none">
+                <FeatureMockupReply />
               </div>
             </div>
-          ))}
+          </div>
+
+          <div 
+            className="transition-all duration-1000 ease-out"
+            style={{ 
+              opacity: isVisible ? 1 : 0, 
+              transform: isVisible ? 'translateY(0)' : 'translateY(60px)',
+              transitionDelay: '500ms'
+            }}
+          >
+            <div className="flex flex-col lg:flex-row-reverse gap-10 lg:gap-16 items-center">
+              <div className="flex-1 text-center lg:text-left">
+                <div className="flex items-center gap-3 mb-4 justify-center lg:justify-start">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <Brain className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-semibold" data-testid="text-feature-summaries">Thread summaries</h3>
+                </div>
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto lg:mx-0">
+                  Key decisions extracted from long threads instantly.
+                </p>
+              </div>
+              <div className="flex-1 w-full max-w-md lg:max-w-none">
+                <FeatureMockupSummary />
+              </div>
+            </div>
+          </div>
+
+          <div 
+            className="transition-all duration-1000 ease-out"
+            style={{ 
+              opacity: isVisible ? 1 : 0, 
+              transform: isVisible ? 'translateY(0)' : 'translateY(60px)',
+              transitionDelay: '700ms'
+            }}
+          >
+            <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-center">
+              <div className="flex-1 text-center lg:text-left">
+                <div className="flex items-center gap-3 mb-4 justify-center lg:justify-start">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <Languages className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-semibold" data-testid="text-feature-multilingual">Multilingual support</h3>
+                </div>
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto lg:mx-0">
+                  Translate and reply across 50+ languages with cultural context.
+                </p>
+              </div>
+              <div className="flex-1 w-full max-w-md lg:max-w-none">
+                <FeatureMockupGlobal />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -645,17 +762,7 @@ function GlobalSection() {
               transform: isVisible ? 'translateX(0)' : 'translateX(60px)'
             }}
           >
-            <div className="relative group">
-              <div className="absolute -inset-4 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-              <div className="relative rounded-2xl border border-white/[0.08] overflow-hidden shadow-xl shadow-black/20">
-                <img 
-                  src={globalPreview} 
-                  alt="Multilingual email translation"
-                  className="w-full h-auto"
-                  loading="lazy"
-                />
-              </div>
-            </div>
+            <FeatureMockupGlobal />
           </div>
         </div>
       </div>
