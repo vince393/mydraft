@@ -7,8 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useScrollAnimation, useParallax } from "@/hooks/use-scroll-animation";
 import { 
-  Clock, 
-  CheckCircle,
   ArrowRight,
   Mail,
   Star,
@@ -19,7 +17,15 @@ import {
   Sparkles,
   Brain,
   Globe,
+  Zap,
+  Languages,
+  Shield,
 } from "lucide-react";
+
+import inboxPreview from "@assets/images/inbox-preview.png";
+import aiReplyPreview from "@assets/images/ai-reply-preview.png";
+import summaryPreview from "@assets/images/summary-preview.png";
+import globalPreview from "@assets/images/global-preview.png";
 
 interface AuthResponse {
   user: { id: string; plan?: string; onboardingCompleted?: boolean; emailConnected?: boolean } | null;
@@ -43,11 +49,10 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <MarketingNav />
       <HeroSection getStartedHref={getStartedHref()} />
-      <PainSection />
-      <ReliefSection />
+      <FeaturesSection />
       <DemoSection />
       <GlobalSection />
-      <SimpleStartSection getStartedHref={getStartedHref()} />
+      <HowItWorksSection getStartedHref={getStartedHref()} />
       <TestimonialsSection />
       <FAQSection />
       <FinalCTASection getStartedHref={getStartedHref()} />
@@ -114,7 +119,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transitionDelay: '300ms'
               }}
             >
-              AI-powered email management that drafts replies, summarizes threads, and handles multilingual communication, so you can focus on what matters.
+              AI drafts your replies, summarizes threads, and translates across 50+ languages.
             </p>
             
             <div 
@@ -254,128 +259,91 @@ function HeroEmailItem({ from, subject, time, unread = false, selected = false }
   );
 }
 
-function PainSection() {
-  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
+function FeaturesSection() {
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.1 });
 
-  return (
-    <section className="py-32 px-6 relative">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-      </div>
-
-      <div className="max-w-3xl mx-auto w-full" ref={ref}>
-        <div 
-          className="transition-all duration-1000 ease-out"
-          style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
-          }}
-        >
-          <p className="text-2xl sm:text-3xl md:text-4xl leading-relaxed text-muted-foreground font-light">
-            You open your inbox first thing in the morning. <span className="text-foreground font-normal">There are 47 unread emails.</span> Most of them need a reply. Some are urgent. A few are in a language you don't speak.
-          </p>
-        </div>
-        
-        <div 
-          className="mt-12 transition-all duration-1000 ease-out delay-300"
-          style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
-          }}
-        >
-          <p className="text-2xl sm:text-3xl md:text-4xl leading-relaxed text-muted-foreground font-light">
-            By noon, you've written 20 replies. <span className="text-foreground font-normal">Most of them say the same things you said yesterday.</span>
-          </p>
-        </div>
-
-        <div 
-          className="mt-12 transition-all duration-1000 ease-out delay-500"
-          style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
-          }}
-        >
-          <p className="text-xl sm:text-2xl text-muted-foreground/60 font-light">
-            You didn't sign up for this. You have real work to do.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ReliefSection() {
-  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
-
-  const moments = [
+  const features = [
     {
-      before: "You stare at a client email for 5 minutes, trying to find the right words.",
-      after: "A reply is already drafted for you. It sounds like you wrote it. You hit send.",
+      icon: Sparkles,
+      title: "AI-drafted replies",
+      description: "Replies written in your tone, ready to review and send.",
+      image: aiReplyPreview,
     },
     {
-      before: "You scroll through a 30-message thread trying to figure out what was decided.",
-      after: "You see the three key decisions at the top. No scrolling needed.",
+      icon: Brain,
+      title: "Thread summaries",
+      description: "Key decisions extracted from long threads instantly.",
+      image: summaryPreview,
     },
     {
-      before: "A partner emails you in Japanese. You paste it into Google Translate and hope for the best.",
-      after: "You read it in your language, with cultural context. Your reply goes back in theirs, with proper formality.",
+      icon: Languages,
+      title: "Multilingual support",
+      description: "Translate and reply across 50+ languages with cultural context.",
+      image: globalPreview,
     },
   ];
 
   return (
-    <section className="py-32 px-6 relative">
-      <div className="max-w-4xl mx-auto w-full" ref={ref}>
+    <section className="py-24 sm:py-32 px-6 relative">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+      </div>
+
+      <div className="max-w-6xl mx-auto w-full" ref={ref}>
         <div 
-          className="text-center mb-20 transition-all duration-1000 ease-out"
+          className="text-center mb-16 sm:mb-20 transition-all duration-1000 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
           }}
         >
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-4">
             A smarter way to manage email
           </h2>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            See how MyDraft transforms everyday inbox tasks.
+          <p className="text-muted-foreground text-lg max-w-lg mx-auto">
+            Less time writing, more time doing.
           </p>
         </div>
 
-        <div className="space-y-12">
-          {moments.map((moment, i) => (
+        <div className="space-y-20 sm:space-y-28">
+          {features.map((feature, i) => (
             <div 
               key={i}
-              className="transition-all duration-700 ease-out"
+              className="transition-all duration-1000 ease-out"
               style={{ 
                 opacity: isVisible ? 1 : 0, 
-                transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
+                transform: isVisible ? 'translateY(0)' : 'translateY(60px)',
                 transitionDelay: `${300 + i * 200}ms`
               }}
             >
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="p-6 rounded-2xl border border-white/[0.06] bg-white/[0.01]">
-                  <p className="text-xs font-medium text-muted-foreground/50 uppercase tracking-wider mb-3">Before</p>
-                  <p className="text-muted-foreground leading-relaxed">{moment.before}</p>
+              <div className={`flex flex-col gap-10 lg:gap-16 items-center ${i % 2 === 1 ? 'lg:flex-row-reverse' : 'lg:flex-row'}`}>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                      <feature.icon className="w-5 h-5 text-primary" />
+                    </div>
+                    <h3 className="text-2xl sm:text-3xl font-semibold">{feature.title}</h3>
+                  </div>
+                  <p className="text-lg text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
                 </div>
-                <div className="p-6 rounded-2xl border border-primary/20 bg-primary/[0.03]">
-                  <p className="text-xs font-medium text-primary/70 uppercase tracking-wider mb-3">With MyDraft</p>
-                  <p className="text-foreground/90 leading-relaxed">{moment.after}</p>
+                <div className="flex-1">
+                  <div className="relative group">
+                    <div className="absolute -inset-4 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    <div className="relative rounded-2xl border border-white/[0.08] overflow-hidden shadow-xl shadow-black/20">
+                      <img 
+                        src={feature.image} 
+                        alt={feature.title}
+                        className="w-full h-auto"
+                        loading="lazy"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
-        </div>
-
-        <div 
-          className="mt-16 text-center transition-all duration-1000 ease-out"
-          style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
-            transitionDelay: '1000ms'
-          }}
-        >
-          <p className="text-xl text-muted-foreground">
-            Same email address. Same contacts. <span className="text-foreground font-medium">Completely different experience.</span>
-          </p>
         </div>
       </div>
     </section>
@@ -402,22 +370,22 @@ function DemoSection() {
   }, [isVisible, isPaused]);
 
   return (
-    <section className="py-32 px-6 relative">
+    <section className="py-24 sm:py-32 px-6 relative">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent pointer-events-none" />
       
-      <div className="max-w-6xl mx-auto w-full" ref={ref}>
+      <div className="max-w-5xl mx-auto w-full" ref={ref}>
         <div 
-          className="text-center mb-16 transition-all duration-1000 ease-out"
+          className="text-center mb-12 sm:mb-16 transition-all duration-1000 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
           }}
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
-            See the difference
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-4">
+            See it in action
           </h2>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            AI-drafted replies, thread summaries, and a distraction-free inbox.
+          <p className="text-muted-foreground text-lg">
+            Click through to explore each feature.
           </p>
         </div>
 
@@ -495,18 +463,16 @@ function DemoTab({ active, onClick, label, icon: Icon, testId }: {
   testId: string;
 }) {
   return (
-    <button
+    <Button
       onClick={onClick}
       data-testid={testId}
-      className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-        active 
-          ? 'bg-primary text-primary-foreground' 
-          : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.05]'
-      }`}
+      variant={active ? "default" : "ghost"}
+      size="sm"
+      className="rounded-full gap-2"
     >
       <Icon className="w-4 h-4" />
       {label}
-    </button>
+    </Button>
   );
 }
 
@@ -584,8 +550,8 @@ function DemoReply() {
             Hi Lisa, Thursday works perfectly for me. Same time? Let me know if you need to adjust. Thanks!
           </p>
           <div className="flex gap-2">
-            <div className="px-3 py-1.5 rounded-md bg-primary text-xs font-medium text-primary-foreground">Send</div>
-            <div className="px-3 py-1.5 rounded-md bg-white/[0.05] text-xs text-muted-foreground">Edit</div>
+            <Button size="sm" className="text-xs">Send</Button>
+            <Button size="sm" variant="ghost" className="text-xs">Edit</Button>
           </div>
         </div>
       </div>
@@ -602,7 +568,7 @@ function DemoSummary() {
         </div>
         <div>
           <p className="text-sm font-medium">Skip the scroll</p>
-          <p className="text-xs text-muted-foreground">Get the key decisions without reading every message.</p>
+          <p className="text-xs text-muted-foreground">Key decisions from 12 messages, in seconds.</p>
         </div>
       </div>
       <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 mb-4">
@@ -613,27 +579,17 @@ function DemoSummary() {
         </div>
         <div className="space-y-3">
           <div className="flex items-start gap-2">
-            <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-2" />
             <p className="text-sm text-foreground/80">Budget approved for Q4 marketing campaign</p>
           </div>
           <div className="flex items-start gap-2">
-            <Clock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-2" />
             <p className="text-sm text-foreground/70">Waiting on vendor pricing by Friday</p>
           </div>
           <div className="flex items-start gap-2">
-            <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-2" />
             <p className="text-sm text-foreground/60">Team agreed on launch date: Nov 15</p>
           </div>
-        </div>
-      </div>
-      <div className="space-y-2">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02]">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-[10px] font-medium">M</div>
-          <p className="text-xs text-muted-foreground truncate">Mike: "Sounds good, let's finalize..."</p>
-        </div>
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02]">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-[10px] font-medium">A</div>
-          <p className="text-xs text-muted-foreground truncate">Anna: "I'll send the docs today"</p>
         </div>
       </div>
     </div>
@@ -641,59 +597,65 @@ function DemoSummary() {
 }
 
 function GlobalSection() {
-  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.15 });
 
   return (
-    <section className="py-32 px-6 relative">
+    <section className="py-24 sm:py-32 px-6 relative">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
       </div>
 
-      <div className="max-w-3xl mx-auto w-full" ref={ref}>
-        <div 
-          className="transition-all duration-1000 ease-out"
-          style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
-          }}
-        >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-8 text-center">
-            Global inbox,
-            <br />
-            <span className="text-primary">local tone.</span>
-          </h2>
-        </div>
-
-        <div 
-          className="mt-12 transition-all duration-1000 ease-out delay-200"
-          style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
-          }}
-        >
-          <p className="text-xl text-muted-foreground leading-relaxed text-center mb-12">
-            MyDraft translates emails with cultural awareness, not just word-for-word conversion. Replies adapt to the appropriate tone, formality, and etiquette for each region automatically.
-          </p>
-        </div>
-
-        <div 
-          className="grid sm:grid-cols-3 gap-6 transition-all duration-1000 ease-out delay-400"
-          style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
-          }}
-        >
-          <div className="text-center p-6 rounded-2xl border border-white/[0.06] bg-white/[0.01]">
-            <p className="text-3xl mb-2">50+</p>
-            <p className="text-sm text-muted-foreground">languages</p>
+      <div className="max-w-6xl mx-auto w-full" ref={ref}>
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          <div 
+            className="transition-all duration-1000 ease-out"
+            style={{ 
+              opacity: isVisible ? 1 : 0, 
+              transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
+            }}
+          >
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
+              Global inbox,
+              <br />
+              <span className="text-primary">local tone.</span>
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+              Translate and reply across languages with cultural awareness built in.
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 rounded-xl border border-white/[0.06] bg-white/[0.01]">
+                <p className="text-2xl font-semibold mb-1">50+</p>
+                <p className="text-xs text-muted-foreground">languages</p>
+              </div>
+              <div className="text-center p-4 rounded-xl border border-white/[0.06] bg-white/[0.01]">
+                <p className="text-2xl font-semibold mb-1">20+</p>
+                <p className="text-xs text-muted-foreground">cultures</p>
+              </div>
+              <div className="text-center p-4 rounded-xl border border-white/[0.06] bg-white/[0.01]">
+                <p className="text-2xl font-semibold mb-1">Auto</p>
+                <p className="text-xs text-muted-foreground">formality</p>
+              </div>
+            </div>
           </div>
-          <div className="text-center p-6 rounded-2xl border border-white/[0.06] bg-white/[0.01]">
-            <p className="text-3xl mb-2">20+</p>
-            <p className="text-sm text-muted-foreground">cultural contexts</p>
-          </div>
-          <div className="text-center p-6 rounded-2xl border border-white/[0.06] bg-white/[0.01]">
-            <p className="text-3xl mb-2">Auto</p>
-            <p className="text-sm text-muted-foreground">formality detection</p>
+
+          <div 
+            className="transition-all duration-1000 ease-out delay-200"
+            style={{ 
+              opacity: isVisible ? 1 : 0, 
+              transform: isVisible ? 'translateX(0)' : 'translateX(60px)'
+            }}
+          >
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="relative rounded-2xl border border-white/[0.08] overflow-hidden shadow-xl shadow-black/20">
+                <img 
+                  src={globalPreview} 
+                  alt="Multilingual email translation"
+                  className="w-full h-auto"
+                  loading="lazy"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -701,12 +663,19 @@ function GlobalSection() {
   );
 }
 
-function SimpleStartSection({ getStartedHref }: { getStartedHref: string }) {
+function HowItWorksSection({ getStartedHref }: { getStartedHref: string }) {
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
 
+  const steps = [
+    { icon: Mail, number: "1", title: "Sign up free", description: "Create your account in seconds." },
+    { icon: Globe, number: "2", title: "Connect your email", description: "Link Gmail or Outlook with one click." },
+    { icon: Zap, number: "3", title: "Set your style", description: "Tell the AI how you write." },
+    { icon: Shield, number: "4", title: "You're ready", description: "Your inbox, now smarter." },
+  ];
+
   return (
-    <section className="py-32 px-6 relative">
-      <div className="max-w-3xl mx-auto w-full" ref={ref}>
+    <section className="py-24 sm:py-32 px-6 relative">
+      <div className="max-w-4xl mx-auto w-full" ref={ref}>
         <div 
           className="text-center mb-16 transition-all duration-1000 ease-out"
           style={{ 
@@ -714,34 +683,28 @@ function SimpleStartSection({ getStartedHref }: { getStartedHref: string }) {
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
           }}
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-4">
             Get started in minutes
           </h2>
-          <p className="text-lg text-muted-foreground">
-            No installs, no migrations, no new email address required.
-          </p>
         </div>
 
-        <div className="space-y-8">
-          {[
-            { step: "1", text: "Create your free account and pick a plan." },
-            { step: "2", text: "Connect your Gmail or Outlook with one click." },
-            { step: "3", text: "Tell the AI your writing style, so replies sound like you." },
-            { step: "4", text: "Open your inbox. It already looks better." },
-          ].map((item, i) => (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {steps.map((step, i) => (
             <div 
               key={i}
-              className="flex items-start gap-5 transition-all duration-700 ease-out"
+              className="text-center transition-all duration-700 ease-out"
               style={{ 
                 opacity: isVisible ? 1 : 0, 
-                transform: isVisible ? 'translateX(0)' : 'translateX(-30px)',
+                transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
                 transitionDelay: `${300 + i * 150}ms`
               }}
             >
-              <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-medium flex-shrink-0">
-                {item.step}
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
+                <step.icon className="w-6 h-6 text-primary" />
               </div>
-              <p className="text-lg text-foreground/90 pt-2">{item.text}</p>
+              <div className="text-xs font-medium text-primary mb-2">Step {step.number}</div>
+              <h3 className="text-lg font-semibold mb-1">{step.title}</h3>
+              <p className="text-sm text-muted-foreground">{step.description}</p>
             </div>
           ))}
         </div>
@@ -801,7 +764,7 @@ function TestimonialsSection() {
   }
 
   return (
-    <section className="min-h-[70vh] flex items-center py-32 px-6 relative overflow-hidden">
+    <section className="py-24 sm:py-32 px-6 relative overflow-hidden">
       <div className="max-w-4xl mx-auto w-full" ref={ref}>
         <div 
           className="text-center mb-16 transition-all duration-1000 ease-out"
@@ -810,7 +773,7 @@ function TestimonialsSection() {
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
           }}
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight">
             What our users are saying
           </h2>
         </div>
@@ -914,23 +877,23 @@ function FAQSection() {
     },
     {
       q: "What about emails in other languages?",
-      a: "MyDraft handles 50+ languages with cultural context. It doesn't just translate words; it adapts tone, formality, and etiquette based on the sender's region. A Japanese business email gets properly formal treatment, while an Australian reply stays casual."
+      a: "MyDraft handles 50+ languages with cultural context. It adapts tone, formality, and etiquette based on the sender's region automatically."
     }
   ];
 
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.15 });
 
   return (
-    <section className="py-32 px-6 relative">
+    <section className="py-24 sm:py-32 px-6 relative">
       <div className="max-w-3xl mx-auto" ref={ref}>
         <div 
-          className="text-center mb-20 transition-all duration-1000 ease-out"
+          className="text-center mb-16 transition-all duration-1000 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
           }}
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight">
             Frequently asked questions
           </h2>
         </div>
@@ -966,7 +929,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
   const parallaxOffset = useParallax(0.1);
 
   return (
-    <section className="min-h-[70vh] flex items-center py-32 px-6 relative overflow-hidden">
+    <section className="min-h-[60vh] flex items-center py-24 sm:py-32 px-6 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.08] via-primary/[0.02] to-transparent pointer-events-none" />
       <div 
         className="absolute bottom-0 left-1/2 w-[1000px] h-[500px] bg-primary/[0.1] rounded-full blur-[150px] pointer-events-none"
@@ -975,7 +938,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
       
       <div className="max-w-3xl mx-auto text-center relative w-full" ref={ref}>
         <h2 
-          className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-8 transition-all duration-1000 ease-out"
+          className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6 transition-all duration-1000 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
@@ -986,7 +949,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
           <span className="text-primary">your inbox?</span>
         </h2>
         <p 
-          className="text-xl text-muted-foreground mb-14 transition-all duration-1000 ease-out delay-150"
+          className="text-lg text-muted-foreground mb-10 transition-all duration-1000 ease-out delay-150"
           style={{ 
             opacity: isVisible ? 1 : 0, 
             transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
