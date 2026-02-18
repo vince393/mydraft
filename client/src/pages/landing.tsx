@@ -99,11 +99,11 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transitionDelay: '150ms'
               }}
             >
-              Your inbox
+              The inbox
               <br />
-              shouldn't feel
+              that works
               <br />
-              <span className="text-primary">like a second job.</span>
+              <span className="text-primary">for you.</span>
             </h1>
             
             <p 
@@ -114,7 +114,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transitionDelay: '300ms'
               }}
             >
-              You have better things to do than write the same replies over and over. Let AI handle the drafts while you focus on what actually matters.
+              AI-powered email management that drafts replies, summarizes threads, and handles multilingual communication, so you can focus on what matters.
             </p>
             
             <div 
@@ -333,8 +333,11 @@ function ReliefSection() {
           }}
         >
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight mb-6">
-            Now imagine this instead.
+            A smarter way to manage email
           </h2>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+            See how MyDraft transforms everyday inbox tasks.
+          </p>
         </div>
 
         <div className="space-y-12">
@@ -411,10 +414,10 @@ function DemoSection() {
           }}
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
-            Here's what your morning looks like.
+            See the difference
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Open your inbox. Review AI-drafted replies. Send what sounds right. That's it.
+            AI-drafted replies, thread summaries, and a distraction-free inbox.
           </p>
         </div>
 
@@ -655,9 +658,9 @@ function GlobalSection() {
           }}
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-8 text-center">
-            Your inbox doesn't have borders.
+            Global inbox,
             <br />
-            <span className="text-primary">Neither should your replies.</span>
+            <span className="text-primary">local tone.</span>
           </h2>
         </div>
 
@@ -669,7 +672,7 @@ function GlobalSection() {
           }}
         >
           <p className="text-xl text-muted-foreground leading-relaxed text-center mb-12">
-            When someone emails you in French, or Japanese, or Portuguese, you shouldn't have to paste things into a translator and hope for the best. MyDraft understands the language <span className="text-foreground italic">and</span> the culture, so your reply lands the way you intended.
+            MyDraft translates emails with cultural awareness, not just word-for-word conversion. Replies adapt to the appropriate tone, formality, and etiquette for each region automatically.
           </p>
         </div>
 
@@ -712,10 +715,10 @@ function SimpleStartSection({ getStartedHref }: { getStartedHref: string }) {
           }}
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
-            Getting started takes two minutes.
+            Get started in minutes
           </h2>
           <p className="text-lg text-muted-foreground">
-            No installs. No migrations. No new email address.
+            No installs, no migrations, no new email address required.
           </p>
         </div>
 
@@ -808,7 +811,7 @@ function TestimonialsSection() {
           }}
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
-            People who made the switch.
+            What our users are saying
           </h2>
         </div>
         
@@ -928,7 +931,7 @@ function FAQSection() {
           }}
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
-            You're probably wondering...
+            Frequently asked questions
           </h2>
         </div>
         <Accordion type="single" collapsible className="space-y-4">
@@ -978,9 +981,9 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
             transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
           }}
         >
-          You spend hours in your inbox every day.
+          Ready to upgrade
           <br />
-          <span className="text-primary">What if you didn't have to?</span>
+          <span className="text-primary">your inbox?</span>
         </h2>
         <p 
           className="text-xl text-muted-foreground mb-14 transition-all duration-1000 ease-out delay-150"
@@ -989,7 +992,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
             transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
           }}
         >
-          Same email address. Same contacts. A completely different relationship with your inbox.
+          Same email address. Same contacts. Better everything else.
         </p>
         <div 
           className="flex flex-col sm:flex-row gap-5 justify-center transition-all duration-1000 ease-out delay-300"
