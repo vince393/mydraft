@@ -320,7 +320,7 @@ export default function LoginPage() {
               key={index} 
               className="flex items-start gap-4 group"
             >
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:border-white/20 transition-all duration-300">
+              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center group-hover:bg-gray-200 group-hover:border-gray-300 transition-all duration-300">
                 <feature.icon className="w-5 h-5 text-blue-400" />
               </div>
               <div>

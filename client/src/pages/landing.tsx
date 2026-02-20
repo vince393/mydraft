@@ -67,9 +67,9 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
 
   return (
     <section className="min-h-screen flex items-center pt-20 pb-16 px-5 sm:px-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-amber-50/40 via-transparent to-transparent pointer-events-none" />
       <div 
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-primary/[0.08] rounded-full blur-[150px] pointer-events-none transition-opacity duration-1000"
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-amber-100/50 rounded-full blur-[150px] pointer-events-none transition-opacity duration-1000"
         style={{ 
           opacity: mounted ? 1 : 0,
           transform: `translate(-50%, calc(-50% + ${parallaxOffset}px))`
@@ -86,7 +86,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transform: mounted ? 'translateY(0)' : 'translateY(30px)'
               }}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-muted-foreground text-sm mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/5 border border-primary/10 text-muted-foreground text-sm mb-8">
                 <Globe className="w-3.5 h-3.5" />
                 Works with Gmail & Outlook
               </div>
@@ -133,14 +133,14 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto border-white/10" data-testid="hero-signin">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto" data-testid="hero-signin">
                   Sign in
                 </Button>
               </Link>
             </div>
             
             <p 
-              className="text-sm text-muted-foreground/60 mt-6 transition-all duration-1000 ease-out"
+              className="text-sm text-muted-foreground mt-6 transition-all duration-1000 ease-out"
               style={{ 
                 opacity: mounted ? 1 : 0,
                 transitionDelay: '600ms'
@@ -158,27 +158,27 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               transitionDelay: '400ms'
             }}
           >
-            <div className="absolute -inset-6 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent rounded-3xl blur-3xl opacity-50" />
-            <div className="relative rounded-2xl border border-white/[0.08] bg-card/40 backdrop-blur-sm overflow-hidden shadow-2xl shadow-black/40">
-              <div className="bg-white/[0.02] px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+            <div className="absolute -inset-6 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-3xl blur-3xl opacity-50" />
+            <div className="relative rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-xl">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-white/10" />
-                  <div className="w-3 h-3 rounded-full bg-white/10" />
-                  <div className="w-3 h-3 rounded-full bg-white/10" />
+                  <div className="w-3 h-3 rounded-full bg-gray-300" />
+                  <div className="w-3 h-3 rounded-full bg-gray-300" />
+                  <div className="w-3 h-3 rounded-full bg-gray-300" />
                 </div>
-                <span className="text-xs text-muted-foreground/60">MyDraft</span>
+                <span className="text-xs text-muted-foreground">MyDraft</span>
                 <div className="w-16" />
               </div>
               
               <div className="flex">
-                <div className="w-14 border-r border-white/[0.04] py-4 flex flex-col items-center gap-4">
+                <div className="w-14 border-r border-gray-200 py-4 flex flex-col items-center gap-4">
                   <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
                     <Inbox className="w-4 h-4 text-primary" />
                   </div>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground/50">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground">
                     <Send className="w-4 h-4" />
                   </div>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground/50">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground">
                     <Archive className="w-4 h-4" />
                   </div>
                 </div>
@@ -209,7 +209,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                   />
                   
                   <div className="mt-4 pl-11">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Sparkles className="w-3 h-3 text-primary/60" />
                       <span className="italic">Suggested: "Thanks Sarah, morning works."</span>
                       <span className="text-primary/70">Use</span>
@@ -239,7 +239,7 @@ function HeroEmailItem({ from, subject, time, unread = false, selected = false }
   return (
     <div className={`p-3 rounded-xl transition-colors ${selected ? 'bg-primary/10 ring-1 ring-primary/30' : ''}`}>
       <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${selected ? 'bg-primary/30 text-primary' : 'bg-white/[0.06] text-muted-foreground'}`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${selected ? 'bg-primary/30 text-primary' : 'bg-gray-100 text-muted-foreground'}`}>
           {from.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
@@ -247,9 +247,9 @@ function HeroEmailItem({ from, subject, time, unread = false, selected = false }
             <span className={`text-sm ${unread ? 'font-semibold' : 'text-muted-foreground'}`}>{from}</span>
             {unread && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
           </div>
-          <p className={`text-sm truncate ${unread ? 'text-foreground/80' : 'text-muted-foreground/60'}`}>{subject}</p>
+          <p className={`text-sm truncate ${unread ? 'text-foreground/80' : 'text-muted-foreground'}`}>{subject}</p>
         </div>
-        <span className="text-[11px] text-muted-foreground/50">{time}</span>
+        <span className="text-[11px] text-muted-foreground">{time}</span>
       </div>
     </div>
   );
@@ -257,20 +257,20 @@ function HeroEmailItem({ from, subject, time, unread = false, selected = false }
 
 function FeatureMockupReply() {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/30">
-      <div className="bg-white/[0.02] px-4 py-2.5 border-b border-white/[0.06] flex items-center gap-2">
+    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-lg">
+      <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center gap-2">
         <Sparkles className="w-3.5 h-3.5 text-primary" />
         <span className="text-xs font-medium text-muted-foreground">AI Draft</span>
       </div>
       <div className="p-5 space-y-4">
         <div className="flex items-start gap-3">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white text-[10px] font-medium flex-shrink-0">L</div>
-          <div className="flex-1 p-3 rounded-lg bg-white/[0.03] border border-white/[0.04]">
-            <p className="text-[11px] text-muted-foreground/60 mb-1">Lisa Martinez</p>
+          <div className="flex-1 p-3 rounded-lg bg-gray-50 border border-gray-200">
+            <p className="text-[11px] text-muted-foreground mb-1">Lisa Martinez</p>
             <p className="text-xs text-foreground/70">Can we reschedule our meeting to Thursday? I have a conflict on Wednesday afternoon.</p>
           </div>
         </div>
-        <div className="p-3 rounded-xl bg-primary/[0.06] border border-primary/20">
+        <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
           <div className="flex items-center gap-1.5 mb-2">
             <Sparkles className="w-3 h-3 text-primary" />
             <span className="text-[10px] font-medium text-primary">Suggested reply</span>
@@ -290,13 +290,13 @@ function FeatureMockupReply() {
 
 function FeatureMockupSummary() {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/30">
-      <div className="bg-white/[0.02] px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
+    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-lg">
+      <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-medium text-muted-foreground">Thread Summary</span>
         </div>
-        <span className="text-[10px] text-muted-foreground/40">18 messages</span>
+        <span className="text-[10px] text-muted-foreground">18 messages</span>
       </div>
       <div className="p-5 space-y-3">
         <div className="flex items-start gap-2.5">
@@ -313,10 +313,10 @@ function FeatureMockupSummary() {
         </div>
         <div className="flex items-start gap-2.5">
           <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
-          <p className="text-xs text-foreground/60">Sarah to send revised timeline Monday</p>
+          <p className="text-xs text-muted-foreground">Sarah to send revised timeline Monday</p>
         </div>
-        <div className="mt-3 pt-3 border-t border-white/[0.04]">
-          <p className="text-[10px] text-muted-foreground/40">Action items: 2 pending, 2 completed</p>
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <p className="text-[10px] text-muted-foreground">Action items: 2 pending, 2 completed</p>
         </div>
       </div>
     </div>
@@ -325,21 +325,21 @@ function FeatureMockupSummary() {
 
 function FeatureMockupGlobal() {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/30">
-      <div className="bg-white/[0.02] px-4 py-2.5 border-b border-white/[0.06] flex items-center gap-2">
+    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-lg">
+      <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center gap-2">
         <Languages className="w-3.5 h-3.5 text-primary" />
         <span className="text-xs font-medium text-muted-foreground">Translation</span>
       </div>
       <div className="p-5 space-y-4">
-        <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.04]">
+        <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
           <div className="flex items-center gap-1.5 mb-2">
-            <span className="text-[10px] text-muted-foreground/60">Original (Japanese)</span>
+            <span className="text-[10px] text-muted-foreground">Original (Japanese)</span>
           </div>
-          <p className="text-xs text-foreground/60 font-light" style={{ fontFamily: 'sans-serif' }}>
+          <p className="text-xs text-muted-foreground font-light" style={{ fontFamily: 'sans-serif' }}>
             山田様、お忙しいところ恐れ入りますが、来週の会議の件についてご確認いただけますでしょうか。
           </p>
         </div>
-        <div className="p-3 rounded-lg bg-primary/[0.06] border border-primary/15">
+        <div className="p-3 rounded-lg bg-primary/5 border border-primary/15">
           <div className="flex items-center gap-1.5 mb-2">
             <span className="text-[10px] text-primary/70">Translated to English</span>
           </div>
@@ -364,7 +364,7 @@ function FeaturesSection() {
   return (
     <section className="py-24 sm:py-32 px-6 relative">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
       </div>
 
       <div className="max-w-6xl mx-auto w-full" ref={ref}>
@@ -488,7 +488,7 @@ function DemoSection() {
 
   return (
     <section className="py-24 sm:py-32 px-6 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-50/30 to-transparent pointer-events-none" />
       
       <div className="max-w-5xl mx-auto w-full" ref={ref}>
         <div 
@@ -518,7 +518,7 @@ function DemoSection() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
-            <div className="flex items-center justify-center gap-2 p-1.5 rounded-full bg-white/[0.03] border border-white/[0.06]">
+            <div className="flex items-center justify-center gap-2 p-1.5 rounded-full bg-gray-100 border border-gray-200">
               <DemoTab 
                 active={activeDemo === 'inbox'}
                 onClick={() => { setActiveDemo('inbox'); setIsPaused(true); }}
@@ -546,7 +546,7 @@ function DemoSection() {
                 <div 
                   key={demo}
                   className={`h-1 rounded-full transition-all duration-500 ${
-                    activeDemo === demo ? 'w-8 bg-primary' : 'w-2 bg-white/20'
+                    activeDemo === demo ? 'w-8 bg-primary' : 'w-2 bg-gray-300'
                   }`}
                 />
               ))}
@@ -558,7 +558,7 @@ function DemoSection() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
-            <div className="rounded-2xl border border-white/[0.08] bg-card/80 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/20">
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-xl">
               <div className="transition-opacity duration-500" key={activeDemo}>
                 {activeDemo === 'inbox' && <DemoInbox />}
                 {activeDemo === 'reply' && <DemoReply />}
@@ -585,7 +585,7 @@ function DemoTab({ active, onClick, label, icon: Icon, testId }: {
       data-testid={testId}
       variant={active ? "default" : "ghost"}
       size="sm"
-      className="rounded-full gap-2"
+      className="gap-2"
     >
       <Icon className="w-4 h-4" />
       {label}
@@ -617,19 +617,19 @@ function DemoInbox() {
             <div className="w-1.5 h-1.5 rounded-full bg-primary" />
           </div>
         </div>
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-xs font-medium">S</div>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-muted-foreground truncate">Sarah Chen</p>
-            <p className="text-xs text-muted-foreground/60 truncate">Re: Q4 budget discussion</p>
+            <p className="text-xs text-muted-foreground truncate">Re: Q4 budget discussion</p>
           </div>
           <span className="text-[10px] text-muted-foreground">1h</span>
         </div>
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">J</div>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-muted-foreground truncate">James Wilson</p>
-            <p className="text-xs text-muted-foreground/60 truncate">Meeting notes from today</p>
+            <p className="text-xs text-muted-foreground truncate">Meeting notes from today</p>
           </div>
           <span className="text-[10px] text-muted-foreground">3h</span>
         </div>
@@ -653,7 +653,7 @@ function DemoReply() {
       <div className="space-y-4">
         <div className="flex items-start gap-3">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">L</div>
-          <div className="flex-1 p-3 rounded-lg bg-white/[0.02]">
+          <div className="flex-1 p-3 rounded-lg bg-gray-50">
             <p className="text-xs text-muted-foreground mb-1">Lisa Martinez</p>
             <p className="text-sm text-foreground/80">Can we reschedule our meeting to Thursday? I have a conflict on Wednesday.</p>
           </div>
@@ -692,7 +692,7 @@ function DemoSummary() {
         <div className="flex items-center gap-2 mb-4">
           <Brain className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-medium text-primary">Summary</span>
-          <span className="text-[10px] text-muted-foreground/50 ml-auto">12 messages</span>
+          <span className="text-[10px] text-muted-foreground ml-auto">12 messages</span>
         </div>
         <div className="space-y-3">
           <div className="flex items-start gap-2">
@@ -705,7 +705,7 @@ function DemoSummary() {
           </div>
           <div className="flex items-start gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-2" />
-            <p className="text-sm text-foreground/60">Team agreed on launch date: Nov 15</p>
+            <p className="text-sm text-muted-foreground">Team agreed on launch date: Nov 15</p>
           </div>
         </div>
       </div>
@@ -719,7 +719,7 @@ function GlobalSection() {
   return (
     <section className="py-24 sm:py-32 px-6 relative">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
       </div>
 
       <div className="max-w-6xl mx-auto w-full" ref={ref}>
@@ -740,15 +740,15 @@ function GlobalSection() {
               Translate and reply across languages with cultural awareness built in.
             </p>
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 rounded-xl border border-white/[0.06] bg-white/[0.01]">
+              <div className="text-center p-4 rounded-xl border border-gray-200 bg-gray-50">
                 <p className="text-2xl font-semibold mb-1">50+</p>
                 <p className="text-xs text-muted-foreground">languages</p>
               </div>
-              <div className="text-center p-4 rounded-xl border border-white/[0.06] bg-white/[0.01]">
+              <div className="text-center p-4 rounded-xl border border-gray-200 bg-gray-50">
                 <p className="text-2xl font-semibold mb-1">20+</p>
                 <p className="text-xs text-muted-foreground">cultures</p>
               </div>
-              <div className="text-center p-4 rounded-xl border border-white/[0.06] bg-white/[0.01]">
+              <div className="text-center p-4 rounded-xl border border-gray-200 bg-gray-50">
                 <p className="text-2xl font-semibold mb-1">Auto</p>
                 <p className="text-xs text-muted-foreground">formality</p>
               </div>
@@ -825,7 +825,7 @@ function HowItWorksSection({ getStartedHref }: { getStartedHref: string }) {
           }}
         >
           <Link href={getStartedHref}>
-            <Button size="lg" className="rounded-full px-8 gap-2" data-testid="button-simple-start-cta">
+            <Button size="lg" className="px-8 gap-2" data-testid="button-simple-start-cta">
               Start free
               <ArrowRight className="w-4 h-4" />
             </Button>
@@ -898,7 +898,7 @@ function TestimonialsSection() {
             >
               {testimonials.map((t, i) => (
                 <div key={t.id || i} className="w-full flex-shrink-0 px-4">
-                  <Card className="bg-white/[0.02] border-white/[0.06] max-w-2xl mx-auto">
+                  <Card className="bg-white border-gray-200 shadow-md max-w-2xl mx-auto">
                     <CardContent className="p-10 text-center">
                       <div className="flex justify-center gap-1 mb-8">
                         {[...Array(t.rating)].map((_, j) => (
@@ -922,7 +922,6 @@ function TestimonialsSection() {
                 onClick={prevSlide}
                 variant="outline"
                 size="icon"
-                className="border-white/[0.1]"
                 data-testid="testimonial-prev"
               >
                 <ChevronDown className="w-5 h-5 rotate-90" />
@@ -934,8 +933,8 @@ function TestimonialsSection() {
                     onClick={() => setCurrentIndex(i)}
                     variant="ghost"
                     size="sm"
-                    className={`rounded-full min-h-0 min-w-0 p-1 ${
-                      i === currentIndex ? 'bg-primary' : 'bg-white/20'
+                    className={`min-h-0 min-w-0 p-1 ${
+                      i === currentIndex ? 'bg-primary' : 'bg-gray-300'
                     }`}
                     data-testid={`testimonial-dot-${i}`}
                   >
@@ -947,7 +946,6 @@ function TestimonialsSection() {
                 onClick={nextSlide}
                 variant="outline"
                 size="icon"
-                className="border-white/[0.1]"
                 data-testid="testimonial-next"
               >
                 <ChevronDown className="w-5 h-5 -rotate-90" />
@@ -1015,11 +1013,11 @@ function FAQSection() {
                 transitionDelay: `${200 + i * 80}ms`
               }}
             >
-              <AccordionItem value={`faq-${i}`} className="border border-white/[0.06] rounded-2xl overflow-hidden px-6" data-testid={`faq-toggle-${i}`}>
+              <AccordionItem value={`faq-${i}`} className="border border-gray-200 rounded-2xl overflow-hidden px-6" data-testid={`faq-toggle-${i}`}>
                 <AccordionTrigger className="text-lg font-medium hover:no-underline">
                   {faq.q}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground/70 leading-relaxed">
+                <AccordionContent className="text-muted-foreground leading-relaxed">
                   {faq.a}
                 </AccordionContent>
               </AccordionItem>
@@ -1037,9 +1035,9 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
 
   return (
     <section className="min-h-[60vh] flex items-center py-24 sm:py-32 px-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.08] via-primary/[0.02] to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-amber-50/50 via-amber-50/20 to-transparent pointer-events-none" />
       <div 
-        className="absolute bottom-0 left-1/2 w-[1000px] h-[500px] bg-primary/[0.1] rounded-full blur-[150px] pointer-events-none"
+        className="absolute bottom-0 left-1/2 w-[1000px] h-[500px] bg-primary/[0.06] rounded-full blur-[150px] pointer-events-none"
         style={{ transform: `translate(-50%, ${parallaxOffset * 0.5}px)` }}
       />
       
@@ -1078,7 +1076,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
             </Button>
           </Link>
           <Link href="/pricing">
-            <Button variant="outline" size="lg" className="border-white/10" data-testid="cta-pricing">
+            <Button variant="outline" size="lg" data-testid="cta-pricing">
               View pricing
             </Button>
           </Link>
@@ -1090,7 +1088,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
 
 function Footer() {
   return (
-    <footer className="py-16 px-6 border-t border-white/[0.04]">
+    <footer className="py-16 px-6 border-t border-gray-200">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
           <div>
@@ -1124,8 +1122,8 @@ function Footer() {
             </ul>
           </div>
         </div>
-        <div className="pt-10 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground/50">&copy; 2026 MyDraft</p>
+        <div className="pt-10 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">&copy; 2026 MyDraft</p>
           <a href="mailto:support@mydraft.io" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-email">support@mydraft.io</a>
         </div>
       </div>

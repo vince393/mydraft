@@ -210,8 +210,8 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
-        <DialogHeader className="px-5 py-4 border-b border-white/[0.06] flex-shrink-0">
+      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-gray-200 backdrop-blur-xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 248,248,250), 1)" : "rgba(var(--background-rgb, 248,248,250), 0.95)" }}>
+        <DialogHeader className="px-5 py-4 border-b border-gray-200 flex-shrink-0">
           <DialogTitle className="flex items-center justify-between text-base font-medium">
             <div className="flex items-center gap-2.5">
               <Sparkles className="w-4 h-4 text-primary" />
@@ -281,14 +281,14 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
 
             <div className="relative">
               {generateMutation.isPending ? (
-                <div className="h-[200px] flex items-center justify-center bg-white/[0.03] rounded-md border border-white/[0.08]">
+                <div className="h-[200px] flex items-center justify-center bg-gray-50 rounded-md border border-gray-200">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span className="text-sm">Generating...</span>
                   </div>
                 </div>
               ) : generateError ? (
-                <div className="h-[200px] flex flex-col items-center justify-center bg-white/[0.03] rounded-md border border-destructive/30 gap-3">
+                <div className="h-[200px] flex flex-col items-center justify-center bg-gray-50 rounded-md border border-destructive/30 gap-3">
                   <AlertCircle className="w-5 h-5 text-destructive" />
                   <p className="text-sm text-center max-w-[280px]">{generateError.error}</p>
                   {generateError.canRetry && (
@@ -310,7 +310,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-white/[0.03] rounded-lg border border-white/[0.08]">
+              <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
                 <Wand2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                 <input
                   type="text"
@@ -352,7 +352,7 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/[0.06] flex-shrink-0">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 flex-shrink-0">
           <Button variant="ghost" size="sm" onClick={handleClose} data-testid="button-cancel-draft">
             Cancel
           </Button>

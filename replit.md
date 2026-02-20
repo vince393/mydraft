@@ -2,7 +2,7 @@
 
 ## Overview
 
-MyDraft is an AI-powered email inbox management application inspired by modern email clients like Hey.com and Superhuman. The application features a minimalist dark interface with AI-assisted reply drafting capabilities for business and service use. Users can view emails, read detailed content, and leverage AI to generate contextual reply drafts.
+MyDraft is an AI-powered email inbox management application inspired by modern email clients like Hey.com and Superhuman. The application features a clean white/light mode interface (hey.com-inspired) with AI-assisted reply drafting capabilities for business and service use. Users can view emails, read detailed content, and leverage AI to generate contextual reply drafts.
 
 ## Branding
 - **Business Name**: MyDraft
@@ -25,7 +25,7 @@ Preferred communication style: Simple, everyday language.
 - **State Management**: TanStack React Query for server state and data fetching
 - **UI Components**: shadcn/ui component library built on Radix UI primitives
 - **Styling**: Tailwind CSS with custom dark theme variables and CSS custom properties
-- **Design System**: Dark mode first with accent blue (#3B82F6), following Hey.com/Superhuman aesthetic
+- **Design System**: Light mode first (hey.com-inspired) with warm whites, rounded pill buttons, accent blue (#3B82F6). Dark mode available via settings toggle
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express
@@ -184,3 +184,12 @@ This ensures that even database administrators cannot read user email content, m
   - API: `/api/referrals/stats` (GET), `/api/referrals/generate-code` (POST)
   - Settings page "Referrals" tab: "Give Pro, Get Pro" messaging, copy link, progress bar (X/2), stats cards
 - **Pricing Page Fix**: Grid corrected from 4 to 3 columns, centered with max-width
+- **White Mode / Hey.com Design Overhaul**: 
+  - Switched default theme from dark to light mode across main.tsx and settings.tsx
+  - Updated CSS root variables for warm, inviting palette (warm whites, soft grays)
+  - Buttons redesigned: rounded-full pill shape, font-semibold, better hover transitions
+  - Landing page completely rewritten for white mode: warm amber gradients, white cards with subtle shadows, clean typography
+  - Marketing nav updated: white background with blur, clean borders
+  - All components updated (sidebar, email list/detail, compose, AI dialogs) removing dark-mode white-opacity patterns
+  - All public pages (pricing, help, security, legal) updated for light mode consistency
+  - Dark mode still available via settings toggle

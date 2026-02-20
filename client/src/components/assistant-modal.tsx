@@ -712,7 +712,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                             <Textarea
                               value={editedBody}
                               onChange={(e) => setEditedBody(e.target.value)}
-                              className="text-xs min-h-[100px] mb-2 bg-black/20 border-white/10 text-white/80 rounded-lg"
+                              className="text-xs min-h-[100px] mb-2 bg-gray-100 border-gray-200 text-foreground/80 rounded-lg"
                               data-testid="textarea-edit-draft"
                             />
                           ) : (

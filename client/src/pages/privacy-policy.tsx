@@ -156,7 +156,7 @@ export default function PrivacyPolicyPage() {
         </div>
       </div>
       
-      <footer className="py-12 px-6 border-t border-white/[0.04]">
+      <footer className="py-12 px-6 border-t border-gray-100">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-6">
             <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy</Link>
