@@ -2014,9 +2014,9 @@ function AppearanceTab() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("theme");
-      return (saved === "light" || saved === "dark") ? saved : "light";
+      return (saved === "light" || saved === "dark") ? saved : "dark";
     }
-    return "light";
+    return "dark";
   });
 
   useEffect(() => {

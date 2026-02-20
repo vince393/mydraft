@@ -509,7 +509,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             placeholder={screen.isMobile ? "Search..." : "Search emails..."} 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${screen.isMobile ? 'pl-10 pr-18 h-11' : 'pl-9 pr-16 h-10'} text-sm backdrop-blur-md bg-gray-100 border-gray-200 rounded-full placeholder:text-muted-foreground/50 focus:bg-white focus:border-primary/40 transition-all`}
+            className={`${screen.isMobile ? 'pl-10 pr-18 h-11' : 'pl-9 pr-16 h-10'} text-sm backdrop-blur-md bg-white/8 dark:bg-white/5 border-white/25 dark:border-white/15 rounded-full placeholder:text-muted-foreground/50 focus:bg-white/12 dark:focus:bg-white/8 focus:border-white/35 dark:focus:border-white/20 transition-all`}
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.1)"
             }}
@@ -525,7 +525,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className={`${screen.isMobile ? 'w-7 h-7' : 'w-6 h-6'} flex items-center justify-center rounded-full backdrop-blur-sm bg-gray-200 border border-gray-300 hover:bg-gray-300 text-muted-foreground hover:text-foreground transition-all`}
+                className={`${screen.isMobile ? 'w-7 h-7' : 'w-6 h-6'} flex items-center justify-center rounded-full backdrop-blur-sm bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all`}
                 data-testid="button-clear-search"
               >
                 <X className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
@@ -817,14 +817,14 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
 
       {isSelectionMode ? (
         <div 
-          className="mx-3 mb-2 px-3 py-2 flex flex-wrap items-center gap-2 rounded-full backdrop-blur-2xl border border-gray-200"
+          className="mx-3 mb-2 px-3 py-2 flex flex-wrap items-center gap-2 rounded-full backdrop-blur-2xl border border-white/20 dark:border-white/10"
           style={{
             background: "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
             boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.12), 0 4px 16px rgba(0,0,0,0.15)"
           }}
         >
           <button 
-            className="w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-gray-100 border border-gray-200 hover:bg-gray-200 text-foreground/70 hover:text-foreground transition-all cursor-pointer"
+            className="w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/8 dark:bg-white/5 border border-white/15 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-foreground/70 hover:text-foreground transition-all cursor-pointer"
             onClick={handleCancelSelection}
             data-testid="button-cancel-selection"
           >
@@ -835,7 +835,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </span>
           <span className="flex-1" />
           <button
-            className="h-8 px-3 rounded-full backdrop-blur-sm bg-gray-100 border border-gray-200 hover:bg-gray-200 text-xs font-medium text-foreground/70 hover:text-foreground transition-all cursor-pointer"
+            className="h-8 px-3 rounded-full backdrop-blur-sm bg-white/8 dark:bg-white/5 border border-white/15 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-xs font-medium text-foreground/70 hover:text-foreground transition-all cursor-pointer"
             onClick={handleSelectAll}
             data-testid="button-select-all"
           >
@@ -843,7 +843,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </button>
           <div className="flex items-center gap-1.5">
             <button 
-              className="w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-gray-100 border border-gray-200 hover:bg-gray-200 text-foreground/70 hover:text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-9 h-9 flex items-center justify-center rounded-full backdrop-blur-sm bg-white/8 dark:bg-white/5 border border-white/15 dark:border-white/10 hover:bg-white/15 dark:hover:bg-white/10 text-foreground/70 hover:text-foreground transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleArchiveSelected}
               disabled={selectedIds.size === 0 || isMoving}
               data-testid="button-archive-selected"
@@ -871,7 +871,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       ) : (
         <div className="absolute bottom-4 right-4">
           <button 
-            className="group rounded-full w-16 h-16 flex items-center justify-center backdrop-blur-sm bg-gray-100 border border-gray-200 hover:bg-gray-200 hover:scale-110 active:scale-95 transition-all duration-150 cursor-pointer"
+            className="group rounded-full w-16 h-16 flex items-center justify-center backdrop-blur-sm bg-white/5 dark:bg-white/[0.03] border border-white/20 dark:border-white/10 hover:bg-white/8 dark:hover:bg-white/5 hover:border-white/30 dark:hover:border-white/15 hover:scale-110 active:scale-95 active:bg-white/12 dark:active:bg-white/8 transition-all duration-150 cursor-pointer"
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.1)"
             }}

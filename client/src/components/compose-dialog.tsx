@@ -858,9 +858,9 @@ export function ComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-gray-200 backdrop-blur-xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 248,248,250), 1)" : "rgba(var(--background-rgb, 248,248,250), 0.95)" }}>
+      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
         {/* Header */}
-        <DialogHeader className="flex-shrink-0 px-5 py-3.5 border-b border-gray-200">
+        <DialogHeader className="flex-shrink-0 px-5 py-3.5 border-b border-white/[0.06]">
           <DialogTitle className="flex items-center gap-2.5 text-sm font-medium">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center border border-primary/20" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.1))" }}>
               <div className="text-primary">{getModeIcon()}</div>
@@ -872,7 +872,7 @@ export function ComposeDialog({
         {/* Form Content */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Recipients Section */}
-          <div className="px-5 py-3 space-y-2.5 border-b border-gray-200">
+          <div className="px-5 py-3 space-y-2.5 border-b border-white/[0.06]">
             {/* To Field */}
             <div className="flex items-center gap-2.5">
               <span className="text-[11px] text-foreground/30 font-medium w-6 text-right">To</span>
@@ -920,7 +920,7 @@ export function ComposeDialog({
             </div>
             
             {/* Subject Field */}
-            <div className="flex items-center gap-2.5 pt-1 border-t border-gray-100">
+            <div className="flex items-center gap-2.5 pt-1 border-t border-white/[0.04]">
               <span className="text-[11px] text-foreground/30 font-medium w-6 text-right">Sub</span>
               <Input
                 value={subject}
@@ -998,7 +998,7 @@ export function ComposeDialog({
             
             {/* Attached Images Preview */}
             {attachedImages.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="mt-3 pt-3 border-t border-white/[0.04]">
                 <div className="flex items-center gap-2 mb-2">
                   <FileImage className="w-3.5 h-3.5 text-foreground/30" />
                   <span className="text-[11px] text-foreground/30">AI Images ({attachedImages.length})</span>
@@ -1009,7 +1009,7 @@ export function ComposeDialog({
                       <img 
                         src={img.data} 
                         alt={img.name}
-                        className="w-14 h-14 object-cover rounded-lg border border-gray-200"
+                        className="w-14 h-14 object-cover rounded-lg border border-white/10"
                       />
                       <button
                         onClick={() => removeAttachedImage(idx)}
@@ -1027,9 +1027,9 @@ export function ComposeDialog({
             
             {/* AI Refine Bar - only show when there's content */}
             {hasUserContent() && (
-              <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-gray-100">
+              <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-white/[0.04]">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 flex-1 rounded-full px-3 py-1.5 border border-gray-200" style={{ background: "rgba(0,0,0,0.02)" }}>
+                  <div className="flex items-center gap-2 flex-1 rounded-full px-3 py-1.5 border border-white/[0.06]" style={{ background: "rgba(255,255,255,0.02)" }}>
                     <Sparkles className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
                     <Input
                       value={refineInput}
@@ -1061,7 +1061,7 @@ export function ComposeDialog({
         
         {/* Attachments Preview */}
         {(fileAttachments.length > 0 || attachedImages.length > 0) && (
-          <div className="flex-shrink-0 px-5 py-2 border-t border-gray-100">
+          <div className="flex-shrink-0 px-5 py-2 border-t border-white/[0.04]">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Paperclip className="w-3 h-3 text-foreground/25" />
               <span className="text-[10px] font-medium text-foreground/30">
@@ -1074,8 +1074,8 @@ export function ComposeDialog({
                 return (
                   <div
                     key={`file-${idx}`}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-gray-200 text-[11px] group"
-                    style={{ background: "rgba(0,0,0,0.03)" }}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-white/[0.08] text-[11px] group"
+                    style={{ background: "rgba(255,255,255,0.03)" }}
                     data-testid={`attachment-file-${idx}`}
                   >
                     {isImage ? (
@@ -1120,7 +1120,7 @@ export function ComposeDialog({
         )}
 
         {/* Footer Actions */}
-        <div className="flex-shrink-0 px-5 py-2.5 border-t border-gray-100">
+        <div className="flex-shrink-0 px-5 py-2.5 border-t border-white/[0.04]">
           <div className="flex items-center justify-between gap-2">
             {/* Hidden file input */}
             <input
@@ -1371,8 +1371,8 @@ export function ComposeDialog({
                     <button
                       type="button"
                       disabled={sendMutation.isPending || !to.trim() || isGenerating}
-                      className="h-8 px-3 rounded-full flex items-center gap-1.5 text-xs font-medium text-foreground/40 hover:text-foreground/60 border border-gray-200 hover:border-gray-300 transition-all cursor-pointer disabled:opacity-30"
-                      style={{ background: "rgba(0,0,0,0.03)" }}
+                      className="h-8 px-3 rounded-full flex items-center gap-1.5 text-xs font-medium text-foreground/40 hover:text-foreground/60 border border-white/[0.08] hover:border-white/15 transition-all cursor-pointer disabled:opacity-30"
+                      style={{ background: "rgba(255,255,255,0.03)" }}
                       data-testid="button-schedule-send"
                     >
                       <Clock className="w-3.5 h-3.5" />

@@ -977,7 +977,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
               </div>
             )}
           </div>
-          <DialogFooter className="gap-2 pt-2 border-t border-gray-200">
+          <DialogFooter className="gap-2 pt-2 border-t border-white/[0.06]">
             <Button variant="outline" onClick={() => { setIsCreateOpen(false); setNewFolderAiDescription(""); }}>
               Cancel
             </Button>
@@ -1072,7 +1072,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                 key={name}
                 onClick={() => handleSelectIcon(name)}
                 className={`w-12 h-12 flex items-center justify-center rounded-lg transition-colors hover:bg-muted ${
-                  selectedFolder?.iconName === name ? "bg-primary/20 ring-2 ring-primary" : "bg-gray-100"
+                  selectedFolder?.iconName === name ? "bg-primary/20 ring-2 ring-primary" : "bg-white/[0.03]"
                 }`}
                 data-testid={`icon-option-${name}`}
               >
@@ -1144,7 +1144,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   className={`p-3 sm:p-3 rounded-xl cursor-pointer transition-all border ${
                     selectedSuggestions.has(email.id)
                       ? "bg-primary/10 border-primary/40"
-                      : "bg-gray-100 border-gray-200 active:bg-gray-200"
+                      : "bg-white/[0.03] border-white/[0.06] active:bg-white/[0.08]"
                   }`}
                   data-testid={`suggestion-email-${email.id}`}
                 >
@@ -1180,7 +1180,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
             )}
           </div>
           
-          <DialogFooter className="gap-2 pt-2 border-t border-gray-200">
+          <DialogFooter className="gap-2 pt-2 border-t border-white/[0.06]">
             <Button variant="outline" onClick={() => setIsSuggestionOpen(false)}>
               {suggestedEmails.length > 0 ? "Skip" : "Close"}
             </Button>

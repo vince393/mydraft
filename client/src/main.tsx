@@ -4,10 +4,11 @@ import "./index.css";
 
 // Apply theme before React renders to prevent flash
 const savedTheme = localStorage.getItem("theme");
-if (savedTheme === "dark") {
-  document.documentElement.classList.add("dark");
-} else {
+if (savedTheme === "light") {
   document.documentElement.classList.remove("dark");
+} else {
+  // Default to dark
+  document.documentElement.classList.add("dark");
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

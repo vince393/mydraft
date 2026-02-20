@@ -247,7 +247,7 @@ export default function HelpPage() {
               placeholder="Search for help..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-4 h-12 text-base bg-card border-gray-200 focus:border-primary/50"
+              className="pl-12 pr-4 h-12 text-base bg-card/50 border-white/10 focus:border-primary/50"
               data-testid="input-search-help"
             />
             {searchQuery && (
@@ -268,7 +268,7 @@ export default function HelpPage() {
           ) : (
             <div className="space-y-6 mb-16">
               {filteredSections.map((section) => (
-                <Card key={section.id} className="bg-card border-gray-200">
+                <Card key={section.id} className="bg-card/30 border-white/[0.08]">
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center gap-3 text-lg">
                       <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -283,7 +283,7 @@ export default function HelpPage() {
                         <AccordionItem 
                           key={index} 
                           value={`${section.id}-${index}`}
-                          className="border-gray-200"
+                          className="border-white/[0.06]"
                         >
                           <AccordionTrigger 
                             className="text-left hover:no-underline py-4 text-sm font-medium"
@@ -303,7 +303,7 @@ export default function HelpPage() {
             </div>
           )}
 
-          <Card className="bg-gradient-to-br from-card to-card border-gray-200">
+          <Card className="bg-gradient-to-br from-card/50 to-card/30 border-white/[0.08]">
             <CardHeader className="text-center pb-2">
               <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-primary" />
@@ -340,7 +340,7 @@ export default function HelpPage() {
                       value={contactName}
                       onChange={(e) => setContactName(e.target.value)}
                       placeholder="Your name"
-                      className="bg-background border-gray-200"
+                      className="bg-background/50 border-white/10"
                       data-testid="input-contact-name"
                     />
                   </div>
@@ -352,7 +352,7 @@ export default function HelpPage() {
                       value={contactEmail}
                       onChange={(e) => setContactEmail(e.target.value)}
                       placeholder="your@email.com"
-                      className="bg-background border-gray-200"
+                      className="bg-background/50 border-white/10"
                       data-testid="input-contact-email"
                     />
                   </div>
@@ -364,7 +364,7 @@ export default function HelpPage() {
                       onChange={(e) => setContactMessage(e.target.value)}
                       placeholder="How can we help you?"
                       rows={4}
-                      className="bg-background border-gray-200 resize-none"
+                      className="bg-background/50 border-white/10 resize-none"
                       data-testid="input-contact-message"
                     />
                   </div>
@@ -393,7 +393,7 @@ export default function HelpPage() {
         </div>
       </main>
 
-      <footer className="border-t border-gray-200 py-12">
+      <footer className="border-t border-white/[0.06] py-12">
         <div className="max-w-4xl mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-6">
             <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy</Link>

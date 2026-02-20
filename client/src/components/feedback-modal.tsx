@@ -111,7 +111,7 @@ export function FeedbackModal({ open, onOpenChange, userEmail }: FeedbackModalPr
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col p-0 gap-0" data-testid="modal-feedback">
-        <DialogHeader className="px-6 py-4 border-b border-gray-200 shrink-0">
+        <DialogHeader className="px-6 py-4 border-b border-white/[0.06] shrink-0">
           <DialogTitle className="text-lg">Feedback</DialogTitle>
           <DialogDescription>
             Share your thoughts, report issues, or request features.
@@ -229,7 +229,7 @@ export function FeedbackModal({ open, onOpenChange, userEmail }: FeedbackModalPr
                     return (
                       <div
                         key={item.id}
-                        className="p-4 rounded-lg border border-gray-200 bg-gray-50"
+                        className="p-4 rounded-lg border border-white/[0.08] bg-white/[0.03]"
                         data-testid={`feedback-item-${item.id}`}
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
