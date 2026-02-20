@@ -1008,10 +1008,11 @@ function FAQSection() {
           {faqs.map((faq, i) => (
             <div 
               key={i}
-              className="transition-all duration-700 ease-out"
+              className="duration-700 ease-out"
               style={{ 
                 opacity: isVisible ? 1 : 0, 
                 transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+                transitionProperty: 'opacity, transform',
                 transitionDelay: `${200 + i * 80}ms`
               }}
             >
