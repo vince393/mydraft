@@ -87,7 +87,7 @@ export function MarketingNav() {
           </Link>
         </div>
 
-        <div className="flex md:hidden items-center gap-1.5">
+        <div className="flex md:hidden items-center gap-1.5 ml-auto">
           <Link href={getStartedHref()}>
             <Button size="sm" className="bg-primary text-xs" data-testid="mobile-nav-getstarted">
               {isLoggedIn ? "Inbox" : "Get started"}
