@@ -138,19 +138,15 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
       )}
 
       {isOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setIsOpen(false)}>
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center sm:justify-center" onClick={() => setIsOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className="relative w-full flex flex-col"
+            className="relative w-full h-full sm:h-auto sm:max-w-[520px] sm:max-h-[min(640px,85vh)] flex flex-col sm:rounded-2xl sm:border sm:border-white/[0.08]"
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: "520px",
-              maxHeight: "min(640px, 85vh)",
               backdropFilter: "blur(40px)",
               WebkitBackdropFilter: "blur(40px)",
               background: "linear-gradient(145deg, rgba(30,30,40,0.92) 0%, rgba(20,20,28,0.96) 100%)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "16px",
               boxShadow: "0 24px 48px rgba(0,0,0,0.5)",
             }}
           >
