@@ -63,14 +63,14 @@ function AuthenticatedApp() {
 
   const { data: emails = [] } = useQuery<Email[]>({
     queryKey: ["/api/emails"],
-    staleTime: 30000,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: unreadCounts } = useQuery<UnreadCounts>({
     queryKey: ["/api/emails/unread-counts"],
-    staleTime: 30000,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Check if AI chat feature is enabled for this user

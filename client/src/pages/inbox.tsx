@@ -201,7 +201,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     staleTime: Infinity,
     gcTime: Infinity,
     refetchOnWindowFocus: false,
-    refetchOnMount: "always",
+    refetchOnMount: false,
   });
 
   // Step 2: Fetch fresh emails from Nylas in background
@@ -213,10 +213,10 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return response.json();
     },
     enabled: !!userData?.user && !isCustomFolder,
-    staleTime: 60000,
-    gcTime: 300000,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 2,
     retryDelay: 500,
   });
@@ -242,9 +242,9 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return response.json();
     },
     enabled: !!userData?.user && isCustomFolder && !!customFolderId,
-    staleTime: 10000,
-    gcTime: 300000,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Use custom folder emails when viewing a custom folder, otherwise use all emails
