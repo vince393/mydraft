@@ -118,7 +118,15 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
   return (
     <>
       {asMenuItem ? (
-        <DropdownMenuItem onClick={() => setIsOpen(true)} className="gap-2" data-testid="button-ai-inbox-refresh">
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setTimeout(() => setIsOpen(true), 100);
+          }}
+          className="gap-2"
+          data-testid="button-ai-inbox-refresh"
+        >
           <Wand2 className="w-4 h-4 text-purple-400" />
           AI Cleanup
         </DropdownMenuItem>
