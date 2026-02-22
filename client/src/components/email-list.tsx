@@ -695,6 +695,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       {/* Email list */}
       <div 
         ref={scrollContainerRef}
+        data-pull-to-refresh
         className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative pt-[52px]"
         onTouchStart={(e) => {
           if (scrollContainerRef.current?.scrollTop === 0 && !isRefreshing && !isSyncing) {
