@@ -47,7 +47,6 @@ export default function LandingPage() {
       <HeroSection getStartedHref={getStartedHref()} />
       <FeaturesSection />
       <DemoSection />
-      <GlobalSection />
       <HowItWorksSection getStartedHref={getStartedHref()} />
       <TestimonialsSection />
       <FAQSection />
@@ -452,9 +451,23 @@ function FeaturesSection() {
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-semibold" data-testid="text-feature-multilingual">Multilingual support</h3>
                 </div>
-                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto lg:mx-0">
-                  Translate and reply across 50+ languages with cultural context.
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto lg:mx-0 mb-6">
+                  Translate and reply across 50+ languages. AI adapts tone and formality based on the sender's culture automatically.
                 </p>
+                <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto lg:mx-0">
+                  <div className="text-center p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                    <p className="text-xl font-semibold mb-0.5" data-testid="text-stat-languages">50+</p>
+                    <p className="text-[11px] text-muted-foreground">languages</p>
+                  </div>
+                  <div className="text-center p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                    <p className="text-xl font-semibold mb-0.5" data-testid="text-stat-cultures">20+</p>
+                    <p className="text-[11px] text-muted-foreground">cultures</p>
+                  </div>
+                  <div className="text-center p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                    <p className="text-xl font-semibold mb-0.5" data-testid="text-stat-formality">Auto</p>
+                    <p className="text-[11px] text-muted-foreground">formality</p>
+                  </div>
+                </div>
               </div>
               <div className="flex-1 w-full max-w-md lg:max-w-none">
                 <FeatureMockupGlobal />
@@ -710,63 +723,6 @@ function DemoSummary() {
         </div>
       </div>
     </div>
-  );
-}
-
-function GlobalSection() {
-  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.15 });
-
-  return (
-    <section className="py-24 sm:py-32 px-6 relative">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-      </div>
-
-      <div className="max-w-6xl mx-auto w-full" ref={ref}>
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          <div 
-            className="transition-all duration-1000 ease-out"
-            style={{ 
-              opacity: isVisible ? 1 : 0, 
-              transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
-            }}
-          >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6">
-              Global inbox,
-              <br />
-              <span className="text-primary">local tone.</span>
-            </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-              Translate and reply across languages with cultural awareness built in.
-            </p>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 rounded-xl border border-white/[0.06] bg-white/[0.01]">
-                <p className="text-2xl font-semibold mb-1">50+</p>
-                <p className="text-xs text-muted-foreground">languages</p>
-              </div>
-              <div className="text-center p-4 rounded-xl border border-white/[0.06] bg-white/[0.01]">
-                <p className="text-2xl font-semibold mb-1">20+</p>
-                <p className="text-xs text-muted-foreground">cultures</p>
-              </div>
-              <div className="text-center p-4 rounded-xl border border-white/[0.06] bg-white/[0.01]">
-                <p className="text-2xl font-semibold mb-1">Auto</p>
-                <p className="text-xs text-muted-foreground">formality</p>
-              </div>
-            </div>
-          </div>
-
-          <div 
-            className="transition-all duration-1000 ease-out delay-200"
-            style={{ 
-              opacity: isVisible ? 1 : 0, 
-              transform: isVisible ? 'translateX(0)' : 'translateX(60px)'
-            }}
-          >
-            <FeatureMockupGlobal />
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 
