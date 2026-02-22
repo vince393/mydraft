@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect, type ReactNode } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare, ArrowDown } from "lucide-react";
 import { useScreenSize } from "@/hooks/use-screen-size";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -697,23 +697,24 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative pt-[52px]"
         onTouchStart={(e) => {
-          if (scrollContainerRef.current?.scrollTop === 0) {
+          if (scrollContainerRef.current?.scrollTop === 0 && !isRefreshing && !isSyncing) {
             setIsPulling(true);
+            (scrollContainerRef.current as any)._startY = e.touches[0].clientY;
           }
         }}
         onTouchMove={(e) => {
-          if (isPulling && scrollContainerRef.current?.scrollTop === 0) {
-            const touch = e.touches[0];
-            const startY = (scrollContainerRef.current as any)._startY || touch.clientY;
-            if (!(scrollContainerRef.current as any)._startY) {
-              (scrollContainerRef.current as any)._startY = touch.clientY;
-            }
-            const distance = Math.max(0, Math.min(100, touch.clientY - startY));
-            setPullDistance(distance);
-          }
+          if (!isPulling || isRefreshing || isSyncing) return;
+          const startY = (scrollContainerRef.current as any)?._startY;
+          if (startY == null) return;
+          const currentY = e.touches[0].clientY;
+          const raw = currentY - startY;
+          if (raw < 0) { setPullDistance(0); return; }
+          const damped = Math.min(120, raw * 0.45);
+          setPullDistance(damped);
+          if (damped > 5) e.preventDefault();
         }}
         onTouchEnd={() => {
-          if (pullDistance >= pullThreshold && onRefresh && !isRefreshing) {
+          if (pullDistance >= pullThreshold && onRefresh && !isRefreshing && !isSyncing) {
             onRefresh();
           }
           setPullDistance(0);
@@ -725,16 +726,35 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       >
         {(pullDistance > 0 || isRefreshing) && (
           <div 
-            className="flex items-center justify-center py-3 transition-all"
-            style={{ height: isRefreshing ? 48 : pullDistance * 0.6 }}
+            className="flex flex-col items-center justify-center overflow-hidden"
+            style={{ 
+              height: isRefreshing ? 56 : pullDistance * 0.7,
+              transition: isPulling ? 'none' : 'height 0.3s cubic-bezier(0.2, 0, 0, 1)',
+            }}
           >
-            <Loader2 
-              className={`w-5 h-5 text-primary ${isRefreshing || pullDistance >= pullThreshold ? 'animate-spin' : ''}`}
-              style={{ 
-                transform: isRefreshing ? 'none' : `rotate(${pullDistance * 3.6}deg)`,
-                opacity: Math.min(1, pullDistance / pullThreshold)
-              }}
-            />
+            {isRefreshing ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                <span className="text-xs text-muted-foreground/60">Refreshing...</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <ArrowDown
+                  className="w-4 h-4 text-primary/60"
+                  style={{ 
+                    transform: pullDistance >= pullThreshold ? 'rotate(180deg) scale(1.1)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease-out',
+                    opacity: Math.min(1, pullDistance / (pullThreshold * 0.6)),
+                  }}
+                />
+                <span 
+                  className="text-[10px] text-muted-foreground/40 mt-1"
+                  style={{ opacity: Math.min(1, pullDistance / pullThreshold) }}
+                >
+                  {pullDistance >= pullThreshold ? 'Release to refresh' : 'Pull to refresh'}
+                </span>
+              </div>
+            )}
           </div>
         )}
         {isSyncing && (

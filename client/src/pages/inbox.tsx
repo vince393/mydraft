@@ -733,7 +733,8 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
             hasConnectedAccount={!!userData?.user?.connectedEmail}
             onConnectAccount={() => setLocation("/connect-email")}
             onRefresh={() => {
-              queryClient.invalidateQueries({ queryKey: ["/api/emails", "fresh"] });
+              queryClient.refetchQueries({ queryKey: ["/api/emails", "fresh"] });
+              queryClient.refetchQueries({ queryKey: ["/api/emails/unread-counts"] });
             }}
             isRefreshing={isFetchingFresh}
             onCompose={onCompose}
