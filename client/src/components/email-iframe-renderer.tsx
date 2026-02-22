@@ -151,6 +151,7 @@ export function EmailIframeRenderer({
     const hrColor = dark ? "rgba(255,255,255,0.08)" : "#dadce0";
 
     const hasRichContent = hasStyleTag || /<table/i.test(rawHtml);
+    const isMobile = window.innerWidth < 640;
 
     return `<!DOCTYPE html>
 <html>
@@ -165,12 +166,12 @@ export function EmailIframeRenderer({
   }
   body {
     margin: 0;
-    padding: ${hasRichContent ? '0' : '14px 16px'};
+    padding: ${hasRichContent ? '0' : (isMobile ? '8px 10px' : '14px 16px')};
     background: ${bgColor};
     color: ${textColor};
     font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.58;
+    font-size: ${isMobile ? '13px' : '14px'};
+    line-height: ${isMobile ? '1.55' : '1.58'};
     word-wrap: break-word;
     overflow-wrap: break-word;
     overflow-x: hidden;

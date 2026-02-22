@@ -486,8 +486,8 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 15px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.6;
   letter-spacing: -0.01em;
   color: hsl(var(--foreground));
   overflow-x: hidden;
@@ -495,14 +495,27 @@ html, body {
   width: 100%;
 }
 
+@media (min-width: 640px) {
+  .email-body-container {
+    font-size: 15px;
+    line-height: 1.65;
+  }
+}
+
 /* Email iframe wrapper */
 .email-iframe-wrapper {
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid hsl(var(--border) / 0.15);
   background: #ffffff;
   max-width: 100%;
   width: 100%;
+}
+
+@media (min-width: 640px) {
+  .email-iframe-wrapper {
+    border-radius: 8px;
+  }
 }
 
 .dark .email-iframe-wrapper {
@@ -513,8 +526,8 @@ html, body {
 
 .email-content-plain {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 15px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.6;
   letter-spacing: -0.01em;
   color: hsl(var(--foreground));
   word-wrap: break-word;
@@ -523,6 +536,13 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   padding: 4px 0;
+}
+
+@media (min-width: 640px) {
+  .email-content-plain {
+    font-size: 15px;
+    line-height: 1.65;
+  }
 }
 
 .email-content-plain p {

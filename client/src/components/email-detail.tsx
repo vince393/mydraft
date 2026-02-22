@@ -543,9 +543,9 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
 
   return (
     <div className="flex flex-col h-full overflow-x-hidden">
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border/20">
+      <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 border-b border-border/20">
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-          <h1 className="text-[15px] sm:text-base font-medium truncate pr-2 sm:pr-4 tracking-tight" data-testid="email-subject">
+          <h1 className="text-[14px] sm:text-base font-medium truncate pr-1 sm:pr-4 tracking-tight" data-testid="email-subject">
             {showTranslated && translatedContent?.subject ? translatedContent.subject : email.subject}
           </h1>
         </div>
@@ -553,35 +553,38 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
           <Button 
             size="icon" 
             variant="ghost" 
+            className="w-8 h-8 sm:w-9 sm:h-9"
             data-testid="button-archive"
             onClick={onArchive}
           >
-            <Archive className="w-4 h-4" />
+            <Archive className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
           <Button 
             size="icon" 
             variant="ghost" 
+            className="w-8 h-8 sm:w-9 sm:h-9"
             data-testid="button-trash"
             onClick={onTrash}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
           <Button 
             size="icon" 
             variant="ghost" 
+            className="w-8 h-8 sm:w-9 sm:h-9"
             data-testid="button-star"
             onClick={onStar}
           >
-            <Star className={`w-4 h-4 ${email.isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
+            <Star className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${email.isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
           </Button>
-          <Button size="icon" variant="ghost" data-testid="button-more">
-            <MoreHorizontal className="w-4 h-4" />
+          <Button size="icon" variant="ghost" className="w-8 h-8 sm:w-9 sm:h-9" data-testid="button-more">
+            <MoreHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
         </div>
       </div>
 
       {/* AI Action Bar - buttons transform into expanded panels */}
-      <div className="border-b border-border/20 bg-muted/20 px-4 sm:px-6 py-2">
+      <div className="border-b border-border/20 bg-muted/20 px-3 sm:px-6 py-2">
         <div className="flex flex-col gap-2">
           {/* Draft Reply button - moves to top when summary is open */}
           <div className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
@@ -908,7 +911,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
             </div>
           )}
 
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-4 flex-wrap">
             {detectedLanguage && !detectedLanguage.isEnglish && (
               <>
                 {translatedContent ? (
@@ -1086,7 +1089,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
 
           {showDraft && (
             <div 
-              className="mb-8 p-5 rounded-2xl border border-white/15 dark:border-white/10 backdrop-blur-2xl" 
+              className="mb-8 p-3 sm:p-5 rounded-2xl border border-white/15 dark:border-white/10 backdrop-blur-2xl" 
               style={{
                 background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
                 boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 24px rgba(0,0,0,0.12)"
@@ -1125,7 +1128,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
               <Textarea
                 value={draftContent}
                 onChange={(e) => setDraftContent(e.target.value)}
-                className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-xl resize-none text-sm focus:border-white/20 focus:bg-white/[0.05] transition-colors"
+                className="min-h-[100px] sm:min-h-[150px] bg-white/[0.03] border-white/10 rounded-xl resize-none text-[13px] sm:text-sm focus:border-white/20 focus:bg-white/[0.05] transition-colors"
                 placeholder="AI generated reply will appear here..."
                 disabled={generatedDraft.status === "scheduled"}
                 data-testid="textarea-draft"
@@ -1165,7 +1168,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       ))}
                     </div>
                   )}
-                  <div className="flex flex-wrap gap-1.5" data-testid="quick-actions">
+                  <div className="flex flex-wrap gap-1 sm:gap-1.5" data-testid="quick-actions">
                     {[
                       { label: "Shorter", instruction: "Make this response shorter and more concise", testId: "button-shorter" },
                       { label: "Longer", instruction: "Make this response longer with more detail", testId: "button-longer" },
@@ -1176,7 +1179,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                         key={action.testId}
                         onClick={() => handleRefine(action.instruction)}
                         disabled={isRefining}
-                        className="h-7 px-3 rounded-full text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer"
+                        className="h-6 sm:h-7 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer"
                         data-testid={action.testId}
                       >
                         {action.label}
@@ -1184,16 +1187,17 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     ))}
                     <button
                       onClick={() => draftFileInputRef.current?.click()}
-                      className="h-7 px-3 rounded-full text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all cursor-pointer flex items-center gap-1"
+                      className="h-6 sm:h-7 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all cursor-pointer flex items-center gap-1"
                       data-testid="button-draft-attach"
                     >
                       <Paperclip className="w-3 h-3" />
-                      Attach
+                      <span className="hidden sm:inline">Attach</span>
+                      <span className="sm:hidden">File</span>
                     </button>
                     <button
                       onClick={handleGenerateImage}
                       disabled={isRefining || isGeneratingImage}
-                      className="h-7 px-3 rounded-full text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                      className="h-6 sm:h-7 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1"
                       data-testid="button-generate-image"
                     >
                       {isGeneratingImage ? (
@@ -1201,20 +1205,21 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       ) : (
                         <ImageIcon className="w-3 h-3" />
                       )}
-                      Add Image
+                      <span className="hidden sm:inline">Add Image</span>
+                      <span className="sm:hidden">Image</span>
                     </button>
                   </div>
                   <div 
-                    className="flex items-center gap-2 px-3 py-2 rounded-full border border-white/10 backdrop-blur-sm"
+                    className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full border border-white/10 backdrop-blur-sm"
                     style={{ background: "rgba(255,255,255,0.03)" }}
                     data-testid="refine-bar"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
+                    <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary/60 flex-shrink-0" />
                     <Input
                       value={refineInput}
                       onChange={(e) => setRefineInput(e.target.value)}
                       placeholder="Tell AI how to adjust..."
-                      className="flex-1 h-7 border-0 bg-transparent focus-visible:ring-0 text-xs placeholder:text-foreground/30"
+                      className="flex-1 h-6 sm:h-7 border-0 bg-transparent focus-visible:ring-0 text-[11px] sm:text-xs placeholder:text-foreground/30"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
@@ -1227,7 +1232,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     <button
                       onClick={() => handleRefine()}
                       disabled={!refineInput.trim() || isRefining}
-                      className="h-7 px-3 rounded-full text-[11px] font-medium backdrop-blur-sm bg-primary/15 border border-primary/20 text-primary hover:bg-primary/25 transition-all disabled:opacity-40 cursor-pointer"
+                      className="h-6 sm:h-7 px-2.5 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-primary/15 border border-primary/20 text-primary hover:bg-primary/25 transition-all disabled:opacity-40 cursor-pointer flex-shrink-0"
                       data-testid="button-refine"
                     >
                       {isRefining ? (
@@ -1239,10 +1244,10 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   </div>
                 </div>
               )}
-              <div className="flex items-center gap-2 mt-4">
+              <div className="flex items-center gap-2 mt-4 flex-wrap">
                 {generatedDraft.status === "scheduled" ? (
                   <button 
-                    className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/70 hover:bg-white/10 hover:text-foreground transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40"
+                    className="h-8 sm:h-9 px-3 sm:px-4 rounded-full text-[11px] sm:text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/70 hover:bg-white/10 hover:text-foreground transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 disabled:opacity-40"
                     onClick={() => cancelScheduleMutation.mutate(generatedDraft.id)}
                     disabled={cancelScheduleMutation.isPending}
                     data-testid="button-cancel-schedule"
@@ -1253,27 +1258,28 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                 ) : (
                   <>
                     <button 
-                      className="h-9 px-5 rounded-full text-xs font-medium backdrop-blur-sm border border-primary/25 text-white hover:border-primary/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40"
+                      className="h-8 sm:h-9 px-3 sm:px-5 rounded-full text-[11px] sm:text-xs font-medium backdrop-blur-sm border border-primary/25 text-white hover:border-primary/40 transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 disabled:opacity-40"
                       style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(147,51,234,0.3))" }}
                       onClick={handleSendDraftReply}
                       disabled={isSendingDraft || !draftContent.trim()}
                       data-testid="button-send-draft"
                     >
                       {isSendingDraft ? (
-                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       ) : (
-                        <Send className="w-3.5 h-3.5" />
+                        <Send className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                       )}
-                      {isSendingDraft ? "Sending..." : draftAttachments.length > 0 ? `Send Reply (${draftAttachments.length})` : "Send Reply"}
+                      {isSendingDraft ? "Sending..." : draftAttachments.length > 0 ? `Send (${draftAttachments.length})` : "Send Reply"}
                     </button>
                     <Popover open={showSchedulePicker} onOpenChange={setShowSchedulePicker}>
                       <PopoverTrigger asChild>
                         <button 
-                          className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/70 hover:bg-white/10 hover:text-foreground hover:border-white/20 transition-all cursor-pointer flex items-center gap-2"
+                          className="h-8 sm:h-9 px-3 sm:px-4 rounded-full text-[11px] sm:text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/70 hover:bg-white/10 hover:text-foreground hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2"
                           data-testid="button-send-later"
                         >
-                          <Clock className="w-3.5 h-3.5" />
-                          Send Later
+                          <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                          <span className="hidden sm:inline">Send Later</span>
+                          <span className="sm:hidden">Later</span>
                           <ChevronDown className="w-3 h-3" />
                         </button>
                       </PopoverTrigger>
@@ -1353,21 +1359,22 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
             </div>
           )}
 
-          <div className="flex items-center gap-3 pt-6 border-t border-border/50">
+          <div className="flex items-center gap-2 sm:gap-3 pt-6 border-t border-border/50 flex-wrap">
             <Button 
-              className="gap-2 px-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
+              size="sm"
+              className="gap-1.5 sm:gap-2 px-3 sm:px-5 text-xs sm:text-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
               data-testid="button-reply"
               onClick={onReply}
             >
-              <Reply className="w-4 h-4" />
+              <Reply className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               Reply
             </Button>
-            <Button variant="outline" className="gap-2" data-testid="button-reply-all" onClick={onReplyAll}>
-              <ReplyAll className="w-4 h-4" />
+            <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 text-xs sm:text-sm" data-testid="button-reply-all" onClick={onReplyAll}>
+              <ReplyAll className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               Reply All
             </Button>
-            <Button variant="outline" className="gap-2" data-testid="button-forward" onClick={onForward}>
-              <Forward className="w-4 h-4" />
+            <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 text-xs sm:text-sm" data-testid="button-forward" onClick={onForward}>
+              <Forward className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               Forward
             </Button>
           </div>
