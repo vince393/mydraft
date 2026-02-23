@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft, Sparkles, Zap, Shield, Clock } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft, Sparkles, Zap, Shield, Clock, Building2 } from "lucide-react";
+import { SiGoogle } from "react-icons/si";
 import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
 
 interface AuthResponse {
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{email?: string; password?: string; confirmPassword?: string; code?: string}>({});
+  const [oauthConnecting, setOauthConnecting] = useState<string | null>(null);
   const [authStep, setAuthStep] = useState<AuthStep>("credentials");
   const [pendingEmail, setPendingEmail] = useState("");
   const [, setLocation] = useLocation();
@@ -243,6 +245,29 @@ export default function LoginPage() {
     setErrors({});
   };
 
+  const handleOAuthLogin = async (provider: 'google' | 'microsoft') => {
+    setOauthConnecting(provider);
+    try {
+      const refCode = urlParams.get("ref") || "";
+      const refParam = refCode ? `&ref=${encodeURIComponent(refCode)}` : "";
+      const response = await fetch(`/api/auth/oauth/login?provider=${provider}${refParam}`, {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("OAuth login failed:", error);
+      toast({
+        title: "Connection failed",
+        description: "Could not connect to " + (provider === 'google' ? 'Google' : 'Microsoft'),
+        variant: "destructive",
+      });
+      setOauthConnecting(null);
+    }
+  };
+
   const handleToggleMode = () => {
     setIsRegister(!isRegister);
     setEmail("");
@@ -252,6 +277,7 @@ export default function LoginPage() {
     setShowPassword(false);
     setShowConfirmPassword(false);
     setErrors({});
+    setOauthConnecting(null);
     setAuthStep("credentials");
     setPendingEmail("");
   };
@@ -493,6 +519,46 @@ export default function LoginPage() {
             <p className="text-muted-foreground">
               {isRegister ? "Start your 14-day free trial. No credit card required." : "Sign in to continue to your inbox"}
             </p>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            <Button
+              variant="outline"
+              className="w-full h-12 gap-3 text-sm font-medium"
+              onClick={() => handleOAuthLogin('google')}
+              disabled={oauthConnecting !== null || isPending}
+              data-testid="button-oauth-google"
+            >
+              {oauthConnecting === 'google' ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <SiGoogle className="w-4 h-4" />
+              )}
+              {isRegister ? "Sign up with Google" : "Continue with Google"}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-12 gap-3 text-sm font-medium"
+              onClick={() => handleOAuthLogin('microsoft')}
+              disabled={oauthConnecting !== null || isPending}
+              data-testid="button-oauth-microsoft"
+            >
+              {oauthConnecting === 'microsoft' ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Building2 className="w-5 h-5" />
+              )}
+              {isRegister ? "Sign up with Microsoft" : "Continue with Microsoft"}
+            </Button>
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">or continue with email</span>
+            </div>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-5">

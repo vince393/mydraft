@@ -233,6 +233,11 @@ const pendingOAuthStates: Map<
   { userId: string; provider: string; expiresAt: number }
 > = new Map();
 
+const pendingOAuthLoginStates: Map<
+  string,
+  { provider: string; expiresAt: number; referralCode?: string }
+> = new Map();
+
 function generateStateToken(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
@@ -246,6 +251,11 @@ function cleanupExpiredStates(): void {
   for (const [token, data] of pendingOAuthStates.entries()) {
     if (data.expiresAt < now) {
       pendingOAuthStates.delete(token);
+    }
+  }
+  for (const [token, data] of pendingOAuthLoginStates.entries()) {
+    if (data.expiresAt < now) {
+      pendingOAuthLoginStates.delete(token);
     }
   }
 }
@@ -1697,6 +1707,35 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  app.get("/api/auth/oauth/login", async (req, res) => {
+    try {
+      const provider = req.query.provider as string;
+      if (!provider || !["google", "microsoft"].includes(provider)) {
+        return res.status(400).json({ error: "Invalid provider" });
+      }
+
+      cleanupExpiredStates();
+
+      const stateToken = generateStateToken();
+      const expiresAt = Date.now() + 10 * 60 * 1000;
+      const referralCode = req.query.ref as string | undefined;
+      pendingOAuthLoginStates.set(stateToken, {
+        provider,
+        expiresAt,
+        referralCode,
+      });
+
+      const redirectUri = getEmailRedirectUri(req, provider);
+      const emailProvider = provider === "google" ? gmailProvider : microsoftProvider;
+      const authUrl = emailProvider.getAuthUrl(redirectUri, `login_${stateToken}`);
+
+      res.json({ url: authUrl });
+    } catch (error) {
+      console.error("Error generating OAuth login URL:", error);
+      res.status(500).json({ error: "Failed to generate auth URL" });
+    }
+  });
+
   app.get("/api/auth/google/callback", async (req, res) => {
     try {
       console.log("Google OAuth callback received:", JSON.stringify(req.query));
@@ -1720,19 +1759,89 @@ Return ONLY valid JSON, no other text.`;
         return res.redirect("/?error=invalid_state");
       }
 
-      const storedState = pendingOAuthStates.get(state);
+      const isLoginFlow = String(state).startsWith("login_");
+
+      if (isLoginFlow) {
+        const actualState = String(state).replace("login_", "");
+        const loginState = pendingOAuthLoginStates.get(actualState);
+        if (!loginState || loginState.expiresAt < Date.now()) {
+          pendingOAuthLoginStates.delete(actualState);
+          return res.redirect("/login?error=session_expired");
+        }
+        pendingOAuthLoginStates.delete(actualState);
+
+        const redirectUri = getEmailRedirectUri(req, "google");
+        const tokenData = await gmailProvider.exchangeCode(code, redirectUri);
+        const normalizedEmail = tokenData.email.toLowerCase().trim();
+
+        let user = await storage.getUserByEmail(normalizedEmail);
+
+        if (!user) {
+          const randomPassword = randomBytes(32).toString("hex");
+          const hashedPassword = await hashPassword(randomPassword);
+
+          user = await storage.createUser({
+            email: normalizedEmail,
+            password: hashedPassword,
+            emailVerified: true,
+          });
+
+          if (loginState.referralCode) {
+            try {
+              const referrer = await storage.getUserByReferralCode(loginState.referralCode);
+              if (referrer && referrer.id !== user.id) {
+                await storage.updateUser(user.id, { referredByUserId: referrer.id });
+                await storage.createReferral(referrer.id, user.id);
+              }
+            } catch (e) {
+              console.error("Referral linking failed:", e);
+            }
+          }
+        }
+
+        req.session.userId = user.id;
+
+        const existingEmailAccount = await storage.getEmailAccount(user.id);
+        if (!existingEmailAccount) {
+          await storage.createEmailAccount({
+            userId: user.id,
+            provider: "google",
+            email: normalizedEmail,
+            accessToken: tokenData.accessToken,
+            refreshToken: tokenData.refreshToken,
+            tokenExpiresAt: tokenData.expiresAt,
+          });
+        } else {
+          await storage.updateEmailAccount(user.id, {
+            provider: "google",
+            email: normalizedEmail,
+            accessToken: tokenData.accessToken,
+            refreshToken: tokenData.refreshToken,
+            tokenExpiresAt: tokenData.expiresAt,
+          });
+        }
+
+        if (!user.plan) {
+          return res.redirect("/select-plan");
+        } else if (!user.onboardingCompleted) {
+          return res.redirect("/onboarding");
+        }
+        return res.redirect("/inbox");
+      }
+
+      const storedState = pendingOAuthStates.get(state as string);
       if (!storedState) {
         console.error("Unknown or expired state token");
         return res.redirect("/?error=invalid_state");
       }
 
       if (storedState.expiresAt < Date.now()) {
-        pendingOAuthStates.delete(state);
+        pendingOAuthStates.delete(state as string);
         console.error("State token expired");
         return res.redirect("/?error=session_expired");
       }
 
-      pendingOAuthStates.delete(state);
+      pendingOAuthStates.delete(state as string);
 
       const { userId } = storedState;
       const provider = "google";
@@ -1801,19 +1910,89 @@ Return ONLY valid JSON, no other text.`;
         return res.redirect("/?error=invalid_state");
       }
 
-      const storedState = pendingOAuthStates.get(state);
+      const isLoginFlow = String(state).startsWith("login_");
+
+      if (isLoginFlow) {
+        const actualState = String(state).replace("login_", "");
+        const loginState = pendingOAuthLoginStates.get(actualState);
+        if (!loginState || loginState.expiresAt < Date.now()) {
+          pendingOAuthLoginStates.delete(actualState);
+          return res.redirect("/login?error=session_expired");
+        }
+        pendingOAuthLoginStates.delete(actualState);
+
+        const redirectUri = getEmailRedirectUri(req, "microsoft");
+        const tokenData = await microsoftProvider.exchangeCode(code, redirectUri);
+        const normalizedEmail = tokenData.email.toLowerCase().trim();
+
+        let user = await storage.getUserByEmail(normalizedEmail);
+
+        if (!user) {
+          const randomPassword = randomBytes(32).toString("hex");
+          const hashedPassword = await hashPassword(randomPassword);
+
+          user = await storage.createUser({
+            email: normalizedEmail,
+            password: hashedPassword,
+            emailVerified: true,
+          });
+
+          if (loginState.referralCode) {
+            try {
+              const referrer = await storage.getUserByReferralCode(loginState.referralCode);
+              if (referrer && referrer.id !== user.id) {
+                await storage.updateUser(user.id, { referredByUserId: referrer.id });
+                await storage.createReferral(referrer.id, user.id);
+              }
+            } catch (e) {
+              console.error("Referral linking failed:", e);
+            }
+          }
+        }
+
+        req.session.userId = user.id;
+
+        const existingEmailAccount = await storage.getEmailAccount(user.id);
+        if (!existingEmailAccount) {
+          await storage.createEmailAccount({
+            userId: user.id,
+            provider: "microsoft",
+            email: normalizedEmail,
+            accessToken: tokenData.accessToken,
+            refreshToken: tokenData.refreshToken,
+            tokenExpiresAt: tokenData.expiresAt,
+          });
+        } else {
+          await storage.updateEmailAccount(user.id, {
+            provider: "microsoft",
+            email: normalizedEmail,
+            accessToken: tokenData.accessToken,
+            refreshToken: tokenData.refreshToken,
+            tokenExpiresAt: tokenData.expiresAt,
+          });
+        }
+
+        if (!user.plan) {
+          return res.redirect("/select-plan");
+        } else if (!user.onboardingCompleted) {
+          return res.redirect("/onboarding");
+        }
+        return res.redirect("/inbox");
+      }
+
+      const storedState = pendingOAuthStates.get(state as string);
       if (!storedState) {
         console.error("Unknown or expired state token");
         return res.redirect("/?error=invalid_state");
       }
 
       if (storedState.expiresAt < Date.now()) {
-        pendingOAuthStates.delete(state);
+        pendingOAuthStates.delete(state as string);
         console.error("State token expired");
         return res.redirect("/?error=session_expired");
       }
 
-      pendingOAuthStates.delete(state);
+      pendingOAuthStates.delete(state as string);
 
       const { userId } = storedState;
       const provider = "microsoft";
