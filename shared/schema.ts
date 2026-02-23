@@ -168,6 +168,40 @@ export const insertNylasGrantSchema = createInsertSchema(nylasGrants).omit({
 export type NylasGrant = typeof nylasGrants.$inferSelect;
 export type InsertNylasGrant = z.infer<typeof insertNylasGrantSchema>;
 
+export const emailAccounts = pgTable("email_accounts", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  provider: text("provider").$type<"google" | "microsoft">().notNull(),
+  email: text("email").notNull(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertEmailAccountSchema = createInsertSchema(emailAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type EmailAccount = typeof emailAccounts.$inferSelect;
+export type InsertEmailAccount = z.infer<typeof insertEmailAccountSchema>;
+
+export const apiHealthLogs = pgTable("api_health_logs", {
+  id: serial("id").primaryKey(),
+  provider: text("provider").notNull(),
+  endpoint: text("endpoint").notNull(),
+  statusCode: integer("status_code"),
+  errorMessage: text("error_message"),
+  severity: text("severity").$type<"info" | "warning" | "error" | "critical">().default("info").notNull(),
+  resolved: boolean("resolved").default(false).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type ApiHealthLog = typeof apiHealthLogs.$inferSelect;
+
 // Contacts for email autocomplete
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),

@@ -6,7 +6,10 @@ import { sql, desc, eq } from "drizzle-orm";
 import { ownerNotes } from "@shared/schema";
 import OpenAI from "openai";
 
-import * as nylas from "./nylas";
+import { gmailProvider } from "./gmail";
+import { microsoftProvider } from "./microsoft";
+import type { IEmailProvider, EmailListItem, EmailDetail, GetMessagesOptions } from "./email-provider";
+import { getRecentHealthLogs, getUnresolvedIssues, resolveIssue, resolveAllIssues, getHealthSummary } from "./api-health";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
@@ -194,10 +197,35 @@ function hasPlan(userPlan: string, minPlan: "pro" | "premium"): boolean {
   return (planHierarchy[userPlan] || 0) >= planHierarchy[minPlan];
 }
 
-function getRedirectUri(req: any): string {
-  const protocol = req.headers["x-forwarded-proto"] || "https";
-  const host = req.headers.host;
-  return `${protocol}://${host}/api/nylas/callback`;
+function getEmailRedirectUri(req: any, provider: string): string {
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || req.hostname;
+  return `${protocol}://${host}/api/auth/${provider}/callback`;
+}
+
+async function getProviderAndToken(userId: string): Promise<{ provider: IEmailProvider; accessToken: string; account: any } | null> {
+  const account = await storage.getEmailAccount(userId);
+  if (!account) return null;
+
+  const isExpired = account.tokenExpiresAt && new Date(account.tokenExpiresAt).getTime() < Date.now() + 5 * 60 * 1000;
+
+  if (isExpired) {
+    const emailProvider = account.provider === "google" ? gmailProvider : microsoftProvider;
+    try {
+      const refreshed = await emailProvider.refreshAccessToken(account.refreshToken);
+      await storage.updateEmailAccount(userId, {
+        accessToken: refreshed.accessToken,
+        tokenExpiresAt: refreshed.expiresAt,
+      });
+      return { provider: emailProvider, accessToken: refreshed.accessToken, account: { ...account, accessToken: refreshed.accessToken } };
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      return null;
+    }
+  }
+
+  const emailProvider = account.provider === "google" ? gmailProvider : microsoftProvider;
+  return { provider: emailProvider, accessToken: account.accessToken, account };
 }
 
 const pendingOAuthStates: Map<
@@ -1040,7 +1068,7 @@ export async function registerRoutes(
       return res.json({ user: null });
     }
 
-    const grant = await storage.getNylasGrant(user.id);
+    const emailAccount = await storage.getEmailAccount(user.id);
 
     res.json({
       user: {
@@ -1051,9 +1079,9 @@ export async function registerRoutes(
         plan: user.plan,
         onboardingCompleted: user.onboardingCompleted,
         aiPreferences: user.aiPreferences,
-        emailConnected: !!grant,
-        connectedEmail: grant?.email || null,
-        connectedProvider: grant?.provider || null,
+        emailConnected: !!emailAccount,
+        connectedEmail: emailAccount?.email || null,
+        connectedProvider: emailAccount?.provider || null,
         createdAt: user.createdAt,
         emailSignature: user.emailSignature,
         signatureEnabled: user.signatureEnabled,
@@ -1200,15 +1228,15 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      const grant = await storage.getNylasGrant(user.id);
+      const emailAccount = await storage.getEmailAccount(user.id);
       res.json({
         email: user.email,
         plan: user.plan,
         aiPreferences: user.aiPreferences,
         emailSignature: user.emailSignature,
         signatureEnabled: user.signatureEnabled,
-        connectedEmail: grant
-          ? { email: grant.email, provider: grant.provider }
+        connectedEmail: emailAccount
+          ? { email: emailAccount.email, provider: emailAccount.provider }
           : null,
         emailVerified: user.emailVerified,
         twoFactorEnabled: user.twoFactorEnabled,
@@ -1624,7 +1652,7 @@ Return ONLY valid JSON, no other text.`;
 
   app.delete("/api/user", requireAuth, async (req, res) => {
     try {
-      await storage.deleteNylasGrant(req.session.userId!);
+      await storage.deleteEmailAccount(req.session.userId!);
       await storage.deleteUser(req.session.userId!);
       req.session.destroy((err) => {
         if (err) {
@@ -1639,7 +1667,7 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
-  app.get("/api/nylas/auth-url", requireAuth, async (req, res) => {
+  app.get("/api/email/auth-url", requireAuth, async (req, res) => {
     try {
       const provider = req.query.provider as string;
       if (!provider || !["google", "microsoft"].includes(provider)) {
@@ -1658,8 +1686,9 @@ Return ONLY valid JSON, no other text.`;
         expiresAt,
       });
 
-      const redirectUri = getRedirectUri(req);
-      const authUrl = await nylas.getAuthUrl(provider, redirectUri, stateToken);
+      const redirectUri = getEmailRedirectUri(req, provider);
+      const emailProvider = provider === "google" ? gmailProvider : microsoftProvider;
+      const authUrl = emailProvider.getAuthUrl(redirectUri, stateToken);
 
       res.json({ url: authUrl });
     } catch (error) {
@@ -1668,9 +1697,9 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
-  app.get("/api/nylas/callback", async (req, res) => {
+  app.get("/api/auth/google/callback", async (req, res) => {
     try {
-      console.log("OAuth callback received:", JSON.stringify(req.query));
+      console.log("Google OAuth callback received:", JSON.stringify(req.query));
 
       const { code, state, error, error_description } = req.query;
 
@@ -1705,99 +1734,148 @@ Return ONLY valid JSON, no other text.`;
 
       pendingOAuthStates.delete(state);
 
-      const { userId, provider } = storedState;
+      const { userId } = storedState;
+      const provider = "google";
 
-      const redirectUri = getRedirectUri(req);
-      const grant = await nylas.exchangeCodeForGrant(code, redirectUri);
+      const redirectUri = getEmailRedirectUri(req, provider);
+      const tokenData = await gmailProvider.exchangeCode(code, redirectUri);
 
-      // Normalize the email from OAuth provider
-      const normalizedEmail = grant.email.toLowerCase().trim();
+      const normalizedEmail = tokenData.email.toLowerCase().trim();
 
-      // Check if this OAuth email is already connected to a different user
-      const existingGrantByEmail =
-        await storage.getNylasGrantByEmail(normalizedEmail);
-
-      if (existingGrantByEmail && existingGrantByEmail.userId !== userId) {
-        // This email is already connected to another account
-        // Log the current user into that existing account instead
-        const existingUser = await storage.getUser(existingGrantByEmail.userId);
-
-        if (existingUser) {
-          // Update the grant with fresh OAuth tokens
-          await storage.updateNylasGrant(existingGrantByEmail.userId, {
-            grantId: grant.id,
-            provider: grant.provider || provider,
-            email: normalizedEmail,
-          });
-
-          // Switch session to the existing account
-          req.session.userId = existingUser.id;
-          await new Promise<void>((resolve, reject) => {
-            req.session.save((err) => {
-              if (err) reject(err);
-              else resolve();
-            });
-          });
-
-          return res.redirect("/?connected=true&account_merged=true");
-        }
-      }
-
-      // Normal flow: connect email to current user
-      const existingGrant = await storage.getNylasGrant(userId);
+      const existingAccount = await storage.getEmailAccount(userId);
       const currentUser = await storage.getUser(userId);
 
-      if (existingGrant) {
-        await storage.updateNylasGrant(userId, {
-          grantId: grant.id,
-          provider: grant.provider || provider,
+      if (existingAccount) {
+        await storage.updateEmailAccount(userId, {
+          provider,
           email: normalizedEmail,
+          accessToken: tokenData.accessToken,
+          refreshToken: tokenData.refreshToken,
+          tokenExpiresAt: tokenData.expiresAt,
         });
       } else {
-        await storage.createNylasGrant({
-          userId: userId,
-          grantId: grant.id,
-          provider: grant.provider || provider,
+        await storage.createEmailAccount({
+          userId,
+          provider,
           email: normalizedEmail,
+          accessToken: tokenData.accessToken,
+          refreshToken: tokenData.refreshToken,
+          tokenExpiresAt: tokenData.expiresAt,
         });
 
-        // Log email connection activity
         await storage.createActivityLog(
           userId,
           currentUser?.email || normalizedEmail,
           "email_connected",
-          `Connected ${grant.provider || provider} email: ${normalizedEmail}`,
+          `Connected ${provider} email: ${normalizedEmail}`,
         );
       }
 
       res.redirect("/?connected=true");
     } catch (error) {
-      console.error("Error in OAuth callback:", error);
+      console.error("Error in Google OAuth callback:", error);
       res.redirect("/?error=auth_failed");
     }
   });
 
-  app.get("/api/nylas/status", requireAuth, async (req, res) => {
+  app.get("/api/auth/microsoft/callback", async (req, res) => {
     try {
-      const grant = await storage.getNylasGrant(req.session.userId!);
-      if (grant) {
-        res.json({
-          connected: true,
-          email: grant.email,
-          provider: grant.provider,
+      console.log("Microsoft OAuth callback received:", JSON.stringify(req.query));
+
+      const { code, state, error, error_description } = req.query;
+
+      if (error) {
+        console.error("OAuth error from provider:", error, error_description);
+        return res.redirect(
+          `/connect-email?error=${encodeURIComponent(String(error_description || error))}`,
+        );
+      }
+
+      if (!code || typeof code !== "string") {
+        console.error("Missing authorization code. Query params:", req.query);
+        return res.status(400).send("Missing authorization code");
+      }
+
+      if (!state || typeof state !== "string") {
+        console.error("Missing state token in OAuth callback");
+        return res.redirect("/?error=invalid_state");
+      }
+
+      const storedState = pendingOAuthStates.get(state);
+      if (!storedState) {
+        console.error("Unknown or expired state token");
+        return res.redirect("/?error=invalid_state");
+      }
+
+      if (storedState.expiresAt < Date.now()) {
+        pendingOAuthStates.delete(state);
+        console.error("State token expired");
+        return res.redirect("/?error=session_expired");
+      }
+
+      pendingOAuthStates.delete(state);
+
+      const { userId } = storedState;
+      const provider = "microsoft";
+
+      const redirectUri = getEmailRedirectUri(req, provider);
+      const tokenData = await microsoftProvider.exchangeCode(code, redirectUri);
+
+      const normalizedEmail = tokenData.email.toLowerCase().trim();
+
+      const existingAccount = await storage.getEmailAccount(userId);
+      const currentUser = await storage.getUser(userId);
+
+      if (existingAccount) {
+        await storage.updateEmailAccount(userId, {
+          provider,
+          email: normalizedEmail,
+          accessToken: tokenData.accessToken,
+          refreshToken: tokenData.refreshToken,
+          tokenExpiresAt: tokenData.expiresAt,
         });
+      } else {
+        await storage.createEmailAccount({
+          userId,
+          provider,
+          email: normalizedEmail,
+          accessToken: tokenData.accessToken,
+          refreshToken: tokenData.refreshToken,
+          tokenExpiresAt: tokenData.expiresAt,
+        });
+
+        await storage.createActivityLog(
+          userId,
+          currentUser?.email || normalizedEmail,
+          "email_connected",
+          `Connected ${provider} email: ${normalizedEmail}`,
+        );
+      }
+
+      res.redirect("/?connected=true");
+    } catch (error) {
+      console.error("Error in Microsoft OAuth callback:", error);
+      res.redirect("/?error=auth_failed");
+    }
+  });
+
+  app.get("/api/email/status", requireAuth, async (req, res) => {
+    try {
+      const account = await storage.getEmailAccount(req.session.userId!);
+      if (account) {
+        res.json({ connected: true, email: account.email, provider: account.provider });
       } else {
         res.json({ connected: false });
       }
     } catch (error) {
-      console.error("Error checking Nylas status:", error);
+      console.error("Error checking email status:", error);
       res.status(500).json({ error: "Failed to check status" });
     }
   });
 
-  app.post("/api/nylas/disconnect", requireAuth, async (req, res) => {
+  app.post("/api/email/disconnect", requireAuth, async (req, res) => {
     try {
-      await storage.deleteNylasGrant(req.session.userId!);
+      await storage.deleteEmailAccount(req.session.userId!);
       res.json({ success: true });
     } catch (error) {
       console.error("Error disconnecting:", error);
@@ -1813,17 +1891,14 @@ Return ONLY valid JSON, no other text.`;
       const userId = req.session.userId!;
       const userIdNum = parseInt(userId, 10);
 
-      const grant = await storage.getNylasGrant(userId);
-      if (!grant) {
-        // No email account connected - return empty array
+      const providerResult = await getProviderAndToken(userId);
+      if (!providerResult) {
         return res.json([]);
       }
 
-      // If cached is requested and we have cached data, return it immediately
       if (useCached) {
         const cachedData = await storage.getCachedEmails(userIdNum);
         if (cachedData.length > 0) {
-          // Apply starred status and local folder overrides
           const starredIds = await storage.getStarredEmailIds(userId);
           const starredSet = new Set(starredIds);
           const localStates = await storage.getAllLocalEmailStates(userId);
@@ -1840,23 +1915,18 @@ Return ONLY valid JSON, no other text.`;
         }
       }
 
-      // Fetch from Nylas
-      nylas.prefetchFolderIds(grant.grantId);
       let allMessages: any[] = [];
 
-      // Get all local email states to apply folder overrides
       const localStates = await storage.getAllLocalEmailStates(userId);
 
       if (allFolders) {
-        // Fetch from all folders for threading
         const folders = ["inbox", "sent", "trash", "junk", "archived"] as const;
         const folderResults = await Promise.allSettled(
           folders.map(async (f) => {
             try {
-              const messages = await nylas.getMessages(
-                grant.grantId,
-                f,
-                grant.provider,
+              const messages = await providerResult.provider.getMessages(
+                providerResult.accessToken,
+                { folder: f },
               );
               return messages.map((m) => ({ ...m, folder: f }));
             } catch {
@@ -1871,7 +1941,6 @@ Return ONLY valid JSON, no other text.`;
           }
         }
 
-        // Deduplicate by message ID
         const seen = new Set<string>();
         allMessages = allMessages.filter((msg) => {
           if (seen.has(msg.id)) return false;
@@ -1879,10 +1948,9 @@ Return ONLY valid JSON, no other text.`;
           return true;
         });
       } else {
-        const messages = await nylas.getMessages(
-          grant.grantId,
-          folder || "inbox",
-          grant.provider,
+        const messages = await providerResult.provider.getMessages(
+          providerResult.accessToken,
+          { folder: folder || "inbox" },
         );
         allMessages = messages.map((m) => ({
           ...m,
@@ -1909,7 +1977,7 @@ Return ONLY valid JSON, no other text.`;
         );
       }
 
-      // Get starred emails from database (UI-only, not Nylas)
+      // Get starred emails from database (UI-only)
       const starredIds = await storage.getStarredEmailIds(userId);
       const starredSet = new Set(starredIds);
 
@@ -1944,7 +2012,7 @@ Return ONLY valid JSON, no other text.`;
   // Get unread counts per folder
   app.get("/api/emails/unread-counts", requireAuth, async (req, res) => {
     try {
-      const grant = await storage.getNylasGrant(req.session.userId!);
+      const providerResult = await getProviderAndToken(req.session.userId!);
 
       const counts: Record<string, number> = {
         inbox: 0,
@@ -1955,29 +2023,24 @@ Return ONLY valid JSON, no other text.`;
         junk: 0,
       };
 
-      if (grant) {
-        // Fetch from Nylas for all folders that can have unread messages
+      if (providerResult) {
         const folders = ["inbox", "junk", "trash"] as const;
 
         await Promise.all(
           folders.map(async (folder) => {
             try {
-              const messages = await nylas.getMessages(
-                grant.grantId,
-                folder,
-                grant.provider,
+              const messages = await providerResult.provider.getMessages(
+                providerResult.accessToken,
+                { folder },
               );
               counts[folder] = messages.filter(
                 (m: any) => !m.isRead && m.unread !== false,
               ).length;
             } catch (err) {
-              // Silently ignore folder fetch errors (folder may not exist)
               console.log(`Could not fetch ${folder} for unread count`);
             }
           }),
         );
-
-        // Note: sent/drafts/archived don't have "unread" concept for user's own messages
       } else {
         // Fallback to local storage
         const allEmails = await storage.getEmails();
@@ -2000,9 +2063,9 @@ Return ONLY valid JSON, no other text.`;
     try {
       const id = req.params.id;
 
-      const grant = await storage.getNylasGrant(req.session.userId!);
-      if (grant && id.length > 10) {
-        const message = await nylas.getMessage(grant.grantId, id);
+      const providerResult = await getProviderAndToken(req.session.userId!);
+      if (providerResult && id.length > 10) {
+        const message = await providerResult.provider.getMessage(providerResult.accessToken, id);
         return res.json({
           id: id,
           nylasId: id,
@@ -2039,10 +2102,9 @@ Return ONLY valid JSON, no other text.`;
     try {
       const id = req.params.id;
 
-      const grant = await storage.getNylasGrant(req.session.userId!);
-      if (grant && id.length > 10) {
-        await nylas.markAsRead(grant.grantId, id);
-        nylas.invalidateMessagesCache(grant.grantId);
+      const providerResult = await getProviderAndToken(req.session.userId!);
+      if (providerResult && id.length > 10) {
+        await providerResult.provider.markAsRead(providerResult.accessToken, id);
         return res.json({ success: true });
       }
 
@@ -2062,10 +2124,9 @@ Return ONLY valid JSON, no other text.`;
     try {
       const id = req.params.id;
 
-      const grant = await storage.getNylasGrant(req.session.userId!);
-      if (grant && id.length > 10) {
-        await nylas.markAsUnread(grant.grantId, id);
-        nylas.invalidateMessagesCache(grant.grantId);
+      const providerResult = await getProviderAndToken(req.session.userId!);
+      if (providerResult && id.length > 10) {
+        await providerResult.provider.markAsUnread(providerResult.accessToken, id);
         return res.json({ success: true });
       }
 
@@ -2096,11 +2157,9 @@ Return ONLY valid JSON, no other text.`;
         return res.status(400).json({ error: "Invalid folder" });
       }
 
-      // Check if this is a Nylas message ID (long alphanumeric string)
-      const isNylasId = id.length > 10 && !/^\d+$/.test(id);
+      const isExternalId = id.length > 10 && !/^\d+$/.test(id);
 
-      if (isNylasId) {
-        // Use local storage only - don't sync folder changes to Nylas
+      if (isExternalId) {
         await storage.setLocalEmailFolder(userId, id, folder);
 
         // Return immediately for faster UX - record action asynchronously
@@ -2110,10 +2169,9 @@ Return ONLY valid JSON, no other text.`;
         if (folder === "trash" || folder === "archived") {
           (async () => {
             try {
-              // Get email details from Nylas for better pattern learning
-              const grant = await storage.getNylasGrant(userId);
-              if (grant) {
-                const message = await nylas.getMessage(grant.grantId, id);
+              const providerResult2 = await getProviderAndToken(userId);
+              if (providerResult2) {
+                const message = await providerResult2.provider.getMessage(providerResult2.accessToken, id);
                 const senderEmail = message?.from?.[0]?.email;
                 const subject = message?.subject || "";
                 // Extract keywords from subject
@@ -2167,7 +2225,7 @@ Return ONLY valid JSON, no other text.`;
   app.patch("/api/emails/:id/star", requireAuth, async (req, res) => {
     try {
       const messageId = req.params.id;
-      // Toggle star in database only (UI-only, not synced with Nylas)
+      // Toggle star in database only (UI-only)
       const isStarred = await storage.toggleStarEmail(
         req.session.userId!,
         messageId,
@@ -2183,10 +2241,9 @@ Return ONLY valid JSON, no other text.`;
     try {
       const id = req.params.id;
 
-      const grant = await storage.getNylasGrant(req.session.userId!);
-      if (grant && id.length > 10) {
-        await nylas.deleteMessage(grant.grantId, id);
-        nylas.invalidateMessagesCache(grant.grantId);
+      const providerResult = await getProviderAndToken(req.session.userId!);
+      if (providerResult && id.length > 10) {
+        await providerResult.provider.deleteMessage(providerResult.accessToken, id);
         return res.status(204).send();
       }
 
@@ -2266,14 +2323,14 @@ Return ONLY valid JSON, no other text.`;
     async (req, res) => {
       try {
         const { messageId, attachmentId } = req.params;
-        const grant = await storage.getNylasGrant(req.session.userId!);
+        const providerResult = await getProviderAndToken(req.session.userId!);
 
-        if (!grant) {
+        if (!providerResult) {
           return res.status(400).json({ error: "No email account connected" });
         }
 
-        const attachment = await nylas.downloadAttachment(
-          grant.grantId,
+        const attachment = await providerResult.provider.downloadAttachment(
+          providerResult.accessToken,
           messageId,
           attachmentId,
         );
@@ -2450,24 +2507,22 @@ Return ONLY valid JSON, no other text.`;
       }
 
       const userId = req.session.userId!;
-      const grant = await storage.getNylasGrant(userId);
+      const providerResult = await getProviderAndToken(userId);
 
-      // Get message IDs assigned to this folder
       const messageIds = await storage.getEmailsInFolder(userId, folderId);
 
       if (!messageIds.length) {
         return res.json({ emails: [] });
       }
 
-      if (!grant) {
+      if (!providerResult) {
         return res.json({ emails: [] });
       }
 
-      // Fetch each email individually by ID to ensure we get all assigned emails
       const folderEmails: any[] = [];
       for (const messageId of messageIds) {
         try {
-          const email = await nylas.getMessage(grant.grantId, messageId);
+          const email = await providerResult.provider.getMessage(providerResult.accessToken, messageId);
           if (email) {
             folderEmails.push(email);
           }
@@ -2521,16 +2576,12 @@ Return ONLY valid JSON, no other text.`;
           .json({ error: "Folder does not have an AI description" });
       }
 
-      const grant = await storage.getNylasGrant(userId);
-      if (!grant) {
+      const providerResult = await getProviderAndToken(userId);
+      if (!providerResult) {
         return res.status(400).json({ error: "No email account connected" });
       }
 
-      // Fetch recent emails from inbox
-      const emails = await nylas.getMessages(grant.grantId, {
-        in: "INBOX",
-        limit: 50,
-      });
+      const emails = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 50 });
 
       if (!emails.length) {
         return res.json({ suggestions: [] });
@@ -2656,16 +2707,15 @@ If truly nothing matches, return: []`,
     console.log("[AI Inbox Refresh] Starting analysis...");
     try {
       const userId = req.session.userId!;
-      const grant = await storage.getNylasGrant(userId);
-      console.log("[AI Inbox Refresh] Grant found:", !!grant);
+      const providerResult = await getProviderAndToken(userId);
+      console.log("[AI Inbox Refresh] Provider found:", !!providerResult);
 
-      if (!grant) {
+      if (!providerResult) {
         return res.status(400).json({ error: "No email account connected" });
       }
 
-      // Get recent emails for analysis
       console.log("[AI Inbox Refresh] Fetching messages...");
-      const messages = await nylas.getMessages(grant.grantId, "inbox", 50);
+      const messages = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 50 });
       console.log(
         "[AI Inbox Refresh] Messages fetched:",
         messages?.length || 0,
@@ -2707,7 +2757,7 @@ If truly nothing matches, return: []`,
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
       // Prepare email summaries for AI analysis with better signals
-      // Note: messages come from nylas.getMessages() which returns EmailListItem objects
+      // Note: messages come from provider.getMessages() which returns EmailListItem objects
       // with .from (display name), .fromEmail (email address), .preview (snippet), etc.
       const emailSummaries = messages.slice(0, 30).map((msg: any) => {
         const fromEmail = msg.fromEmail || "";
@@ -2942,13 +2992,12 @@ JSON response only:
     async (req, res) => {
       try {
         const userId = req.session.userId!;
-        const grant = await storage.getNylasGrant(userId);
+        const providerResult = await getProviderAndToken(userId);
 
-        if (!grant) {
+        if (!providerResult) {
           return res.status(400).json({ error: "No email account connected" });
         }
 
-        // Only get approved suggestions - this is the critical safety check
         const approvedSuggestions =
           await storage.getApprovedAiInboxSuggestions(userId);
 
@@ -2992,33 +3041,26 @@ JSON response only:
                 );
                 break;
               case "star":
-                // Star is a message property, try Nylas but don't fail if it errors
                 try {
-                  await nylas.updateMessage(
-                    grant.grantId,
+                  await providerResult.provider.toggleStar(
+                    providerResult.accessToken,
                     suggestion.messageId,
-                    {
-                      starred: true,
-                    },
+                    true,
                   );
-                } catch (nylasErr) {
-                  console.log("Star via Nylas failed, continuing:", nylasErr);
+                } catch (starErr) {
+                  console.log("Star failed, continuing:", starErr);
                 }
                 break;
               case "mark_read":
-                // Mark read is a message property, try Nylas but don't fail if it errors
                 try {
-                  await nylas.updateMessage(
-                    grant.grantId,
+                  await providerResult.provider.markAsRead(
+                    providerResult.accessToken,
                     suggestion.messageId,
-                    {
-                      unread: false,
-                    },
                   );
-                } catch (nylasErr) {
+                } catch (readErr) {
                   console.log(
-                    "Mark read via Nylas failed, continuing:",
-                    nylasErr,
+                    "Mark read failed, continuing:",
+                    readErr,
                   );
                 }
                 break;
@@ -3055,9 +3097,6 @@ JSON response only:
             );
           }
         }
-
-        // Invalidate messages cache
-        nylas.invalidateMessagesCache(grant.grantId);
 
         res.json(results);
       } catch (error) {
@@ -3658,8 +3697,8 @@ Translation Rules:
         return res.status(400).json({ error: "Subject and body required" });
       }
 
-      const grant = await storage.getNylasGrant(req.session.userId!);
-      if (!grant) {
+      const providerResult = await getProviderAndToken(req.session.userId!);
+      if (!providerResult) {
         return res
           .status(401)
           .json({ error: "Not connected to email provider" });
@@ -3750,19 +3789,16 @@ Translation Rules:
         }
       }
 
-      // If immediate send is requested (e.g., from undo confirmation), send now
       if (immediate) {
-        await nylas.sendMessage(
-          grant.grantId,
+        await providerResult.provider.sendMessage(providerResult.accessToken, {
           to,
           subject,
           body,
-          replyToMessageId,
           cc,
           bcc,
+          replyToMessageId,
           attachments,
-        );
-        nylas.invalidateMessagesCache(grant.grantId);
+        });
         // Increment daily send count for Free plan users
         await storage.incrementDailySendCount(req.session.userId!);
 
@@ -3817,7 +3853,7 @@ Translation Rules:
 
       const pendingSend = await storage.createPendingSend({
         userId: req.session.userId!,
-        grantId: grant.grantId,
+        grantId: providerResult.account.id?.toString() || userId,
         payload: { to, cc, bcc, subject, body, replyToMessageId, attachments },
         scheduledSendAt,
         delaySeconds: isScheduledSend
@@ -3961,12 +3997,11 @@ Translation Rules:
             }
           }
 
-          // If not found and looks like a Nylas ID (longer string), fetch from Nylas
           if (!emailData && emailId.length > 10) {
-            const grant = await storage.getNylasGrant(req.session.userId!);
-            if (grant) {
+            const providerResult = await getProviderAndToken(req.session.userId!);
+            if (providerResult) {
               try {
-                const message = await nylas.getMessage(grant.grantId, emailId);
+                const message = await providerResult.provider.getMessage(providerResult.accessToken, emailId);
                 if (message) {
                   emailData = {
                     sender: message.from,
@@ -3976,8 +4011,8 @@ Translation Rules:
                     preview: "",
                   };
                 }
-              } catch (nylasError) {
-                console.error("Error fetching email from Nylas:", nylasError);
+              } catch (fetchError) {
+                console.error("Error fetching email from provider:", fetchError);
               }
             }
           }
@@ -4126,7 +4161,7 @@ Reply:`;
             status: "draft",
           });
         } else {
-          // For Nylas IDs, just return the content without saving
+          // For external provider IDs, just return the content without saving
           draft = {
             id: 0,
             emailId: 0,
@@ -4966,16 +5001,14 @@ Return only the improved text, nothing else.`;
       const folder = req.query.folder as string | undefined;
       const targetFolder = folder || "inbox";
 
-      // Try to get emails from Nylas first, fall back to storage
-      const grant = await storage.getNylasGrant(req.session.userId!);
+      const providerResult = await getProviderAndToken(req.session.userId!);
       let unreadCount = 0;
 
-      if (grant) {
+      if (providerResult) {
         try {
-          const messages = await nylas.getMessages(
-            grant.grantId,
-            targetFolder,
-            grant.provider,
+          const messages = await providerResult.provider.getMessages(
+            providerResult.accessToken,
+            { folder: targetFolder },
           );
           unreadCount = messages.filter(
             (m: any) => !m.isRead && m.unread !== false,
@@ -5253,38 +5286,36 @@ Return only the improved text, nothing else.`;
 
       // Gather context for the assistant
       const user = await storage.getUser(userId);
-      const grant = await storage.getNylasGrant(userId);
+      const providerResult = await getProviderAndToken(userId);
       const settings = await storage.getAssistantSettings(userId);
 
-      // Use the new unified settings permissions (canReadEmails, canDraftEmails, canSendEmails)
       const perms = {
         canReadEmails: settings?.canReadEmails ?? false,
         canDraftEmails: settings?.canDraftEmails ?? false,
         canSendEmails: settings?.canSendEmails ?? false,
-        canArchive: true, // Archive doesn't require special permission
-        canTrash: true, // Trash doesn't require special permission
+        canArchive: true,
+        canTrash: true,
         canSearch: true,
         requireConfirmation: true,
       };
 
-      // Fetch real emails from Nylas if connected
-      let nylasMessages: any[] = [];
+      let providerMessages: any[] = [];
       let emailContext = "";
 
-      if (grant && perms.canReadEmails) {
+      if (providerResult && perms.canReadEmails) {
         try {
-          nylasMessages = await nylas.getMessages(grant.grantId);
+          providerMessages = await providerResult.provider.getMessages(providerResult.accessToken);
           // Log the read action
           await storage.createAuditLog(
             userId,
             "read",
             "executed",
             undefined,
-            `Fetched ${nylasMessages.length} emails for context`,
+            `Fetched ${providerMessages.length} emails for context`,
           );
 
           // Build detailed email context
-          const recentEmails = nylasMessages.slice(0, 15);
+          const recentEmails = providerMessages.slice(0, 15);
           emailContext = recentEmails
             .map((m: any, i: number) => {
               const from = m.from?.[0]?.email || "unknown";
@@ -5300,19 +5331,18 @@ Return only the improved text, nothing else.`;
             })
             .join("\n\n");
         } catch (e) {
-          console.error("Error fetching Nylas messages:", e);
+          console.error("Error fetching email messages:", e);
           emailContext = "Unable to fetch emails at this time.";
         }
       }
 
       const assistantName = "Vince";
 
-      // Build stats from Nylas data
-      const unreadCount = nylasMessages.filter((m: any) => m.unread).length;
-      const starredCount = nylasMessages.filter((m: any) => m.starred).length;
+      const unreadCount = providerMessages.filter((m: any) => m.unread).length;
+      const starredCount = providerMessages.filter((m: any) => m.starred).length;
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
-      const todayEmails = nylasMessages.filter(
+      const todayEmails = providerMessages.filter(
         (m: any) => m.date && new Date(m.date * 1000) >= todayStart,
       );
 
@@ -5357,7 +5387,7 @@ USER ACCOUNT:
 - Plan: ${user?.plan || "free"}
 
 INBOX STATUS:
-- Total emails visible: ${nylasMessages.length}
+- Total emails visible: ${providerMessages.length}
 - Unread emails: ${unreadCount}
 - Starred emails: ${starredCount}
 - Emails today: ${todayEmails.length}
@@ -5566,7 +5596,7 @@ RESPONSE STYLE:
       }
 
       const user = await storage.getUser(userId);
-      const grant = await storage.getNylasGrant(userId);
+      const emailAccount = await storage.getEmailAccount(userId);
       const styleProfile = await storage.getUserStyleProfile(userId);
       const pendingActions = await storage.getPendingAssistantActions(userId);
       const settings = await storage.getAssistantSettings(userId);
@@ -5586,8 +5616,8 @@ RESPONSE STYLE:
           id: user?.id,
           email: user?.email,
           plan: user?.plan,
-          connectedEmail: grant?.email,
-          provider: grant?.provider,
+          connectedEmail: emailAccount?.email,
+          provider: emailAccount?.provider,
         },
         styleProfile: styleProfile?.profile || defaultProfile,
         pendingActions: pendingActions.map((a) => ({
@@ -5600,10 +5630,10 @@ RESPONSE STYLE:
         capabilities: {
           canRead: settings?.canReadEmails ?? false,
           canDraft: settings?.canDraftEmails ?? false,
-          canSend: (settings?.canSendEmails ?? false) && !!grant,
-          canArchive: !!grant,
-          canTrash: !!grant,
-          canSearch: !!grant,
+          canSend: (settings?.canSendEmails ?? false) && !!emailAccount,
+          canArchive: !!emailAccount,
+          canTrash: !!emailAccount,
+          canSearch: !!emailAccount,
         },
         permissions: {
           canReadEmails: settings?.canReadEmails ?? false,
@@ -5970,8 +6000,7 @@ Respond with ONLY a brief suggestion, like:
             });
         }
 
-        // user already fetched above for feature flag check
-        const grant = await storage.getNylasGrant(userId);
+        const providerResult = await getProviderAndToken(userId);
         const styleProfile = await storage.getUserStyleProfile(userId);
 
         const profile = styleProfile?.profile || {
@@ -5988,11 +6017,10 @@ Respond with ONLY a brief suggestion, like:
         let recipientName = "";
         let originalSubject = "";
 
-        // For reply/forward, fetch the original message
         if (messageId && actionType !== "compose") {
-          if (grant) {
+          if (providerResult) {
             try {
-              const messages = await nylas.getMessages(grant.grantId);
+              const messages = await providerResult.provider.getMessages(providerResult.accessToken);
               originalMessage = messages.find((m: any) => m.id === messageId);
               if (originalMessage) {
                 originalBody =
@@ -6240,16 +6268,14 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           .json({ error: `Action already ${action.status}` });
       }
 
-      const grant = await storage.getNylasGrant(userId);
-      if (!grant) {
+      const providerResult = await getProviderAndToken(userId);
+      if (!providerResult) {
         return res.status(400).json({ error: "No email account connected" });
       }
 
-      // Check user's email permissions from settings
       const settings = await storage.getAssistantSettings(userId);
       const canSend = settings?.canSendEmails ?? false;
 
-      // Apply any modifications to the action metadata
       const finalMetadata = modifications
         ? { ...action.metadata, ...modifications }
         : action.metadata;
@@ -6262,7 +6288,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           case "reply":
           case "reply-all":
           case "forward":
-            // Verify user has granted send permission
             if (!canSend) {
               result = {
                 success: false,
@@ -6271,20 +6296,17 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
               };
               break;
             }
-            // Send the email via Nylas
             if (finalMetadata?.to && finalMetadata?.body) {
-              await nylas.sendMessage(
-                grant.grantId,
-                finalMetadata.to as string[],
-                finalMetadata.subject || "",
-                finalMetadata.body as string,
-                action.actionType !== "send"
+              await providerResult.provider.sendMessage(providerResult.accessToken, {
+                to: finalMetadata.to as string[],
+                subject: finalMetadata.subject || "",
+                body: finalMetadata.body as string,
+                replyToMessageId: action.actionType !== "send"
                   ? finalMetadata.originalMessageId
                   : undefined,
-                finalMetadata.cc as string[] | undefined,
-                finalMetadata.bcc as string[] | undefined,
-              );
-              nylas.invalidateMessagesCache(grant.grantId);
+                cc: finalMetadata.cc as string[] | undefined,
+                bcc: finalMetadata.bcc as string[] | undefined,
+              });
 
               // Save contacts for autocomplete
               const allRecipients = [
@@ -6320,7 +6342,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
           case "trash":
             if (finalMetadata?.messageId) {
-              // Use local storage - don't sync to Nylas
+              // Use local storage
               await storage.setLocalEmailFolder(
                 userId,
                 finalMetadata.messageId,
@@ -6334,7 +6356,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
           case "archive":
             if (finalMetadata?.messageId) {
-              // Use local storage - don't sync to Nylas
+              // Use local storage
               await storage.setLocalEmailFolder(
                 userId,
                 finalMetadata.messageId,
@@ -6366,8 +6388,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
               error: `Unknown action type: ${action.actionType}`,
             };
         }
-      } catch (nylasError) {
-        console.error("Nylas action error:", nylasError);
+      } catch (actionError) {
+        console.error("Email action error:", actionError);
         result = { success: false, error: "Failed to execute email action" };
       }
 
@@ -6982,8 +7004,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       // Get connected email accounts count
       const usersWithGrants = await Promise.all(
         allUsers.map(async (user) => {
-          const grant = await storage.getNylasGrant(user.id);
-          return grant ? 1 : 0;
+          const account = await storage.getEmailAccount(user.id);
+          return account ? 1 : 0;
         }),
       );
       const connectedAccounts = usersWithGrants.reduce(
@@ -7064,7 +7086,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       // Check various service statuses
       const status = {
         database: "healthy",
-        nylas: process.env.NYLAS_API_KEY ? "configured" : "not_configured",
+        google: process.env.GOOGLE_CLIENT_ID ? "configured" : "not_configured",
+        microsoft: process.env.MICROSOFT_CLIENT_ID ? "configured" : "not_configured",
         stripe: process.env.STRIPE_SECRET_KEY ? "configured" : "not_configured",
         openai: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
           ? "configured"
@@ -7075,6 +7098,58 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error fetching system status:", error);
       res.status(500).json({ error: "Failed to fetch status" });
+    }
+  });
+
+  app.get("/api/owner/api-health/summary", requireOwner, async (req, res) => {
+    try {
+      const summary = await getHealthSummary();
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching health summary:", error);
+      res.status(500).json({ error: "Failed to fetch health summary" });
+    }
+  });
+
+  app.get("/api/owner/api-health/logs", requireOwner, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const logs = await getRecentHealthLogs(limit);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching health logs:", error);
+      res.status(500).json({ error: "Failed to fetch health logs" });
+    }
+  });
+
+  app.get("/api/owner/api-health/unresolved", requireOwner, async (req, res) => {
+    try {
+      const issues = await getUnresolvedIssues();
+      res.json(issues);
+    } catch (error) {
+      console.error("Error fetching unresolved issues:", error);
+      res.status(500).json({ error: "Failed to fetch unresolved issues" });
+    }
+  });
+
+  app.post("/api/owner/api-health/resolve/:id", requireOwner, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await resolveIssue(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error resolving issue:", error);
+      res.status(500).json({ error: "Failed to resolve issue" });
+    }
+  });
+
+  app.post("/api/owner/api-health/resolve-all", requireOwner, async (req, res) => {
+    try {
+      await resolveAllIssues();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error resolving all issues:", error);
+      res.status(500).json({ error: "Failed to resolve all issues" });
     }
   });
 
@@ -7200,15 +7275,15 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       // Enrich with connected email provider
       const enrichedUsers = await Promise.all(
         allUsers.map(async (user) => {
-          const grant = await storage.getNylasGrant(user.id);
+          const emailAccount = await storage.getEmailAccount(user.id);
           return {
             id: user.id,
             email: user.email,
             plan: user.plan,
             onboardingCompleted: user.onboardingCompleted,
             createdAt: user.createdAt,
-            connectedProvider: grant?.provider || null,
-            connectedEmail: grant?.email || null,
+            connectedProvider: emailAccount?.provider || null,
+            connectedEmail: emailAccount?.email || null,
           };
         }),
       );
@@ -8987,8 +9062,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           return res.status(404).json({ error: "Campaign not found" });
         }
 
-        const nylasGrant = await storage.getNylasGrant(req.session.userId!);
-        if (!nylasGrant) {
+        const providerResult = await getProviderAndToken(req.session.userId!);
+        if (!providerResult) {
           return res
             .status(400)
             .json({ error: "Please connect your email account first" });
@@ -8999,7 +9074,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           return res.status(404).json({ error: "User not found" });
         }
 
-        // Use sample data for test with user's own info
         const testRecipient = {
           email: user.email,
           name: user.email.split("@")[0].replace(/[._]/g, " "),
@@ -9013,12 +9087,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
         const testSubject = `[TEST] ${personalizedSubject}`;
 
-        await nylas.sendMessage(
-          nylasGrant.grantId,
-          [user.email],
-          testSubject,
-          personalizedBody,
-        );
+        await providerResult.provider.sendMessage(providerResult.accessToken, {
+          to: [user.email],
+          subject: testSubject,
+          body: personalizedBody,
+        });
 
         res.json({ message: "Test email sent to your inbox" });
       } catch (error) {
@@ -9088,8 +9161,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             .json({ error: "No recipients in this campaign" });
         }
 
-        const nylasGrant = await storage.getNylasGrant(req.session.userId!);
-        if (!nylasGrant) {
+        const providerResult = await getProviderAndToken(req.session.userId!);
+        if (!providerResult) {
           return res
             .status(400)
             .json({ error: "Please connect your email account first" });
@@ -9100,7 +9173,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           startedAt: new Date(),
         });
 
-        // Send emails in the background with variable replacement
         (async () => {
           let sentCount = 0;
           let failedCount = 0;
@@ -9116,12 +9188,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
                 recipient,
               );
 
-              await nylas.sendMessage(
-                nylasGrant.grantId,
-                [recipient.email],
-                personalizedSubject,
-                personalizedBody,
-              );
+              await providerResult.provider.sendMessage(providerResult.accessToken, {
+                to: [recipient.email],
+                subject: personalizedSubject,
+                body: personalizedBody,
+              });
 
               storage
                 .saveContact(

@@ -204,7 +204,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     refetchOnMount: false,
   });
 
-  // Step 2: Fetch fresh emails from Nylas in background
+  // Step 2: Fetch fresh emails from provider in background
   const { data: freshEmails, isFetching: isFetchingFresh, isSuccess: hasFreshData } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", "fresh"],
     queryFn: async () => {

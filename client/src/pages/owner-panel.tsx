@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/queryClient";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   Users,
   DollarSign,
@@ -49,6 +49,7 @@ import {
   Star,
   Check,
   X,
+  HeartPulse,
 } from "lucide-react";
 
 interface OwnerStats {
@@ -100,7 +101,8 @@ interface ActivityLog {
 
 interface SystemStatus {
   database: string;
-  nylas: string;
+  google: string;
+  microsoft: string;
   stripe: string;
   openai: string;
   lastChecked: string;
@@ -168,9 +170,29 @@ interface OwnerNote {
   updatedAt: string;
 }
 
+interface ApiHealthSummary {
+  status: string;
+  errorsLast24h: number;
+  unresolvedCritical: number;
+  googleErrorsLast24h: number;
+  microsoftErrorsLast24h: number;
+}
+
+interface ApiHealthLog {
+  id: number;
+  provider: string;
+  endpoint: string;
+  statusCode: number;
+  errorMessage: string;
+  severity: string;
+  resolved: boolean;
+  createdAt: string;
+}
+
 const EXPENSE_CATEGORIES = [
   { value: "replit", label: "Replit", color: "#3B82F6" },
-  { value: "nylas", label: "Nylas", color: "#8B5CF6" },
+  { value: "google", label: "Google", color: "#4285F4" },
+  { value: "microsoft", label: "Microsoft", color: "#00A4EF" },
   { value: "openai", label: "OpenAI", color: "#10B981" },
   { value: "stripe", label: "Stripe", color: "#F59E0B" },
   { value: "google", label: "Google Cloud", color: "#4285F4" },
@@ -286,8 +308,24 @@ export default function OwnerPanel() {
   const { data: notesList = [], isLoading: notesLoading } = useQuery<OwnerNote[]>({
     queryKey: ["/api/owner/notes"],
     enabled: isOwnerData?.isOwner === true && activeTab === "notes",
-    staleTime: 0, // Always refetch when tab becomes active
-    refetchOnWindowFocus: true, // Refetch when window regains focus (for cross-device sync)
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: apiHealthSummary, isLoading: healthSummaryLoading } = useQuery<ApiHealthSummary>({
+    queryKey: ["/api/owner/api-health/summary"],
+    enabled: isOwnerData?.isOwner === true && activeTab === "api-health",
+    refetchInterval: 30000,
+  });
+
+  const { data: apiHealthLogs = [], isLoading: healthLogsLoading } = useQuery<ApiHealthLog[]>({
+    queryKey: ["/api/owner/api-health/logs"],
+    enabled: isOwnerData?.isOwner === true && activeTab === "api-health",
+  });
+
+  const { data: apiHealthUnresolved = [], isLoading: healthUnresolvedLoading } = useQuery<ApiHealthLog[]>({
+    queryKey: ["/api/owner/api-health/unresolved"],
+    enabled: isOwnerData?.isOwner === true && activeTab === "api-health",
   });
 
   const updateFeedbackMutation = useMutation({
@@ -469,6 +507,36 @@ export default function OwnerPanel() {
     },
     onError: () => {
       toast({ title: "Failed to delete note", variant: "destructive" });
+    },
+  });
+
+  const resolveHealthIssueMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("POST", `/api/owner/api-health/resolve/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/api-health/unresolved"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/api-health/logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/api-health/summary"] });
+      toast({ title: "Issue resolved" });
+    },
+    onError: () => {
+      toast({ title: "Failed to resolve issue", variant: "destructive" });
+    },
+  });
+
+  const resolveAllHealthIssuesMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/owner/api-health/resolve-all", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/api-health/unresolved"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/api-health/logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/api-health/summary"] });
+      toast({ title: "All issues resolved" });
+    },
+    onError: () => {
+      toast({ title: "Failed to resolve all issues", variant: "destructive" });
     },
   });
 
@@ -680,6 +748,10 @@ export default function OwnerPanel() {
             <TabsTrigger value="notes" data-testid="tab-notes">
               <MessageSquare className="w-4 h-4 mr-2" />
               Notes
+            </TabsTrigger>
+            <TabsTrigger value="api-health" data-testid="tab-api-health">
+              <HeartPulse className="w-4 h-4 mr-2" />
+              API Health
             </TabsTrigger>
           </TabsList>
 
@@ -1091,11 +1163,22 @@ export default function OwnerPanel() {
                       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                         <div className="flex items-center gap-3">
                           <Mail className="w-5 h-5 text-muted-foreground" />
-                          <span className="font-medium">Nylas (Email)</span>
+                          <span className="font-medium">Google (Gmail API)</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(systemStatus?.nylas || "unknown")}
-                          <span className="text-sm capitalize">{systemStatus?.nylas || "Unknown"}</span>
+                          {getStatusIcon(systemStatus?.google || "unknown")}
+                          <span className="text-sm capitalize">{systemStatus?.google || "Unknown"}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <Mail className="w-5 h-5 text-muted-foreground" />
+                          <span className="font-medium">Microsoft (Graph API)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(systemStatus?.microsoft || "unknown")}
+                          <span className="text-sm capitalize">{systemStatus?.microsoft || "Unknown"}</span>
                         </div>
                       </div>
                       
@@ -2039,6 +2122,232 @@ export default function OwnerPanel() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="api-health">
+            <div className="space-y-6">
+              {healthSummaryLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Card data-testid="card-health-summary">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      Health Summary
+                      <Badge
+                        data-testid="badge-health-status"
+                        variant={
+                          apiHealthSummary?.status === "healthy"
+                            ? "secondary"
+                            : apiHealthSummary?.status === "warning"
+                              ? "outline"
+                              : "destructive"
+                        }
+                        className={
+                          apiHealthSummary?.status === "healthy"
+                            ? "bg-green-500 text-white"
+                            : apiHealthSummary?.status === "warning"
+                              ? "bg-yellow-500 text-white"
+                              : ""
+                        }
+                      >
+                        {apiHealthSummary?.status || "unknown"}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Errors (24h)</p>
+                        <p className="text-2xl font-bold" data-testid="text-errors-24h">
+                          {apiHealthSummary?.errorsLast24h ?? 0}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Unresolved Critical</p>
+                        <p className="text-2xl font-bold" data-testid="text-unresolved-critical">
+                          {apiHealthSummary?.unresolvedCritical ?? 0}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Google Errors (24h)</p>
+                        <p className="text-2xl font-bold" data-testid="text-google-errors">
+                          {apiHealthSummary?.googleErrorsLast24h ?? 0}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Microsoft Errors (24h)</p>
+                        <p className="text-2xl font-bold" data-testid="text-microsoft-errors">
+                          {apiHealthSummary?.microsoftErrorsLast24h ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card data-testid="card-unresolved-issues">
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <CardTitle>Unresolved Issues</CardTitle>
+                    {apiHealthUnresolved.length > 0 && (
+                      <Button
+                        variant="outline"
+                        onClick={() => resolveAllHealthIssuesMutation.mutate()}
+                        disabled={resolveAllHealthIssuesMutation.isPending}
+                        data-testid="button-resolve-all"
+                      >
+                        {resolveAllHealthIssuesMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                        )}
+                        Resolve All
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {healthUnresolvedLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : apiHealthUnresolved.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <CheckCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No unresolved issues</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {apiHealthUnresolved.map((issue) => (
+                        <div
+                          key={issue.id}
+                          className="flex items-start justify-between gap-3 p-3 rounded-lg bg-muted/50 flex-wrap"
+                          data-testid={`row-issue-${issue.id}`}
+                        >
+                          <div className="flex flex-col gap-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" data-testid={`badge-provider-${issue.id}`}>
+                                {issue.provider}
+                              </Badge>
+                              <span className="font-medium text-sm">{issue.endpoint}</span>
+                              <Badge
+                                data-testid={`badge-severity-${issue.id}`}
+                                className={
+                                  issue.severity === "critical"
+                                    ? "bg-purple-500 text-white"
+                                    : issue.severity === "error"
+                                      ? "bg-red-500 text-white"
+                                      : issue.severity === "warning"
+                                        ? "bg-yellow-500 text-white"
+                                        : "bg-blue-500 text-white"
+                                }
+                              >
+                                {issue.severity}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate" data-testid={`text-error-${issue.id}`}>
+                              {issue.errorMessage}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(issue.createdAt), { addSuffix: true })}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => resolveHealthIssueMutation.mutate(issue.id)}
+                            disabled={resolveHealthIssueMutation.isPending}
+                            data-testid={`button-resolve-${issue.id}`}
+                          >
+                            Resolve
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-recent-logs">
+                <CardHeader>
+                  <CardTitle>Recent Logs</CardTitle>
+                  <CardDescription>Last 50 health log entries</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {healthLogsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : apiHealthLogs.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No health logs yet</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[500px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Timestamp</TableHead>
+                            <TableHead>Provider</TableHead>
+                            <TableHead>Endpoint</TableHead>
+                            <TableHead>Status Code</TableHead>
+                            <TableHead>Severity</TableHead>
+                            <TableHead>Error Message</TableHead>
+                            <TableHead>Resolved</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {apiHealthLogs.map((log) => (
+                            <TableRow key={log.id} data-testid={`row-log-${log.id}`}>
+                              <TableCell className="text-xs whitespace-nowrap">
+                                {format(new Date(log.createdAt), "MMM d, h:mm a")}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{log.provider}</Badge>
+                              </TableCell>
+                              <TableCell className="text-sm">{log.endpoint}</TableCell>
+                              <TableCell>
+                                <span className="font-mono text-sm">{log.statusCode}</span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  className={
+                                    log.severity === "critical"
+                                      ? "bg-purple-500 text-white"
+                                      : log.severity === "error"
+                                        ? "bg-red-500 text-white"
+                                        : log.severity === "warning"
+                                          ? "bg-yellow-500 text-white"
+                                          : "bg-blue-500 text-white"
+                                  }
+                                >
+                                  {log.severity}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate text-sm">
+                                {log.errorMessage}
+                              </TableCell>
+                              <TableCell>
+                                {log.resolved ? (
+                                  <Badge variant="secondary" className="bg-green-500 text-white">
+                                    Resolved
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">Open</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

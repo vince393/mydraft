@@ -1,5 +1,7 @@
 import { storage } from "./storage";
-import * as nylas from "./nylas";
+import { gmailProvider } from "./gmail";
+import { microsoftProvider } from "./microsoft";
+import type { IEmailProvider } from "./email-provider";
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 
@@ -122,8 +124,26 @@ async function processPendingSends() {
         }
         
         const { to, cc, bcc, subject, body, replyToMessageId, attachments } = claimed.payload;
-        await nylas.sendMessage(claimed.grantId, to, subject, body, replyToMessageId, cc, bcc, attachments);
-        nylas.invalidateMessagesCache(claimed.grantId);
+        
+        const account = await storage.getEmailAccount(claimed.userId);
+        if (!account) {
+          throw new Error("No email account connected for user " + claimed.userId);
+        }
+        
+        const emailProvider: IEmailProvider = account.provider === "google" ? gmailProvider : microsoftProvider;
+        
+        let accessToken = account.accessToken;
+        const isExpired = account.tokenExpiresAt && new Date(account.tokenExpiresAt).getTime() < Date.now() + 5 * 60 * 1000;
+        if (isExpired) {
+          const refreshed = await emailProvider.refreshAccessToken(account.refreshToken);
+          await storage.updateEmailAccount(claimed.userId, {
+            accessToken: refreshed.accessToken,
+            tokenExpiresAt: refreshed.expiresAt,
+          });
+          accessToken = refreshed.accessToken;
+        }
+        
+        await emailProvider.sendMessage(accessToken, { to, subject, body, cc, bcc, replyToMessageId, attachments });
         await storage.markPendingSendSent(claimed.id);
         console.log(`[EmailScheduler] Successfully sent email ${claimed.id} to ${to.join(", ")}`);
 

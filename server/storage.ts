@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, users, referrals, nylasGrants, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type EmailAccount, type InsertEmailAccount, users, referrals, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -31,6 +31,12 @@ export interface IStorage {
   createNylasGrant(grant: InsertNylasGrant): Promise<NylasGrant>;
   updateNylasGrant(userId: string, updates: Partial<NylasGrant>): Promise<NylasGrant | undefined>;
   deleteNylasGrant(userId: string): Promise<boolean>;
+
+  getEmailAccount(userId: string): Promise<EmailAccount | undefined>;
+  getEmailAccountByEmail(email: string): Promise<EmailAccount | undefined>;
+  createEmailAccount(account: InsertEmailAccount): Promise<EmailAccount>;
+  updateEmailAccount(userId: string, updates: Partial<EmailAccount>): Promise<EmailAccount | undefined>;
+  deleteEmailAccount(userId: string): Promise<boolean>;
 
   createSupportMessage(message: InsertSupportMessage): Promise<SupportMessage>;
 
@@ -845,6 +851,35 @@ Business Development`,
 
   async deleteNylasGrant(userId: string): Promise<boolean> {
     const result = await db.delete(nylasGrants).where(eq(nylasGrants.userId, userId)).returning();
+    return result.length > 0;
+  }
+
+  async getEmailAccount(userId: string): Promise<EmailAccount | undefined> {
+    const [account] = await db.select().from(emailAccounts).where(eq(emailAccounts.userId, userId));
+    return account;
+  }
+
+  async getEmailAccountByEmail(email: string): Promise<EmailAccount | undefined> {
+    const normalizedEmail = email.toLowerCase().trim();
+    const [account] = await db.select().from(emailAccounts).where(eq(emailAccounts.email, normalizedEmail));
+    return account;
+  }
+
+  async createEmailAccount(account: InsertEmailAccount): Promise<EmailAccount> {
+    const [created] = await db.insert(emailAccounts).values(account).returning();
+    return created;
+  }
+
+  async updateEmailAccount(userId: string, updates: Partial<EmailAccount>): Promise<EmailAccount | undefined> {
+    const [updated] = await db.update(emailAccounts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(emailAccounts.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  async deleteEmailAccount(userId: string): Promise<boolean> {
+    const result = await db.delete(emailAccounts).where(eq(emailAccounts.userId, userId)).returning();
     return result.length > 0;
   }
 

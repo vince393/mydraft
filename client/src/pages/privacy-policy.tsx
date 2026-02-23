@@ -76,7 +76,7 @@ export default function PrivacyPolicyPage() {
                 We do not sell, rent, or trade your personal information to third parties. We may share data only in the following circumstances:
               </p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
-                <li><strong>Service Providers:</strong> We work with trusted third-party providers who assist in delivering our services, including Stripe for payment processing, OpenAI for AI features, and Nylas for email connectivity. These providers are contractually bound to protect your data.</li>
+                <li><strong>Service Providers:</strong> We work with trusted third-party providers who assist in delivering our services, including Stripe for payment processing, OpenAI for AI features, and Google and Microsoft for email connectivity. These providers are contractually bound to protect your data.</li>
                 <li><strong>Legal Compliance:</strong> We may disclose information when required by law, court order, or government request, or when necessary to protect our rights, safety, or property.</li>
                 <li><strong>Business Transfers:</strong> In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction.</li>
               </ul>

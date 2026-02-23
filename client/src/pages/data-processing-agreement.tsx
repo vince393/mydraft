@@ -126,7 +126,12 @@ export default function DataProcessingAgreementPage() {
                       <td className="py-2">United States</td>
                     </tr>
                     <tr className="border-b border-white/5">
-                      <td className="py-2 pr-4">Nylas</td>
+                      <td className="py-2 pr-4">Google (Gmail API)</td>
+                      <td className="py-2 pr-4">Email API connectivity and synchronization</td>
+                      <td className="py-2">United States</td>
+                    </tr>
+                    <tr className="border-b border-white/5">
+                      <td className="py-2 pr-4">Microsoft (Graph API)</td>
                       <td className="py-2 pr-4">Email API connectivity and synchronization</td>
                       <td className="py-2">United States</td>
                     </tr>

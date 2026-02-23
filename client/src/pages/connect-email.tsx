@@ -10,12 +10,12 @@ export default function ConnectEmailPage() {
   const [, setLocation] = useLocation();
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
-  const { data: nylasStatus, isLoading: statusLoading } = useQuery<{ connected: boolean; email?: string }>({
-    queryKey: ["/api/nylas/status"],
+  const { data: emailStatus, isLoading: statusLoading } = useQuery<{ connected: boolean; email?: string; provider?: string }>({
+    queryKey: ["/api/email/status"],
     retry: false,
   });
 
-  const isConnected = nylasStatus?.connected ?? false;
+  const isConnected = emailStatus?.connected ?? false;
 
   // Automatically redirect to inbox if already connected
   useEffect(() => {
@@ -27,7 +27,7 @@ export default function ConnectEmailPage() {
   const handleConnect = async (provider: 'google' | 'microsoft') => {
     setConnectingProvider(provider);
     try {
-      const response = await fetch(`/api/nylas/auth-url?provider=${provider}`, {
+      const response = await fetch(`/api/email/auth-url?provider=${provider}`, {
         credentials: 'include'
       });
       const data = await response.json();
@@ -78,7 +78,7 @@ export default function ConnectEmailPage() {
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-muted/50 text-center">
                   <p className="text-sm text-muted-foreground">
-                    Connected as <span className="font-medium text-foreground">{nylasStatus?.email || "your account"}</span>
+                    Connected as <span className="font-medium text-foreground">{emailStatus?.email || "your account"}</span>
                   </p>
                 </div>
                 <Button 

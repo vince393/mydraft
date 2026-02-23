@@ -6,20 +6,20 @@ import { SiGoogle } from "react-icons/si";
 import { Mail } from "lucide-react";
 import { CheckCircle, LogOut, Loader2 } from "lucide-react";
 
-interface NylasStatus {
+interface EmailStatus {
   connected: boolean;
   email?: string;
   provider?: string;
 }
 
 export function ConnectionBanner() {
-  const { data: status, isLoading } = useQuery<NylasStatus>({
-    queryKey: ["/api/nylas/status"],
+  const { data: status, isLoading } = useQuery<EmailStatus>({
+    queryKey: ["/api/email/status"],
   });
 
   const connectMutation = useMutation({
     mutationFn: async (provider: string) => {
-      const response = await fetch(`/api/nylas/auth-url?provider=${provider}`);
+      const response = await fetch(`/api/email/auth-url?provider=${provider}`);
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
@@ -29,10 +29,10 @@ export function ConnectionBanner() {
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/nylas/disconnect", {});
+      await apiRequest("POST", "/api/email/disconnect", {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/nylas/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/email/status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
     },
   });

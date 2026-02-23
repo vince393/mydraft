@@ -1585,7 +1585,7 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/nylas/disconnect");
+      const response = await apiRequest("POST", "/api/email/disconnect");
       return response.json();
     },
     onSuccess: () => {
@@ -1600,7 +1600,7 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
 
   const connectMutation = useMutation({
     mutationFn: async (provider: string) => {
-      const response = await fetch(`/api/nylas/auth-url?provider=${provider}`);
+      const response = await fetch(`/api/email/auth-url?provider=${provider}`);
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
