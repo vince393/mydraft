@@ -2213,7 +2213,7 @@ Return ONLY valid JSON, no other text.`;
                 { folder },
               );
               counts[folder] = messages.filter(
-                (m: any) => !m.isRead && m.unread !== false,
+                (m: any) => !m.isRead,
               ).length;
             } catch (err) {
               console.log(`Could not fetch ${folder} for unread count`);
@@ -2351,7 +2351,7 @@ Return ONLY valid JSON, no other text.`;
               const providerResult2 = await getProviderAndToken(userId);
               if (providerResult2) {
                 const message = await providerResult2.provider.getMessage(providerResult2.accessToken, id);
-                const senderEmail = message?.from?.[0]?.email;
+                const senderEmail = message?.fromEmail;
                 const subject = message?.subject || "";
                 // Extract keywords from subject
                 const keywords = subject
@@ -2769,10 +2769,10 @@ Return ONLY valid JSON, no other text.`;
       // Use OpenAI to analyze which emails match the folder's AI description
       const emailSummaries = emails.slice(0, 50).map((e: any) => ({
         id: e.id,
-        sender: e.from?.[0]?.name || e.from?.[0]?.email || "Unknown",
-        senderEmail: e.from?.[0]?.email || "",
+        sender: e.from || "Unknown",
+        senderEmail: e.fromEmail || "",
         subject: e.subject || "(No subject)",
-        preview: e.snippet || "",
+        preview: e.preview || "",
       }));
 
       const aiResponse = await openai.chat.completions.create({
@@ -2832,11 +2832,11 @@ If truly nothing matches, return: []`,
         .filter((e: any) => matchingIds.includes(e.id))
         .map((e: any) => ({
           id: e.id,
-          sender: e.from?.[0]?.name || e.from?.[0]?.email || "Unknown",
-          senderEmail: e.from?.[0]?.email || "",
+          sender: e.from || "Unknown",
+          senderEmail: e.fromEmail || "",
           subject: e.subject || "(No subject)",
-          preview: e.snippet || "",
-          date: e.date ? new Date(e.date * 1000).toISOString() : null,
+          preview: e.preview || "",
+          date: e.date instanceof Date ? e.date.toISOString() : e.date ? new Date(e.date).toISOString() : null,
         }));
 
       res.json({ suggestions, folderName: folder.name });
@@ -5190,7 +5190,7 @@ Return only the improved text, nothing else.`;
             { folder: targetFolder },
           );
           unreadCount = messages.filter(
-            (m: any) => !m.isRead && m.unread !== false,
+            (m: any) => !m.isRead,
           ).length;
         } catch (err) {
           console.log(`Could not fetch ${targetFolder} for response time`);
@@ -5497,16 +5497,16 @@ Return only the improved text, nothing else.`;
           const recentEmails = providerMessages.slice(0, 15);
           emailContext = recentEmails
             .map((m: any, i: number) => {
-              const from = m.from?.[0]?.email || "unknown";
-              const name = m.from?.[0]?.name || from;
+              const fromEmail = m.fromEmail || "unknown";
+              const fromName = m.from || fromEmail;
               const subject = m.subject || "(no subject)";
-              const date = m.date
-                ? new Date(m.date * 1000).toLocaleString()
-                : "unknown date";
-              const unread = m.unread ? "[UNREAD]" : "";
-              const starred = m.starred ? "[STARRED]" : "";
-              const snippet = m.snippet?.substring(0, 150) || "";
-              return `${i + 1}. ${unread}${starred} FROM: ${name} <${from}>\n   SUBJECT: ${subject}\n   DATE: ${date}\n   PREVIEW: ${snippet}...`;
+              const date = m.date instanceof Date
+                ? m.date.toLocaleString()
+                : m.date ? new Date(m.date).toLocaleString() : "unknown date";
+              const unread = !m.isRead ? "[UNREAD]" : "";
+              const starred = m.isStarred ? "[STARRED]" : "";
+              const preview = (m.preview || "").substring(0, 150);
+              return `${i + 1}. ${unread}${starred} FROM: ${fromName} <${fromEmail}>\n   SUBJECT: ${subject}\n   DATE: ${date}\n   PREVIEW: ${preview}...`;
             })
             .join("\n\n");
         } catch (e) {
@@ -5517,12 +5517,12 @@ Return only the improved text, nothing else.`;
 
       const assistantName = "Vince";
 
-      const unreadCount = providerMessages.filter((m: any) => m.unread).length;
-      const starredCount = providerMessages.filter((m: any) => m.starred).length;
+      const unreadCount = providerMessages.filter((m: any) => !m.isRead).length;
+      const starredCount = providerMessages.filter((m: any) => m.isStarred).length;
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayEmails = providerMessages.filter(
-        (m: any) => m.date && new Date(m.date * 1000) >= todayStart,
+        (m: any) => m.date && new Date(m.date) >= todayStart,
       );
 
       // Get recent conversation history for context
@@ -6199,16 +6199,16 @@ Respond with ONLY a brief suggestion, like:
         if (messageId && actionType !== "compose") {
           if (providerResult) {
             try {
-              const messages = await providerResult.provider.getMessages(providerResult.accessToken);
-              originalMessage = messages.find((m: any) => m.id === messageId);
-              if (originalMessage) {
+              const fullMessage = await providerResult.provider.getMessage(providerResult.accessToken, messageId);
+              if (fullMessage) {
+                originalMessage = fullMessage;
                 originalBody =
-                  typeof originalMessage.body === "string"
-                    ? originalMessage.body
+                  typeof fullMessage.body === "string"
+                    ? fullMessage.body
                     : "";
-                recipientEmail = originalMessage.from?.[0]?.email || "";
-                recipientName = originalMessage.from?.[0]?.name || "";
-                originalSubject = originalMessage.subject || "";
+                recipientEmail = fullMessage.fromEmail || "";
+                recipientName = fullMessage.from || "";
+                originalSubject = fullMessage.subject || "";
               }
             } catch (e) {
               console.error("Error fetching original message:", e);
