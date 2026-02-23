@@ -78,16 +78,24 @@ shared/           # Shared types and schemas
 
 ## External Dependencies
 
-### Nylas Email Integration
-- **Provider**: Nylas v3 API (US region, Sandbox)
-- **Authentication**: OAuth 2.0 flow for Google and Microsoft accounts
-- **API Key**: Requires `NYLAS_API_KEY` environment variable
+### Email Provider Integration (Google & Microsoft)
+- **Providers**: Google Gmail API and Microsoft Graph API (direct integration, no middleware)
+- **Authentication**: OAuth 2.0 with automatic token refresh (5-min buffer)
+- **Required Secrets**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`
 - **Features**: 
-  - Real email inbox access via OAuth
+  - Real email inbox access via OAuth (Gmail and Outlook/Microsoft 365)
   - Send/receive emails through connected accounts
-  - Message actions: read, star, archive, delete
-- **Files**: `server/nylas.ts` (API helper), OAuth routes in `server/routes.ts`
-- **Frontend**: `client/src/components/connection-banner.tsx` for account connection UI
+  - Message actions: read, star, archive, trash, delete, attachments
+  - Automatic token refresh with expiry tracking
+- **Architecture**:
+  - `server/email-provider.ts`: Unified IEmailProvider interface
+  - `server/gmail.ts`: Google OAuth + Gmail API implementation
+  - `server/microsoft.ts`: Microsoft OAuth + Graph API implementation
+  - `server/api-health.ts`: API health monitoring and error logging
+- **API Routes**: `/api/email/auth-url`, `/api/auth/google/callback`, `/api/auth/microsoft/callback`, `/api/email/status`, `/api/email/disconnect`
+- **Storage**: `email_accounts` table stores provider, tokens, expiry per user
+- **Health Monitoring**: `api_health_logs` table tracks API errors/auth failures with severity levels, owner dashboard panel
+- **Legacy**: `nylas_grants` table and `nylasId` column kept for backwards compatibility (no longer actively used)
 
 ### AI Services
 - **OpenAI API**: Accessed via Replit AI Integrations environment variables (`AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL`)
@@ -96,7 +104,7 @@ shared/           # Shared types and schemas
 ### Database
 - **PostgreSQL**: Primary database configured via `DATABASE_URL` environment variable
 - Migrations managed via Drizzle Kit (`drizzle-kit push`)
-- **Tables**: users, emails, drafts, nylas_grants
+- **Tables**: users, emails, drafts, email_accounts, api_health_logs, nylas_grants (legacy)
 
 ### Key NPM Dependencies
 - `@tanstack/react-query`: Server state management
