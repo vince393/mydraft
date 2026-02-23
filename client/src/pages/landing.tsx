@@ -5,7 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { MarketingNav } from "@/components/marketing-nav";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { useScrollAnimation, useParallax } from "@/hooks/use-scroll-animation";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 import { 
   ArrowRight,
   Mail,
@@ -62,22 +62,13 @@ export default function LandingPage() {
 
 function HeroSection({ getStartedHref }: { getStartedHref: string }) {
   const [mounted, setMounted] = useState(false);
-  const parallaxOffset = useParallax(0.15);
-  
   useEffect(() => {
     setMounted(true);
   }, []);
 
   return (
     <section className="min-h-screen flex items-center pt-20 pb-16 px-5 sm:px-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-transparent to-transparent pointer-events-none" />
-      <div 
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-primary/[0.08] rounded-full blur-[150px] pointer-events-none transition-opacity duration-1000"
-        style={{ 
-          opacity: mounted ? 1 : 0,
-          transform: `translate(-50%, calc(-50% + ${parallaxOffset}px))`
-        }}
-      />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.01] via-transparent to-transparent pointer-events-none" />
       
       <div className="max-w-6xl mx-auto relative w-full">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
@@ -86,20 +77,20 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               className="transition-all duration-1000 ease-out"
               style={{ 
                 opacity: mounted ? 1 : 0, 
-                transform: mounted ? 'translateY(0)' : 'translateY(30px)'
+                transform: mounted ? 'translateY(0)' : 'translateY(20px)'
               }}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-muted-foreground text-sm mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/[0.03] border border-white/[0.08] text-muted-foreground text-sm mb-8">
                 <Globe className="w-3.5 h-3.5" />
                 Works with Gmail & Outlook
               </div>
             </div>
             
             <h1 
-              className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6 transition-all duration-1000 ease-out"
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.08] mb-6 transition-all duration-1000 ease-out"
               style={{ 
                 opacity: mounted ? 1 : 0, 
-                transform: mounted ? 'translateY(0)' : 'translateY(40px)',
+                transform: mounted ? 'translateY(0)' : 'translateY(30px)',
                 transitionDelay: '150ms'
               }}
             >
@@ -111,10 +102,10 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
             </h1>
             
             <p 
-              className="text-lg sm:text-xl text-muted-foreground leading-relaxed mb-10 max-w-md mx-auto lg:mx-0 transition-all duration-1000 ease-out"
+              className="text-lg text-muted-foreground leading-relaxed mb-10 max-w-md mx-auto lg:mx-0 transition-all duration-1000 ease-out"
               style={{ 
                 opacity: mounted ? 1 : 0, 
-                transform: mounted ? 'translateY(0)' : 'translateY(40px)',
+                transform: mounted ? 'translateY(0)' : 'translateY(30px)',
                 transitionDelay: '300ms'
               }}
             >
@@ -122,28 +113,28 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
             </p>
             
             <div 
-              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start transition-all duration-1000 ease-out"
+              className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start transition-all duration-1000 ease-out"
               style={{ 
                 opacity: mounted ? 1 : 0, 
-                transform: mounted ? 'translateY(0)' : 'translateY(40px)',
+                transform: mounted ? 'translateY(0)' : 'translateY(30px)',
                 transitionDelay: '450ms'
               }}
             >
               <Link href={getStartedHref}>
-                <Button size="lg" className="gap-2 w-full sm:w-auto shadow-lg shadow-primary/25" data-testid="hero-getstarted">
+                <Button size="lg" className="gap-2 w-full sm:w-auto rounded-md" data-testid="hero-getstarted">
                   Try it free
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto border-white/10" data-testid="hero-signin">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-md border-white/[0.12]" data-testid="hero-signin">
                   Sign in
                 </Button>
               </Link>
             </div>
             
             <p 
-              className="text-sm text-muted-foreground/60 mt-6 transition-all duration-1000 ease-out"
+              className="text-sm text-muted-foreground/50 mt-6 transition-all duration-1000 ease-out"
               style={{ 
                 opacity: mounted ? 1 : 0,
                 transitionDelay: '600ms'
@@ -157,36 +148,35 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
             className="relative hidden lg:block transition-all duration-1000 ease-out"
             style={{ 
               opacity: mounted ? 1 : 0, 
-              transform: mounted ? 'translateX(0)' : 'translateX(60px)',
+              transform: mounted ? 'translateX(0)' : 'translateX(40px)',
               transitionDelay: '400ms'
             }}
           >
-            <div className="absolute -inset-6 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent rounded-3xl blur-3xl opacity-50" />
-            <div className="relative rounded-2xl border border-white/[0.08] bg-card/40 backdrop-blur-sm overflow-hidden shadow-2xl shadow-black/40">
-              <div className="bg-white/[0.02] px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-white/10" />
-                  <div className="w-3 h-3 rounded-full bg-white/10" />
-                  <div className="w-3 h-3 rounded-full bg-white/10" />
+            <div className="relative rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-xl">
+              <div className="px-4 py-2.5 border-b border-white/[0.08] flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-white/[0.08]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-white/[0.08]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-white/[0.08]" />
                 </div>
-                <span className="text-xs text-muted-foreground/60">MyDraft</span>
-                <div className="w-16" />
+                <span className="text-[11px] text-muted-foreground/40 font-medium tracking-wide uppercase">MyDraft</span>
+                <div className="w-14" />
               </div>
               
               <div className="flex">
-                <div className="w-14 border-r border-white/[0.04] py-4 flex flex-col items-center gap-4">
-                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <Inbox className="w-4 h-4 text-primary" />
+                <div className="w-12 border-r border-white/[0.06] py-4 flex flex-col items-center gap-3">
+                  <div className="w-7 h-7 rounded-md bg-primary/15 flex items-center justify-center">
+                    <Inbox className="w-3.5 h-3.5 text-primary" />
                   </div>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground/50">
-                    <Send className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground/30">
+                    <Send className="w-3.5 h-3.5" />
                   </div>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground/50">
-                    <Archive className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground/30">
+                    <Archive className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 
-                <div className="flex-1 p-5 space-y-3">
+                <div className="flex-1 p-4 space-y-0.5">
                   <HeroEmailItem 
                     from="David Park" 
                     subject="Quick question about the proposal"
@@ -211,11 +201,11 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                     time="3h"
                   />
                   
-                  <div className="mt-4 pl-11">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
-                      <Sparkles className="w-3 h-3 text-primary/60" />
-                      <span className="italic">Suggested: "Thanks Sarah, morning works."</span>
-                      <span className="text-primary/70">Use</span>
+                  <div className="mt-3 ml-10 pt-2 border-t border-white/[0.04]">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground/50">
+                      <Sparkles className="w-3 h-3 text-primary/50" />
+                      <span>Suggested: "Thanks Sarah, morning works."</span>
+                      <span className="text-primary/60 font-medium ml-1">Use</span>
                     </div>
                   </div>
                 </div>
@@ -226,7 +216,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
       </div>
       
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
-        <ChevronDown className="w-6 h-6 text-muted-foreground/40" />
+        <ChevronDown className="w-5 h-5 text-muted-foreground/30" />
       </div>
     </section>
   );
@@ -240,19 +230,19 @@ function HeroEmailItem({ from, subject, time, unread = false, selected = false }
   selected?: boolean;
 }) {
   return (
-    <div className={`p-3 rounded-xl transition-colors ${selected ? 'bg-primary/10 ring-1 ring-primary/30' : ''}`}>
+    <div className={`px-3 py-2.5 rounded-md transition-colors ${selected ? 'bg-primary/[0.08] border border-primary/20' : 'border border-transparent'}`}>
       <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${selected ? 'bg-primary/30 text-primary' : 'bg-white/[0.06] text-muted-foreground'}`}>
+        <div className={`w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-semibold ${selected ? 'bg-primary/20 text-primary' : 'bg-white/[0.05] text-muted-foreground/60'}`}>
           {from.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className={`text-sm ${unread ? 'font-semibold' : 'text-muted-foreground'}`}>{from}</span>
+            <span className={`text-sm ${unread ? 'font-semibold' : 'text-muted-foreground/70'}`}>{from}</span>
             {unread && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
           </div>
-          <p className={`text-sm truncate ${unread ? 'text-foreground/80' : 'text-muted-foreground/60'}`}>{subject}</p>
+          <p className={`text-[13px] truncate ${unread ? 'text-foreground/60' : 'text-muted-foreground/40'}`}>{subject}</p>
         </div>
-        <span className="text-[11px] text-muted-foreground/50">{time}</span>
+        <span className="text-[11px] text-muted-foreground/30">{time}</span>
       </div>
     </div>
   );
@@ -310,51 +300,38 @@ function FeatureShowcase() {
   );
 }
 
-function FeatureSection({ badge, title, description, mockup, direction, accentColor }: {
+function FeatureSection({ badge, title, description, mockup, direction }: {
   badge: string;
   title: string;
   description: string;
   mockup: React.ReactNode;
   direction: 'left' | 'right';
-  accentColor: string;
+  accentColor?: string;
   'data-testid'?: string;
 }) {
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.15 });
-  
-  const colorMap: Record<string, { badge: string; glow: string }> = {
-    blue: { badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20', glow: 'from-blue-500/20' },
-    purple: { badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20', glow: 'from-purple-500/20' },
-    emerald: { badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', glow: 'from-emerald-500/20' },
-    amber: { badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20', glow: 'from-amber-500/20' },
-    rose: { badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20', glow: 'from-rose-500/20' },
-  };
-  const colors = colorMap[accentColor] || colorMap.blue;
 
   return (
-    <section className="py-24 sm:py-32 lg:py-40 px-5 sm:px-6 relative overflow-hidden" ref={ref}>
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
-      <div 
-        className={`absolute top-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[200px] pointer-events-none bg-gradient-to-br ${colors.glow} to-transparent ${direction === 'left' ? 'right-0 translate-x-1/3' : 'left-0 -translate-x-1/3'}`}
-        style={{ opacity: isVisible ? 0.4 : 0, transition: 'opacity 2s ease' }}
-      />
+    <section className="py-20 sm:py-28 lg:py-36 px-5 sm:px-6 relative" ref={ref}>
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
-      <div className="max-w-6xl mx-auto relative">
+      <div className="max-w-6xl mx-auto">
         <div className={`flex flex-col ${direction === 'right' ? 'lg:flex-row-reverse' : 'lg:flex-row'} gap-12 lg:gap-20 items-center`}>
           <div 
             className="flex-1 text-center lg:text-left max-w-xl"
             style={{
               opacity: isVisible ? 1 : 0,
-              transform: isVisible ? 'translateY(0)' : 'translateY(50px)',
-              transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+              transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
+              transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border mb-6 ${colors.badge}`}>
+            <span className="text-xs font-medium tracking-widest uppercase text-muted-foreground/60 mb-4 block">
               {badge}
-            </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-semibold tracking-tight leading-[1.15] mb-5">
+            </span>
+            <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold tracking-tight leading-[1.1] mb-5">
               {title}
             </h2>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+            <p className="text-base sm:text-lg text-muted-foreground/70 leading-relaxed">
               {description}
             </p>
           </div>
@@ -364,9 +341,9 @@ function FeatureSection({ badge, title, description, mockup, direction, accentCo
             style={{
               opacity: isVisible ? 1 : 0,
               transform: isVisible 
-                ? 'translateY(0) translateX(0)' 
-                : `translateY(30px) translateX(${direction === 'left' ? '40px' : '-40px'})`,
-              transition: 'all 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s',
+                ? 'translateY(0)' 
+                : 'translateY(30px)',
+              transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s',
             }}
           >
             {mockup}
@@ -389,20 +366,20 @@ function MockupAIReply() {
   }, [isVisible]);
 
   return (
-    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
-      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
+      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white text-xs font-semibold">LM</div>
+          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center text-[11px] font-semibold text-foreground/70">LM</div>
           <div>
             <p className="text-sm font-medium">Lisa Martinez</p>
-            <p className="text-[11px] text-muted-foreground">Re: Meeting reschedule</p>
+            <p className="text-[11px] text-muted-foreground/50">Re: Meeting reschedule</p>
           </div>
         </div>
-        <span className="text-[11px] text-muted-foreground/50">2 min ago</span>
+        <span className="text-[11px] text-muted-foreground/30">2 min ago</span>
       </div>
       <div className="p-5">
-        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] mb-5">
-          <p className="text-sm text-foreground/70 leading-relaxed">
+        <div className="p-4 rounded-md bg-white/[0.02] border border-white/[0.06] mb-5">
+          <p className="text-sm text-foreground/60 leading-relaxed">
             Hi, can we reschedule our meeting to Thursday? I have a conflict on Wednesday afternoon. Same time works for me if that's okay with you.
           </p>
         </div>
@@ -412,28 +389,26 @@ function MockupAIReply() {
           style={{ 
             opacity: showDraft ? 1 : 0, 
             maxHeight: showDraft ? '300px' : '0px',
-            transform: showDraft ? 'translateY(0)' : 'translateY(20px)',
+            transform: showDraft ? 'translateY(0)' : 'translateY(16px)',
           }}
         >
-          <div className="p-4 rounded-xl bg-primary/[0.06] border border-primary/20 relative">
-            <div className="absolute -top-3 left-4">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/20 border border-primary/30">
-                <Sparkles className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-semibold text-primary">AI Draft</span>
-              </div>
+          <div className="p-4 rounded-md border border-primary/25 bg-primary/[0.04] relative">
+            <div className="flex items-center gap-1.5 mb-3">
+              <Sparkles className="w-3.5 h-3.5 text-primary/70" />
+              <span className="text-[11px] font-medium text-primary/80">AI Draft</span>
             </div>
-            <p className="text-sm text-foreground/90 leading-relaxed mt-2 mb-4">
+            <p className="text-sm text-foreground/80 leading-relaxed mb-4">
               Hi Lisa, Thursday works perfectly for me. Same time is great. See you then!
             </p>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="rounded-lg text-xs gap-1.5 shadow-sm" data-testid="mockup-send">
+              <Button size="sm" className="rounded-md text-xs gap-1.5" data-testid="mockup-send">
                 <Send className="w-3 h-3" />
                 Send
               </Button>
-              <Button size="sm" variant="ghost" className="rounded-lg text-xs" data-testid="mockup-edit">
+              <Button size="sm" variant="ghost" className="rounded-md text-xs" data-testid="mockup-edit">
                 Edit
               </Button>
-              <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground/40">
+              <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground/30">
                 <RotateCcw className="w-3 h-3" />
                 Regenerate
               </div>
@@ -468,44 +443,42 @@ function MockupThreadSummary() {
   ];
 
   return (
-    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
-      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
+      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-            <Brain className="w-4 h-4 text-purple-400" />
+          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center">
+            <Brain className="w-3.5 h-3.5 text-foreground/60" />
           </div>
           <div>
             <p className="text-sm font-medium">Thread Summary</p>
-            <p className="text-[11px] text-muted-foreground">Q4 Budget Discussion</p>
+            <p className="text-[11px] text-muted-foreground/50">Q4 Budget Discussion</p>
           </div>
         </div>
-        <div className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
-          <span className="text-[10px] text-muted-foreground">18 messages</span>
-        </div>
+        <span className="text-[10px] text-muted-foreground/30 border border-white/[0.08] rounded-md px-2 py-0.5">18 messages</span>
       </div>
-      <div className="p-5 space-y-3">
+      <div className="p-5 space-y-2">
         {summaryItems.map((item, i) => (
           <div 
             key={i} 
-            className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] transition-all duration-500 ease-out"
+            className="flex items-start gap-3 p-3 rounded-md border border-white/[0.06] bg-white/[0.01] transition-all duration-500 ease-out"
             style={{ 
               opacity: visibleItems > i ? 1 : 0,
-              transform: visibleItems > i ? 'translateX(0)' : 'translateX(-20px)',
+              transform: visibleItems > i ? 'translateX(0)' : 'translateX(-16px)',
             }}
           >
-            <div className={`w-2 h-2 rounded-full ${item.color} flex-shrink-0 mt-1.5`} />
+            <div className={`w-1.5 h-1.5 rounded-full ${item.color} flex-shrink-0 mt-2`} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-foreground/80">{item.text}</p>
+              <p className="text-sm text-foreground/70">{item.text}</p>
             </div>
-            <span className="text-[10px] text-muted-foreground/50 px-2 py-0.5 rounded-full bg-white/[0.04] flex-shrink-0">{item.tag}</span>
+            <span className="text-[10px] text-muted-foreground/40 px-2 py-0.5 rounded-md border border-white/[0.06] flex-shrink-0">{item.tag}</span>
           </div>
         ))}
         <div 
-          className="flex items-center justify-between pt-3 mt-2 border-t border-white/[0.04] transition-all duration-500"
+          className="flex items-center justify-between pt-3 mt-1 border-t border-white/[0.06] transition-all duration-500"
           style={{ opacity: visibleItems >= 4 ? 1 : 0 }}
         >
-          <span className="text-[11px] text-muted-foreground/50">2 action items pending</span>
-          <span className="text-[11px] text-primary/70 cursor-pointer">View full thread</span>
+          <span className="text-[11px] text-muted-foreground/40">2 action items pending</span>
+          <span className="text-[11px] text-foreground/50 cursor-pointer hover:text-foreground/70">View full thread</span>
         </div>
       </div>
     </div>
@@ -524,27 +497,23 @@ function MockupTranslation() {
   }, [isVisible]);
 
   return (
-    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
-      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
+      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-            <Languages className="w-4 h-4 text-emerald-400" />
+          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center">
+            <Languages className="w-3.5 h-3.5 text-foreground/60" />
           </div>
           <div>
             <p className="text-sm font-medium">Instant Translation</p>
-            <p className="text-[11px] text-muted-foreground">Japanese &rarr; English</p>
+            <p className="text-[11px] text-muted-foreground/50">Japanese &rarr; English</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-lg">🇯🇵</span>
-          <ArrowRight className="w-3 h-3 text-muted-foreground/40" />
-          <span className="text-lg">🇺🇸</span>
-        </div>
+        <span className="text-[11px] text-muted-foreground/30">Auto-detected</span>
       </div>
-      <div className="p-5 space-y-4">
-        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-          <span className="text-[10px] text-muted-foreground/50 mb-2 block">Original</span>
-          <p className="text-sm text-foreground/60 leading-relaxed" style={{ fontFamily: 'sans-serif' }}>
+      <div className="p-5 space-y-3">
+        <div className="p-4 rounded-md bg-white/[0.02] border border-white/[0.06]">
+          <span className="text-[10px] text-muted-foreground/40 mb-2 block uppercase tracking-wider">Original</span>
+          <p className="text-sm text-foreground/50 leading-relaxed" style={{ fontFamily: 'sans-serif' }}>
             山田様、お忙しいところ恐れ入りますが、来週の会議の件についてご確認いただけますでしょうか。何卒よろしくお願いいたします。
           </p>
         </div>
@@ -553,12 +522,12 @@ function MockupTranslation() {
           className="transition-all duration-700 ease-out"
           style={{ 
             opacity: showTranslation ? 1 : 0,
-            transform: showTranslation ? 'translateY(0)' : 'translateY(15px)',
+            transform: showTranslation ? 'translateY(0)' : 'translateY(12px)',
           }}
         >
-          <div className="p-4 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/15">
-            <span className="text-[10px] text-emerald-400/70 mb-2 block">Translated</span>
-            <p className="text-sm text-foreground/85 leading-relaxed">
+          <div className="p-4 rounded-md border border-white/[0.10] bg-white/[0.03]">
+            <span className="text-[10px] text-foreground/50 mb-2 block uppercase tracking-wider">Translated</span>
+            <p className="text-sm text-foreground/80 leading-relaxed">
               Mr. Yamada, I apologize for the intrusion on your busy schedule. Could you please confirm the details regarding next week's meeting? Thank you very much for your consideration.
             </p>
           </div>
@@ -568,14 +537,14 @@ function MockupTranslation() {
           className="transition-all duration-500 delay-300"
           style={{ 
             opacity: showTranslation ? 1 : 0,
-            transform: showTranslation ? 'translateY(0)' : 'translateY(10px)',
+            transform: showTranslation ? 'translateY(0)' : 'translateY(8px)',
           }}
         >
-          <div className="p-3 rounded-xl bg-amber-500/[0.06] border border-amber-500/15 flex items-start gap-2.5">
-            <Globe className="w-4 h-4 text-amber-400/70 flex-shrink-0 mt-0.5" />
+          <div className="p-3 rounded-md border border-white/[0.08] bg-white/[0.01] flex items-start gap-2.5">
+            <Globe className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-[11px] font-medium text-amber-400/80 mb-0.5">Cultural context</p>
-              <p className="text-[11px] text-amber-300/60">Formal keigo style detected. Use respectful honorifics and humble language in your reply.</p>
+              <p className="text-[11px] font-medium text-foreground/60 mb-0.5">Cultural context</p>
+              <p className="text-[11px] text-muted-foreground/50">Formal keigo style detected. Use respectful honorifics and humble language in your reply.</p>
             </div>
           </div>
         </div>
@@ -602,44 +571,42 @@ function MockupUndoSend() {
   }, [isVisible]);
 
   return (
-    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
-      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
+      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-            <Undo2 className="w-4 h-4 text-amber-400" />
+          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center">
+            <Clock className="w-3.5 h-3.5 text-foreground/60" />
           </div>
-          <div>
-            <p className="text-sm font-medium">Send with safety net</p>
-          </div>
+          <p className="text-sm font-medium">Undo Send</p>
         </div>
       </div>
       <div className="p-5">
-        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] mb-4">
+        <div className="p-4 rounded-md bg-white/[0.02] border border-white/[0.06] mb-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-muted-foreground">To: david.park@company.com</span>
-            <span className="text-[10px] text-muted-foreground/50">Just now</span>
+            <span className="text-xs text-muted-foreground/50">To: david.park@company.com</span>
+            <span className="text-[10px] text-muted-foreground/30">Just now</span>
           </div>
           <p className="text-sm font-medium mb-1">Re: Q4 Proposal</p>
-          <p className="text-sm text-foreground/70">Looks great, let's move forward with Option B. I'll loop in the team tomorrow.</p>
+          <p className="text-sm text-foreground/60">Looks great, let's move forward with Option B. I'll loop in the team tomorrow.</p>
         </div>
 
         {phase === 'countdown' && (
-          <div className="p-4 rounded-xl bg-amber-500/[0.08] border border-amber-500/20 transition-all duration-300">
+          <div className="p-4 rounded-md border border-white/[0.12] bg-white/[0.03] transition-all duration-300">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10">
-                  <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                <div className="relative w-9 h-9">
+                  <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
                     <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/[0.06]" />
-                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-amber-400" strokeDasharray="94.2" strokeDashoffset={94.2 - (94.2 * countdown / 5)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s linear' }} />
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground/60" strokeDasharray="94.2" strokeDashoffset={94.2 - (94.2 * countdown / 5)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s linear' }} />
                   </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-amber-400">{countdown}</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-foreground/70">{countdown}</span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Message sending...</p>
-                  <p className="text-[11px] text-muted-foreground">You can undo this</p>
+                  <p className="text-sm font-medium">Sending...</p>
+                  <p className="text-[11px] text-muted-foreground/50">You can undo this</p>
                 </div>
               </div>
-              <Button size="sm" variant="outline" className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 gap-1.5" data-testid="mockup-undo">
+              <Button size="sm" variant="outline" className="rounded-md border-white/[0.15] gap-1.5" data-testid="mockup-undo">
                 <Undo2 className="w-3.5 h-3.5" />
                 Undo
               </Button>
@@ -648,23 +615,23 @@ function MockupUndoSend() {
         )}
 
         {phase === 'undone' && (
-          <div className="p-4 rounded-xl bg-green-500/[0.08] border border-green-500/20 transition-all duration-500">
+          <div className="p-4 rounded-md border border-green-500/20 bg-green-500/[0.04] transition-all duration-500">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <Check className="w-5 h-5 text-green-400" />
+              <div className="w-8 h-8 rounded-md bg-green-500/10 flex items-center justify-center">
+                <Check className="w-4 h-4 text-green-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-green-400">Message recalled</p>
-                <p className="text-[11px] text-muted-foreground">Moved back to drafts. Crisis averted.</p>
+                <p className="text-sm font-medium">Message recalled</p>
+                <p className="text-[11px] text-muted-foreground/50">Moved back to drafts.</p>
               </div>
             </div>
           </div>
         )}
 
         {phase === 'sending' && (
-          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            <span className="text-sm text-muted-foreground">Preparing to send...</span>
+          <div className="p-4 rounded-md bg-white/[0.02] border border-white/[0.06] flex items-center gap-3">
+            <div className="w-4 h-4 border-2 border-white/[0.10] border-t-foreground/50 rounded-full animate-spin" />
+            <span className="text-sm text-muted-foreground/50">Preparing to send...</span>
           </div>
         )}
       </div>
@@ -685,60 +652,60 @@ function MockupSmartFolders() {
   }, [isVisible]);
 
   const folders = [
-    { name: 'Important', count: 3, color: 'text-red-400 bg-red-500/15', icon: Star, emails: ['David Park - Q4 Proposal', 'CEO - Company update', 'HR - Benefits enrollment'] },
-    { name: 'Updates', count: 8, color: 'text-blue-400 bg-blue-500/15', icon: Mail, emails: ['GitHub - PR merged', 'Slack - New message', 'Jira - Sprint started'] },
-    { name: 'Newsletters', count: 12, color: 'text-emerald-400 bg-emerald-500/15', icon: Archive, emails: ['TechCrunch - Daily digest', 'Morning Brew', 'Product Hunt - Top 5'] },
-    { name: 'Promotions', count: 24, color: 'text-amber-400 bg-amber-500/15', icon: Zap, emails: ['Amazon - Sale alert', 'Figma - New features', 'Notion - Templates'] },
+    { name: 'Important', count: 3, icon: Star, emails: ['David Park - Q4 Proposal', 'CEO - Company update', 'HR - Benefits enrollment'] },
+    { name: 'Updates', count: 8, icon: Mail, emails: ['GitHub - PR merged', 'Slack - New message', 'Jira - Sprint started'] },
+    { name: 'Newsletters', count: 12, icon: Archive, emails: ['TechCrunch - Daily digest', 'Morning Brew', 'Product Hunt - Top 5'] },
+    { name: 'Promotions', count: 24, icon: Zap, emails: ['Amazon - Sale alert', 'Figma - New features', 'Notion - Templates'] },
   ];
 
   return (
-    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
-      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
+      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center">
-            <FolderKanban className="w-4 h-4 text-rose-400" />
+          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center">
+            <FolderKanban className="w-3.5 h-3.5 text-foreground/60" />
           </div>
           <div>
             <p className="text-sm font-medium">Smart Folders</p>
-            <p className="text-[11px] text-muted-foreground">AI-sorted automatically</p>
+            <p className="text-[11px] text-muted-foreground/50">AI-sorted automatically</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40">
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/30">
           <Sparkles className="w-3 h-3" />
-          Auto-organized
+          Auto
         </div>
       </div>
       <div className="flex">
-        <div className="w-44 border-r border-white/[0.04] p-3 space-y-1">
+        <div className="w-40 border-r border-white/[0.06] p-2.5 space-y-0.5">
           {folders.map((folder, i) => (
             <div 
               key={i}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-300 ${
-                activeFolder === i ? 'bg-white/[0.06] border border-white/[0.08]' : 'hover:bg-white/[0.02]'
+              className={`flex items-center gap-2 px-2.5 py-2 rounded-md cursor-pointer transition-all duration-200 ${
+                activeFolder === i ? 'bg-white/[0.06] border border-white/[0.10]' : 'border border-transparent hover:bg-white/[0.03]'
               }`}
               onClick={() => setActiveFolder(i)}
             >
-              <folder.icon className={`w-3.5 h-3.5 ${folder.color.split(' ')[0]}`} />
-              <span className={`text-xs flex-1 ${activeFolder === i ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>{folder.name}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFolder === i ? folder.color : 'text-muted-foreground/40'}`}>{folder.count}</span>
+              <folder.icon className={`w-3.5 h-3.5 ${activeFolder === i ? 'text-foreground/70' : 'text-muted-foreground/30'}`} />
+              <span className={`text-xs flex-1 ${activeFolder === i ? 'font-medium text-foreground' : 'text-muted-foreground/60'}`}>{folder.name}</span>
+              <span className={`text-[10px] ${activeFolder === i ? 'text-foreground/50' : 'text-muted-foreground/25'}`}>{folder.count}</span>
             </div>
           ))}
         </div>
-        <div className="flex-1 p-3 space-y-1.5 min-h-[180px]">
+        <div className="flex-1 p-2.5 space-y-1 min-h-[170px]">
           {folders[activeFolder].emails.map((email, i) => (
             <div 
               key={`${activeFolder}-${i}`}
-              className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.03] transition-all duration-300"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-md border border-white/[0.05] bg-white/[0.01] transition-all duration-300"
               style={{
                 opacity: isVisible ? 1 : 0,
-                transform: isVisible ? 'translateX(0)' : 'translateX(10px)',
-                transitionDelay: `${i * 100}ms`,
+                transform: isVisible ? 'translateX(0)' : 'translateX(8px)',
+                transitionDelay: `${i * 80}ms`,
               }}
             >
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-medium ${folders[activeFolder].color}`}>
+              <div className="w-5 h-5 rounded-md bg-white/[0.06] flex items-center justify-center text-[9px] font-medium text-foreground/50">
                 {email.charAt(0)}
               </div>
-              <span className="text-xs text-foreground/70 truncate">{email}</span>
+              <span className="text-xs text-foreground/60 truncate">{email}</span>
             </div>
           ))}
         </div>
@@ -758,16 +725,17 @@ function HowItWorksSection({ getStartedHref }: { getStartedHref: string }) {
   ];
 
   return (
-    <section className="py-24 sm:py-32 px-6 relative">
+    <section className="py-24 sm:py-32 px-5 sm:px-6 relative">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
       <div className="max-w-4xl mx-auto w-full" ref={ref}>
         <div 
           className="text-center mb-16 transition-all duration-1000 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
+            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
           }}
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
             Get started in minutes
           </h2>
         </div>
@@ -779,16 +747,16 @@ function HowItWorksSection({ getStartedHref }: { getStartedHref: string }) {
               className="text-center transition-all duration-700 ease-out"
               style={{ 
                 opacity: isVisible ? 1 : 0, 
-                transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
+                transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
                 transitionDelay: `${300 + i * 150}ms`
               }}
             >
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
-                <step.icon className="w-6 h-6 text-primary" />
+              <div className="w-12 h-12 rounded-lg bg-white/[0.04] border border-white/[0.10] flex items-center justify-center mx-auto mb-4">
+                <step.icon className="w-5 h-5 text-foreground/60" />
               </div>
-              <div className="text-xs font-medium text-primary mb-2">Step {step.number}</div>
-              <h3 className="text-lg font-semibold mb-1">{step.title}</h3>
-              <p className="text-sm text-muted-foreground">{step.description}</p>
+              <div className="text-[11px] font-medium text-muted-foreground/40 uppercase tracking-widest mb-2">Step {step.number}</div>
+              <h3 className="text-base font-semibold mb-1">{step.title}</h3>
+              <p className="text-sm text-muted-foreground/60">{step.description}</p>
             </div>
           ))}
         </div>
@@ -797,12 +765,12 @@ function HowItWorksSection({ getStartedHref }: { getStartedHref: string }) {
           className="text-center mt-14 transition-all duration-700 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+            transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
             transitionDelay: '900ms'
           }}
         >
           <Link href={getStartedHref}>
-            <Button size="lg" className="rounded-full px-8 gap-2" data-testid="button-simple-start-cta">
+            <Button size="lg" className="rounded-md px-8 gap-2" data-testid="button-simple-start-cta">
               Start free
               <ArrowRight className="w-4 h-4" />
             </Button>
@@ -848,16 +816,17 @@ function TestimonialsSection() {
   }
 
   return (
-    <section className="py-24 sm:py-32 px-6 relative overflow-hidden">
+    <section className="py-24 sm:py-32 px-5 sm:px-6 relative">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
       <div className="max-w-4xl mx-auto w-full" ref={ref}>
         <div 
           className="text-center mb-16 transition-all duration-1000 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
+            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
           }}
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
             What our users are saying
           </h2>
         </div>
@@ -875,16 +844,16 @@ function TestimonialsSection() {
             >
               {testimonials.map((t, i) => (
                 <div key={t.id || i} className="w-full flex-shrink-0 px-4">
-                  <Card className="bg-white/[0.02] border-white/[0.06] max-w-2xl mx-auto">
+                  <Card className="bg-white/[0.02] border-white/[0.08] rounded-lg max-w-2xl mx-auto">
                     <CardContent className="p-10 text-center">
                       <div className="flex justify-center gap-1 mb-8">
                         {[...Array(t.rating)].map((_, j) => (
-                          <Star key={j} className="w-6 h-6 fill-primary text-primary" />
+                          <Star key={j} className="w-5 h-5 fill-foreground/60 text-foreground/60" />
                         ))}
                       </div>
-                      <p className="text-xl text-muted-foreground leading-relaxed mb-8">"{t.content}"</p>
+                      <p className="text-lg text-muted-foreground/80 leading-relaxed mb-8">"{t.content}"</p>
                       <div>
-                        <p className="font-medium text-lg">{t.userName}</p>
+                        <p className="font-medium">{t.userName}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -968,36 +937,37 @@ function FAQSection() {
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.15 });
 
   return (
-    <section className="py-24 sm:py-32 px-6 relative">
+    <section className="py-24 sm:py-32 px-5 sm:px-6 relative">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
       <div className="max-w-3xl mx-auto" ref={ref}>
         <div 
           className="text-center mb-16 transition-all duration-1000 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
+            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
           }}
         >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
             Frequently asked questions
           </h2>
         </div>
-        <Accordion type="single" collapsible className="space-y-4">
+        <Accordion type="single" collapsible className="space-y-3">
           {faqs.map((faq, i) => (
             <div 
               key={i}
               className="duration-700 ease-out"
               style={{ 
                 opacity: isVisible ? 1 : 0, 
-                transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+                transform: isVisible ? 'translateY(0)' : 'translateY(24px)',
                 transitionProperty: 'opacity, transform',
                 transitionDelay: `${200 + i * 80}ms`
               }}
             >
-              <AccordionItem value={`faq-${i}`} className="border border-white/[0.06] rounded-2xl overflow-hidden px-6" data-testid={`faq-toggle-${i}`}>
-                <AccordionTrigger className="text-lg font-medium hover:no-underline">
+              <AccordionItem value={`faq-${i}`} className="border border-white/[0.08] rounded-lg overflow-hidden px-6" data-testid={`faq-toggle-${i}`}>
+                <AccordionTrigger className="text-base font-medium hover:no-underline">
                   {faq.q}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground/70 leading-relaxed">
+                <AccordionContent className="text-muted-foreground/60 leading-relaxed text-sm">
                   {faq.a}
                 </AccordionContent>
               </AccordionItem>
@@ -1011,22 +981,17 @@ function FAQSection() {
 
 function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.3 });
-  const parallaxOffset = useParallax(0.1);
 
   return (
-    <section className="min-h-[60vh] flex items-center py-24 sm:py-32 px-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.08] via-primary/[0.02] to-transparent pointer-events-none" />
-      <div 
-        className="absolute bottom-0 left-1/2 w-[1000px] h-[500px] bg-primary/[0.1] rounded-full blur-[150px] pointer-events-none"
-        style={{ transform: `translate(-50%, ${parallaxOffset * 0.5}px)` }}
-      />
+    <section className="py-24 sm:py-32 px-5 sm:px-6 relative">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
       
-      <div className="max-w-3xl mx-auto text-center relative w-full" ref={ref}>
+      <div className="max-w-3xl mx-auto text-center w-full" ref={ref}>
         <h2 
-          className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-6 transition-all duration-1000 ease-out"
+          className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-6 transition-all duration-1000 ease-out"
           style={{ 
             opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
+            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
           }}
         >
           Ready to upgrade
@@ -1034,29 +999,29 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
           <span className="text-primary">your inbox?</span>
         </h2>
         <p 
-          className="text-lg text-muted-foreground mb-10 transition-all duration-1000 ease-out delay-150"
+          className="text-lg text-muted-foreground/60 mb-10 transition-all duration-1000 ease-out delay-150"
           style={{ 
             opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
+            transform: isVisible ? 'translateY(0)' : 'translateY(30px)'
           }}
         >
           Same email address. Same contacts. Better everything else.
         </p>
         <div 
-          className="flex flex-col sm:flex-row gap-5 justify-center transition-all duration-1000 ease-out delay-300"
+          className="flex flex-col sm:flex-row gap-3 justify-center transition-all duration-1000 ease-out delay-300"
           style={{ 
             opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(40px)'
+            transform: isVisible ? 'translateY(0)' : 'translateY(30px)'
           }}
         >
           <Link href={getStartedHref}>
-            <Button size="lg" className="gap-2 shadow-lg shadow-primary/25" data-testid="cta-getstarted">
+            <Button size="lg" className="gap-2 rounded-md" data-testid="cta-getstarted">
               Try it free
               <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
           <Link href="/pricing">
-            <Button variant="outline" size="lg" className="border-white/10" data-testid="cta-pricing">
+            <Button variant="outline" size="lg" className="rounded-md border-white/[0.12]" data-testid="cta-pricing">
               View pricing
             </Button>
           </Link>
@@ -1068,43 +1033,43 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
 
 function Footer() {
   return (
-    <footer className="py-16 px-6 border-t border-white/[0.04]">
+    <footer className="py-16 px-5 sm:px-6 border-t border-white/[0.06]">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
           <div>
-            <h4 className="text-sm font-semibold text-foreground mb-5">Product</h4>
+            <h4 className="text-xs font-medium uppercase tracking-widest text-muted-foreground/40 mb-5">Product</h4>
             <ul className="space-y-3">
-              <li><Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-pricing">Pricing</Link></li>
-              <li><Link href="/security" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-security">Security</Link></li>
-              <li><Link href="/help" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-help">Help Center</Link></li>
+              <li><Link href="/pricing" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-pricing">Pricing</Link></li>
+              <li><Link href="/security" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-security">Security</Link></li>
+              <li><Link href="/help" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-help">Help Center</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-foreground mb-5">Legal</h4>
+            <h4 className="text-xs font-medium uppercase tracking-widest text-muted-foreground/40 mb-5">Legal</h4>
             <ul className="space-y-3">
-              <li><Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-terms">Terms of Service</Link></li>
-              <li><Link href="/cookies" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-cookies">Cookie Policy</Link></li>
+              <li><Link href="/privacy" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-terms">Terms of Service</Link></li>
+              <li><Link href="/cookies" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-cookies">Cookie Policy</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-foreground mb-5">Policies</h4>
+            <h4 className="text-xs font-medium uppercase tracking-widest text-muted-foreground/40 mb-5">Policies</h4>
             <ul className="space-y-3">
-              <li><Link href="/acceptable-use" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-aup">Acceptable Use</Link></li>
-              <li><Link href="/dpa" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-dpa">DPA</Link></li>
-              <li><Link href="/ai-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-ai">AI Use Policy</Link></li>
+              <li><Link href="/acceptable-use" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-aup">Acceptable Use</Link></li>
+              <li><Link href="/dpa" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-dpa">DPA</Link></li>
+              <li><Link href="/ai-policy" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-ai">AI Use Policy</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-foreground mb-5">Billing</h4>
+            <h4 className="text-xs font-medium uppercase tracking-widest text-muted-foreground/40 mb-5">Billing</h4>
             <ul className="space-y-3">
-              <li><Link href="/refund-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-link-refund">Refund Policy</Link></li>
+              <li><Link href="/refund-policy" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-refund">Refund Policy</Link></li>
             </ul>
           </div>
         </div>
-        <div className="pt-10 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground/50">&copy; 2026 MyDraft</p>
-          <a href="mailto:support@mydraft.io" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-email">support@mydraft.io</a>
+        <div className="pt-10 border-t border-white/[0.06] flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground/30">&copy; 2026 MyDraft</p>
+          <a href="mailto:support@mydraft.io" className="text-sm text-muted-foreground/50 hover:text-foreground transition-colors" data-testid="footer-email">support@mydraft.io</a>
         </div>
       </div>
     </footer>
