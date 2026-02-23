@@ -20,6 +20,11 @@ import {
   Zap,
   Languages,
   Shield,
+  Undo2,
+  FolderKanban,
+  Clock,
+  Check,
+  RotateCcw,
 } from "lucide-react";
 
 
@@ -45,8 +50,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <MarketingNav />
       <HeroSection getStartedHref={getStartedHref()} />
-      <FeaturesSection />
-      <DemoSection />
+      <FeatureShowcase />
       <HowItWorksSection getStartedHref={getStartedHref()} />
       <TestimonialsSection />
       <FAQSection />
@@ -254,225 +258,118 @@ function HeroEmailItem({ from, subject, time, unread = false, selected = false }
   );
 }
 
-function FeatureMockupReply() {
+function FeatureShowcase() {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/30">
-      <div className="bg-white/[0.02] px-4 py-2.5 border-b border-white/[0.06] flex items-center gap-2">
-        <Sparkles className="w-3.5 h-3.5 text-primary" />
-        <span className="text-xs font-medium text-muted-foreground">AI Draft</span>
-      </div>
-      <div className="p-5 space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white text-[10px] font-medium flex-shrink-0">L</div>
-          <div className="flex-1 p-3 rounded-lg bg-white/[0.03] border border-white/[0.04]">
-            <p className="text-[11px] text-muted-foreground/60 mb-1">Lisa Martinez</p>
-            <p className="text-xs text-foreground/70">Can we reschedule our meeting to Thursday? I have a conflict on Wednesday afternoon.</p>
-          </div>
-        </div>
-        <div className="p-3 rounded-xl bg-primary/[0.06] border border-primary/20">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Sparkles className="w-3 h-3 text-primary" />
-            <span className="text-[10px] font-medium text-primary">Suggested reply</span>
-          </div>
-          <p className="text-xs text-foreground/80 mb-3">
-            Hi Lisa, Thursday works perfectly for me. Same time? Let me know if you need to adjust. Thanks!
-          </p>
-          <div className="flex gap-2">
-            <Button size="sm" data-testid="mockup-send">Send</Button>
-            <Button size="sm" variant="ghost" data-testid="mockup-edit">Edit</Button>
-          </div>
-        </div>
-      </div>
+    <div>
+      <FeatureSection
+        badge="AI Replies"
+        title="Your reply, already written."
+        description="Open any email and a draft is waiting. Written in your voice, matching your tone and style. Review it, tweak a word, and hit send. What used to take 5 minutes now takes 5 seconds."
+        mockup={<MockupAIReply />}
+        direction="left"
+        accentColor="blue"
+        data-testid="feature-section-ai-replies"
+      />
+      <FeatureSection
+        badge="Thread Summary"
+        title="Catch up in seconds, not minutes."
+        description="Long email threads with 20+ messages? AI reads them all and gives you the key decisions, action items, and what's still pending. Never scroll through an entire chain again."
+        mockup={<MockupThreadSummary />}
+        direction="right"
+        accentColor="purple"
+        data-testid="feature-section-summaries"
+      />
+      <FeatureSection
+        badge="50+ Languages"
+        title="Email anyone, anywhere."
+        description="Receive an email in Japanese and reply in perfect keigo. Get a message in Portuguese and respond with the right formality. AI adapts tone, culture, and etiquette automatically."
+        mockup={<MockupTranslation />}
+        direction="left"
+        accentColor="emerald"
+        data-testid="feature-section-multilingual"
+      />
+      <FeatureSection
+        badge="Undo Send"
+        title="Send with confidence."
+        description="Every email has an undo window. Catch a typo, forgot an attachment, wrong recipient? Pull it back before it's delivered. Schedule emails for later with one click."
+        mockup={<MockupUndoSend />}
+        direction="right"
+        accentColor="amber"
+        data-testid="feature-section-undo-send"
+      />
+      <FeatureSection
+        badge="Smart Folders"
+        title="Your inbox, organized by AI."
+        description="AI automatically sorts incoming emails into folders that make sense. Important messages rise to the top. Newsletters, updates, and noise get tucked away. Zero manual rules needed."
+        mockup={<MockupSmartFolders />}
+        direction="left"
+        accentColor="rose"
+        data-testid="feature-section-smart-folders"
+      />
     </div>
   );
 }
 
-function FeatureMockupSummary() {
-  return (
-    <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/30">
-      <div className="bg-white/[0.02] px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Brain className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-medium text-muted-foreground">Thread Summary</span>
-        </div>
-        <span className="text-[10px] text-muted-foreground/40">18 messages</span>
-      </div>
-      <div className="p-5 space-y-3">
-        <div className="flex items-start gap-2.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-1.5" />
-          <p className="text-xs text-foreground/80">Budget approved for Q4 marketing campaign</p>
-        </div>
-        <div className="flex items-start gap-2.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-1.5" />
-          <p className="text-xs text-foreground/70">Waiting on vendor pricing by Friday</p>
-        </div>
-        <div className="flex items-start gap-2.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-1.5" />
-          <p className="text-xs text-foreground/70">Team agreed on launch date: Nov 15</p>
-        </div>
-        <div className="flex items-start gap-2.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
-          <p className="text-xs text-foreground/60">Sarah to send revised timeline Monday</p>
-        </div>
-        <div className="mt-3 pt-3 border-t border-white/[0.04]">
-          <p className="text-[10px] text-muted-foreground/40">Action items: 2 pending, 2 completed</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FeatureMockupGlobal() {
-  return (
-    <div className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/30">
-      <div className="bg-white/[0.02] px-4 py-2.5 border-b border-white/[0.06] flex items-center gap-2">
-        <Languages className="w-3.5 h-3.5 text-primary" />
-        <span className="text-xs font-medium text-muted-foreground">Translation</span>
-      </div>
-      <div className="p-5 space-y-4">
-        <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.04]">
-          <div className="flex items-center gap-1.5 mb-2">
-            <span className="text-[10px] text-muted-foreground/60">Original (Japanese)</span>
-          </div>
-          <p className="text-xs text-foreground/60 font-light" style={{ fontFamily: 'sans-serif' }}>
-            山田様、お忙しいところ恐れ入りますが、来週の会議の件についてご確認いただけますでしょうか。
-          </p>
-        </div>
-        <div className="p-3 rounded-lg bg-primary/[0.06] border border-primary/15">
-          <div className="flex items-center gap-1.5 mb-2">
-            <span className="text-[10px] text-primary/70">Translated to English</span>
-          </div>
-          <p className="text-xs text-foreground/80">
-            Mr. Yamada, I apologize for the intrusion on your busy schedule. Could you please confirm the details regarding next week's meeting?
-          </p>
-        </div>
-        <div className="p-2.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/15">
-          <div className="flex items-center gap-1.5">
-            <Globe className="w-3 h-3 text-amber-500/70" />
-            <span className="text-[10px] text-amber-500/70">Cultural note: Formal keigo style, use respectful tone in reply</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FeaturesSection() {
-  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.1 });
+function FeatureSection({ badge, title, description, mockup, direction, accentColor }: {
+  badge: string;
+  title: string;
+  description: string;
+  mockup: React.ReactNode;
+  direction: 'left' | 'right';
+  accentColor: string;
+  'data-testid'?: string;
+}) {
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.15 });
+  
+  const colorMap: Record<string, { badge: string; glow: string }> = {
+    blue: { badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20', glow: 'from-blue-500/20' },
+    purple: { badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20', glow: 'from-purple-500/20' },
+    emerald: { badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', glow: 'from-emerald-500/20' },
+    amber: { badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20', glow: 'from-amber-500/20' },
+    rose: { badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20', glow: 'from-rose-500/20' },
+  };
+  const colors = colorMap[accentColor] || colorMap.blue;
 
   return (
-    <section className="py-24 sm:py-32 px-6 relative">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-      </div>
+    <section className="py-24 sm:py-32 lg:py-40 px-5 sm:px-6 relative overflow-hidden" ref={ref}>
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
+      <div 
+        className={`absolute top-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[200px] pointer-events-none bg-gradient-to-br ${colors.glow} to-transparent ${direction === 'left' ? 'right-0 translate-x-1/3' : 'left-0 -translate-x-1/3'}`}
+        style={{ opacity: isVisible ? 0.4 : 0, transition: 'opacity 2s ease' }}
+      />
 
-      <div className="max-w-6xl mx-auto w-full" ref={ref}>
-        <div 
-          className="text-center mb-16 sm:mb-20 transition-all duration-1000 ease-out"
-          style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
-          }}
-        >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-4">
-            A smarter way to manage email
-          </h2>
-          <p className="text-muted-foreground text-lg max-w-lg mx-auto">
-            Less time writing, more time doing.
-          </p>
-        </div>
-
-        <div className="space-y-24 sm:space-y-32">
+      <div className="max-w-6xl mx-auto relative">
+        <div className={`flex flex-col ${direction === 'right' ? 'lg:flex-row-reverse' : 'lg:flex-row'} gap-12 lg:gap-20 items-center`}>
           <div 
-            className="transition-all duration-1000 ease-out"
-            style={{ 
-              opacity: isVisible ? 1 : 0, 
-              transform: isVisible ? 'translateY(0)' : 'translateY(60px)',
-              transitionDelay: '300ms'
+            className="flex-1 text-center lg:text-left max-w-xl"
+            style={{
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? 'translateY(0)' : 'translateY(50px)',
+              transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
-            <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-center">
-              <div className="flex-1 text-center lg:text-left">
-                <div className="flex items-center gap-3 mb-4 justify-center lg:justify-start">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-semibold" data-testid="text-feature-ai-replies">AI-drafted replies</h3>
-                </div>
-                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto lg:mx-0">
-                  Replies written in your tone, ready to review and send with one click.
-                </p>
-              </div>
-              <div className="flex-1 w-full max-w-md lg:max-w-none">
-                <FeatureMockupReply />
-              </div>
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border mb-6 ${colors.badge}`}>
+              {badge}
             </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-semibold tracking-tight leading-[1.15] mb-5">
+              {title}
+            </h2>
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+              {description}
+            </p>
           </div>
 
           <div 
-            className="transition-all duration-1000 ease-out"
-            style={{ 
-              opacity: isVisible ? 1 : 0, 
-              transform: isVisible ? 'translateY(0)' : 'translateY(60px)',
-              transitionDelay: '500ms'
+            className="flex-1 w-full max-w-lg lg:max-w-none"
+            style={{
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible 
+                ? 'translateY(0) translateX(0)' 
+                : `translateY(30px) translateX(${direction === 'left' ? '40px' : '-40px'})`,
+              transition: 'all 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s',
             }}
           >
-            <div className="flex flex-col lg:flex-row-reverse gap-10 lg:gap-16 items-center">
-              <div className="flex-1 text-center lg:text-left">
-                <div className="flex items-center gap-3 mb-4 justify-center lg:justify-start">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                    <Brain className="w-5 h-5 text-primary" />
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-semibold" data-testid="text-feature-summaries">Thread summaries</h3>
-                </div>
-                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto lg:mx-0">
-                  Key decisions extracted from long threads instantly.
-                </p>
-              </div>
-              <div className="flex-1 w-full max-w-md lg:max-w-none">
-                <FeatureMockupSummary />
-              </div>
-            </div>
-          </div>
-
-          <div 
-            className="transition-all duration-1000 ease-out"
-            style={{ 
-              opacity: isVisible ? 1 : 0, 
-              transform: isVisible ? 'translateY(0)' : 'translateY(60px)',
-              transitionDelay: '700ms'
-            }}
-          >
-            <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-center">
-              <div className="flex-1 text-center lg:text-left">
-                <div className="flex items-center gap-3 mb-4 justify-center lg:justify-start">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                    <Languages className="w-5 h-5 text-primary" />
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-semibold" data-testid="text-feature-multilingual">Multilingual support</h3>
-                </div>
-                <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto lg:mx-0 mb-6">
-                  Translate and reply across 50+ languages. AI adapts tone and formality based on the sender's culture automatically.
-                </p>
-                <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto lg:mx-0">
-                  <div className="text-center p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
-                    <p className="text-xl font-semibold mb-0.5" data-testid="text-stat-languages">50+</p>
-                    <p className="text-[11px] text-muted-foreground">languages</p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
-                    <p className="text-xl font-semibold mb-0.5" data-testid="text-stat-cultures">20+</p>
-                    <p className="text-[11px] text-muted-foreground">cultures</p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
-                    <p className="text-xl font-semibold mb-0.5" data-testid="text-stat-formality">Auto</p>
-                    <p className="text-[11px] text-muted-foreground">formality</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 w-full max-w-md lg:max-w-none">
-                <FeatureMockupGlobal />
-              </div>
-            </div>
+            {mockup}
           </div>
         </div>
       </div>
@@ -480,208 +377,206 @@ function FeaturesSection() {
   );
 }
 
-function DemoSection() {
-  const [activeDemo, setActiveDemo] = useState<'inbox' | 'reply' | 'summary'>('inbox');
-  const [isPaused, setIsPaused] = useState(false);
-  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.2 });
+function MockupAIReply() {
+  const [showDraft, setShowDraft] = useState(false);
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.3 });
 
   useEffect(() => {
-    if (!isVisible || isPaused) return;
-    
-    const demos: Array<'inbox' | 'reply' | 'summary'> = ['inbox', 'reply', 'summary'];
-    const interval = setInterval(() => {
-      setActiveDemo(current => {
-        const currentIndex = demos.indexOf(current);
-        return demos[(currentIndex + 1) % demos.length];
-      });
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [isVisible, isPaused]);
+    if (isVisible) {
+      const timer = setTimeout(() => setShowDraft(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible]);
 
   return (
-    <section className="py-24 sm:py-32 px-6 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent pointer-events-none" />
-      
-      <div className="max-w-5xl mx-auto w-full" ref={ref}>
-        <div 
-          className="text-center mb-12 sm:mb-16 transition-all duration-1000 ease-out"
-          style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
-          }}
-        >
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-4">
-            See it in action
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            Click through to explore each feature.
+    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
+      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white text-xs font-semibold">LM</div>
+          <div>
+            <p className="text-sm font-medium">Lisa Martinez</p>
+            <p className="text-[11px] text-muted-foreground">Re: Meeting reschedule</p>
+          </div>
+        </div>
+        <span className="text-[11px] text-muted-foreground/50">2 min ago</span>
+      </div>
+      <div className="p-5">
+        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] mb-5">
+          <p className="text-sm text-foreground/70 leading-relaxed">
+            Hi, can we reschedule our meeting to Thursday? I have a conflict on Wednesday afternoon. Same time works for me if that's okay with you.
           </p>
         </div>
 
         <div 
-          className="flex flex-col items-center transition-all duration-1000 ease-out delay-200"
+          className="transition-all duration-700 ease-out overflow-hidden"
           style={{ 
-            opacity: isVisible ? 1 : 0, 
-            transform: isVisible ? 'translateY(0)' : 'translateY(50px)'
+            opacity: showDraft ? 1 : 0, 
+            maxHeight: showDraft ? '300px' : '0px',
+            transform: showDraft ? 'translateY(0)' : 'translateY(20px)',
           }}
         >
-          <div 
-            className="flex flex-col items-center gap-4 mb-10"
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-          >
-            <div className="flex items-center justify-center gap-2 p-1.5 rounded-full bg-white/[0.03] border border-white/[0.06]">
-              <DemoTab 
-                active={activeDemo === 'inbox'}
-                onClick={() => { setActiveDemo('inbox'); setIsPaused(true); }}
-                label="Your inbox"
-                icon={Inbox}
-                testId="demo-toggle-inbox"
-              />
-              <DemoTab 
-                active={activeDemo === 'reply'}
-                onClick={() => { setActiveDemo('reply'); setIsPaused(true); }}
-                label="AI writes it"
-                icon={Sparkles}
-                testId="demo-toggle-reply"
-              />
-              <DemoTab 
-                active={activeDemo === 'summary'}
-                onClick={() => { setActiveDemo('summary'); setIsPaused(true); }}
-                label="Key points"
-                icon={Brain}
-                testId="demo-toggle-summary"
-              />
+          <div className="p-4 rounded-xl bg-primary/[0.06] border border-primary/20 relative">
+            <div className="absolute -top-3 left-4">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/20 border border-primary/30">
+                <Sparkles className="w-3 h-3 text-primary" />
+                <span className="text-[10px] font-semibold text-primary">AI Draft</span>
+              </div>
             </div>
+            <p className="text-sm text-foreground/90 leading-relaxed mt-2 mb-4">
+              Hi Lisa, Thursday works perfectly for me. Same time is great. See you then!
+            </p>
             <div className="flex items-center gap-2">
-              {['inbox', 'reply', 'summary'].map((demo) => (
-                <div 
-                  key={demo}
-                  className={`h-1 rounded-full transition-all duration-500 ${
-                    activeDemo === demo ? 'w-8 bg-primary' : 'w-2 bg-white/20'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div 
-            className="w-full max-w-3xl mx-auto"
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-          >
-            <div className="rounded-2xl border border-white/[0.08] bg-card/80 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/20">
-              <div className="transition-opacity duration-500" key={activeDemo}>
-                {activeDemo === 'inbox' && <DemoInbox />}
-                {activeDemo === 'reply' && <DemoReply />}
-                {activeDemo === 'summary' && <DemoSummary />}
+              <Button size="sm" className="rounded-lg text-xs gap-1.5 shadow-sm" data-testid="mockup-send">
+                <Send className="w-3 h-3" />
+                Send
+              </Button>
+              <Button size="sm" variant="ghost" className="rounded-lg text-xs" data-testid="mockup-edit">
+                Edit
+              </Button>
+              <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground/40">
+                <RotateCcw className="w-3 h-3" />
+                Regenerate
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
-function DemoTab({ active, onClick, label, icon: Icon, testId }: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  testId: string;
-}) {
-  return (
-    <Button
-      onClick={onClick}
-      data-testid={testId}
-      variant={active ? "default" : "ghost"}
-      size="sm"
-      className="rounded-full gap-2"
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </Button>
-  );
-}
+function MockupThreadSummary() {
+  const [visibleItems, setVisibleItems] = useState(0);
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.3 });
 
-function DemoInbox() {
+  useEffect(() => {
+    if (isVisible) {
+      const timers: ReturnType<typeof setTimeout>[] = [];
+      const items = [600, 900, 1200, 1500];
+      items.forEach((delay, i) => {
+        timers.push(setTimeout(() => setVisibleItems(i + 1), delay));
+      });
+      return () => timers.forEach(clearTimeout);
+    }
+  }, [isVisible]);
+
+  const summaryItems = [
+    { color: 'bg-green-500', text: 'Budget approved for Q4 marketing campaign', tag: 'Decision' },
+    { color: 'bg-amber-500', text: 'Waiting on vendor pricing by end of week', tag: 'Pending' },
+    { color: 'bg-blue-500', text: 'Launch date confirmed: November 15', tag: 'Confirmed' },
+    { color: 'bg-purple-500', text: 'Sarah to send revised timeline on Monday', tag: 'Action' },
+  ];
+
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-          <Inbox className="w-4 h-4 text-primary" />
+    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
+      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+            <Brain className="w-4 h-4 text-purple-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Thread Summary</p>
+            <p className="text-[11px] text-muted-foreground">Q4 Budget Discussion</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium">Clean and focused</p>
-          <p className="text-xs text-muted-foreground">No noise. Just the emails that matter.</p>
+        <div className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
+          <span className="text-[10px] text-muted-foreground">18 messages</span>
         </div>
       </div>
-      <div className="space-y-3">
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-medium">D</div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">David Park</p>
-            <p className="text-xs text-muted-foreground truncate">Quick question about the proposal</p>
+      <div className="p-5 space-y-3">
+        {summaryItems.map((item, i) => (
+          <div 
+            key={i} 
+            className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] transition-all duration-500 ease-out"
+            style={{ 
+              opacity: visibleItems > i ? 1 : 0,
+              transform: visibleItems > i ? 'translateX(0)' : 'translateX(-20px)',
+            }}
+          >
+            <div className={`w-2 h-2 rounded-full ${item.color} flex-shrink-0 mt-1.5`} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-foreground/80">{item.text}</p>
+            </div>
+            <span className="text-[10px] text-muted-foreground/50 px-2 py-0.5 rounded-full bg-white/[0.04] flex-shrink-0">{item.tag}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground">8m</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-          </div>
-        </div>
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-xs font-medium">S</div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-muted-foreground truncate">Sarah Chen</p>
-            <p className="text-xs text-muted-foreground/60 truncate">Re: Q4 budget discussion</p>
-          </div>
-          <span className="text-[10px] text-muted-foreground">1h</span>
-        </div>
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">J</div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-muted-foreground truncate">James Wilson</p>
-            <p className="text-xs text-muted-foreground/60 truncate">Meeting notes from today</p>
-          </div>
-          <span className="text-[10px] text-muted-foreground">3h</span>
+        ))}
+        <div 
+          className="flex items-center justify-between pt-3 mt-2 border-t border-white/[0.04] transition-all duration-500"
+          style={{ opacity: visibleItems >= 4 ? 1 : 0 }}
+        >
+          <span className="text-[11px] text-muted-foreground/50">2 action items pending</span>
+          <span className="text-[11px] text-primary/70 cursor-pointer">View full thread</span>
         </div>
       </div>
     </div>
   );
 }
 
-function DemoReply() {
+function MockupTranslation() {
+  const [showTranslation, setShowTranslation] = useState(false);
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.3 });
+
+  useEffect(() => {
+    if (isVisible) {
+      const timer = setTimeout(() => setShowTranslation(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible]);
+
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-          <Sparkles className="w-4 h-4 text-primary" />
+    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
+      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+            <Languages className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Instant Translation</p>
+            <p className="text-[11px] text-muted-foreground">Japanese &rarr; English</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium">Your reply, already written</p>
-          <p className="text-xs text-muted-foreground">Review it, tweak it if you want, and send.</p>
+        <div className="flex items-center gap-1.5">
+          <span className="text-lg">🇯🇵</span>
+          <ArrowRight className="w-3 h-3 text-muted-foreground/40" />
+          <span className="text-lg">🇺🇸</span>
         </div>
       </div>
-      <div className="space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">L</div>
-          <div className="flex-1 p-3 rounded-lg bg-white/[0.02]">
-            <p className="text-xs text-muted-foreground mb-1">Lisa Martinez</p>
-            <p className="text-sm text-foreground/80">Can we reschedule our meeting to Thursday? I have a conflict on Wednesday.</p>
-          </div>
-        </div>
-        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs font-medium text-primary">AI Draft</span>
-          </div>
-          <p className="text-sm text-foreground/90 mb-4">
-            Hi Lisa, Thursday works perfectly for me. Same time? Let me know if you need to adjust. Thanks!
+      <div className="p-5 space-y-4">
+        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+          <span className="text-[10px] text-muted-foreground/50 mb-2 block">Original</span>
+          <p className="text-sm text-foreground/60 leading-relaxed" style={{ fontFamily: 'sans-serif' }}>
+            山田様、お忙しいところ恐れ入りますが、来週の会議の件についてご確認いただけますでしょうか。何卒よろしくお願いいたします。
           </p>
-          <div className="flex gap-2">
-            <Button size="sm" className="text-xs">Send</Button>
-            <Button size="sm" variant="ghost" className="text-xs">Edit</Button>
+        </div>
+
+        <div 
+          className="transition-all duration-700 ease-out"
+          style={{ 
+            opacity: showTranslation ? 1 : 0,
+            transform: showTranslation ? 'translateY(0)' : 'translateY(15px)',
+          }}
+        >
+          <div className="p-4 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/15">
+            <span className="text-[10px] text-emerald-400/70 mb-2 block">Translated</span>
+            <p className="text-sm text-foreground/85 leading-relaxed">
+              Mr. Yamada, I apologize for the intrusion on your busy schedule. Could you please confirm the details regarding next week's meeting? Thank you very much for your consideration.
+            </p>
+          </div>
+        </div>
+
+        <div 
+          className="transition-all duration-500 delay-300"
+          style={{ 
+            opacity: showTranslation ? 1 : 0,
+            transform: showTranslation ? 'translateY(0)' : 'translateY(10px)',
+          }}
+        >
+          <div className="p-3 rounded-xl bg-amber-500/[0.06] border border-amber-500/15 flex items-start gap-2.5">
+            <Globe className="w-4 h-4 text-amber-400/70 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-medium text-amber-400/80 mb-0.5">Cultural context</p>
+              <p className="text-[11px] text-amber-300/60">Formal keigo style detected. Use respectful honorifics and humble language in your reply.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -689,37 +584,163 @@ function DemoReply() {
   );
 }
 
-function DemoSummary() {
+function MockupUndoSend() {
+  const [phase, setPhase] = useState<'sending' | 'countdown' | 'undone'>('sending');
+  const [countdown, setCountdown] = useState(5);
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.3 });
+
+  useEffect(() => {
+    if (!isVisible) return;
+    
+    const t1 = setTimeout(() => setPhase('countdown'), 500);
+    const t2 = setTimeout(() => setCountdown(4), 1500);
+    const t3 = setTimeout(() => setCountdown(3), 2500);
+    const t4 = setTimeout(() => setCountdown(2), 3500);
+    const t5 = setTimeout(() => setPhase('undone'), 4200);
+    
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
+  }, [isVisible]);
+
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-          <Brain className="w-4 h-4 text-primary" />
-        </div>
-        <div>
-          <p className="text-sm font-medium">Skip the scroll</p>
-          <p className="text-xs text-muted-foreground">Key decisions from 12 messages, in seconds.</p>
+    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
+      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+            <Undo2 className="w-4 h-4 text-amber-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Send with safety net</p>
+          </div>
         </div>
       </div>
-      <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 mb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Brain className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-medium text-primary">Summary</span>
-          <span className="text-[10px] text-muted-foreground/50 ml-auto">12 messages</span>
+      <div className="p-5">
+        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-muted-foreground">To: david.park@company.com</span>
+            <span className="text-[10px] text-muted-foreground/50">Just now</span>
+          </div>
+          <p className="text-sm font-medium mb-1">Re: Q4 Proposal</p>
+          <p className="text-sm text-foreground/70">Looks great, let's move forward with Option B. I'll loop in the team tomorrow.</p>
         </div>
-        <div className="space-y-3">
-          <div className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-2" />
-            <p className="text-sm text-foreground/80">Budget approved for Q4 marketing campaign</p>
+
+        {phase === 'countdown' && (
+          <div className="p-4 rounded-xl bg-amber-500/[0.08] border border-amber-500/20 transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative w-10 h-10">
+                  <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/[0.06]" />
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-amber-400" strokeDasharray="94.2" strokeDashoffset={94.2 - (94.2 * countdown / 5)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s linear' }} />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-amber-400">{countdown}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Message sending...</p>
+                  <p className="text-[11px] text-muted-foreground">You can undo this</p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 gap-1.5" data-testid="mockup-undo">
+                <Undo2 className="w-3.5 h-3.5" />
+                Undo
+              </Button>
+            </div>
           </div>
-          <div className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-2" />
-            <p className="text-sm text-foreground/70">Waiting on vendor pricing by Friday</p>
+        )}
+
+        {phase === 'undone' && (
+          <div className="p-4 rounded-xl bg-green-500/[0.08] border border-green-500/20 transition-all duration-500">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                <Check className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-400">Message recalled</p>
+                <p className="text-[11px] text-muted-foreground">Moved back to drafts. Crisis averted.</p>
+              </div>
+            </div>
           </div>
-          <div className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-2" />
-            <p className="text-sm text-foreground/60">Team agreed on launch date: Nov 15</p>
+        )}
+
+        {phase === 'sending' && (
+          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <span className="text-sm text-muted-foreground">Preparing to send...</span>
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MockupSmartFolders() {
+  const [activeFolder, setActiveFolder] = useState(0);
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.3 });
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const interval = setInterval(() => {
+      setActiveFolder(prev => (prev + 1) % 4);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isVisible]);
+
+  const folders = [
+    { name: 'Important', count: 3, color: 'text-red-400 bg-red-500/15', icon: Star, emails: ['David Park - Q4 Proposal', 'CEO - Company update', 'HR - Benefits enrollment'] },
+    { name: 'Updates', count: 8, color: 'text-blue-400 bg-blue-500/15', icon: Mail, emails: ['GitHub - PR merged', 'Slack - New message', 'Jira - Sprint started'] },
+    { name: 'Newsletters', count: 12, color: 'text-emerald-400 bg-emerald-500/15', icon: Archive, emails: ['TechCrunch - Daily digest', 'Morning Brew', 'Product Hunt - Top 5'] },
+    { name: 'Promotions', count: 24, color: 'text-amber-400 bg-amber-500/15', icon: Zap, emails: ['Amazon - Sale alert', 'Figma - New features', 'Notion - Templates'] },
+  ];
+
+  return (
+    <div ref={ref} className="rounded-2xl border border-white/[0.08] bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-black/40">
+      <div className="bg-white/[0.02] px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center">
+            <FolderKanban className="w-4 h-4 text-rose-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Smart Folders</p>
+            <p className="text-[11px] text-muted-foreground">AI-sorted automatically</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40">
+          <Sparkles className="w-3 h-3" />
+          Auto-organized
+        </div>
+      </div>
+      <div className="flex">
+        <div className="w-44 border-r border-white/[0.04] p-3 space-y-1">
+          {folders.map((folder, i) => (
+            <div 
+              key={i}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-300 ${
+                activeFolder === i ? 'bg-white/[0.06] border border-white/[0.08]' : 'hover:bg-white/[0.02]'
+              }`}
+              onClick={() => setActiveFolder(i)}
+            >
+              <folder.icon className={`w-3.5 h-3.5 ${folder.color.split(' ')[0]}`} />
+              <span className={`text-xs flex-1 ${activeFolder === i ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>{folder.name}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeFolder === i ? folder.color : 'text-muted-foreground/40'}`}>{folder.count}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex-1 p-3 space-y-1.5 min-h-[180px]">
+          {folders[activeFolder].emails.map((email, i) => (
+            <div 
+              key={`${activeFolder}-${i}`}
+              className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.03] transition-all duration-300"
+              style={{
+                opacity: isVisible ? 1 : 0,
+                transform: isVisible ? 'translateX(0)' : 'translateX(10px)',
+                transitionDelay: `${i * 100}ms`,
+              }}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-medium ${folders[activeFolder].color}`}>
+                {email.charAt(0)}
+              </div>
+              <span className="text-xs text-foreground/70 truncate">{email}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
