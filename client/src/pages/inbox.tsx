@@ -63,8 +63,8 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   const [multiEmailSelection, setMultiEmailSelection] = useState<EmailWithNylasId[]>([]);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
-  const [showMobileDetail, setShowMobileDetail] = useState(false);
-  const [hidingMobileDetail, setHidingMobileDetail] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [hidingDetail, setHidingDetail] = useState(false);
   const [optimisticStars, setOptimisticStars] = useState<Map<string | number, boolean>>(new Map());
   const [optimisticRemovals, setOptimisticRemovals] = useState<Set<string | number>>(new Set());
   const [, setLocation] = useLocation();
@@ -348,7 +348,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     setSelectedEmailId(null);
     setSelectedThreadEmails([]);
     setGeneratedDraft(null);
-    setShowMobileDetail(false);
+    setShowDetail(false);
   }, [activeFolder]);
 
   const markAsReadMutation = useMutation({
@@ -438,9 +438,9 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return { ...result, emailId, folder, previousFolder, showUndo };
     },
     onMutate: async ({ emailId, folder, previousFolder, showUndo = true }) => {
-      // Optimistically remove email from list immediately
       setOptimisticRemovals(prev => new Set(prev).add(emailId));
       setSelectedEmailId(null);
+      setShowDetail(false);
       setGeneratedDraft(null);
       
       // Show undo toast immediately
@@ -503,10 +503,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     const threadEmails = email.threadEmails || [email];
     setSelectedThreadEmails(threadEmails);
     setGeneratedDraft(null);
-    if (screen.isMobile) {
-      setShowMobileDetail(true);
-    }
-    // Mark all unread emails in the thread as read
+    setShowDetail(true);
     threadEmails.forEach(threadEmail => {
       if (!threadEmail.isRead) {
         markAsReadMutation.mutate(getEmailId(threadEmail));
@@ -515,11 +512,17 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   };
 
   const handleBackToList = () => {
-    setHidingMobileDetail(true);
-    setTimeout(() => {
-      setShowMobileDetail(false);
-      setHidingMobileDetail(false);
-    }, 220);
+    if (screen.isMobile) {
+      setHidingDetail(true);
+      setTimeout(() => {
+        setShowDetail(false);
+        setHidingDetail(false);
+        setSelectedEmailId(null);
+      }, 220);
+    } else {
+      setShowDetail(false);
+      setSelectedEmailId(null);
+    }
   };
 
   const handleAiReply = () => {
@@ -610,9 +613,9 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   };
 
   const handlePermanentDeleteSingleEmail = async (emailId: string | number) => {
-    // Optimistically remove from list
     setOptimisticRemovals(prev => new Set(prev).add(emailId));
     setSelectedEmailId(null);
+    setShowDetail(false);
     
     try {
       const response = await apiRequest("DELETE", `/api/emails/${emailId}`);
@@ -692,8 +695,8 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
 
   return (
     <div className="email-layout">
-      {/* Email List Panel - hidden on mobile when viewing detail */}
-      <div className={`email-list-panel overflow-x-hidden ${screen.isMobile && showMobileDetail ? 'hidden' : ''}`}>
+      {/* Email List Panel - hidden when viewing email detail */}
+      <div className={`email-list-panel overflow-x-hidden ${showDetail ? 'hide-for-detail' : ''}`}>
         {activeFolder.toLowerCase() === "drafts" ? (
           <DraftsList />
         ) : (
@@ -757,23 +760,20 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
         )}
       </div>
       
-      {/* Email Detail Panel - full screen overlay on mobile, side panel on desktop */}
-      {(!screen.isMobile || showMobileDetail || hidingMobileDetail) && (
-        <div className={`email-detail-panel ${screen.isMobile && showMobileDetail && !hidingMobileDetail ? 'show-mobile' : ''} ${screen.isMobile && hidingMobileDetail ? 'hide-mobile' : ''}`}>
-          <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
-            {/* Mobile back button */}
-            {screen.isMobile && (showMobileDetail || hidingMobileDetail) && (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={handleBackToList}
-                className="mr-auto"
-                data-testid="button-back-to-list"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            )}
-            <div className={`flex items-center gap-2 ${screen.isMobile && (showMobileDetail || hidingMobileDetail) ? '' : 'ml-auto'}`}>
+      {/* Email Detail Panel - replaces list when viewing an email */}
+      {(showDetail || hidingDetail) && (
+        <div className={`email-detail-panel ${showDetail && !hidingDetail ? 'show-detail' : ''} ${hidingDetail ? 'hide-detail' : ''}`}>
+          <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-4 sm:px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleBackToList}
+              className="flex-shrink-0"
+              data-testid="button-back-to-list"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex items-center gap-2 ml-auto">
               {!userData?.user?.connectedEmail && !screen.isMobile && (
                 <Button
                   variant="outline"
@@ -786,7 +786,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
                   Connect Account
                 </Button>
               )}
-              {!screen.isMobile && <NotificationBell />}
+              <NotificationBell />
             </div>
           </header>
         <div className="flex-1 overflow-y-auto overflow-x-hidden">

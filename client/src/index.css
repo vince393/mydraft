@@ -328,7 +328,7 @@ body {
     padding-right: env(safe-area-inset-right, 0px);
   }
 
-  /* Mobile-first email layout */
+  /* Email layout - single panel, list or detail */
   .email-layout {
     display: flex;
     height: 100%;
@@ -342,35 +342,43 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border-right: none;
     padding-bottom: 0;
   }
 
   .email-detail-panel {
     display: none;
-    flex: 1;
-    min-width: 0;
+    width: 100%;
+    flex-shrink: 0;
     flex-direction: column;
+    overflow: hidden;
   }
 
-  .email-detail-panel.show-mobile {
+  .email-detail-panel.show-detail {
     display: flex;
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-    background: hsl(var(--background));
-    padding-bottom: 0;
-    animation: slideInFromRight 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
 
-  .email-detail-panel.hide-mobile {
-    display: flex;
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-    background: hsl(var(--background));
-    padding-bottom: 0;
-    animation: slideOutToRight 0.22s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  .email-list-panel.hide-for-detail {
+    display: none;
+  }
+
+  /* Mobile: slide animation for detail panel */
+  @media (max-width: 767px) {
+    .email-detail-panel.show-detail {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      background: hsl(var(--background));
+      animation: slideInFromRight 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    }
+
+    .email-detail-panel.hide-detail {
+      display: flex;
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      background: hsl(var(--background));
+      animation: slideOutToRight 0.22s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    }
   }
 
   @keyframes slideInFromRight {
@@ -388,39 +396,6 @@ body {
     }
     to {
       transform: translateX(100%);
-    }
-  }
-
-  @media (min-width: 768px) {
-    .email-list-panel {
-      width: 40%;
-      max-width: 400px;
-      border-right: 1px solid hsl(var(--border) / 0.5);
-      padding-bottom: 0;
-    }
-    
-    .email-detail-panel {
-      display: flex;
-    }
-    
-    .email-detail-panel.show-mobile {
-      position: static;
-      inset: auto;
-      z-index: auto;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .email-list-panel {
-      width: 35%;
-      max-width: 450px;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .email-list-panel {
-      width: 30%;
-      max-width: 500px;
     }
   }
 
