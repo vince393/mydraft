@@ -25,6 +25,8 @@ import {
   Clock,
   Check,
   RotateCcw,
+  Plus,
+  FolderPlus,
 } from "lucide-react";
 
 
@@ -659,23 +661,65 @@ function MockupUndoSend() {
 }
 
 function MockupSmartFolders() {
-  const [activeFolder, setActiveFolder] = useState(0);
+  const [phase, setPhase] = useState<'idle' | 'dialog' | 'typing' | 'ai' | 'sorting' | 'done'>('idle');
+  const [typedChars, setTypedChars] = useState(0);
+  const [aiChars, setAiChars] = useState(0);
+  const [sortedEmails, setSortedEmails] = useState(0);
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.3 });
 
+  const folderName = "Client Projects";
+  const aiDescription = "Emails from clients about active projects, proposals, and deliverables";
+  const matchedEmails = [
+    { from: "S", name: "Sarah Chen", subject: "Updated proposal for Q4 campaign" },
+    { from: "D", name: "David Park", subject: "Deliverables timeline review" },
+    { from: "L", name: "Lisa Martinez", subject: "Project kickoff next Monday" },
+    { from: "J", name: "James Wilson", subject: "Budget approval for Phase 2" },
+  ];
+
+  const existingFolders = [
+    { name: 'Important', count: 3, icon: Star },
+    { name: 'Updates', count: 8, icon: Mail },
+    { name: 'Newsletters', count: 12, icon: Archive },
+  ];
+
   useEffect(() => {
-    if (!isVisible) return;
-    const interval = setInterval(() => {
-      setActiveFolder(prev => (prev + 1) % 4);
-    }, 2000);
-    return () => clearInterval(interval);
+    if (!isVisible) {
+      setPhase('idle');
+      setTypedChars(0);
+      setAiChars(0);
+      setSortedEmails(0);
+      return;
+    }
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    timers.push(setTimeout(() => setPhase('dialog'), 600));
+    timers.push(setTimeout(() => setPhase('typing'), 1200));
+
+    for (let i = 1; i <= folderName.length; i++) {
+      timers.push(setTimeout(() => setTypedChars(i), 1200 + i * 70));
+    }
+
+    const afterTyping = 1200 + folderName.length * 70 + 400;
+    timers.push(setTimeout(() => setPhase('ai'), afterTyping));
+
+    for (let i = 1; i <= aiDescription.length; i++) {
+      timers.push(setTimeout(() => setAiChars(i), afterTyping + 200 + i * 18));
+    }
+
+    const afterAi = afterTyping + 200 + aiDescription.length * 18 + 500;
+    timers.push(setTimeout(() => setPhase('sorting'), afterAi));
+
+    for (let i = 1; i <= matchedEmails.length; i++) {
+      timers.push(setTimeout(() => setSortedEmails(i), afterAi + i * 400));
+    }
+
+    timers.push(setTimeout(() => setPhase('done'), afterAi + matchedEmails.length * 400 + 600));
+
+    return () => timers.forEach(clearTimeout);
   }, [isVisible]);
 
-  const folders = [
-    { name: 'Important', count: 3, icon: Star, emails: ['David Park - Q4 Proposal', 'CEO - Company update', 'HR - Benefits enrollment'] },
-    { name: 'Updates', count: 8, icon: Mail, emails: ['GitHub - PR merged', 'Slack - New message', 'Jira - Sprint started'] },
-    { name: 'Newsletters', count: 12, icon: Archive, emails: ['TechCrunch - Daily digest', 'Morning Brew', 'Product Hunt - Top 5'] },
-    { name: 'Promotions', count: 24, icon: Zap, emails: ['Amazon - Sale alert', 'Figma - New features', 'Notion - Templates'] },
-  ];
+  const showDialog = phase !== 'idle';
+  const showNewFolder = phase === 'sorting' || phase === 'done';
 
   return (
     <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
@@ -689,44 +733,140 @@ function MockupSmartFolders() {
             <p className="text-[11px] text-muted-foreground/50">AI-sorted automatically</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/30">
-          <Sparkles className="w-3 h-3" />
-          Auto
+        <div 
+          className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 px-2 py-1 rounded-md border border-white/[0.08] transition-all duration-300"
+          style={{ opacity: phase === 'idle' ? 1 : 0.3 }}
+        >
+          <Plus className="w-3 h-3" />
+          New folder
         </div>
       </div>
+
       <div className="flex">
         <div className="w-40 border-r border-white/[0.06] p-2.5 space-y-0.5">
-          {folders.map((folder, i) => (
-            <div 
-              key={i}
-              className={`flex items-center gap-2 px-2.5 py-2 rounded-md cursor-pointer transition-all duration-200 ${
-                activeFolder === i ? 'bg-white/[0.06] border border-white/[0.10]' : 'border border-transparent hover:bg-white/[0.03]'
-              }`}
-              onClick={() => setActiveFolder(i)}
-            >
-              <folder.icon className={`w-3.5 h-3.5 ${activeFolder === i ? 'text-foreground/70' : 'text-muted-foreground/30'}`} />
-              <span className={`text-xs flex-1 ${activeFolder === i ? 'font-medium text-foreground' : 'text-muted-foreground/60'}`}>{folder.name}</span>
-              <span className={`text-[10px] ${activeFolder === i ? 'text-foreground/50' : 'text-muted-foreground/25'}`}>{folder.count}</span>
+          {existingFolders.map((folder, i) => (
+            <div key={i} className="flex items-center gap-2 px-2.5 py-2 rounded-md border border-transparent">
+              <folder.icon className="w-3.5 h-3.5 text-muted-foreground/30" />
+              <span className="text-xs text-muted-foreground/60 flex-1">{folder.name}</span>
+              <span className="text-[10px] text-muted-foreground/25">{folder.count}</span>
             </div>
           ))}
+
+          <div 
+            className="transition-all duration-500 ease-out overflow-hidden"
+            style={{ 
+              maxHeight: showNewFolder ? '40px' : '0px',
+              opacity: showNewFolder ? 1 : 0,
+            }}
+          >
+            <div className="flex items-center gap-2 px-2.5 py-2 rounded-md bg-rose-500/[0.08] border border-rose-500/20">
+              <FolderPlus className="w-3.5 h-3.5 text-rose-400/70" />
+              <span className="text-xs font-medium text-foreground flex-1 truncate">Client Projects</span>
+              <span className="text-[10px] text-rose-400/70">{sortedEmails}</span>
+            </div>
+          </div>
         </div>
-        <div className="flex-1 p-2.5 space-y-1 min-h-[170px]">
-          {folders[activeFolder].emails.map((email, i) => (
+
+        <div className="flex-1 p-4 min-h-[220px] relative">
+          {!showDialog && (
+            <div className="flex items-center justify-center h-full text-muted-foreground/20">
+              <div className="text-center">
+                <FolderKanban className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs">Select a folder</p>
+              </div>
+            </div>
+          )}
+
+          {showDialog && !showNewFolder && (
             <div 
-              key={`${activeFolder}-${i}`}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-md border border-white/[0.05] bg-white/[0.01] transition-all duration-300"
-              style={{
-                opacity: isVisible ? 1 : 0,
-                transform: isVisible ? 'translateX(0)' : 'translateX(8px)',
-                transitionDelay: `${i * 80}ms`,
+              className="transition-all duration-400 ease-out"
+              style={{ 
+                opacity: showDialog ? 1 : 0,
+                transform: showDialog ? 'scale(1)' : 'scale(0.95)',
               }}
             >
-              <div className="w-5 h-5 rounded-md bg-white/[0.06] flex items-center justify-center text-[9px] font-medium text-foreground/50">
-                {email.charAt(0)}
+              <div className="relative rounded-md p-[1px] bg-gradient-to-r from-rose-500/30 via-pink-500/20 to-rose-500/30">
+                <div className="rounded-[5px] bg-background p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FolderPlus className="w-4 h-4 text-rose-400" />
+                    <span className="text-sm font-semibold bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent">New Smart Folder</span>
+                  </div>
+
+                  <div className="mb-3">
+                    <span className="text-[10px] text-muted-foreground/40 uppercase tracking-wider block mb-1.5">Folder name</span>
+                    <div className="px-3 py-2 rounded-md border border-white/[0.10] bg-white/[0.02] min-h-[32px] flex items-center">
+                      <span className="text-sm text-foreground/80">
+                        {phase === 'dialog' ? '' : folderName.slice(0, typedChars)}
+                      </span>
+                      {(phase === 'typing' || phase === 'dialog') && (
+                        <span className="w-[2px] h-4 bg-foreground/60 ml-[1px] animate-pulse" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div 
+                    className="transition-all duration-500 ease-out overflow-hidden"
+                    style={{ 
+                      maxHeight: phase === 'ai' ? '100px' : '0px',
+                      opacity: phase === 'ai' ? 1 : 0,
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Sparkles className="w-3 h-3 text-rose-400/70" />
+                      <span className="text-[10px] text-rose-400/70 font-medium">AI description</span>
+                    </div>
+                    <div className="px-3 py-2 rounded-md border border-rose-500/15 bg-rose-500/[0.03]">
+                      <p className="text-xs text-foreground/60 leading-relaxed">
+                        {aiDescription.slice(0, aiChars)}
+                        {aiChars < aiDescription.length && (
+                          <span className="w-[2px] h-3 bg-rose-400/60 ml-[1px] inline-block animate-pulse" />
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <span className="text-xs text-foreground/60 truncate">{email}</span>
             </div>
-          ))}
+          )}
+
+          {showNewFolder && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-muted-foreground/40">
+                  {phase === 'done' ? `${matchedEmails.length} emails sorted` : 'Sorting emails...'}
+                </span>
+                {phase === 'sorting' && (
+                  <div className="w-3 h-3 border-2 border-white/[0.10] border-t-rose-400/60 rounded-full animate-spin" />
+                )}
+                {phase === 'done' && (
+                  <Check className="w-3 h-3 text-green-400" />
+                )}
+              </div>
+              {matchedEmails.map((email, i) => (
+                <div 
+                  key={i}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-md border border-white/[0.06] bg-white/[0.02] transition-all duration-400 ease-out"
+                  style={{
+                    opacity: sortedEmails > i ? 1 : 0,
+                    transform: sortedEmails > i ? 'translateY(0)' : 'translateY(12px)',
+                  }}
+                >
+                  <div className="w-6 h-6 rounded-md bg-white/[0.06] flex items-center justify-center text-[10px] font-semibold text-foreground/50">
+                    {email.from}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground/70">{email.name}</p>
+                    <p className="text-[11px] text-muted-foreground/40 truncate">{email.subject}</p>
+                  </div>
+                  {sortedEmails > i && (
+                    <div className="w-4 h-4 rounded-full bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+                      <Check className="w-2.5 h-2.5 text-rose-400" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
