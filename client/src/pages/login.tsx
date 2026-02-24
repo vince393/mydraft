@@ -256,6 +256,13 @@ export default function LoginPage() {
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        toast({
+          title: "Connection failed",
+          description: data.error || "Could not start sign in. Please try again.",
+          variant: "destructive",
+        });
+        setOauthConnecting(null);
       }
     } catch (error) {
       console.error("OAuth login failed:", error);

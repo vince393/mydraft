@@ -1880,10 +1880,10 @@ Return ONLY valid JSON, no other text.`;
         );
       }
 
-      res.redirect("/?connected=true");
+      res.redirect("/inbox?connected=true");
     } catch (error) {
       console.error("Error in Google OAuth callback:", error);
-      res.redirect("/?error=auth_failed");
+      res.redirect("/connect-email?error=auth_failed");
     }
   });
 
@@ -2031,10 +2031,10 @@ Return ONLY valid JSON, no other text.`;
         );
       }
 
-      res.redirect("/?connected=true");
+      res.redirect("/inbox?connected=true");
     } catch (error) {
       console.error("Error in Microsoft OAuth callback:", error);
-      res.redirect("/?error=auth_failed");
+      res.redirect("/connect-email?error=auth_failed");
     }
   });
 

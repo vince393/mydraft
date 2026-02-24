@@ -19,10 +19,14 @@ export function ConnectionBanner() {
 
   const connectMutation = useMutation({
     mutationFn: async (provider: string) => {
-      const response = await fetch(`/api/email/auth-url?provider=${provider}`);
+      const response = await fetch(`/api/email/auth-url?provider=${provider}`, {
+        credentials: 'include'
+      });
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Could not start connection");
       }
     },
   });

@@ -33,6 +33,9 @@ export default function ConnectEmailPage() {
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        console.error("No auth URL returned:", data);
+        setConnectingProvider(null);
       }
     } catch (error) {
       console.error("Failed to get auth URL:", error);
