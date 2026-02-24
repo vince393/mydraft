@@ -98,7 +98,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               <br />
               that works
               <br />
-              <span className="text-primary">for you.</span>
+              <span className="bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-400 bg-clip-text text-transparent">for you.</span>
             </h1>
             
             <p 
@@ -203,9 +203,9 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                   
                   <div className="mt-3 ml-10 pt-2 border-t border-white/[0.04]">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground/50">
-                      <Sparkles className="w-3 h-3 text-primary/50" />
+                      <Sparkles className="w-3 h-3 text-blue-400/70" />
                       <span>Suggested: "Thanks Sarah, morning works."</span>
-                      <span className="text-primary/60 font-medium ml-1">Use</span>
+                      <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent font-medium ml-1">Use</span>
                     </div>
                   </div>
                 </div>
@@ -300,7 +300,15 @@ function FeatureShowcase() {
   );
 }
 
-function FeatureSection({ badge, title, description, mockup, direction }: {
+const ACCENT_GRADIENTS: Record<string, string> = {
+  blue: 'from-blue-400 to-cyan-400',
+  purple: 'from-purple-400 to-fuchsia-400',
+  emerald: 'from-emerald-400 to-teal-400',
+  amber: 'from-amber-400 to-orange-400',
+  rose: 'from-rose-400 to-pink-400',
+};
+
+function FeatureSection({ badge, title, description, mockup, direction, accentColor = 'blue' }: {
   badge: string;
   title: string;
   description: string;
@@ -310,6 +318,7 @@ function FeatureSection({ badge, title, description, mockup, direction }: {
   'data-testid'?: string;
 }) {
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.15 });
+  const gradient = ACCENT_GRADIENTS[accentColor] || ACCENT_GRADIENTS.blue;
 
   return (
     <section className="py-20 sm:py-28 lg:py-36 px-5 sm:px-6 relative" ref={ref}>
@@ -325,7 +334,7 @@ function FeatureSection({ badge, title, description, mockup, direction }: {
               transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
-            <span className="text-xs font-medium tracking-widest uppercase text-muted-foreground/60 mb-4 block">
+            <span className={`text-xs font-semibold tracking-widest uppercase mb-4 block bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
               {badge}
             </span>
             <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold tracking-tight leading-[1.1] mb-5">
@@ -392,25 +401,27 @@ function MockupAIReply() {
             transform: showDraft ? 'translateY(0)' : 'translateY(16px)',
           }}
         >
-          <div className="p-4 rounded-md border border-primary/25 bg-primary/[0.04] relative">
-            <div className="flex items-center gap-1.5 mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-primary/70" />
-              <span className="text-[11px] font-medium text-primary/80">AI Draft</span>
-            </div>
-            <p className="text-sm text-foreground/80 leading-relaxed mb-4">
-              Hi Lisa, Thursday works perfectly for me. Same time is great. See you then!
-            </p>
-            <div className="flex items-center gap-2">
-              <Button size="sm" className="rounded-md text-xs gap-1.5" data-testid="mockup-send">
-                <Send className="w-3 h-3" />
-                Send
-              </Button>
-              <Button size="sm" variant="ghost" className="rounded-md text-xs" data-testid="mockup-edit">
-                Edit
-              </Button>
-              <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground/30">
-                <RotateCcw className="w-3 h-3" />
-                Regenerate
+          <div className="relative rounded-md p-[1px] bg-gradient-to-r from-blue-500/30 via-indigo-500/20 to-purple-500/30">
+            <div className="rounded-[5px] bg-blue-500/[0.05] p-4">
+              <div className="flex items-center gap-1.5 mb-3">
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-[11px] font-semibold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">AI Draft</span>
+              </div>
+              <p className="text-sm text-foreground/80 leading-relaxed mb-4">
+                Hi Lisa, Thursday works perfectly for me. Same time is great. See you then!
+              </p>
+              <div className="flex items-center gap-2">
+                <Button size="sm" className="rounded-md text-xs gap-1.5" data-testid="mockup-send">
+                  <Send className="w-3 h-3" />
+                  Send
+                </Button>
+                <Button size="sm" variant="ghost" className="rounded-md text-xs" data-testid="mockup-edit">
+                  Edit
+                </Button>
+                <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground/30">
+                  <RotateCcw className="w-3 h-3" />
+                  Regenerate
+                </div>
               </div>
             </div>
           </div>
@@ -436,10 +447,10 @@ function MockupThreadSummary() {
   }, [isVisible]);
 
   const summaryItems = [
-    { color: 'bg-green-500', text: 'Budget approved for Q4 marketing campaign', tag: 'Decision' },
-    { color: 'bg-amber-500', text: 'Waiting on vendor pricing by end of week', tag: 'Pending' },
-    { color: 'bg-blue-500', text: 'Launch date confirmed: November 15', tag: 'Confirmed' },
-    { color: 'bg-purple-500', text: 'Sarah to send revised timeline on Monday', tag: 'Action' },
+    { color: 'bg-green-500', text: 'Budget approved for Q4 marketing campaign', tag: 'Decision', tagColor: 'text-green-400/70 border-green-500/20' },
+    { color: 'bg-amber-500', text: 'Waiting on vendor pricing by end of week', tag: 'Pending', tagColor: 'text-amber-400/70 border-amber-500/20' },
+    { color: 'bg-blue-500', text: 'Launch date confirmed: November 15', tag: 'Confirmed', tagColor: 'text-blue-400/70 border-blue-500/20' },
+    { color: 'bg-purple-500', text: 'Sarah to send revised timeline on Monday', tag: 'Action', tagColor: 'text-purple-400/70 border-purple-500/20' },
   ];
 
   return (
@@ -470,7 +481,7 @@ function MockupThreadSummary() {
             <div className="flex-1 min-w-0">
               <p className="text-sm text-foreground/70">{item.text}</p>
             </div>
-            <span className="text-[10px] text-muted-foreground/40 px-2 py-0.5 rounded-md border border-white/[0.06] flex-shrink-0">{item.tag}</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-md border flex-shrink-0 ${item.tagColor}`}>{item.tag}</span>
           </div>
         ))}
         <div 
@@ -525,11 +536,13 @@ function MockupTranslation() {
             transform: showTranslation ? 'translateY(0)' : 'translateY(12px)',
           }}
         >
-          <div className="p-4 rounded-md border border-white/[0.10] bg-white/[0.03]">
-            <span className="text-[10px] text-foreground/50 mb-2 block uppercase tracking-wider">Translated</span>
-            <p className="text-sm text-foreground/80 leading-relaxed">
-              Mr. Yamada, I apologize for the intrusion on your busy schedule. Could you please confirm the details regarding next week's meeting? Thank you very much for your consideration.
-            </p>
+          <div className="relative rounded-md p-[1px] bg-gradient-to-r from-emerald-500/25 via-transparent to-teal-500/25">
+            <div className="rounded-[5px] bg-white/[0.03] p-4">
+              <span className="text-[10px] font-semibold mb-2 block uppercase tracking-wider bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Translated</span>
+              <p className="text-sm text-foreground/80 leading-relaxed">
+                Mr. Yamada, I apologize for the intrusion on your busy schedule. Could you please confirm the details regarding next week's meeting? Thank you very much for your consideration.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -540,11 +553,15 @@ function MockupTranslation() {
             transform: showTranslation ? 'translateY(0)' : 'translateY(8px)',
           }}
         >
-          <div className="p-3 rounded-md border border-white/[0.08] bg-white/[0.01] flex items-start gap-2.5">
-            <Globe className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[11px] font-medium text-foreground/60 mb-0.5">Cultural context</p>
-              <p className="text-[11px] text-muted-foreground/50">Formal keigo style detected. Use respectful honorifics and humble language in your reply.</p>
+          <div className="relative rounded-md p-[1px] bg-gradient-to-r from-emerald-500/40 via-teal-500/30 to-cyan-500/40">
+            <div className="rounded-[5px] bg-emerald-500/[0.06] backdrop-blur-sm px-3.5 py-3 flex items-start gap-2.5">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Globe className="w-3.5 h-3.5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-emerald-300/90 mb-0.5">Cultural context</p>
+                <p className="text-[11px] text-foreground/60">Formal keigo style detected. Use respectful honorifics and humble language in your reply.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -615,14 +632,16 @@ function MockupUndoSend() {
         )}
 
         {phase === 'undone' && (
-          <div className="p-4 rounded-md border border-green-500/20 bg-green-500/[0.04] transition-all duration-500">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-md bg-green-500/10 flex items-center justify-center">
-                <Check className="w-4 h-4 text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Message recalled</p>
-                <p className="text-[11px] text-muted-foreground/50">Moved back to drafts.</p>
+          <div className="relative rounded-md p-[1px] bg-gradient-to-r from-green-500/30 via-emerald-500/20 to-green-500/30 transition-all duration-500">
+            <div className="rounded-[5px] bg-green-500/[0.04] p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-gradient-to-br from-green-500/15 to-emerald-500/15 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-green-300/90">Message recalled</p>
+                  <p className="text-[11px] text-muted-foreground/50">Moved back to drafts.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -996,7 +1015,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
         >
           Ready to upgrade
           <br />
-          <span className="text-primary">your inbox?</span>
+          <span className="bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-400 bg-clip-text text-transparent">your inbox?</span>
         </h2>
         <p 
           className="text-lg text-muted-foreground/60 mb-10 transition-all duration-1000 ease-out delay-150"
