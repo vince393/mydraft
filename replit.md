@@ -192,3 +192,7 @@ This ensures that even database administrators cannot read user email content, m
   - API: `/api/referrals/stats` (GET), `/api/referrals/generate-code` (POST)
   - Settings page "Referrals" tab: "Give Pro, Get Pro" messaging, copy link, progress bar (X/2), stats cards
 - **Pricing Page Fix**: Grid corrected from 4 to 3 columns, centered with max-width
+- **Custom Checkout Page**: Redesigned checkout with frosted glass dark theme, embedded Stripe Elements card form, branded layout with logo, plan summary sidebar, trust badges (SSL/PCI/secure payment), savings percentage for annual plans
+- **OAuth Login Flow Fix**: Google/Microsoft sign-in on login page now only creates/logs in the user account without auto-connecting their email. Users go through normal onboarding and email connection flow separately
+- **Microsoft Publisher Verification**: Added `/.well-known/microsoft-identity-association.json` route for domain verification
+- **Email List Search Bar**: Desktop search bar now stretches full width across the column instead of being fixed-width centered; refreshing and syncing indicators no longer overlap

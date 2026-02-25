@@ -4,47 +4,49 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap } from "lucide-react";
+import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
 import type { User } from "@shared/schema";
 
 interface AuthResponse {
   user: User | null;
 }
 
-const planDetails: Record<string, { name: string; description: string; features: string[] }> = {
+const planDetails: Record<string, { name: string; description: string; features: string[]; accent: string }> = {
   student: {
     name: "Student",
     description: "50% student discount",
     features: ["Unlimited AI replies", "Email humanizer", "Tone customization", "Priority support"],
+    accent: "blue",
   },
   pro: {
     name: "Pro",
     description: "For professionals who need more",
     features: ["Personal writing style memory", "100 AI emails per day", "Advanced automation", "API access"],
+    accent: "blue",
   },
   business: {
     name: "Business",
     description: "For teams and power users",
     features: ["Unlimited AI assistance", "Voice assistant", "Custom AI training", "Dedicated support"],
+    accent: "amber",
   },
 };
 
-const pricing: Record<string, Record<string, { amount: number; period: string }>> = {
+const pricing: Record<string, Record<string, { amount: number; period: string; monthly: number }>> = {
   student: {
-    monthly: { amount: 5, period: "/month" },
-    annual: { amount: 45, period: "/year" },
+    monthly: { amount: 5, period: "/month", monthly: 5 },
+    annual: { amount: 45, period: "/year", monthly: 3.75 },
   },
   pro: {
-    monthly: { amount: 10, period: "/month" },
-    annual: { amount: 99, period: "/year" },
+    monthly: { amount: 10, period: "/month", monthly: 10 },
+    annual: { amount: 99, period: "/year", monthly: 8.25 },
   },
   business: {
-    monthly: { amount: 29, period: "/month" },
-    annual: { amount: 299, period: "/year" },
+    monthly: { amount: 29, period: "/month", monthly: 29 },
+    annual: { amount: 299, period: "/year", monthly: 24.92 },
   },
 };
 
@@ -55,6 +57,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [cardComplete, setCardComplete] = useState(false);
 
   const setupIntentMutation = useMutation({
     mutationFn: async () => {
@@ -151,9 +154,12 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
 
   if (setupError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-destructive mb-4">{setupError}</p>
-        <Button onClick={handleRetrySetup} data-testid="button-retry-setup">
+      <div className="text-center py-12">
+        <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+          <CreditCard className="w-5 h-5 text-destructive" />
+        </div>
+        <p className="text-sm text-destructive mb-4">{setupError}</p>
+        <Button onClick={handleRetrySetup} variant="outline" data-testid="button-retry-setup">
           Try again
         </Button>
       </div>
@@ -164,71 +170,89 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
   const priceInfo = pricing[plan]?.[interval];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium mb-2 block">Card details</label>
-          <div className="p-4 border border-border rounded-lg bg-background">
-            <CardElement
-              options={{
-                style: {
-                  base: {
-                    fontSize: "16px",
-                    color: "hsl(var(--foreground))",
-                    "::placeholder": {
-                      color: "hsl(var(--muted-foreground))",
-                    },
-                    iconColor: "hsl(var(--primary))",
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div>
+        <label className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-2.5 block">Payment method</label>
+        <div 
+          className="p-4 rounded-xl transition-all duration-200"
+          style={{
+            background: "rgba(255,255,255,0.03)",
+            border: cardError ? "1px solid rgba(239,68,68,0.4)" : cardComplete ? "1px solid rgba(59,130,246,0.3)" : "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.1)",
+          }}
+        >
+          <CardElement
+            options={{
+              style: {
+                base: {
+                  fontSize: "16px",
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                  color: "#e2e8f0",
+                  letterSpacing: "0.025em",
+                  "::placeholder": {
+                    color: "#64748b",
                   },
-                  invalid: {
-                    color: "hsl(var(--destructive))",
-                    iconColor: "hsl(var(--destructive))",
-                  },
+                  iconColor: "#94a3b8",
                 },
-                hidePostalCode: false,
-              }}
-              onChange={(e) => {
-                if (e.error) {
-                  setCardError(e.error.message);
-                } else {
-                  setCardError(null);
-                }
-              }}
-            />
-          </div>
-          {cardError && (
-            <p className="text-sm text-destructive mt-2">{cardError}</p>
-          )}
+                invalid: {
+                  color: "#f87171",
+                  iconColor: "#f87171",
+                },
+              },
+              hidePostalCode: false,
+            }}
+            onChange={(e) => {
+              setCardComplete(e.complete);
+              if (e.error) {
+                setCardError(e.error.message);
+              } else {
+                setCardError(null);
+              }
+            }}
+          />
         </div>
+        {cardError && (
+          <p className="text-xs text-destructive mt-2 flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-destructive flex-shrink-0" />
+            {cardError}
+          </p>
+        )}
       </div>
 
-      <div className="p-4 rounded-lg bg-muted/50 border border-border">
+      <div 
+        className="rounded-xl p-4"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-muted-foreground">Plan</span>
-          <span className="font-medium">{planInfo?.name}</span>
+          <span className="text-sm text-muted-foreground/60">Plan</span>
+          <span className="text-sm font-medium">{planInfo?.name}</span>
         </div>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-muted-foreground">Billing</span>
-          <span className="font-medium capitalize">{interval}</span>
+          <span className="text-sm text-muted-foreground/60">Billing cycle</span>
+          <span className="text-sm font-medium capitalize">{interval}</span>
         </div>
-        <div className="h-px bg-border my-3" />
+        <div className="h-px my-3" style={{ background: "rgba(255,255,255,0.06)" }} />
         <div className="flex items-center justify-between">
-          <span className="font-medium">Due today</span>
+          <span className="text-sm font-medium">Due today</span>
           <div className="text-right">
-            <span className="text-lg font-bold text-emerald-500">$0.00</span>
-            <p className="text-xs text-muted-foreground">14-day free trial</p>
+            <span className="text-xl font-bold text-emerald-400">$0.00</span>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          After your trial, you'll be charged ${priceInfo?.amount}{priceInfo?.period}
-        </p>
+        <div className="flex items-center gap-1.5 mt-2">
+          <Clock className="w-3 h-3 text-muted-foreground/40" />
+          <p className="text-xs text-muted-foreground/50">
+            After 14-day trial: ${priceInfo?.amount}{priceInfo?.period}
+          </p>
+        </div>
       </div>
 
       <Button
         type="submit"
-        className="w-full"
-        size="lg"
-        disabled={!stripe || isProcessing || setupIntentMutation.isPending}
+        className="w-full h-12 text-base font-medium"
+        disabled={!stripe || isProcessing || setupIntentMutation.isPending || !cardComplete}
         data-testid="button-complete-payment"
       >
         {isProcessing || setupIntentMutation.isPending ? (
@@ -239,21 +263,14 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
         ) : (
           <>
             <Lock className="w-4 h-4 mr-2" />
-            Start 14-day free trial
+            Start free trial
           </>
         )}
       </Button>
 
-      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <Shield className="w-3 h-3" />
-          <span>256-bit encryption</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Lock className="w-3 h-3" />
-          <span>Secure checkout</span>
-        </div>
-      </div>
+      <p className="text-[11px] text-center text-muted-foreground/40 leading-relaxed">
+        By subscribing, you agree to our terms. Your card will be charged ${priceInfo?.amount}{priceInfo?.period} after the trial period unless you cancel.
+      </p>
     </form>
   );
 }
@@ -309,91 +326,156 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Invalid plan</h1>
-          <Button onClick={() => setLocation("/pricing")}>View plans</Button>
+          <Button onClick={() => setLocation("/pricing")} data-testid="button-view-plans">View plans</Button>
         </div>
       </div>
     );
   }
 
+  const savingsPercent = interval === "annual" ? Math.round((1 - priceInfo.monthly / pricing[plan].monthly.amount) * 100) : 0;
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <button
-          onClick={() => window.history.back()}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(59,130,246,0.06) 0%, transparent 70%)",
+      }} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
-          <div className="order-2 lg:order-1">
-            <div className="lg:sticky lg:top-8">
-              <h1 className="text-3xl font-bold mb-2">Complete your subscription</h1>
-              <p className="text-muted-foreground mb-8">Start your 14-day free trial. Cancel anytime.</p>
+      <div className="relative max-w-5xl mx-auto px-4 py-6 sm:py-10">
+        <div className="flex items-center justify-between mb-8 sm:mb-12">
+          <button
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2 text-sm text-muted-foreground/60 hover:text-foreground transition-colors"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          <img src={logoPath} alt="MyDraft" className="h-6 opacity-60" />
+        </div>
 
-              {stripePromise ? (
-                <Elements stripe={stripePromise}>
-                  <CheckoutForm plan={plan} interval={interval} onSuccess={handleSuccess} />
-                </Elements>
-              ) : (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
+          <div className="lg:col-span-3 order-2 lg:order-1">
+            <div className="lg:sticky lg:top-10">
+              <div className="mb-8">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">Start your free trial</h1>
+                <p className="text-muted-foreground/60 text-sm">No charge for 14 days. Cancel anytime with one click.</p>
+              </div>
+
+              <div 
+                className="rounded-2xl p-6 sm:p-8 mb-6"
+                style={{
+                  background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.05)",
+                }}
+              >
+                {stripePromise ? (
+                  <Elements stripe={stripePromise}>
+                    <CheckoutForm plan={plan} interval={interval} onSuccess={handleSuccess} />
+                  </Elements>
+                ) : (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/40" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground/30">
+                <div className="flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>256-bit SSL</span>
                 </div>
-              )}
+                <div className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>PCI compliant</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Secure payment</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="order-1 lg:order-2">
-            <Card className="border-2 border-primary bg-gradient-to-br from-primary/5 via-background to-blue-500/5">
-              <CardContent className="p-6 sm:p-8">
-                <Badge className="bg-primary text-primary-foreground mb-4">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  14-day free trial
-                </Badge>
-
-                <h2 className="text-2xl sm:text-3xl font-bold mb-1">{planInfo.name}</h2>
-                <p className="text-muted-foreground mb-6">{planInfo.description}</p>
-
-                <div className="flex items-baseline gap-2 mb-6">
-                  <span className="text-4xl sm:text-5xl font-bold">${priceInfo.amount}</span>
-                  <span className="text-muted-foreground text-lg">{priceInfo.period}</span>
+          <div className="lg:col-span-2 order-1 lg:order-2">
+            <div 
+              className="rounded-2xl overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                boxShadow: "0 12px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06)",
+              }}
+            >
+              <div className="p-6 sm:p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    {plan === "business" ? (
+                      <Zap className="w-5 h-5 text-amber-400" />
+                    ) : (
+                      <Sparkles className="w-5 h-5 text-primary" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">{planInfo.name}</h2>
+                    <p className="text-xs text-muted-foreground/50">{planInfo.description}</p>
+                  </div>
                 </div>
 
-                <div className="space-y-3 mb-8">
+                <div className="flex items-baseline gap-1.5 mb-1">
+                  <span className="text-4xl font-bold tracking-tight">${priceInfo.amount}</span>
+                  <span className="text-muted-foreground/50 text-sm">{priceInfo.period}</span>
+                </div>
+                {interval === "annual" && savingsPercent > 0 && (
+                  <p className="text-xs text-emerald-400/70 mb-6">
+                    Save {savingsPercent}% vs monthly
+                  </p>
+                )}
+                {interval === "monthly" && (
+                  <div className="mb-6" />
+                )}
+
+                <div className="space-y-3">
                   {planInfo.features.map((feature) => (
-                    <div key={feature} className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Check className="w-3 h-3 text-primary" />
+                    <div key={feature} className="flex items-center gap-2.5">
+                      <div className="w-4 h-4 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-2.5 h-2.5 text-emerald-400" />
                       </div>
-                      <span>{feature}</span>
+                      <span className="text-sm text-foreground/70">{feature}</span>
                     </div>
                   ))}
                 </div>
+              </div>
 
-                <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CreditCard className="w-4 h-4 text-emerald-500" />
-                    <span className="font-medium text-emerald-600 dark:text-emerald-400">No charge today</span>
+              <div 
+                className="px-6 sm:px-8 py-4"
+                style={{ 
+                  background: "rgba(16, 185, 129, 0.04)",
+                  borderTop: "1px solid rgba(16, 185, 129, 0.1)",
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-3 h-3 text-emerald-400" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Your card won't be charged until your 14-day trial ends. Cancel anytime with one click.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="mt-6 p-4 rounded-lg border border-border bg-card">
-              <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-primary mt-0.5" />
-                <div>
-                  <p className="font-medium mb-1">Your payment is secure</p>
-                  <p className="text-sm text-muted-foreground">
-                    We use Stripe for secure payment processing. Your card information is encrypted and never stored on our servers.
-                  </p>
+                  <div>
+                    <p className="text-sm font-medium text-emerald-400/80">14-day free trial</p>
+                    <p className="text-xs text-muted-foreground/40">No charge until trial ends</p>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div 
+              className="mt-4 rounded-xl p-4 flex items-start gap-3"
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <Shield className="w-4 h-4 text-muted-foreground/30 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-muted-foreground/40 leading-relaxed">
+                Your payment information is encrypted and processed securely. We never store your card details on our servers.
+              </p>
             </div>
           </div>
         </div>
