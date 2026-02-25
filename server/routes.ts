@@ -336,6 +336,16 @@ export async function registerRoutes(
   registerAudioRoutes(app);
   registerImageRoutes(app);
 
+  app.get("/.well-known/microsoft-identity-association.json", (_req, res) => {
+    res.json({
+      associatedApplications: [
+        {
+          applicationId: "ab059e01-544a-4b21-a44f-f886a18aed60"
+        }
+      ]
+    });
+  });
+
   // Step 1: Initiate registration - sends verification email
   app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {
