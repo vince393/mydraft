@@ -279,9 +279,9 @@ export default function CheckoutPage() {
     retry: false,
   });
 
-  const { data: keyData } = useQuery<{ publishableKey: string }>({
+  const { data: keyData, isError: keyError, error: keyErrorDetails } = useQuery<{ publishableKey: string }>({
     queryKey: ["/api/stripe/publishable-key"],
-    retry: false,
+    retry: 2,
   });
 
   useEffect(() => {
@@ -363,6 +363,21 @@ export default function CheckoutPage() {
                   <Elements stripe={stripePromise}>
                     <CheckoutForm plan={plan} interval={interval} onSuccess={handleSuccess} />
                   </Elements>
+                ) : keyError ? (
+                  <div className="text-center py-12">
+                    <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+                      <CreditCard className="w-5 h-5 text-destructive" />
+                    </div>
+                    <p className="text-sm font-medium mb-1">Payment system unavailable</p>
+                    <p className="text-xs text-muted-foreground/50 mb-4">Unable to load the payment form. Please try again.</p>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => window.location.reload()}
+                      data-testid="button-retry-checkout"
+                    >
+                      Retry
+                    </Button>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center py-16">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/40" />

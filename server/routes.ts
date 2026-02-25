@@ -8063,8 +8063,12 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { getStripePublishableKey } = await import("./stripeClient");
       const publishableKey = await getStripePublishableKey();
       res.json({ publishableKey });
-    } catch (error) {
-      console.error("Error getting Stripe key:", error);
+    } catch (error: any) {
+      console.error("Error getting Stripe key:", error?.message || error);
+      console.error("REPLIT_CONNECTORS_HOSTNAME:", process.env.REPLIT_CONNECTORS_HOSTNAME ? "set" : "NOT SET");
+      console.error("REPL_IDENTITY:", process.env.REPL_IDENTITY ? "set" : "NOT SET");
+      console.error("WEB_REPL_RENEWAL:", process.env.WEB_REPL_RENEWAL ? "set" : "NOT SET");
+      console.error("REPLIT_DEPLOYMENT:", process.env.REPLIT_DEPLOYMENT);
       res.status(500).json({ error: "Failed to get Stripe configuration" });
     }
   });

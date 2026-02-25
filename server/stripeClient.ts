@@ -2,6 +2,31 @@ import Stripe from 'stripe';
 
 let connectionSettings: any;
 
+async function fetchConnectionForEnvironment(hostname: string, xReplitToken: string, environment: string) {
+  const url = new URL(`https://${hostname}/api/v2/connection`);
+  url.searchParams.set('include_secrets', 'true');
+  url.searchParams.set('connector_names', 'stripe');
+  url.searchParams.set('environment', environment);
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      'Accept': 'application/json',
+      'X_REPLIT_TOKEN': xReplitToken
+    }
+  });
+
+  const data = await response.json();
+  const settings = data.items?.[0];
+
+  if (settings?.settings?.publishable && settings?.settings?.secret) {
+    return {
+      publishableKey: settings.settings.publishable,
+      secretKey: settings.settings.secret,
+    };
+  }
+  return null;
+}
+
 async function getCredentials() {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   
@@ -19,34 +44,21 @@ async function getCredentials() {
     throw new Error('X_REPLIT_TOKEN not found for repl/depl');
   }
 
-  const connectorName = 'stripe';
   const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
-  const targetEnvironment = isProduction ? 'production' : 'development';
+  const primaryEnv = isProduction ? 'production' : 'development';
 
-  const url = new URL(`https://${hostname}/api/v2/connection`);
-  url.searchParams.set('include_secrets', 'true');
-  url.searchParams.set('connector_names', connectorName);
-  url.searchParams.set('environment', targetEnvironment);
+  let credentials = await fetchConnectionForEnvironment(hostname, xReplitToken, primaryEnv);
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      'Accept': 'application/json',
-      'X_REPLIT_TOKEN': xReplitToken
-    }
-  });
-
-  const data = await response.json();
-  
-  connectionSettings = data.items?.[0];
-
-  if (!connectionSettings || (!connectionSettings.settings.publishable || !connectionSettings.settings.secret)) {
-    throw new Error(`Stripe ${targetEnvironment} connection not found`);
+  if (!credentials && isProduction) {
+    console.log('Stripe production keys not found, falling back to development keys');
+    credentials = await fetchConnectionForEnvironment(hostname, xReplitToken, 'development');
   }
 
-  return {
-    publishableKey: connectionSettings.settings.publishable,
-    secretKey: connectionSettings.settings.secret,
-  };
+  if (!credentials) {
+    throw new Error(`Stripe connection not found for ${primaryEnv}${isProduction ? ' or development' : ''}`);
+  }
+
+  return credentials;
 }
 
 export async function getUncachableStripeClient() {
