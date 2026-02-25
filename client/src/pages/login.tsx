@@ -6,9 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft, Sparkles, Zap, Shield, Clock, Building2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft, Sparkles, Zap, Shield, Clock, Building2, Globe } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
+
+const GlassCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`relative backdrop-blur-2xl bg-white/[0.03] border border-white/[0.06] rounded-2xl shadow-2xl shadow-black/20 ${className}`}>
+    {children}
+  </div>
+);
 
 interface AuthResponse {
   user: { id: string; email: string; plan?: string; onboardingCompleted?: boolean; emailVerified?: boolean; twoFactorEnabled?: boolean } | null;
@@ -293,105 +299,43 @@ export default function LoginPage() {
   const isVerifying = verifyRegistrationMutation.isPending || verify2FAMutation.isPending;
 
   const features = [
-    {
-      icon: Sparkles,
-      title: "AI-Powered Replies",
-      description: "Draft perfect responses in seconds with intelligent AI assistance"
-    },
-    {
-      icon: Zap,
-      title: "Lightning Fast",
-      description: "Process your inbox 10x faster with smart automation"
-    },
-    {
-      icon: Shield,
-      title: "Enterprise Security",
-      description: "Bank-level encryption keeps your emails safe and private"
-    },
-    {
-      icon: Clock,
-      title: "Save 2+ Hours Daily",
-      description: "Reclaim your time with automated inbox management"
-    }
+    { icon: Sparkles, label: "AI-Powered Replies" },
+    { icon: Zap, label: "Lightning Fast" },
+    { icon: Shield, label: "Enterprise Security" },
+    { icon: Globe, label: "50+ Languages" },
   ];
 
-  // Hero section component
-  const HeroSection = () => (
-    <div className="hidden lg:flex lg:flex-1 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Animated background elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-      </div>
-      
-      {/* Grid pattern overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
-      
-      <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
-        {/* Logo */}
-        <div className="mb-12">
-          <img src={logoPath} alt="MyDraft" className="h-10 w-auto" />
-        </div>
-        
-        {/* Main headline */}
-        <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight mb-6">
-          Your inbox,{" "}
-          <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
-            reimagined
-          </span>
-        </h1>
-        
-        <p className="text-lg xl:text-xl text-slate-300 mb-12 max-w-lg leading-relaxed">
-          Stop drowning in emails. Let AI handle the heavy lifting while you focus on what matters most.
-        </p>
-        
-        {/* Feature list */}
-        <div className="space-y-6">
-          {features.map((feature, index) => (
-            <div 
-              key={index} 
-              className="flex items-start gap-4 group"
-            >
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:border-white/20 transition-all duration-300">
-                <feature.icon className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <h3 className="text-white font-medium mb-1">{feature.title}</h3>
-                <p className="text-slate-400 text-sm">{feature.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+  const BackgroundDecor = () => (
+    <>
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(59,130,246,0.12),transparent)]" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_60%_40%_at_80%_100%,rgba(139,92,246,0.06),transparent)]" />
+      <div className="fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:72px_72px]" />
+    </>
   );
 
   if (isLoggedIn) {
     return (
-      <div className="min-h-screen flex">
-        <HeroSection />
-        <div className="flex-1 flex items-center justify-center bg-background px-6 py-12">
-          <div className="w-full max-w-md">
-            <div className="text-center mb-8">
-              <div className="lg:hidden mb-8">
-                <img src={logoPath} alt="MyDraft" className="h-8 w-auto mx-auto" />
-              </div>
-              <h2 className="text-2xl font-semibold text-foreground mb-2">Welcome back!</h2>
-              <p className="text-muted-foreground">
-                You're signed in as {authData?.user?.email}
-              </p>
-            </div>
-            <div className="space-y-4">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <BackgroundDecor />
+        <div className="relative z-10 w-full max-w-sm">
+          <div className="text-center mb-8">
+            <img src={logoPath} alt="MyDraft" className="h-8 w-auto mx-auto mb-8" />
+            <h2 className="text-2xl font-semibold text-foreground mb-2">Welcome back!</h2>
+            <p className="text-muted-foreground text-sm">
+              You're signed in as {authData?.user?.email}
+            </p>
+          </div>
+          <GlassCard className="p-6">
+            <div className="space-y-3">
               <Link href="/inbox">
-                <Button className="w-full gap-2 h-12 text-base" data-testid="button-go-to-inbox">
+                <Button className="w-full gap-2" data-testid="button-go-to-inbox">
                   Go to Inbox
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
               <Button
                 variant="outline"
-                className="w-full gap-2 h-12"
+                className="w-full gap-2 border-white/10 bg-white/[0.02] hover:bg-white/[0.06]"
                 onClick={() => logoutMutation.mutate()}
                 disabled={logoutMutation.isPending}
                 data-testid="button-sign-out"
@@ -404,7 +348,7 @@ export default function LoginPage() {
                 Sign out
               </Button>
             </div>
-          </div>
+          </GlassCard>
         </div>
       </div>
     );
@@ -412,33 +356,30 @@ export default function LoginPage() {
 
   if (authStep === "verify-registration" || authStep === "verify-2fa") {
     return (
-      <div className="min-h-screen flex">
-        <HeroSection />
-        <div className="flex-1 flex items-center justify-center bg-background px-6 py-12">
-          <div className="w-full max-w-md">
-            <div className="lg:hidden mb-8 text-center">
-              <img src={logoPath} alt="MyDraft" className="h-8 w-auto mx-auto" />
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <BackgroundDecor />
+        <div className="relative z-10 w-full max-w-sm">
+          <div className="text-center mb-8">
+            <img src={logoPath} alt="MyDraft" className="h-8 w-auto mx-auto mb-8" />
+            <div className="mx-auto mb-4 w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <Mail className="w-6 h-6 text-blue-400" />
             </div>
-            
-            <div className="text-center mb-8">
-              <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Mail className="w-7 h-7 text-primary" />
-              </div>
-              <h2 className="text-2xl font-semibold text-foreground mb-2">
-                {authStep === "verify-registration" ? "Verify Your Email" : "Two-Factor Authentication"}
-              </h2>
-              <p className="text-muted-foreground">
-                We've sent a 6-digit code to<br />
-                <span className="font-medium text-foreground">{pendingEmail}</span>
-              </p>
-              <p className="text-sm text-muted-foreground/70 mt-2">
-                It may take a few minutes to arrive. Check your spam folder if you don't see it.
-              </p>
-            </div>
-            
-            <form onSubmit={handleVerifyCode} className="space-y-6">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              {authStep === "verify-registration" ? "Verify Your Email" : "Two-Factor Authentication"}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              We've sent a 6-digit code to<br />
+              <span className="font-medium text-foreground">{pendingEmail}</span>
+            </p>
+            <p className="text-xs text-muted-foreground/60 mt-2">
+              It may take a few minutes. Check your spam folder if needed.
+            </p>
+          </div>
+
+          <GlassCard className="p-6">
+            <form onSubmit={handleVerifyCode} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="code" className="text-sm font-medium">Verification Code</Label>
+                <Label htmlFor="code" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Verification Code</Label>
                 <Input
                   id="code"
                   type="text"
@@ -452,16 +393,16 @@ export default function LoginPage() {
                     setVerificationCode(value);
                     if (errors.code) setErrors({});
                   }}
-                  className="text-center text-2xl tracking-[0.5em] h-14 font-mono"
+                  className="text-center text-2xl tracking-[0.5em] h-14 font-mono bg-white/[0.03] border-white/10"
                   autoFocus
                   data-testid="input-verification-code"
                 />
                 {errors.code && <p className="text-sm text-destructive text-center">{errors.code}</p>}
               </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-base"
+
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isVerifying || verificationCode.length !== 6}
                 data-testid="button-verify-code"
               >
@@ -469,31 +410,28 @@ export default function LoginPage() {
                 Verify Email
               </Button>
             </form>
+          </GlassCard>
 
-            <div className="mt-8 space-y-4">
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleResendCode}
-                  disabled={resendCodeMutation.isPending}
-                  className="text-sm text-primary hover:underline disabled:opacity-50"
-                  data-testid="button-resend-code"
-                >
-                  {resendCodeMutation.isPending ? "Sending..." : "Didn't receive a code? Resend"}
-                </button>
-              </div>
-              
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
-                  data-testid="button-back-to-login"
-                >
-                  <ArrowLeft className="w-3 h-3" />
-                  Back to {authStep === "verify-registration" ? "sign up" : "sign in"}
-                </button>
-              </div>
+          <div className="mt-6 space-y-3 text-center">
+            <button
+              type="button"
+              onClick={handleResendCode}
+              disabled={resendCodeMutation.isPending}
+              className="text-sm text-blue-400 hover:text-blue-300 disabled:opacity-50 transition-colors"
+              data-testid="button-resend-code"
+            >
+              {resendCodeMutation.isPending ? "Sending..." : "Didn't receive a code? Resend"}
+            </button>
+            <div>
+              <button
+                type="button"
+                onClick={handleBack}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                data-testid="button-back-to-login"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                Back to {authStep === "verify-registration" ? "sign up" : "sign in"}
+              </button>
             </div>
           </div>
         </div>
@@ -502,42 +440,31 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      <HeroSection />
-      
-      <div className="flex-1 flex items-center justify-center bg-background px-6 py-12">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden mb-8 text-center">
-            <img src={logoPath} alt="MyDraft" className="h-8 w-auto mx-auto mb-6" />
-            <h1 className="text-2xl font-bold text-foreground mb-2">
-              {isRegister ? "Start your free trial" : "Welcome back"}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {isRegister ? "No credit card required" : "Sign in to continue to your inbox"}
-            </p>
-          </div>
-          
-          {/* Desktop header */}
-          <div className="hidden lg:block mb-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-2">
-              {isRegister ? "Create your account" : "Welcome back"}
-            </h2>
-            <p className="text-muted-foreground">
-              {isRegister ? "Start your 14-day free trial. No credit card required." : "Sign in to continue to your inbox"}
-            </p>
-          </div>
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+      <BackgroundDecor />
 
-          <div className="space-y-3 mb-6">
+      <div className="relative z-10 w-full max-w-sm">
+        <div className="text-center mb-8">
+          <img src={logoPath} alt="MyDraft" className="h-8 w-auto mx-auto mb-6" />
+          <h1 className="text-2xl font-semibold text-foreground mb-2">
+            {isRegister ? "Create your account" : "Welcome back"}
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            {isRegister ? "14-day free trial. No credit card required." : "Sign in to continue to your inbox"}
+          </p>
+        </div>
+
+        <GlassCard className="p-6">
+          <div className="space-y-3 mb-5">
             <Button
               variant="outline"
-              className="w-full h-12 gap-3 text-sm font-medium"
+              className="w-full gap-3 text-sm font-medium border-white/10 bg-white/[0.02] hover:bg-white/[0.06]"
               onClick={() => handleOAuthLogin('google')}
               disabled={oauthConnecting !== null || isPending}
               data-testid="button-oauth-google"
             >
               {oauthConnecting === 'google' ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <SiGoogle className="w-4 h-4" />
               )}
@@ -545,77 +472,73 @@ export default function LoginPage() {
             </Button>
             <Button
               variant="outline"
-              className="w-full h-12 gap-3 text-sm font-medium"
+              className="w-full gap-3 text-sm font-medium border-white/10 bg-white/[0.02] hover:bg-white/[0.06]"
               onClick={() => handleOAuthLogin('microsoft')}
               disabled={oauthConnecting !== null || isPending}
               data-testid="button-oauth-microsoft"
             >
               {oauthConnecting === 'microsoft' ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Building2 className="w-5 h-5" />
+                <Building2 className="w-4 h-4" />
               )}
               {isRegister ? "Sign up with Microsoft" : "Continue with Microsoft"}
             </Button>
           </div>
 
-          <div className="relative mb-6">
+          <div className="relative mb-5">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
+              <div className="w-full border-t border-white/[0.06]" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">or continue with email</span>
+              <span className="bg-transparent px-3 text-muted-foreground/50 backdrop-blur-sm">or</span>
             </div>
           </div>
-          
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                autoComplete={isRegister ? "email" : "email"}
-                className="h-12"
+                autoComplete="email"
+                className="bg-white/[0.03] border-white/10 focus:border-blue-500/40"
                 data-testid={isRegister ? "input-register-email" : "input-login-email"}
               />
-              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">Password</Label>
               <div className="relative flex items-center">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder={isRegister ? "Create a strong password" : "Enter your password"}
+                  placeholder={isRegister ? "Min. 8 characters" : "Enter your password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete={isRegister ? "new-password" : "current-password"}
-                  className="pr-10 h-12"
+                  className="pr-10 bg-white/[0.03] border-white/10 focus:border-blue-500/40"
                   data-testid={isRegister ? "input-register-password" : "input-login-password"}
                 />
                 <button
                   type="button"
-                  className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 text-muted-foreground/50 hover:text-foreground transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
                   data-testid="button-toggle-password-visibility"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
             </div>
-            
+
             {isRegister && (
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword" className="text-xs font-medium text-muted-foreground">Confirm Password</Label>
                 <div className="relative flex items-center">
                   <Input
                     id="confirmPassword"
@@ -624,29 +547,25 @@ export default function LoginPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     autoComplete="new-password"
-                    className="pr-10 h-12"
+                    className="pr-10 bg-white/[0.03] border-white/10 focus:border-blue-500/40"
                     data-testid="input-register-confirm-password"
                   />
                   <button
                     type="button"
-                    className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 text-muted-foreground/50 hover:text-foreground transition-colors"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     data-testid="button-toggle-confirm-password-visibility"
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
+                {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
               </div>
             )}
-            
-            <Button 
-              type="submit" 
-              className="w-full h-12 text-base font-medium"
+
+            <Button
+              type="submit"
+              className="w-full font-medium"
               disabled={isPending}
               data-testid={isRegister ? "button-register-submit" : "button-login-submit"}
             >
@@ -655,47 +574,43 @@ export default function LoginPage() {
               {!isPending && <ArrowRight className="ml-2 w-4 h-4" />}
             </Button>
           </form>
+        </GlassCard>
 
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={handleToggleMode}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="button-toggle-auth-mode"
-            >
-              {isRegister ? (
-                <>Already have an account? <span className="text-primary font-medium">Sign in</span></>
-              ) : (
-                <>Don't have an account? <span className="text-primary font-medium">Start free trial</span></>
-              )}
-            </button>
-          </div>
-
-          <p className="mt-8 text-xs text-center text-muted-foreground leading-relaxed">
-            By {isRegister ? "creating an account" : "signing in"}, you agree to our{" "}
-            <Link href="/terms" className="underline hover:text-foreground transition-colors">
-              Terms of Service
-            </Link>
-            {" "}and{" "}
-            <Link href="/privacy" className="underline hover:text-foreground transition-colors">
-              Privacy Policy
-            </Link>
-            .
-          </p>
-          
-          {/* Mobile features preview */}
-          <div className="lg:hidden mt-12 pt-8 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center mb-4">Why professionals choose MyDraft</p>
-            <div className="grid grid-cols-2 gap-4">
-              {features.slice(0, 4).map((feature, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <feature.icon className="w-4 h-4 text-primary flex-shrink-0" />
-                  <span className="text-xs text-muted-foreground">{feature.title}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="mt-5 text-center">
+          <button
+            type="button"
+            onClick={handleToggleMode}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="button-toggle-auth-mode"
+          >
+            {isRegister ? (
+              <>Already have an account? <span className="text-blue-400 font-medium">Sign in</span></>
+            ) : (
+              <>Don't have an account? <span className="text-blue-400 font-medium">Start free trial</span></>
+            )}
+          </button>
         </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+          {features.map((feature, index) => (
+            <div key={index} className="flex items-center gap-1.5">
+              <feature.icon className="w-3.5 h-3.5 text-muted-foreground/40" />
+              <span className="text-[11px] text-muted-foreground/40 whitespace-nowrap">{feature.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-6 text-[11px] text-center text-muted-foreground/40 leading-relaxed">
+          By {isRegister ? "creating an account" : "signing in"}, you agree to our{" "}
+          <Link href="/terms" className="underline hover:text-muted-foreground transition-colors">
+            Terms
+          </Link>
+          {" "}and{" "}
+          <Link href="/privacy" className="underline hover:text-muted-foreground transition-colors">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );

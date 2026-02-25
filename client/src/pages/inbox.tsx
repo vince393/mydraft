@@ -67,6 +67,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   const [hidingDetail, setHidingDetail] = useState(false);
   const [optimisticStars, setOptimisticStars] = useState<Map<string | number, boolean>>(new Map());
   const [optimisticRemovals, setOptimisticRemovals] = useState<Set<string | number>>(new Set());
+  const [isManualRefresh, setIsManualRefresh] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { hasPro, hasPremium } = usePlan();
@@ -232,6 +233,12 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   
   // Show subtle syncing banner when we have cached data displaying and are fetching fresh
   const isSyncing = isFetchingFresh && cachedEmails.length > 0 && !isLoadingEmails;
+
+  useEffect(() => {
+    if (!isFetchingFresh && isManualRefresh) {
+      setIsManualRefresh(false);
+    }
+  }, [isFetchingFresh, isManualRefresh]);
 
   // Fetch emails from custom folder when viewing a custom folder
   const { data: customFolderData, isLoading: isLoadingCustomFolder } = useQuery<{ emails: EmailWithNylasId[] }>({
@@ -736,10 +743,11 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
             hasConnectedAccount={!!userData?.user?.connectedEmail}
             onConnectAccount={() => setLocation("/connect-email")}
             onRefresh={() => {
+              setIsManualRefresh(true);
               queryClient.refetchQueries({ queryKey: ["/api/emails", "fresh"] });
               queryClient.refetchQueries({ queryKey: ["/api/emails/unread-counts"] });
             }}
-            isRefreshing={isFetchingFresh}
+            isRefreshing={isManualRefresh && isFetchingFresh}
             onCompose={onCompose}
             onOpenAssistant={onOpenAssistant}
             mobileNavLeft={
@@ -760,55 +768,68 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
         )}
       </div>
       
-      {/* Email Detail Panel - replaces list when viewing an email */}
-      {(showDetail || hidingDetail) && (
+      {/* Email Detail Panel - replaces list when viewing an email (always visible on tablet) */}
+      {(showDetail || hidingDetail || screen.isTablet) && (
         <div className={`email-detail-panel ${showDetail && !hidingDetail ? 'show-detail' : ''} ${hidingDetail ? 'hide-detail' : ''}`}>
-          <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-4 sm:px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleBackToList}
-              className="flex-shrink-0"
-              data-testid="button-back-to-list"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div className="flex items-center gap-2 ml-auto">
-              {!userData?.user?.connectedEmail && !screen.isMobile && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setLocation("/connect-email")}
-                  data-testid="button-connect-account"
-                >
-                  <Link className="w-4 h-4" />
-                  Connect Account
-                </Button>
-              )}
-              <NotificationBell />
+          {selectedEmailId || !screen.isTablet ? (
+            <>
+              <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-4 sm:px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
+                {!screen.isTablet && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleBackToList}
+                    className="flex-shrink-0"
+                    data-testid="button-back-to-list"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                )}
+                <div className="flex items-center gap-2 ml-auto">
+                  {!userData?.user?.connectedEmail && !screen.isMobile && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setLocation("/connect-email")}
+                      data-testid="button-connect-account"
+                    >
+                      <Link className="w-4 h-4" />
+                      Connect Account
+                    </Button>
+                  )}
+                  <NotificationBell />
+                </div>
+              </header>
+              <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                <EmailDetail 
+                  email={selectedEmail ?? null}
+                  threadEmails={selectedThreadEmails}
+                  currentUserEmail={currentUserEmail}
+                  generatedDraft={generatedDraft} 
+                  onClearDraft={() => setGeneratedDraft(null)}
+                  onDraftUpdate={(draft) => setGeneratedDraft(draft)}
+                  isLoading={isLoadingEmail}
+                  onArchive={handleArchiveEmail}
+                  onTrash={handleTrashEmail}
+                  onStar={handleStarEmail}
+                  onReply={handleReply}
+                  onReplyAll={handleReplyAll}
+                  onForward={handleForward}
+                  onAiDraft={handleAiReply}
+                  hasPro={hasPro}
+                  onUpgradeNeeded={() => setShowUpgradeModal(true)}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground/30">
+              <div className="text-center">
+                <Mail className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="text-sm">Select an email to read</p>
+              </div>
             </div>
-          </header>
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
-          <EmailDetail 
-            email={selectedEmail ?? null}
-            threadEmails={selectedThreadEmails}
-            currentUserEmail={currentUserEmail}
-            generatedDraft={generatedDraft} 
-            onClearDraft={() => setGeneratedDraft(null)}
-            onDraftUpdate={(draft) => setGeneratedDraft(draft)}
-            isLoading={isLoadingEmail}
-            onArchive={handleArchiveEmail}
-            onTrash={handleTrashEmail}
-            onStar={handleStarEmail}
-            onReply={handleReply}
-            onReplyAll={handleReplyAll}
-            onForward={handleForward}
-            onAiDraft={handleAiReply}
-            hasPro={hasPro}
-            onUpgradeNeeded={() => setShowUpgradeModal(true)}
-          />
-        </div>
+          )}
         </div>
       )}
 

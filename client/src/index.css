@@ -361,6 +361,32 @@ body {
     display: none;
   }
 
+  /* Tablet: two-column split view (iPad) */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .email-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+    }
+
+    .email-list-panel {
+      width: 100%;
+      border-right: 1px solid hsl(var(--border) / 0.3);
+    }
+
+    .email-list-panel.hide-for-detail {
+      display: flex;
+    }
+
+    .email-detail-panel {
+      display: flex;
+      width: 100%;
+    }
+
+    .email-detail-panel.show-detail {
+      display: flex;
+    }
+  }
+
   /* Mobile: slide animation for detail panel */
   @media (max-width: 767px) {
     .email-detail-panel.show-detail {

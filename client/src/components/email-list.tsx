@@ -499,7 +499,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       {/* Search bar - sticky top on mobile with nav, full width on desktop */}
       <div className={`z-20 flex items-center ${screen.isMobile ? 'gap-2 absolute top-2 left-0 right-0 px-3' : 'gap-2 absolute top-3 left-0 right-0 px-4'}`}>
         {screen.isMobile && mobileNavLeft}
-        {!screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && !isSyncing && (
+        {!screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && (
           <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
         )}
         <div className={`relative ${screen.isMobile ? 'flex-1 min-w-0' : 'flex-1 min-w-0'}`}>
