@@ -330,25 +330,10 @@ export default function PricingPage() {
     },
   });
 
-  // Stripe checkout for paid plans (new subscribers)
-  const checkoutMutation = useMutation({
-    mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
-      const response = await apiRequest("POST", "/api/stripe/checkout", { plan, interval });
-      return response.json();
-    },
-    onSuccess: (data: { url: string }) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to start checkout",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // Navigate to custom checkout page for paid plans (new subscribers)
+  const handleCheckout = (plan: string, interval: "annual" | "monthly") => {
+    setLocation(`/checkout?plan=${plan}&interval=${interval}`);
+  };
 
   // Change plan for existing subscribers (upgrade/downgrade between paid plans)
   const changePlanMutation = useMutation({
@@ -403,11 +388,11 @@ export default function PricingPage() {
     if (hasActiveSubscription) {
       changePlanMutation.mutate({ plan: planId, interval: billingInterval });
     } else {
-      checkoutMutation.mutate({ plan: planId, interval: billingInterval });
+      handleCheckout(planId, billingInterval);
     }
   };
 
-  const isLoading = selectFreePlanMutation.isPending || checkoutMutation.isPending || portalMutation.isPending || changePlanMutation.isPending;
+  const isLoading = selectFreePlanMutation.isPending || portalMutation.isPending || changePlanMutation.isPending;
 
   const displayPrice = (plan: typeof basePlans[0]) => {
     if (plan.id === "free") return "$0";

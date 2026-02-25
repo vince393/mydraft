@@ -60,22 +60,10 @@ export default function PublicPricingPage() {
     },
   });
 
-  // Stripe checkout for paid plans
-  const checkoutMutation = useMutation({
-    mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
-      const response = await apiRequest("POST", "/api/stripe/checkout", { plan, interval });
-      return response.json();
-    },
-    onSuccess: (data: { url: string }) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: (error: Error) => {
-      toast({ title: "Failed to start checkout", description: error.message, variant: "destructive" });
-      setSelectingPlan(null);
-    },
-  });
+  // Navigate to custom checkout page for paid plans
+  const handleCheckout = (plan: string, interval: "annual" | "monthly") => {
+    setLocation(`/checkout?plan=${plan}&interval=${interval}`);
+  };
 
   const handlePlanSelect = (planId: string) => {
     // If not logged in, go to signup
@@ -100,11 +88,11 @@ export default function PublicPricingPage() {
     if (planId === "free") {
       selectFreePlanMutation.mutate();
     } else {
-      checkoutMutation.mutate({ plan: planId, interval: billingInterval });
+      handleCheckout(planId, billingInterval);
     }
   };
 
-  const isLoading = selectFreePlanMutation.isPending || checkoutMutation.isPending;
+  const isLoading = selectFreePlanMutation.isPending;
 
   return (
     <div className="min-h-screen bg-background text-foreground">

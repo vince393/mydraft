@@ -15,12 +15,6 @@ interface AuthResponse {
 }
 
 const planDetails: Record<string, { name: string; description: string; features: string[]; accent: string }> = {
-  student: {
-    name: "Student",
-    description: "50% student discount",
-    features: ["Unlimited AI replies", "Email humanizer", "Tone customization", "Priority support"],
-    accent: "blue",
-  },
   pro: {
     name: "Pro",
     description: "For professionals who need more",
@@ -36,10 +30,6 @@ const planDetails: Record<string, { name: string; description: string; features:
 };
 
 const pricing: Record<string, Record<string, { amount: number; period: string; monthly: number }>> = {
-  student: {
-    monthly: { amount: 5, period: "/month", monthly: 5 },
-    annual: { amount: 45, period: "/year", monthly: 3.75 },
-  },
   pro: {
     monthly: { amount: 10, period: "/month", monthly: 10 },
     annual: { amount: 99, period: "/year", monthly: 8.25 },
