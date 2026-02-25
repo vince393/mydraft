@@ -1811,26 +1811,6 @@ Return ONLY valid JSON, no other text.`;
 
         req.session.userId = user.id;
 
-        const existingEmailAccount = await storage.getEmailAccount(user.id);
-        if (!existingEmailAccount) {
-          await storage.createEmailAccount({
-            userId: user.id,
-            provider: "google",
-            email: normalizedEmail,
-            accessToken: tokenData.accessToken,
-            refreshToken: tokenData.refreshToken,
-            tokenExpiresAt: tokenData.expiresAt,
-          });
-        } else {
-          await storage.updateEmailAccount(user.id, {
-            provider: "google",
-            email: normalizedEmail,
-            accessToken: tokenData.accessToken,
-            refreshToken: tokenData.refreshToken,
-            tokenExpiresAt: tokenData.expiresAt,
-          });
-        }
-
         if (!user.plan) {
           return res.redirect("/select-plan");
         } else if (!user.onboardingCompleted) {
@@ -1961,26 +1941,6 @@ Return ONLY valid JSON, no other text.`;
         }
 
         req.session.userId = user.id;
-
-        const existingEmailAccount = await storage.getEmailAccount(user.id);
-        if (!existingEmailAccount) {
-          await storage.createEmailAccount({
-            userId: user.id,
-            provider: "microsoft",
-            email: normalizedEmail,
-            accessToken: tokenData.accessToken,
-            refreshToken: tokenData.refreshToken,
-            tokenExpiresAt: tokenData.expiresAt,
-          });
-        } else {
-          await storage.updateEmailAccount(user.id, {
-            provider: "microsoft",
-            email: normalizedEmail,
-            accessToken: tokenData.accessToken,
-            refreshToken: tokenData.refreshToken,
-            tokenExpiresAt: tokenData.expiresAt,
-          });
-        }
 
         if (!user.plan) {
           return res.redirect("/select-plan");

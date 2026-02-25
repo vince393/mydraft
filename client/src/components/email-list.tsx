@@ -496,13 +496,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
 
   return (
     <div className="flex flex-col h-full overflow-x-hidden relative">
-      {/* Search bar - sticky top on mobile with nav, floating on desktop */}
-      <div className={`z-20 flex items-center ${screen.isMobile ? 'gap-2 absolute top-2 left-0 right-0 px-3' : 'gap-2 absolute top-3 left-1/2 -translate-x-1/2'}`}>
+      {/* Search bar - sticky top on mobile with nav, full width on desktop */}
+      <div className={`z-20 flex items-center ${screen.isMobile ? 'gap-2 absolute top-2 left-0 right-0 px-3' : 'gap-2 absolute top-3 left-0 right-0 px-4'}`}>
         {screen.isMobile && mobileNavLeft}
-        {!screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && (
+        {!screen.isMobile && hasConnectedAccount && activeFolder === "inbox" && !isSyncing && (
           <AiInboxRefreshButton onRefreshComplete={onInboxRefresh} />
         )}
-        <div className={`relative ${screen.isMobile ? 'flex-1 min-w-0' : 'w-64'}`}>
+        <div className={`relative ${screen.isMobile ? 'flex-1 min-w-0' : 'flex-1 min-w-0'}`}>
           <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-4 h-4'} text-muted-foreground/50 pointer-events-none z-10`} />
           <Input 
             type="search"
@@ -758,7 +758,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             )}
           </div>
         )}
-        {isSyncing && (
+        {isSyncing && !isRefreshing && (
           <div className="flex items-center justify-center gap-2 py-1 px-3" data-testid="syncing-banner">
             <Loader2 className="w-3.5 h-3.5 text-muted-foreground/60 animate-spin" />
             <span className="text-xs text-muted-foreground/60">Checking for new emails...</span>
