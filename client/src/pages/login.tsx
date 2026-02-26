@@ -430,9 +430,9 @@ export default function LoginPage() {
         <h2 className="text-lg font-semibold text-foreground mb-1">
           {isRegister ? "Create your account" : "Welcome back"}
         </h2>
-        <p className="text-[13px] text-muted-foreground">
-          {isRegister ? "AI-powered email, made simple" : "Sign in to your inbox"}
-        </p>
+        {!isRegister && (
+          <p className="text-[13px] text-muted-foreground">Sign in to your inbox</p>
+        )}
       </div>
 
       <div className="space-y-2.5 mb-5">
