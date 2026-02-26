@@ -10,8 +10,8 @@ MyDraft is an AI-powered email inbox management application inspired by modern e
 
 ## Pricing
 - **Free**: $0 - Basic inbox management, 5 AI drafts/day, no writing style memory
-- **Pro**: $10/month or $99/year - Writing style memory, 100 AI emails/day, 14-day trial (GPT-4o-mini)
-- **Business**: $29/month or $299/year - Enhanced AI quality (GPT-4o), unlimited AI, team features, 14-day trial
+- **Pro**: $10/month or $99/year - Writing style memory, 100 AI emails/day, 14-day trial
+- **Business**: $29/month or $299/year - Enhanced AI quality, unlimited AI, team features, 14-day trial
 
 ## User Preferences
 

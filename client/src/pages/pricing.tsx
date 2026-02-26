@@ -255,7 +255,7 @@ const basePlans = [
     stripeName: "MyDraft Business",
     features: [
       "Everything in Pro",
-      "Enhanced AI quality (GPT-4o)",
+      "Enhanced AI quality",
       "Unlimited AI assistance",
       "Voice assistant",
       "Custom AI training",

@@ -72,7 +72,7 @@ const basePlans = [
     description: "For teams and power users",
     features: [
       "Everything in Pro",
-      "Enhanced AI quality (GPT-4o)",
+      "Enhanced AI quality",
       "Unlimited AI assistance",
       "Voice assistant",
       "Custom AI training",

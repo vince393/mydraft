@@ -207,7 +207,7 @@ export default function PublicPricingPage() {
               description="For teams and power users"
               features={[
                 { text: "Connect 1 email account", included: true },
-                { text: "Enhanced AI quality (GPT-4o)", included: true },
+                { text: "Enhanced AI quality", included: true },
                 { text: "Unlimited AI replies", included: true },
                 { text: "Voice assistant", included: true },
                 { text: "Custom AI training", included: true },
@@ -355,7 +355,7 @@ function FeatureComparison() {
     { name: "Free trial", free: "x", pro: "14 days", business: "14 days" },
     { name: "AI replies", free: "5/day", pro: "Unlimited", business: "Unlimited" },
     { name: "Writing style memory", free: "x", pro: "check", business: "check" },
-    { name: "AI model", free: "Standard", pro: "Standard", business: "Enhanced (GPT-4o)" },
+    { name: "AI model", free: "Standard", pro: "Standard", business: "Enhanced" },
     { name: "Inbox management", free: "Basic", pro: "Advanced", business: "Advanced" },
     { name: "Email scheduling", free: "x", pro: "check", business: "check" },
     { name: "Voice assistant", free: "x", pro: "x", business: "check" },
