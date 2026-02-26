@@ -2949,7 +2949,7 @@ If truly nothing matches, return: []`,
       // Prepare email summaries for AI analysis with better signals
       // Note: messages come from provider.getMessages() which returns EmailListItem objects
       // with .from (display name), .fromEmail (email address), .preview (snippet), etc.
-      const emailSummaries = messages.slice(0, 30).map((msg: any) => {
+      const emailSummaries = messages.slice(0, 50).map((msg: any) => {
         const fromEmail = msg.fromEmail || "";
         const fromName = msg.from || "";
         const domain = fromEmail.split("@")[1] || "";
