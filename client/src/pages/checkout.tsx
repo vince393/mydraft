@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap } from "lucide-react";
@@ -47,7 +49,16 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
-  const [cardComplete, setCardComplete] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [billingEmail, setBillingEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("");
+  const [cardNumberComplete, setCardNumberComplete] = useState(false);
+  const [cardExpiryComplete, setCardExpiryComplete] = useState(false);
+  const [cardCvcComplete, setCardCvcComplete] = useState(false);
+  const cardComplete = cardNumberComplete && cardExpiryComplete && cardCvcComplete && fullName.trim().length > 0;
 
   const setupIntentMutation = useMutation({
     mutationFn: async () => {
@@ -95,8 +106,8 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
       return;
     }
 
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
+    const cardNumberElement = elements.getElement(CardNumberElement);
+    if (!cardNumberElement) {
       return;
     }
 
@@ -111,7 +122,17 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
 
       const { error, setupIntent } = await stripe.confirmCardSetup(clientSecret, {
         payment_method: {
-          card: cardElement,
+          card: cardNumberElement,
+          billing_details: {
+            name: fullName.trim() || undefined,
+            email: billingEmail.trim() || undefined,
+            address: {
+              line1: address.trim() || undefined,
+              city: city.trim() || undefined,
+              postal_code: postalCode.trim() || undefined,
+              country: country.trim() || undefined,
+            },
+          },
         },
       });
 
@@ -159,54 +180,152 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
   const planInfo = planDetails[plan];
   const priceInfo = pricing[plan]?.[interval];
 
+  const stripeElementStyle = {
+    base: {
+      fontSize: "14px",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+      color: "#e2e8f0",
+      letterSpacing: "0.01em",
+      "::placeholder": { color: "#64748b" },
+      iconColor: "#94a3b8",
+    },
+    invalid: { color: "#f87171", iconColor: "#f87171" },
+  };
+
+  const fieldBoxStyle = (hasError?: boolean) => ({
+    background: "rgba(255,255,255,0.03)",
+    border: hasError ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+  });
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-2.5 block">Payment method</label>
-        <div 
-          className="p-4 rounded-xl transition-all duration-200"
-          style={{
-            background: "rgba(255,255,255,0.03)",
-            border: cardError ? "1px solid rgba(239,68,68,0.4)" : cardComplete ? "1px solid rgba(59,130,246,0.3)" : "1px solid rgba(255,255,255,0.08)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.1)",
-          }}
-        >
-          <CardElement
-            options={{
-              style: {
-                base: {
-                  fontSize: "16px",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                  color: "#e2e8f0",
-                  letterSpacing: "0.025em",
-                  "::placeholder": {
-                    color: "#64748b",
-                  },
-                  iconColor: "#94a3b8",
-                },
-                invalid: {
-                  color: "#f87171",
-                  iconColor: "#f87171",
-                },
-              },
-              hidePostalCode: false,
-            }}
-            onChange={(e) => {
-              setCardComplete(e.complete);
-              if (e.error) {
-                setCardError(e.error.message);
-              } else {
-                setCardError(null);
-              }
-            }}
-          />
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-3.5">
+        <label className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider block">Contact</label>
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="fullName" className="text-xs text-muted-foreground/60 mb-1.5 block">Full name</Label>
+            <Input
+              id="fullName"
+              placeholder="John Doe"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              data-testid="input-full-name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="billingEmail" className="text-xs text-muted-foreground/60 mb-1.5 block">Email</Label>
+            <Input
+              id="billingEmail"
+              type="email"
+              placeholder="you@example.com"
+              value={billingEmail}
+              onChange={(e) => setBillingEmail(e.target.value)}
+              data-testid="input-billing-email"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3.5">
+        <label className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider block">Card details</label>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs text-muted-foreground/60 mb-1.5 block">Card number</Label>
+            <div className="p-3 rounded-lg" style={fieldBoxStyle(!!cardError)}>
+              <CardNumberElement
+                options={{ style: stripeElementStyle, showIcon: true }}
+                onChange={(e) => {
+                  setCardNumberComplete(e.complete);
+                  if (e.error) setCardError(e.error.message);
+                  else setCardError(null);
+                }}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground/60 mb-1.5 block">Expiry date</Label>
+              <div className="p-3 rounded-lg" style={fieldBoxStyle()}>
+                <CardExpiryElement
+                  options={{ style: stripeElementStyle }}
+                  onChange={(e) => {
+                    setCardExpiryComplete(e.complete);
+                    if (e.error) setCardError(e.error.message);
+                    else if (!cardError || cardError.includes("expir")) setCardError(null);
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground/60 mb-1.5 block">CVC</Label>
+              <div className="p-3 rounded-lg" style={fieldBoxStyle()}>
+                <CardCvcElement
+                  options={{ style: stripeElementStyle }}
+                  onChange={(e) => {
+                    setCardCvcComplete(e.complete);
+                    if (e.error) setCardError(e.error.message);
+                    else if (!cardError || cardError.includes("security")) setCardError(null);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
         {cardError && (
-          <p className="text-xs text-destructive mt-2 flex items-center gap-1.5">
+          <p className="text-xs text-destructive flex items-center gap-1.5">
             <span className="w-1 h-1 rounded-full bg-destructive flex-shrink-0" />
             {cardError}
           </p>
         )}
+      </div>
+
+      <div className="space-y-3.5">
+        <label className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider block">Billing address</label>
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="address" className="text-xs text-muted-foreground/60 mb-1.5 block">Street address</Label>
+            <Input
+              id="address"
+              placeholder="123 Main St"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              data-testid="input-address"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="city" className="text-xs text-muted-foreground/60 mb-1.5 block">City</Label>
+              <Input
+                id="city"
+                placeholder="New York"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                data-testid="input-city"
+              />
+            </div>
+            <div>
+              <Label htmlFor="postalCode" className="text-xs text-muted-foreground/60 mb-1.5 block">Postal code</Label>
+              <Input
+                id="postalCode"
+                placeholder="10001"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                data-testid="input-postal-code"
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="country" className="text-xs text-muted-foreground/60 mb-1.5 block">Country</Label>
+            <Input
+              id="country"
+              placeholder="US"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              data-testid="input-country"
+            />
+          </div>
+        </div>
       </div>
 
       <div 
