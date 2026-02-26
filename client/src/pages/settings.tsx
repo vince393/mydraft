@@ -2366,7 +2366,7 @@ function ReferralTab() {
       </div>
 
       <p className="text-xs text-muted-foreground/60 leading-relaxed text-center">
-        Free trials don't count — only active paid subscriptions qualify. Promo codes are one-time use and expire after 6 months.
+        Only active paid subscriptions qualify. Promo codes are one-time use and expire after 6 months.
       </p>
     </div>
   );
