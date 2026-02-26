@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -80,10 +79,133 @@ interface Settings {
   connectedEmail: { email: string; provider: string } | null;
 }
 
+type SettingsSection = "account" | "security" | "appearance" | "ai" | "email" | "connections" | "billing" | "referrals" | "feedback" | "team";
+
+interface NavItem {
+  id: SettingsSection;
+  label: string;
+  description: string;
+  icon: typeof User;
+  group: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { id: "account", label: "Account", description: "Profile and password", icon: User, group: "General" },
+  { id: "security", label: "Security", description: "2FA and sessions", icon: Shield, group: "General" },
+  { id: "appearance", label: "Appearance", description: "Theme and display", icon: Palette, group: "General" },
+  { id: "ai", label: "AI Preferences", description: "Tone, language, style", icon: Sparkles, group: "Email" },
+  { id: "email", label: "Signature", description: "Email signature", icon: Mail, group: "Email" },
+  { id: "connections", label: "Connections", description: "Linked accounts", icon: Link2, group: "Email" },
+  { id: "billing", label: "Billing", description: "Plan and payments", icon: CreditCard, group: "Billing" },
+  { id: "referrals", label: "Referrals", description: "Earn free Pro", icon: Gift, group: "Billing" },
+  { id: "feedback", label: "Feedback", description: "Send us feedback", icon: MessageSquare, group: "Support" },
+];
+
+const TEAM_NAV_ITEM: NavItem = { id: "team", label: "Team", description: "Manage members", icon: Users, group: "General" };
+
+function SettingsNav({ active, onChange, showTeam }: { active: SettingsSection; onChange: (s: SettingsSection) => void; showTeam: boolean }) {
+  const items = showTeam ? [...NAV_ITEMS.slice(0, 3), TEAM_NAV_ITEM, ...NAV_ITEMS.slice(3)] : NAV_ITEMS;
+  const groups = Array.from(new Set(items.map(i => i.group)));
+
+  return (
+    <nav className="space-y-5">
+      {groups.map(group => (
+        <div key={group}>
+          <p className="text-[11px] font-medium text-muted-foreground/40 uppercase tracking-wider px-3 mb-1.5">{group}</p>
+          <div className="space-y-0.5">
+            {items.filter(i => i.group === group).map(item => {
+              const Icon = item.icon;
+              const isActive = active === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onChange(item.id)}
+                  data-testid={`tab-${item.id}`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                    isActive
+                      ? "bg-white/[0.06] text-foreground"
+                      : "text-muted-foreground/60 hover:text-foreground hover:bg-white/[0.03]"
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium leading-tight">{item.label}</p>
+                    <p className="text-[11px] text-muted-foreground/40 leading-tight mt-0.5 hidden lg:block">{item.description}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function MobileSettingsNav({ active, onChange, showTeam }: { active: SettingsSection | null; onChange: (s: SettingsSection) => void; showTeam: boolean }) {
+  const items = showTeam ? [...NAV_ITEMS.slice(0, 3), TEAM_NAV_ITEM, ...NAV_ITEMS.slice(3)] : NAV_ITEMS;
+  const groups = Array.from(new Set(items.map(i => i.group)));
+
+  return (
+    <div className="space-y-6">
+      {groups.map(group => (
+        <div key={group}>
+          <p className="text-[11px] font-medium text-muted-foreground/40 uppercase tracking-wider mb-2">{group}</p>
+          <div className="rounded-xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.06]">
+            {items.filter(i => i.group === group).map(item => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onChange(item.id)}
+                  data-testid={`tab-${item.id}`}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-white/[0.01] hover:bg-white/[0.03] transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-muted-foreground/60" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{item.label}</p>
+                    <p className="text-[12px] text-muted-foreground/40">{item.description}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground/20 flex-shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SettingsContent({ section, settings }: { section: SettingsSection; settings: Settings }) {
+  switch (section) {
+    case "account": return <AccountTab settings={settings} />;
+    case "security": return <SecurityTab settings={settings} />;
+    case "appearance": return <AppearanceTab />;
+    case "ai": return <AIPreferencesTab settings={settings} />;
+    case "email": return <EmailSettingsTab settings={settings} />;
+    case "connections": return <ConnectionsTab settings={settings} />;
+    case "billing": return <BillingTab settings={settings} />;
+    case "referrals": return <ReferralTab />;
+    case "feedback": return <FeedbackTab settings={settings} />;
+    case "team": return <TeamTab />;
+    default: return null;
+  }
+}
+
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("account");
+  const [activeSection, setActiveSection] = useState<SettingsSection | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
 
   const { data: settings, isLoading } = useQuery<Settings>({
     queryKey: ["/api/settings"],
@@ -105,91 +227,64 @@ export default function SettingsPage() {
     );
   }
 
+  const showTeam = settings.plan === "premium";
+  const sectionLabel = activeSection ? [...NAV_ITEMS, TEAM_NAV_ITEM].find(i => i.id === activeSection)?.label : null;
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="px-4 py-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => activeSection ? setActiveSection(null) : setLocation("/inbox")}
+              data-testid="button-back"
+              className="touch-target"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="text-xl font-semibold text-foreground">
+              {activeSection ? sectionLabel : "Settings"}
+            </h1>
+          </div>
+          {activeSection ? (
+            <div className="space-y-6">
+              <SettingsContent section={activeSection} settings={settings} />
+            </div>
+          ) : (
+            <MobileSettingsNav active={activeSection} onChange={setActiveSection} showTeam={showTeam} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setLocation("/inbox")}
             data-testid="button-back"
             className="touch-target"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Settings</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
         </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className={`inline-flex sm:grid w-auto sm:w-full h-auto p-1 gap-1 ${settings.plan === "premium" ? "sm:grid-cols-7" : "sm:grid-cols-6"}`}>
-              <TabsTrigger value="account" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-account">
-                <User className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Account</span>
-              </TabsTrigger>
-              <TabsTrigger value="preferences" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-preferences">
-                <Sparkles className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Preferences</span>
-              </TabsTrigger>
-              <TabsTrigger value="email" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-email">
-                <Mail className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Email</span>
-              </TabsTrigger>
-              <TabsTrigger value="billing" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-billing">
-                <CreditCard className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Billing</span>
-              </TabsTrigger>
-              <TabsTrigger value="referrals" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-referrals">
-                <Gift className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Referrals</span>
-              </TabsTrigger>
-              <TabsTrigger value="feedback" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-feedback">
-                <MessageSquare className="w-5 h-5" />
-                <span className="text-xs sm:text-sm">Feedback</span>
-              </TabsTrigger>
-              {settings.plan === "premium" && (
-                <TabsTrigger value="team" className="flex items-center gap-2 py-2 px-3 touch-target whitespace-nowrap" data-testid="tab-team">
-                  <Users className="w-5 h-5" />
-                  <span className="text-xs sm:text-sm">Team</span>
-                </TabsTrigger>
-              )}
-            </TabsList>
+        <div className="flex gap-8">
+          <div className="w-52 flex-shrink-0 sticky top-8 self-start">
+            <SettingsNav active={activeSection || "account"} onChange={setActiveSection} showTeam={showTeam} />
           </div>
-
-          <TabsContent value="account">
+          <div className="flex-1 min-w-0">
             <div className="space-y-6">
-              <AccountTab settings={settings!} />
-              <SecurityTab settings={settings!} />
+              <SettingsContent section={activeSection || "account"} settings={settings} />
             </div>
-          </TabsContent>
-          <TabsContent value="preferences">
-            <div className="space-y-6">
-              <AppearanceTab />
-              <AIPreferencesTab settings={settings!} />
-            </div>
-          </TabsContent>
-          <TabsContent value="email">
-            <div className="space-y-6">
-              <EmailSettingsTab settings={settings!} />
-              <ConnectionsTab settings={settings!} />
-            </div>
-          </TabsContent>
-          <TabsContent value="billing">
-            <BillingTab settings={settings!} />
-          </TabsContent>
-          <TabsContent value="referrals">
-            <ReferralTab />
-          </TabsContent>
-          <TabsContent value="feedback">
-            <FeedbackTab settings={settings!} />
-          </TabsContent>
-          {settings.plan === "premium" && (
-            <TabsContent value="team">
-              <TeamTab />
-            </TabsContent>
-          )}
-        </Tabs>
+          </div>
+        </div>
       </div>
     </div>
   );
