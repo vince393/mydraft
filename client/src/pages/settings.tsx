@@ -80,7 +80,7 @@ interface Settings {
   connectedEmail: { email: string; provider: string } | null;
 }
 
-type SettingsSection = "account" | "security" | "appearance" | "ai" | "email" | "connections" | "billing" | "referrals" | "feedback" | "team";
+type SettingsSection = "account" | "security" | "appearance" | "ai" | "email" | "billing" | "referrals" | "feedback" | "team";
 
 interface NavItem {
   id: SettingsSection;
@@ -91,12 +91,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: "account", label: "Account", description: "Profile and password", icon: User, group: "General" },
-  { id: "security", label: "Security", description: "2FA and sessions", icon: Shield, group: "General" },
+  { id: "account", label: "Account", description: "Email and sign out", icon: User, group: "General" },
+  { id: "security", label: "Security", description: "Password, 2FA, sessions", icon: Shield, group: "General" },
   { id: "appearance", label: "Appearance", description: "Theme and display", icon: Palette, group: "General" },
-  { id: "ai", label: "AI Preferences", description: "Tone, language, style", icon: Sparkles, group: "Email" },
-  { id: "email", label: "Signature", description: "Email signature", icon: Mail, group: "Email" },
-  { id: "connections", label: "Connections", description: "Linked accounts", icon: Link2, group: "Email" },
+  { id: "ai", label: "AI Preferences", description: "Tone, language, permissions", icon: Sparkles, group: "Email" },
+  { id: "email", label: "Email", description: "Signature and connections", icon: Mail, group: "Email" },
   { id: "billing", label: "Billing", description: "Plan and payments", icon: CreditCard, group: "Billing" },
   { id: "referrals", label: "Referrals", description: "Earn free Pro", icon: Gift, group: "Billing" },
   { id: "feedback", label: "Feedback", description: "Send us feedback", icon: MessageSquare, group: "Support" },
@@ -209,7 +208,6 @@ function SettingsContent({ section, settings }: { section: SettingsSection; sett
     case "appearance": return <AppearanceTab />;
     case "ai": return <AIPreferencesTab settings={settings} />;
     case "email": return <EmailSettingsTab settings={settings} />;
-    case "connections": return <ConnectionsTab settings={settings} />;
     case "billing": return <BillingTab settings={settings} />;
     case "referrals": return <ReferralTab />;
     case "feedback": return <FeedbackTab settings={settings} />;
@@ -316,30 +314,6 @@ export default function SettingsPage() {
 function AccountTab({ settings }: { settings: Settings }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-
-  const changePasswordMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("PUT", "/api/settings/password", { 
-        currentPassword, 
-        newPassword 
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Password changed successfully" });
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    },
-    onError: (error: Error) => {
-      toast({ title: "Failed to change password", description: error.message, variant: "destructive" });
-    },
-  });
 
   const deleteAccountMutation = useMutation({
     mutationFn: async () => {
@@ -366,18 +340,6 @@ function AccountTab({ settings }: { settings: Settings }) {
     },
   });
 
-  const handleChangePassword = () => {
-    if (newPassword !== confirmPassword) {
-      toast({ title: "Passwords do not match", variant: "destructive" });
-      return;
-    }
-    if (newPassword.length < 6) {
-      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
-      return;
-    }
-    changePasswordMutation.mutate();
-  };
-
   return (
     <div className="space-y-5">
       <SettingsPanel>
@@ -385,69 +347,22 @@ function AccountTab({ settings }: { settings: Settings }) {
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground/60">Email</Label>
           <Input value={settings.email} disabled className="bg-white/[0.03] border-white/[0.06]" data-testid="input-email" />
+          <p className="text-[11px] text-muted-foreground/40">To edit your display name or avatar, visit your profile page.</p>
         </div>
       </SettingsPanel>
 
       <SettingsPanel>
-        <SectionHeader icon={Shield} title="Change Password" description="Update your account password" />
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="current-password" className="text-xs text-muted-foreground/60">Current Password</Label>
-            <div className="relative">
-              <Input
-                id="current-password"
-                type={showCurrentPassword ? "text" : "password"}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                data-testid="input-current-password"
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors"
-                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-              >
-                {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="new-password" className="text-xs text-muted-foreground/60">New Password</Label>
-            <div className="relative">
-              <Input
-                id="new-password"
-                type={showNewPassword ? "text" : "password"}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                data-testid="input-new-password"
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-              >
-                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password" className="text-xs text-muted-foreground/60">Confirm New Password</Label>
-            <Input
-              id="confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              data-testid="input-confirm-password"
-            />
-          </div>
-          <Button 
-            onClick={handleChangePassword} 
-            disabled={changePasswordMutation.isPending}
-            data-testid="button-change-password"
-          >
-            {changePasswordMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Change Password
-          </Button>
-        </div>
+        <SectionHeader icon={LogOut} title="Sign Out" description="Sign out of your account" />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isPending}
+          data-testid="button-sign-out"
+        >
+          {logoutMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogOut className="w-4 h-4 mr-2" />}
+          Sign Out
+        </Button>
       </SettingsPanel>
 
       <SettingsPanel className="border-destructive/20">
@@ -612,10 +527,46 @@ interface SecuritySettings {
 
 function SecurityTab({ settings }: { settings: Settings }) {
   const { toast } = useToast();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [showLogoutAllDialog, setShowLogoutAllDialog] = useState(false);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationAction, setVerificationAction] = useState<"disable2fa" | "logoutAll" | null>(null);
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("PUT", "/api/settings/password", { 
+        currentPassword, 
+        newPassword 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Password changed successfully" });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to change password", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleChangePassword = () => {
+    if (newPassword !== confirmNewPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    changePasswordMutation.mutate();
+  };
 
   const { data: securitySettings, isLoading: isLoadingSecurity, error: securityError } = useQuery<SecuritySettings>({
     queryKey: ["/api/settings/security"],
@@ -756,6 +707,68 @@ function SecurityTab({ settings }: { settings: Settings }) {
           </p>
         </div>
       </div>
+
+      <SettingsPanel>
+        <SectionHeader icon={Shield} title="Change Password" description="Update your account password" />
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="current-password" className="text-xs text-muted-foreground/60">Current Password</Label>
+            <div className="relative">
+              <Input
+                id="current-password"
+                type={showCurrentPassword ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                data-testid="input-current-password"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+              >
+                {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password" className="text-xs text-muted-foreground/60">New Password</Label>
+            <div className="relative">
+              <Input
+                id="new-password"
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                data-testid="input-new-password"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+              >
+                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-new-password" className="text-xs text-muted-foreground/60">Confirm New Password</Label>
+            <Input
+              id="confirm-new-password"
+              type="password"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              data-testid="input-confirm-password"
+            />
+          </div>
+          <Button 
+            onClick={handleChangePassword} 
+            disabled={changePasswordMutation.isPending}
+            data-testid="button-change-password"
+          >
+            {changePasswordMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Change Password
+          </Button>
+        </div>
+      </SettingsPanel>
 
       <SettingsPanel>
         <SectionHeader icon={Shield} title="Two-Factor Authentication" description="Require a verification code when signing in" />
@@ -1438,6 +1451,7 @@ function AIPreferencesTab({ settings }: { settings: Settings }) {
 
 function EmailSettingsTab({ settings }: { settings: Settings }) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [signature, setSignature] = useState(settings.emailSignature || "");
   const [signatureEnabled, setSignatureEnabled] = useState(settings.signatureEnabled);
 
@@ -1457,58 +1471,6 @@ function EmailSettingsTab({ settings }: { settings: Settings }) {
       toast({ title: "Failed to update settings", description: error.message, variant: "destructive" });
     },
   });
-
-  return (
-    <div className="space-y-5">
-      <SettingsPanel>
-        <SectionHeader icon={Mail} title="Email Signature" description="Added to your outgoing emails" />
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-            <Label htmlFor="signature-toggle" className="text-sm text-foreground/80">Enable signature</Label>
-            <Switch id="signature-toggle" checked={signatureEnabled} onCheckedChange={setSignatureEnabled} data-testid="switch-signature-enabled" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="signature" className="text-xs text-muted-foreground/60">Your signature</Label>
-            <Textarea
-              id="signature"
-              value={signature}
-              onChange={(e) => setSignature(e.target.value)}
-              placeholder="Best regards,&#10;John Doe&#10;john@company.com"
-              rows={5}
-              disabled={!signatureEnabled}
-              className={!signatureEnabled ? "opacity-40" : ""}
-              data-testid="textarea-signature"
-            />
-            <p className="text-[11px] text-muted-foreground/40">
-              Use plain text. Line breaks will be preserved.
-            </p>
-          </div>
-        </div>
-      </SettingsPanel>
-
-      <SettingsPanel>
-        <SectionHeader icon={Mail} title="Multiple Inboxes" description="Connect additional email accounts" />
-        <p className="text-[12px] text-muted-foreground/50">
-          Support for multiple inboxes is coming soon.
-        </p>
-      </SettingsPanel>
-
-      <Button 
-        onClick={() => updateMutation.mutate()} 
-        disabled={updateMutation.isPending}
-        className="w-full"
-        data-testid="button-save-email-settings"
-      >
-        {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-        Save Email Settings
-      </Button>
-    </div>
-  );
-}
-
-function ConnectionsTab({ settings }: { settings: Settings }) {
-  const { toast } = useToast();
-  const [, setLocation] = useLocation();
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
@@ -1538,7 +1500,7 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
   return (
     <div className="space-y-5">
       <SettingsPanel>
-        <SectionHeader icon={Link2} title="Connected Email" description="Manage your email provider" />
+        <SectionHeader icon={Link2} title="Connected Account" description="Your linked email provider" />
         {settings.connectedEmail ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -1596,11 +1558,40 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
       </SettingsPanel>
 
       <SettingsPanel>
-        <SectionHeader icon={Link2} title="Additional Connections" description="More integrations" />
-        <p className="text-[12px] text-muted-foreground/50">
-          Calendar, task manager, and more integrations coming soon.
-        </p>
+        <SectionHeader icon={Mail} title="Email Signature" description="Added to your outgoing emails" />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <Label htmlFor="signature-toggle" className="text-sm text-foreground/80">Enable signature</Label>
+            <Switch id="signature-toggle" checked={signatureEnabled} onCheckedChange={setSignatureEnabled} data-testid="switch-signature-enabled" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="signature" className="text-xs text-muted-foreground/60">Your signature</Label>
+            <Textarea
+              id="signature"
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+              placeholder="Best regards,&#10;John Doe&#10;john@company.com"
+              rows={5}
+              disabled={!signatureEnabled}
+              className={!signatureEnabled ? "opacity-40" : ""}
+              data-testid="textarea-signature"
+            />
+            <p className="text-[11px] text-muted-foreground/40">
+              Use plain text. Line breaks will be preserved.
+            </p>
+          </div>
+        </div>
       </SettingsPanel>
+
+      <Button 
+        onClick={() => updateMutation.mutate()} 
+        disabled={updateMutation.isPending}
+        className="w-full"
+        data-testid="button-save-email-settings"
+      >
+        {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+        Save Email Settings
+      </Button>
     </div>
   );
 }
