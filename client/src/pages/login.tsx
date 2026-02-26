@@ -431,7 +431,7 @@ export default function LoginPage() {
           {isRegister ? "Create your account" : "Welcome back"}
         </h2>
         <p className="text-[13px] text-muted-foreground">
-          {isRegister ? "14-day free trial, no credit card needed" : "Sign in to your inbox"}
+          {isRegister ? "Start your 14-day free trial" : "Sign in to your inbox"}
         </p>
       </div>
 
