@@ -994,9 +994,9 @@ export async function registerRoutes(
     },
   );
 
-  app.post("/api/support/contact", async (req, res) => {
+  app.post("/api/support/contact", authLimiter, async (req, res) => {
     try {
-      const { name, email, message } = req.body;
+      const { name, email, message, subject } = req.body;
 
       if (!name || !email || !message) {
         return res
@@ -1024,6 +1024,21 @@ export async function registerRoutes(
       await storage.createSupportMessage({ name, email, message });
 
       console.log(`Support message received from ${email}: ${name}`);
+
+      const ownerAddr = process.env.OWNER_EMAIL;
+      if (ownerAddr && process.env.RESEND_API_KEY) {
+        try {
+          const { sendSecurityContactEmail } = await import("./email");
+          await sendSecurityContactEmail(ownerAddr, {
+            name,
+            email,
+            message,
+            subject: typeof subject === "string" ? subject : "General Inquiry",
+          });
+        } catch (emailErr) {
+          console.error("Failed to send contact notification email:", emailErr);
+        }
+      }
 
       res.json({ success: true });
     } catch (error) {

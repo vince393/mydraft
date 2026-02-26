@@ -1,21 +1,32 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { MarketingNav } from "@/components/marketing-nav";
-import { useQuery } from "@tanstack/react-query";
-import { 
-  Shield, 
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  Shield,
   Lock,
   Eye,
   Server,
   Key,
   CheckCircle,
-  ArrowRight,
   Mail,
   FileCheck,
   Users,
-  AlertTriangle
+  ShieldCheck,
+  Award,
+  Loader2,
+  Send,
+  Database,
+  Fingerprint,
+  Activity,
+  FileWarning,
 } from "lucide-react";
 
 interface AuthResponse {
@@ -27,14 +38,29 @@ export default function SecurityPage() {
     queryKey: ["/api/auth/me"],
     retry: false,
   });
+  const { toast } = useToast();
 
-  const getStartedHref = () => {
-    if (!authData?.user) return "/login";
-    if (!authData.user.plan) return "/select-plan";
-    if (!authData.user.onboardingCompleted) return "/onboarding";
-    if (!authData.user.emailConnected) return "/connect-email";
-    return "/inbox";
-  };
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    subject: "Security Inquiry",
+    message: "",
+  });
+  const [showContactForm, setShowContactForm] = useState(false);
+
+  const contactMutation = useMutation({
+    mutationFn: async (data: typeof contactForm) => {
+      return apiRequest("POST", "/api/support/contact", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Message sent", description: "Our security team will get back to you within 24 hours." });
+      setContactForm({ name: "", email: "", subject: "Security Inquiry", message: "" });
+      setShowContactForm(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to send message", description: "Please try again or email support@mydraft.io directly.", variant: "destructive" });
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -42,7 +68,7 @@ export default function SecurityPage() {
 
       <section className="pt-32 pb-16 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <Badge variant="secondary" className="mb-6">Security</Badge>
+          <Badge variant="secondary" className="mb-6" data-testid="badge-security">Security</Badge>
           <h1 className="text-4xl md:text-5xl font-semibold mb-6">
             Your privacy is our priority
           </h1>
@@ -50,6 +76,73 @@ export default function SecurityPage() {
             We built MyDraft with security-first principles. Your emails are yours - 
             we're here to help you manage them better, not monetize your data.
           </p>
+        </div>
+      </section>
+
+      <section className="py-12 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="rounded-2xl border border-green-500/20 bg-green-500/[0.04] p-8 md:p-10">
+            <div className="flex flex-col md:flex-row items-start gap-6">
+              <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <Award className="w-8 h-8 text-green-500" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <h2 className="text-xl font-semibold" data-testid="text-casa-title">CASA Tier 2 Compliant</h2>
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30" data-testid="badge-casa">Verified</Badge>
+                </div>
+                <p className="text-muted-foreground mb-6 leading-relaxed">
+                  MyDraft meets the Cloud Application Security Assessment (CASA) Tier 2 requirements, 
+                  the security standard required by Google for applications that access user data through 
+                  OAuth scopes. This covers data handling, authentication, encryption, and vulnerability management.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <Database className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Data Classification</p>
+                      <p className="text-xs text-muted-foreground">4-tier classification system (Restricted, Confidential, Internal, Public)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Lock className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Encryption at Rest</p>
+                      <p className="text-xs text-muted-foreground">AES-256-GCM for email content, scrypt for passwords</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Fingerprint className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Authentication Security</p>
+                      <p className="text-xs text-muted-foreground">Rate limiting, session management, OAuth state validation</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Activity className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Audit Logging</p>
+                      <p className="text-xs text-muted-foreground">Login attempts, data access, and security events tracked</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <FileWarning className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Malware Protection</p>
+                      <p className="text-xs text-muted-foreground">File type blocking, SVG sanitization, attachment scanning</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck className="w-4 h-4 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">XSS Prevention</p>
+                      <p className="text-xs text-muted-foreground">Input sanitization, DOMPurify, Content Security Policy</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -124,6 +217,7 @@ export default function SecurityPage() {
             <DetailSection
               title="Compliance & Transparency"
               items={[
+                "CASA Tier 2 compliant for Google OAuth applications",
                 "GDPR compliant - request data export or deletion anytime",
                 "Clear privacy policy with no hidden terms",
                 "Transparent about what data we collect and why",
@@ -155,14 +249,18 @@ export default function SecurityPage() {
               a="No. Your email content is never used to train or improve AI models. The AI features use pre-trained models that process your content in real-time without retention." 
             />
             <FAQItem 
+              q="What is CASA Tier 2?" 
+              a="CASA (Cloud Application Security Assessment) is Google's security framework for apps that access user data via OAuth. Tier 2 requires verified security controls including encryption, access management, vulnerability handling, and audit logging. MyDraft has been assessed against these requirements." 
+            />
+            <FAQItem 
               q="How do I report a security issue?" 
-              a="We take security reports seriously. Please email support@mydraft.io with any concerns or potential vulnerabilities. We respond within 24 hours." 
+              a="We take security reports seriously. Use the contact form below or email support@mydraft.io with any concerns or potential vulnerabilities. We respond within 24 hours." 
             />
           </div>
         </div>
       </section>
 
-      <section className="py-16 px-6 border-t border-border/30">
+      <section className="py-16 px-6 border-t border-border/30" id="contact">
         <div className="max-w-3xl mx-auto text-center">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-8">
             <Shield className="w-8 h-8 text-primary" />
@@ -172,19 +270,88 @@ export default function SecurityPage() {
           </h2>
           <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
             We're happy to discuss our security practices in more detail. 
-            Enterprise customers can request a security review or SOC 2 report.
+            Enterprise customers can request a security review.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href={getStartedHref()}>
-              <Button size="lg" className="gap-2 w-full sm:w-auto">
-                Start free trial
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto">
+
+          {!showContactForm ? (
+            <Button
+              size="lg"
+              className="gap-2"
+              onClick={() => setShowContactForm(true)}
+              data-testid="button-contact-security"
+            >
+              <Mail className="w-4 h-4" />
               Contact security team
             </Button>
-          </div>
+          ) : (
+            <div className="max-w-md mx-auto text-left">
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Your name</label>
+                  <Input
+                    placeholder="Jane Smith"
+                    value={contactForm.name}
+                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                    data-testid="input-security-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Your email</label>
+                  <Input
+                    type="email"
+                    placeholder="jane@company.com"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                    data-testid="input-security-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Subject</label>
+                  <Input
+                    placeholder="Security question"
+                    value={contactForm.subject}
+                    onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                    data-testid="input-security-subject"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Message</label>
+                  <Textarea
+                    placeholder="Describe your security question or concern..."
+                    rows={4}
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                    data-testid="input-security-message"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1 gap-2"
+                    onClick={() => contactMutation.mutate(contactForm)}
+                    disabled={!contactForm.name || !contactForm.email || !contactForm.message || contactMutation.isPending}
+                    data-testid="button-send-security-message"
+                  >
+                    {contactMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    Send message
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowContactForm(false)}
+                    data-testid="button-cancel-security-contact"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  We typically respond within 24 hours
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -250,7 +417,7 @@ function Footer() {
           <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
         </div>
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground/50">© 2024 MyDraft. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground/50">&copy; 2026 MyDraft. All rights reserved.</p>
           <a href="mailto:support@mydraft.io" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="footer-email">support@mydraft.io</a>
         </div>
       </div>

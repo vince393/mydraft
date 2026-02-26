@@ -4,6 +4,52 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = 'MyDraft <support@mydraft.io>';
 
+export async function sendSecurityContactEmail(
+  to: string,
+  data: { name: string; email: string; message: string; subject: string }
+): Promise<boolean> {
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [to],
+      replyTo: data.email,
+      subject: `[MyDraft Security] ${data.subject}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0f172a; color: #e2e8f0; margin: 0; padding: 40px 20px;">
+  <div style="max-width: 520px; margin: 0 auto; background-color: #1e293b; border-radius: 12px; padding: 40px;">
+    <h1 style="font-size: 22px; font-weight: bold; color: #f8fafc; margin: 0 0 24px;">Security Contact Form Submission</h1>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+      <tr><td style="color: #64748b; padding: 8px 0; font-size: 14px; vertical-align: top; width: 80px;">From:</td><td style="color: #e2e8f0; padding: 8px 0; font-size: 14px;">${data.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td></tr>
+      <tr><td style="color: #64748b; padding: 8px 0; font-size: 14px; vertical-align: top;">Email:</td><td style="color: #e2e8f0; padding: 8px 0; font-size: 14px;"><a href="mailto:${data.email.replace(/</g, '&lt;').replace(/>/g, '&gt;')}" style="color: #3b82f6;">${data.email.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a></td></tr>
+      <tr><td style="color: #64748b; padding: 8px 0; font-size: 14px; vertical-align: top;">Subject:</td><td style="color: #e2e8f0; padding: 8px 0; font-size: 14px;">${data.subject.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td></tr>
+    </table>
+    <div style="background-color: #0f172a; border-radius: 8px; padding: 20px;">
+      <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;">Message</p>
+      <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${data.message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+    </div>
+  </div>
+  <p style="color: #475569; font-size: 12px; text-align: center; margin-top: 24px;">&copy; ${new Date().getFullYear()} MyDraft</p>
+</body>
+</html>`,
+      text: `Security Contact from ${data.name} (${data.email})\nSubject: ${data.subject}\n\n${data.message}`,
+    });
+
+    if (error) {
+      console.error('Failed to send security contact email:', error);
+      return false;
+    }
+
+    console.log(`Security contact email forwarded from ${data.email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending security contact email:', error);
+    return false;
+  }
+}
+
 export async function sendVerificationEmail(to: string, code: string, type: 'signup' | 'login' | 'action'): Promise<boolean> {
   let subject: string;
   let bodyText: string;
