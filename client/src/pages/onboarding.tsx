@@ -1,16 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowRight, ArrowLeft, Loader2, Sparkles, Mail, Zap, MessageSquare, Inbox, Users, Shield, Check, Star, TrendingUp, Clock, Brain, Rocket } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Check, Star, Clock, Brain, Rocket, Shield, Mail, Briefcase, RefreshCw, Inbox, MailOpen, Mails, Waves, PenLine, Sparkles, Tag, FileText, Palette, Smile, Zap, Search, Users, Newspaper, Radio, Megaphone, MessageCircle, ChevronLeft } from "lucide-react";
+import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
 import type { User } from "@shared/schema";
 
 interface AuthResponse {
@@ -100,55 +99,52 @@ const basePlans = [
 
 function getRecommendedPlan(preferences: AIPreferences): string {
   const { emailVolume, automationLevel, primaryUse } = preferences;
-  
   if (emailVolume === "very-high") return "business";
   if (automationLevel === "high" && primaryUse === "work") return "business";
   if (emailVolume === "high" && automationLevel === "high") return "business";
   if (emailVolume === "low" && automationLevel === "low") return "free";
-  
   return "pro";
 }
 
-function getRecommendationReasons(planId: string, preferences: AIPreferences): string[] {
-  const reasons: string[] = [];
-  const { emailVolume, automationLevel, primaryUse, aiFeatures } = preferences;
-  
-  if (planId === "business") {
-    if (emailVolume === "very-high") {
-      reasons.push("You receive a high volume of emails daily - unlimited AI assistance will save you hours");
-    }
-    if (automationLevel === "high") {
-      reasons.push("You want maximum automation - Business includes advanced workflows and custom AI training");
-    }
-    if (primaryUse === "work") {
-      reasons.push("For professional use, you'll benefit from team collaboration and dedicated support");
-    }
-    reasons.push("Voice assistant and custom AI training included");
-  } else if (planId === "pro") {
-    if (emailVolume === "high" || emailVolume === "medium") {
-      reasons.push("100 AI emails per day is perfect for your email volume");
-    }
-    if (automationLevel === "medium" || automationLevel === "high") {
-      reasons.push("Advanced automation and custom rules to streamline your workflow");
-    }
-    if (aiFeatures?.includes("drafts") || aiFeatures?.includes("tone")) {
-      reasons.push("Personal writing style memory learns how you communicate");
-    }
-    reasons.push("API access and integrations for power users");
-  } else if (planId === "student") {
-    reasons.push("50% discount for students - all the essentials at half the price");
-    reasons.push("Email humanizer makes AI text sound natural");
-  } else if (planId === "free") {
-    if (emailVolume === "low") {
-      reasons.push("Your low email volume is perfect for the free tier");
-    }
-    if (automationLevel === "low") {
-      reasons.push("You prefer writing replies yourself - free plan gives you the basics");
-    }
-    reasons.push("Try MyDraft risk-free before upgrading");
-  }
-  
-  return reasons.slice(0, 3);
+interface OptionCardProps {
+  selected: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  desc?: string;
+  testId: string;
+}
+
+function OptionCard({ selected, onClick, icon, label, desc, testId }: OptionCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
+        selected
+          ? "border-primary/40 bg-primary/[0.08]"
+          : "border-white/[0.06] bg-white/[0.02]"
+      }`}
+      data-testid={testId}
+    >
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+          selected ? "bg-primary/15" : "bg-white/[0.04]"
+        }`}>
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className={`text-sm font-medium ${selected ? "text-foreground" : "text-foreground/80"}`}>{label}</div>
+          {desc && <div className="text-xs text-muted-foreground/60 mt-0.5">{desc}</div>}
+        </div>
+        {selected && (
+          <div className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+            <Check className="w-3 h-3 text-white" />
+          </div>
+        )}
+      </div>
+    </button>
+  );
 }
 
 export default function OnboardingPage() {
@@ -163,6 +159,8 @@ export default function OnboardingPage() {
   });
   const [billingInterval, setBillingInterval] = useState<"annual" | "monthly">("annual");
   const [showAllPlans, setShowAllPlans] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -171,10 +169,8 @@ export default function OnboardingPage() {
     retry: false,
   });
 
-  // If user has already completed onboarding, redirect them to the next step
   useEffect(() => {
     if (authData?.user?.onboardingCompleted) {
-      // Redirect based on their current state
       if (!authData.user.emailConnected) {
         setLocation("/connect-email");
       } else {
@@ -187,13 +183,52 @@ export default function OnboardingPage() {
   const currentStepIndex = steps.indexOf(step);
   const recommendedPlan = getRecommendedPlan(preferences);
 
+  const goNext = useCallback(() => {
+    const nextIndex = currentStepIndex + 1;
+    if (nextIndex < steps.length) {
+      setTransitioning(true);
+      setTimeout(() => {
+        setStep(steps[nextIndex]);
+        setTransitioning(false);
+      }, 300);
+    }
+  }, [currentStepIndex, steps]);
+
+  const autoAdvance = useCallback((delay = 600) => {
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    autoAdvanceTimer.current = setTimeout(() => {
+      autoAdvanceTimer.current = null;
+      goNext();
+    }, delay);
+  }, [goNext]);
+
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    };
+  }, []);
+
+  const goBack = useCallback(() => {
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = null;
+    }
+    const prevIndex = currentStepIndex - 1;
+    if (prevIndex >= 0) {
+      setTransitioning(true);
+      setTimeout(() => {
+        setStep(steps[prevIndex]);
+        setTransitioning(false);
+      }, 300);
+    }
+  }, [currentStepIndex, steps]);
+
   const completeOnboardingMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/user/onboarding", { aiPreferences: preferences });
       return response.json();
     },
     onSuccess: async () => {
-      // If 2FA was enabled during onboarding, enable it
       if (preferences.enableTwoFactor) {
         try {
           await apiRequest("POST", "/api/settings/2fa/toggle", { enable: true });
@@ -201,71 +236,42 @@ export default function OnboardingPage() {
           console.error("Failed to enable 2FA:", err);
         }
       }
-      
-      // Wait for the query to refetch with updated data before redirecting
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
-      // Redirect to email connection
       setLocation("/connect-email");
     },
     onError: (error: Error) => {
-      toast({
-        title: "Failed to save preferences",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Failed to save preferences", description: error.message, variant: "destructive" });
     },
   });
 
-  // Free plan selection
   const selectFreePlanMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/user/plan", { plan: "free" });
       return response.json();
     },
-    onSuccess: () => {
-      completeOnboardingMutation.mutate();
-    },
+    onSuccess: () => completeOnboardingMutation.mutate(),
     onError: (error: Error) => {
-      toast({
-        title: "Failed to select plan",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Failed to select plan", description: error.message, variant: "destructive" });
     },
   });
 
-  // Prepare for checkout by saving preferences first
   const prepareCheckoutMutation = useMutation({
     mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
-      // First save the AI preferences
       await apiRequest("POST", "/api/user/onboarding", { aiPreferences: preferences });
-      // If 2FA was enabled, enable it
       if (preferences.enableTwoFactor) {
-        try {
-          await apiRequest("POST", "/api/settings/2fa/toggle", { enable: true });
-        } catch (err) {
-          console.error("Failed to enable 2FA:", err);
-        }
+        try { await apiRequest("POST", "/api/settings/2fa/toggle", { enable: true }); } catch (err) { console.error("Failed to enable 2FA:", err); }
       }
       return { plan, interval };
     },
-    onSuccess: ({ plan, interval }) => {
-      // Redirect to custom checkout page
-      setLocation(`/checkout?plan=${plan}&interval=${interval}`);
-    },
+    onSuccess: ({ plan, interval }) => setLocation(`/checkout?plan=${plan}&interval=${interval}`),
     onError: (error: Error) => {
-      toast({
-        title: "Failed to save preferences",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Failed to save preferences", description: error.message, variant: "destructive" });
     },
   });
 
   const handlePlanSelect = (planId: string) => {
     setPreferences({ ...preferences, selectedPlan: planId });
-    
     if (planId === "free") {
       selectFreePlanMutation.mutate();
     } else {
@@ -274,23 +280,6 @@ export default function OnboardingPage() {
   };
 
   const isPlanLoading = selectFreePlanMutation.isPending || prepareCheckoutMutation.isPending || completeOnboardingMutation.isPending;
-
-  const goNext = () => {
-    const nextIndex = currentStepIndex + 1;
-    if (nextIndex < steps.length) {
-      setStep(steps[nextIndex]);
-    }
-    // For select-plan step, plan selection handles completion
-  };
-
-  const goBack = () => {
-    const prevIndex = currentStepIndex - 1;
-    if (prevIndex >= 0) {
-      setStep(steps[prevIndex]);
-    } else {
-      setLocation("/login");
-    }
-  };
 
   const toggleFeature = (feature: string) => {
     setPreferences((prev) => ({
@@ -301,572 +290,546 @@ export default function OnboardingPage() {
     }));
   };
 
+  const conversationalTitles: Record<Step, { greeting: string; question: string }> = {
+    "primary-use": { greeting: "Let's get to know you", question: "What will you mainly use MyDraft for?" },
+    "email-volume": { greeting: "Got it!", question: "How busy is your inbox on a typical day?" },
+    "ai-features": { greeting: "Nice", question: "Which of these sound useful to you?" },
+    "automation": { greeting: "Great choices", question: "How hands-on do you want to be with your replies?" },
+    "tone": { greeting: "Almost there", question: "How should your emails sound?" },
+    "security": { greeting: "One more thing", question: "Want to add extra security?" },
+    "referral": { greeting: "Last question", question: "How did you find us?" },
+    "select-plan": { greeting: "You're all set!", question: "Here's the plan we'd recommend for you" },
+  };
+
+  const title = conversationalTitles[step];
+
   return (
-    <div className={`min-h-screen bg-background flex items-center justify-center px-4 py-8 sm:py-12 ${step === "select-plan" ? "items-stretch" : ""}`}>
-      <div className={`w-full transition-all ${step === "select-plan" ? "max-w-6xl" : "max-w-lg"}`}>
-        <div className="flex justify-center gap-1 sm:gap-1.5 mb-6 sm:mb-8">
-          {steps.map((s, i) => (
-            <div
-              key={s}
-              className={`h-1 sm:h-1.5 w-6 sm:w-10 rounded-full transition-colors ${
-                i <= currentStepIndex ? "bg-primary" : "bg-muted"
-              }`}
-            />
-          ))}
-        </div>
+    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[10%] left-[20%] w-[500px] h-[500px] bg-blue-600/[0.04] rounded-full blur-[120px]" />
+        <div className="absolute bottom-[20%] right-[15%] w-[400px] h-[400px] bg-violet-600/[0.03] rounded-full blur-[120px]" />
+      </div>
 
-        <Card className={`overflow-hidden ${step === "select-plan" ? "border-0 bg-transparent shadow-none" : ""}`}>
-          {step !== "select-plan" && (
-          <CardHeader className="p-4 sm:p-6">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-            </div>
-            <CardTitle className="text-lg sm:text-xl">
-              {step === "primary-use" && "How will you use MyDraft?"}
-              {step === "email-volume" && "How many emails do you receive daily?"}
-              {step === "ai-features" && "Which AI features interest you?"}
-              {step === "automation" && "How much automation do you want?"}
-              {step === "tone" && "What's your preferred reply tone?"}
-              {step === "security" && "Secure your account"}
-              {step === "referral" && "How did you hear about us?"}
-            </CardTitle>
-            <CardDescription>
-              {step === "primary-use" && "Help us personalize your experience"}
-              {step === "email-volume" && "This helps us recommend the right plan for you"}
-              {step === "ai-features" && "Select all that apply"}
-              {step === "automation" && "We'll set up your inbox accordingly"}
-              {step === "tone" && "This will be your default for AI replies"}
-              {step === "security" && "Add extra protection with two-factor authentication"}
-              {step === "referral" && "We'd love to know how you found us"}
-            </CardDescription>
-          </CardHeader>
-          )}
-          <CardContent className="space-y-4">
-            {step === "primary-use" && (
-              <RadioGroup
-                value={preferences.primaryUse}
-                onValueChange={(value) => setPreferences({ ...preferences, primaryUse: value })}
-                className="space-y-3"
-              >
-                {[
-                  { value: "personal", label: "Personal email", icon: Mail, desc: "Friends, family, subscriptions" },
-                  { value: "work", label: "Work email", icon: Zap, desc: "Clients, colleagues, projects" },
-                  { value: "both", label: "Both", icon: MessageSquare, desc: "Mix of personal and work" },
-                ].map((option) => (
-                  <div key={option.value} className="flex items-center space-x-3">
-                    <RadioGroupItem 
-                      value={option.value} 
-                      id={option.value}
-                      data-testid={`radio-primary-use-${option.value}`}
-                    />
-                    <Label htmlFor={option.value} className="flex items-center gap-3 cursor-pointer flex-1">
-                      <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
-                        <option.icon className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="font-medium">{option.label}</div>
-                        <div className="text-xs text-muted-foreground">{option.desc}</div>
-                      </div>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8">
+        <div className="w-full max-w-lg">
+          <div className="flex justify-center mb-8">
+            <img src={logoPath} alt="MyDraft" className="h-6 w-auto opacity-50" />
+          </div>
 
-            {step === "email-volume" && (
-              <RadioGroup
-                value={preferences.emailVolume}
-                onValueChange={(value) => setPreferences({ ...preferences, emailVolume: value })}
-                className="space-y-3"
-              >
-                {[
-                  { value: "low", label: "Less than 20", desc: "I keep it light" },
-                  { value: "medium", label: "20-50 emails", desc: "A moderate flow" },
-                  { value: "high", label: "50-100 emails", desc: "Busy inbox" },
-                  { value: "very-high", label: "100+ emails", desc: "I need serious help" },
-                ].map((option) => (
-                  <div key={option.value} className="flex items-center space-x-3">
-                    <RadioGroupItem 
-                      value={option.value} 
-                      id={`volume-${option.value}`}
-                      data-testid={`radio-email-volume-${option.value}`}
-                    />
-                    <Label htmlFor={`volume-${option.value}`} className="flex items-center gap-3 cursor-pointer flex-1">
-                      <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
-                        <Inbox className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="font-medium">{option.label}</div>
-                        <div className="text-xs text-muted-foreground">{option.desc}</div>
-                      </div>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
+          <div className="flex justify-center gap-1.5 mb-8">
+            {steps.map((_, i) => (
+              <div
+                key={i}
+                className={`h-1 rounded-full transition-all duration-500 ${
+                  i < currentStepIndex ? "w-8 bg-blue-500" : i === currentStepIndex ? "w-8 bg-blue-500" : "w-4 bg-white/[0.06]"
+                }`}
+              />
+            ))}
+          </div>
 
-            {step === "ai-features" && (
-              <div className="space-y-3">
-                {[
-                  { value: "auto-draft", label: "AI Reply Drafts", desc: "Generate smart reply suggestions" },
-                  { value: "suggest-replies", label: "Tone Matching", desc: "Match your writing style" },
-                  { value: "auto-label", label: "Smart Labeling", desc: "Automatically organize emails" },
-                  { value: "summarize", label: "Email Summaries", desc: "Get quick email summaries" },
-                ].map((feature) => (
-                  <button
-                    key={feature.value}
-                    type="button"
-                    onClick={() => toggleFeature(feature.value)}
-                    className={`w-full p-4 rounded-lg border text-left transition-colors ${
-                      preferences.aiFeatures.includes(feature.value)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-muted-foreground"
-                    }`}
-                    data-testid={`button-feature-${feature.value}`}
-                  >
-                    <div className="font-medium">{feature.label}</div>
-                    <div className="text-sm text-muted-foreground">{feature.desc}</div>
-                  </button>
-                ))}
+          {step !== "select-plan" ? (
+            <div className={`transition-all duration-300 ${transitioning ? "opacity-0 translate-y-3" : "opacity-100 translate-y-0"}`}>
+              <div className="text-center mb-8">
+                <p className="text-xs text-blue-400/70 font-medium uppercase tracking-widest mb-2">{title.greeting}</p>
+                <h1 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">{title.question}</h1>
               </div>
-            )}
 
-            {step === "automation" && (
-              <RadioGroup
-                value={preferences.automationLevel}
-                onValueChange={(value) => setPreferences({ ...preferences, automationLevel: value })}
-                className="space-y-3"
-              >
-                {[
-                  { value: "low", label: "Minimal", desc: "I'll write most replies myself" },
-                  { value: "medium", label: "Balanced", desc: "Suggest drafts but let me review" },
-                  { value: "high", label: "Maximum", desc: "Automate as much as possible" },
-                ].map((option) => (
-                  <div key={option.value} className="flex items-center space-x-3">
-                    <RadioGroupItem 
-                      value={option.value} 
-                      id={option.value}
-                      data-testid={`radio-automation-${option.value}`}
-                    />
-                    <Label htmlFor={option.value} className="cursor-pointer flex-1">
-                      <div className="font-medium">{option.label}</div>
-                      <div className="text-sm text-muted-foreground">{option.desc}</div>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
-
-            {step === "tone" && (
-              <div className="space-y-4">
-                <RadioGroup
-                  value={preferences.replyTone}
-                  onValueChange={(value) => setPreferences({ ...preferences, replyTone: value })}
-                  className="space-y-3"
-                >
-                  {[
-                    { value: "professional", label: "Professional", desc: "Clear, formal, and courteous" },
-                    { value: "friendly", label: "Friendly", desc: "Warm, approachable, casual" },
-                    { value: "concise", label: "Concise", desc: "Brief, to the point" },
-                    { value: "custom", label: "Custom", desc: "Describe your own style" },
-                  ].map((option) => (
-                    <div key={option.value} className="flex items-center space-x-3">
-                      <RadioGroupItem 
-                        value={option.value} 
-                        id={option.value}
-                        data-testid={`radio-tone-${option.value}`}
-                      />
-                      <Label htmlFor={option.value} className="cursor-pointer flex-1">
-                        <div className="font-medium">{option.label}</div>
-                        <div className="text-sm text-muted-foreground">{option.desc}</div>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-                {preferences.replyTone === "custom" && (
-                  <Input
-                    placeholder="Describe your preferred tone..."
-                    value={preferences.customTone || ""}
-                    onChange={(e) => setPreferences({ ...preferences, customTone: e.target.value })}
-                    data-testid="input-custom-tone"
-                  />
-                )}
-              </div>
-            )}
-
-            {step === "security" && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
-                  <div className="flex-shrink-0">
-                    <Shield className="w-10 h-10 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium mb-1">Two-Factor Authentication</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Add an extra layer of security to your account. When enabled, you'll need to enter a code sent to your email when signing in.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <Label htmlFor="enable-2fa" className="font-medium">Enable 2FA</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Require email verification for sign in
-                    </p>
-                  </div>
-                  <Switch
-                    id="enable-2fa"
-                    checked={preferences.enableTwoFactor || false}
-                    onCheckedChange={(checked) => setPreferences({ ...preferences, enableTwoFactor: checked })}
-                    data-testid="switch-enable-2fa"
-                  />
-                </div>
-
-                <p className="text-sm text-muted-foreground text-center">
-                  You can change this setting anytime in your account settings.
-                </p>
-              </div>
-            )}
-
-            {step === "referral" && (
-              <div className="space-y-4">
-                <RadioGroup
-                  value={preferences.referralSource}
-                  onValueChange={(value) => setPreferences({ ...preferences, referralSource: value })}
-                  className="space-y-3"
-                >
-                  {[
-                    { value: "search", label: "Search engine (Google, etc.)" },
-                    { value: "social", label: "Social media" },
-                    { value: "friend", label: "Friend or colleague" },
-                    { value: "blog", label: "Blog or article" },
-                    { value: "podcast", label: "Podcast" },
-                    { value: "ad", label: "Online advertisement" },
-                    { value: "other", label: "Other" },
-                  ].map((option) => (
-                    <div key={option.value} className="flex items-center space-x-3">
-                      <RadioGroupItem 
-                        value={option.value} 
-                        id={`referral-${option.value}`}
-                        data-testid={`radio-referral-${option.value}`}
-                      />
-                      <Label htmlFor={`referral-${option.value}`} className="cursor-pointer flex-1">
-                        <div className="font-medium">{option.label}</div>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-                {preferences.referralSource === "other" && (
-                  <Input
-                    placeholder="Please specify..."
-                    value={preferences.referralOther || ""}
-                    onChange={(e) => setPreferences({ ...preferences, referralOther: e.target.value })}
-                    data-testid="input-referral-other"
-                  />
-                )}
-              </div>
-            )}
-
-            {step === "select-plan" && (
-              <div className="-mx-4 sm:-mx-6">
-                {!showAllPlans ? (
+              <div className="space-y-2.5">
+                {step === "primary-use" && (
                   <>
-                    {(() => {
-                      const plan = basePlans.find(p => p.id === recommendedPlan)!;
-                      const displayPrice = plan.id === "free" 
-                        ? "$0" 
-                        : billingInterval === "annual" 
-                          ? `$${plan.annualPrice}` 
-                          : `$${plan.monthlyPrice}`;
-                      const displayPeriod = plan.id === "free" 
-                        ? "forever" 
-                        : billingInterval === "annual" 
-                          ? "/year" 
-                          : "/month";
+                    {[
+                      { value: "personal", icon: <Mail className="w-4 h-4 text-muted-foreground" />, label: "Personal email", desc: "Friends, family, subscriptions" },
+                      { value: "work", icon: <Briefcase className="w-4 h-4 text-muted-foreground" />, label: "Work email", desc: "Clients, colleagues, projects" },
+                      { value: "both", icon: <RefreshCw className="w-4 h-4 text-muted-foreground" />, label: "Both", desc: "Mix of personal and work" },
+                    ].map((opt) => (
+                      <OptionCard
+                        key={opt.value}
+                        selected={preferences.primaryUse === opt.value}
+                        onClick={() => {
+                          setPreferences({ ...preferences, primaryUse: opt.value });
+                          autoAdvance();
+                        }}
+                        icon={opt.icon}
+                        label={opt.label}
+                        desc={opt.desc}
+                        testId={`radio-primary-use-${opt.value}`}
+                      />
+                    ))}
+                  </>
+                )}
 
-                      const getVisualizationData = () => {
-                        const emailVolume = preferences.emailVolume;
-                        
-                        const emailsPerDay = emailVolume === "very-high" ? 120 : emailVolume === "high" ? 75 : emailVolume === "medium" ? 35 : 15;
-                        const timeSavedPerEmail = plan.id === "business" ? 3 : plan.id === "pro" ? 2.5 : plan.id === "student" ? 2 : 1;
-                        const dailyTimeSaved = Math.round((emailsPerDay * timeSavedPerEmail) / 60);
-                        const monthlyTimeSaved = dailyTimeSaved * 22;
-                        const yearlyTimeSaved = monthlyTimeSaved * 12;
-                        
-                        const emailsAutomated = plan.id === "business" ? "Unlimited" : plan.id === "pro" ? "100" : plan.id === "student" ? "50" : "5";
-                        const responseTime = plan.id === "business" ? "< 30 sec" : plan.id === "pro" ? "< 1 min" : plan.id === "student" ? "< 2 min" : "< 5 min";
-                        
-                        return { emailsPerDay, dailyTimeSaved, monthlyTimeSaved, yearlyTimeSaved, emailsAutomated, responseTime };
-                      };
-                      
-                      const vizData = getVisualizationData();
+                {step === "email-volume" && (
+                  <>
+                    {[
+                      { value: "low", icon: <Inbox className="w-4 h-4 text-muted-foreground" />, label: "Less than 20", desc: "Nice and manageable" },
+                      { value: "medium", icon: <MailOpen className="w-4 h-4 text-muted-foreground" />, label: "20-50 emails", desc: "A steady flow" },
+                      { value: "high", icon: <Mails className="w-4 h-4 text-muted-foreground" />, label: "50-100 emails", desc: "Quite a bit to keep up with" },
+                      { value: "very-high", icon: <Waves className="w-4 h-4 text-muted-foreground" />, label: "100+ emails", desc: "You definitely need help" },
+                    ].map((opt) => (
+                      <OptionCard
+                        key={opt.value}
+                        selected={preferences.emailVolume === opt.value}
+                        onClick={() => {
+                          setPreferences({ ...preferences, emailVolume: opt.value });
+                          autoAdvance();
+                        }}
+                        icon={opt.icon}
+                        label={opt.label}
+                        desc={opt.desc}
+                        testId={`radio-email-volume-${opt.value}`}
+                      />
+                    ))}
+                  </>
+                )}
 
-                      return (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[550px] rounded-xl overflow-hidden border border-border">
-                          <div className="p-6 sm:p-10 lg:p-12 bg-card lg:border-r border-border flex flex-col">
-                            <div className="mb-6">
-                              <Badge className="bg-primary text-primary-foreground text-xs mb-4">
-                                <Star className="w-3 h-3 mr-1" />
-                                Recommended for you
-                              </Badge>
-                              
-                              <h2 className="text-3xl sm:text-4xl font-bold mb-2">{plan.name}</h2>
-                              <p className="text-muted-foreground">{plan.description}</p>
-                            </div>
+                {step === "ai-features" && (
+                  <>
+                    {[
+                      { value: "auto-draft", icon: <PenLine className="w-4 h-4 text-muted-foreground" />, label: "AI Reply Drafts", desc: "Generate smart reply suggestions" },
+                      { value: "suggest-replies", icon: <Sparkles className="w-4 h-4 text-muted-foreground" />, label: "Tone Matching", desc: "Match your writing style" },
+                      { value: "auto-label", icon: <Tag className="w-4 h-4 text-muted-foreground" />, label: "Smart Labeling", desc: "Automatically organize emails" },
+                      { value: "summarize", icon: <FileText className="w-4 h-4 text-muted-foreground" />, label: "Email Summaries", desc: "Get quick email summaries" },
+                    ].map((opt) => (
+                      <OptionCard
+                        key={opt.value}
+                        selected={preferences.aiFeatures.includes(opt.value)}
+                        onClick={() => toggleFeature(opt.value)}
+                        icon={opt.icon}
+                        label={opt.label}
+                        desc={opt.desc}
+                        testId={`button-feature-${opt.value}`}
+                      />
+                    ))}
+                    <div className="pt-4 flex justify-end">
+                      <Button
+                        onClick={goNext}
+                        disabled={preferences.aiFeatures.length === 0}
+                        className="gap-2"
+                        data-testid="button-onboarding-next"
+                      >
+                        Continue
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </>
+                )}
 
-                            <div className="mb-6">
-                              <div className="flex items-baseline gap-1 mb-4">
-                                <span className="text-4xl sm:text-5xl font-bold">{displayPrice}</span>
-                                <span className="text-muted-foreground text-lg">{displayPeriod}</span>
-                              </div>
-                              
-                              <div className="inline-flex items-center bg-muted rounded-full p-1" data-testid="billing-toggle">
-                                <button
-                                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                                    billingInterval === "monthly" 
-                                      ? "bg-primary text-primary-foreground" 
-                                      : "text-muted-foreground hover:text-foreground"
-                                  }`}
-                                  onClick={() => setBillingInterval("monthly")}
-                                  data-testid="button-billing-monthly"
-                                >
-                                  Monthly
-                                </button>
-                                <button
-                                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                                    billingInterval === "annual" 
-                                      ? "bg-primary text-primary-foreground" 
-                                      : "text-muted-foreground hover:text-foreground"
-                                  }`}
-                                  onClick={() => setBillingInterval("annual")}
-                                  data-testid="button-billing-annual"
-                                >
-                                  Annual
-                                </button>
-                              </div>
-                            </div>
+                {step === "automation" && (
+                  <>
+                    {[
+                      { value: "low", icon: <PenLine className="w-4 h-4 text-muted-foreground" />, label: "I'll write most replies myself", desc: "Just help me organize" },
+                      { value: "medium", icon: <Users className="w-4 h-4 text-muted-foreground" />, label: "Suggest drafts, but let me review", desc: "Best of both worlds" },
+                      { value: "high", icon: <Rocket className="w-4 h-4 text-muted-foreground" />, label: "Automate as much as possible", desc: "Full speed ahead" },
+                    ].map((opt) => (
+                      <OptionCard
+                        key={opt.value}
+                        selected={preferences.automationLevel === opt.value}
+                        onClick={() => {
+                          setPreferences({ ...preferences, automationLevel: opt.value });
+                          autoAdvance();
+                        }}
+                        icon={opt.icon}
+                        label={opt.label}
+                        desc={opt.desc}
+                        testId={`radio-automation-${opt.value}`}
+                      />
+                    ))}
+                  </>
+                )}
 
-                            <div className="space-y-3 mb-8 flex-1">
-                              {plan.features.map((feature) => (
-                                <div key={feature} className="flex items-center gap-3">
-                                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                    <Check className="w-3 h-3 text-primary" />
-                                  </div>
-                                  <span className="text-sm">{feature}</span>
-                                </div>
-                              ))}
-                            </div>
+                {step === "tone" && (
+                  <>
+                    {[
+                      { value: "professional", icon: <Briefcase className="w-4 h-4 text-muted-foreground" />, label: "Professional", desc: "Clear, formal, and courteous" },
+                      { value: "friendly", icon: <Smile className="w-4 h-4 text-muted-foreground" />, label: "Friendly", desc: "Warm, approachable, casual" },
+                      { value: "concise", icon: <Zap className="w-4 h-4 text-muted-foreground" />, label: "Concise", desc: "Brief and to the point" },
+                      { value: "custom", icon: <Palette className="w-4 h-4 text-muted-foreground" />, label: "Custom", desc: "Describe your own style" },
+                    ].map((opt) => (
+                      <OptionCard
+                        key={opt.value}
+                        selected={preferences.replyTone === opt.value}
+                        onClick={() => {
+                          setPreferences({ ...preferences, replyTone: opt.value });
+                          if (opt.value !== "custom") autoAdvance();
+                        }}
+                        icon={opt.icon}
+                        label={opt.label}
+                        desc={opt.desc}
+                        testId={`radio-tone-${opt.value}`}
+                      />
+                    ))}
+                    {preferences.replyTone === "custom" && (
+                      <div className="pt-2 flex gap-2">
+                        <Input
+                          placeholder="Describe your preferred tone..."
+                          value={preferences.customTone || ""}
+                          onChange={(e) => setPreferences({ ...preferences, customTone: e.target.value })}
+                          className="flex-1"
+                          data-testid="input-custom-tone"
+                        />
+                        <Button onClick={goNext} disabled={!preferences.customTone?.trim()} data-testid="button-onboarding-next">
+                          <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
 
-                            <div className="space-y-3">
-                              <Button
-                                className="w-full"
-                                size="lg"
-                                onClick={() => handlePlanSelect(plan.id)}
-                                disabled={isPlanLoading}
-                                data-testid={`button-plan-${plan.id}`}
-                              >
-                                {isPlanLoading ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                    Setting up...
-                                  </>
-                                ) : plan.id === "free" ? (
-                                  "Get started free"
-                                ) : (
-                                  `Start 14-day free trial`
-                                )}
-                              </Button>
-                              
-                              <button
-                                type="button"
-                                onClick={() => setShowAllPlans(true)}
-                                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-                                data-testid="button-view-all-plans"
-                              >
-                                View all plans
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="p-6 sm:p-10 lg:p-12 bg-gradient-to-br from-primary/5 via-background to-blue-500/5 flex flex-col justify-center">
-                            <div className="space-y-8">
-                              <div>
-                                <p className="text-sm text-muted-foreground mb-2">Based on your email volume, you'll save</p>
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-5xl sm:text-6xl lg:text-7xl font-bold text-emerald-500">{vizData.yearlyTimeSaved}+</span>
-                                  <span className="text-xl sm:text-2xl text-muted-foreground">hours/year</span>
-                                </div>
-                                <p className="text-sm text-muted-foreground mt-2">
-                                  That's like getting <span className="font-semibold text-foreground">{Math.round(vizData.yearlyTimeSaved / 8)} extra workdays</span> back
-                                </p>
-                              </div>
-
-                              <div className="h-px bg-border" />
-
-                              <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                  <p className="text-sm text-muted-foreground mb-1">AI emails per day</p>
-                                  <p className="text-3xl sm:text-4xl font-bold text-primary">{vizData.emailsAutomated}</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground mb-1">Draft generation</p>
-                                  <p className="text-3xl sm:text-4xl font-bold text-blue-500">{vizData.responseTime}</p>
-                                </div>
-                              </div>
-
-                              <div className="h-px bg-border" />
-
-                              <div className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <Clock className="w-4 h-4 text-emerald-500" />
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Stop wasting time on repetitive emails</p>
-                                    <p className="text-sm text-muted-foreground">AI learns your style and drafts replies in seconds</p>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-start gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <Brain className="w-4 h-4 text-primary" />
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Your writing, amplified by AI</p>
-                                    <p className="text-sm text-muted-foreground">Replies sound exactly like you wrote them</p>
-                                  </div>
-                                </div>
-
-                                {plan.id !== "free" && (
-                                  <div className="flex items-start gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                      <Rocket className="w-4 h-4 text-purple-500" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium">14 days free, cancel anytime</p>
-                                      <p className="text-sm text-muted-foreground">No commitment, no credit card until you're ready</p>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                {step === "security" && (
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Shield className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium mb-1">Two-Factor Authentication</h4>
+                          <p className="text-xs text-muted-foreground/60 leading-relaxed mb-4">
+                            We'll send a code to your email each time you sign in. You can always change this later in settings.
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              id="enable-2fa"
+                              checked={preferences.enableTwoFactor || false}
+                              onCheckedChange={(checked) => setPreferences({ ...preferences, enableTwoFactor: checked })}
+                              data-testid="switch-enable-2fa"
+                            />
+                            <Label htmlFor="enable-2fa" className="text-sm text-muted-foreground cursor-pointer">
+                              {preferences.enableTwoFactor ? "Enabled" : "Enable 2FA"}
+                            </Label>
                           </div>
                         </div>
-                      );
-                    })()}
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button onClick={goNext} className="gap-2" data-testid="button-onboarding-next">
+                        Continue
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {step === "referral" && (
+                  <>
+                    {[
+                      { value: "search", icon: <Search className="w-4 h-4 text-muted-foreground" />, label: "Search engine" },
+                      { value: "social", icon: <Users className="w-4 h-4 text-muted-foreground" />, label: "Social media" },
+                      { value: "friend", icon: <Users className="w-4 h-4 text-muted-foreground" />, label: "Friend or colleague" },
+                      { value: "blog", icon: <Newspaper className="w-4 h-4 text-muted-foreground" />, label: "Blog or article" },
+                      { value: "podcast", icon: <Radio className="w-4 h-4 text-muted-foreground" />, label: "Podcast" },
+                      { value: "ad", icon: <Megaphone className="w-4 h-4 text-muted-foreground" />, label: "Online ad" },
+                      { value: "other", icon: <MessageCircle className="w-4 h-4 text-muted-foreground" />, label: "Other" },
+                    ].map((opt) => (
+                      <OptionCard
+                        key={opt.value}
+                        selected={preferences.referralSource === opt.value}
+                        onClick={() => {
+                          setPreferences({ ...preferences, referralSource: opt.value });
+                          if (opt.value !== "other") autoAdvance();
+                        }}
+                        icon={opt.icon}
+                        label={opt.label}
+                        testId={`radio-referral-${opt.value}`}
+                      />
+                    ))}
+                    {preferences.referralSource === "other" && (
+                      <div className="pt-2 flex gap-2">
+                        <Input
+                          placeholder="Please specify..."
+                          value={preferences.referralOther || ""}
+                          onChange={(e) => setPreferences({ ...preferences, referralOther: e.target.value })}
+                          className="flex-1"
+                          data-testid="input-referral-other"
+                        />
+                        <Button onClick={goNext} disabled={!preferences.referralOther?.trim()} data-testid="button-onboarding-next">
+                          <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </>
-                ) : (
-                  <div className="space-y-3">
-                    {basePlans.map((plan) => {
-                      const isRecommended = plan.id === recommendedPlan;
-                      const displayPrice = plan.id === "free" 
-                        ? "$0" 
-                        : billingInterval === "annual" 
-                          ? `$${plan.annualPrice}` 
-                          : `$${plan.monthlyPrice}`;
-                      const displayPeriod = plan.id === "free" 
-                        ? "forever" 
-                        : billingInterval === "annual" 
-                          ? "/year" 
-                          : "/month";
-
-                      return (
-                        <button
-                          key={plan.id}
-                          type="button"
-                          onClick={() => handlePlanSelect(plan.id)}
-                          disabled={isPlanLoading}
-                          className={`w-full p-3 sm:p-4 rounded-lg border text-left transition-all relative touch-target ${
-                            isRecommended
-                              ? "border-primary bg-primary/5 ring-1 ring-primary"
-                              : "border-border hover:border-muted-foreground"
-                          } ${isPlanLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-                          data-testid={`button-plan-${plan.id}`}
-                        >
-                          {isRecommended && (
-                            <Badge className="absolute -top-2.5 left-3 sm:left-4 bg-primary text-primary-foreground text-[10px] sm:text-xs">
-                              <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
-                              Recommended
-                            </Badge>
-                          )}
-                          <div className="flex items-center justify-between gap-3 sm:gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm sm:text-base">{plan.name}</div>
-                              <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</div>
-                              <div className="flex flex-wrap gap-x-2 sm:gap-x-3 gap-y-1 mt-2">
-                                {plan.features.slice(0, 2).map((feature) => (
-                                  <span key={feature} className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-0.5 sm:gap-1">
-                                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary flex-shrink-0" />
-                                    <span className="line-clamp-1">{feature}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <div className="text-lg sm:text-xl font-bold">{displayPrice}</div>
-                              <div className="text-[10px] sm:text-xs text-muted-foreground">{displayPeriod}</div>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-
-                    <button
-                      type="button"
-                      onClick={() => setShowAllPlans(false)}
-                      className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-                      data-testid="button-hide-all-plans"
-                    >
-                      Show recommended only
-                    </button>
-                  </div>
                 )}
-
-                {isPlanLoading && !showAllPlans && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Setting up your account...</span>
-                  </div>
-                )}
-
-                <p className="text-xs text-muted-foreground text-center">
-                  Pro and Business plans include a 14-day free trial. Cancel anytime.
-                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        <div className="flex justify-between mt-6">
-          <Button
-            variant="ghost"
-            onClick={goBack}
-            disabled={isPlanLoading}
-            data-testid="button-onboarding-back"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          {step !== "select-plan" && (
-            <Button
-              onClick={goNext}
-              disabled={
-                (step === "primary-use" && !preferences.primaryUse) ||
-                (step === "email-volume" && !preferences.emailVolume) ||
-                (step === "ai-features" && preferences.aiFeatures.length === 0) ||
-                (step === "automation" && !preferences.automationLevel) ||
-                (step === "tone" && !preferences.replyTone) ||
-                (step === "referral" && !preferences.referralSource)
-              }
-              data-testid="button-onboarding-next"
-            >
-              Continue
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+              {currentStepIndex > 0 && (
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className="text-sm text-muted-foreground/50 hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+                    data-testid="button-onboarding-back"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <PlanSelectionStep
+              preferences={preferences}
+              recommendedPlan={recommendedPlan}
+              billingInterval={billingInterval}
+              setBillingInterval={setBillingInterval}
+              showAllPlans={showAllPlans}
+              setShowAllPlans={setShowAllPlans}
+              handlePlanSelect={handlePlanSelect}
+              isPlanLoading={isPlanLoading}
+            />
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function PlanSelectionStep({
+  preferences,
+  recommendedPlan,
+  billingInterval,
+  setBillingInterval,
+  showAllPlans,
+  setShowAllPlans,
+  handlePlanSelect,
+  isPlanLoading,
+}: {
+  preferences: AIPreferences;
+  recommendedPlan: string;
+  billingInterval: "annual" | "monthly";
+  setBillingInterval: (v: "annual" | "monthly") => void;
+  showAllPlans: boolean;
+  setShowAllPlans: (v: boolean) => void;
+  handlePlanSelect: (planId: string) => void;
+  isPlanLoading: boolean;
+}) {
+  if (!showAllPlans) {
+    const plan = basePlans.find(p => p.id === recommendedPlan)!;
+    const displayPrice = plan.id === "free" ? "$0" : billingInterval === "annual" ? `$${plan.annualPrice}` : `$${plan.monthlyPrice}`;
+    const displayPeriod = plan.id === "free" ? "forever" : billingInterval === "annual" ? "/year" : "/month";
+
+    const emailsPerDay = preferences.emailVolume === "very-high" ? 120 : preferences.emailVolume === "high" ? 75 : preferences.emailVolume === "medium" ? 35 : 15;
+    const timeSavedPerEmail = plan.id === "business" ? 3 : plan.id === "pro" ? 2.5 : plan.id === "student" ? 2 : 1;
+    const yearlyTimeSaved = Math.round((emailsPerDay * timeSavedPerEmail * 22 * 12) / 60);
+    const emailsAutomated = plan.id === "business" ? "Unlimited" : plan.id === "pro" ? "100" : plan.id === "student" ? "50" : "5";
+    const responseTime = plan.id === "business" ? "< 30 sec" : plan.id === "pro" ? "< 1 min" : plan.id === "student" ? "< 2 min" : "< 5 min";
+
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <p className="text-xs text-blue-400/70 font-medium uppercase tracking-widest mb-2">You're all set!</p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Here's the perfect plan for you</h1>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 rounded-2xl overflow-hidden border border-white/[0.08]">
+          <div className="p-6 sm:p-8 flex flex-col">
+            <Badge className="bg-blue-500 text-white text-xs mb-5 w-fit">
+              <Star className="w-3 h-3 mr-1" />
+              Recommended for you
+            </Badge>
+
+            <h2 className="text-3xl font-bold mb-1">{plan.name}</h2>
+            <p className="text-sm text-muted-foreground/60 mb-5">{plan.description}</p>
+
+            <div className="flex items-baseline gap-1 mb-4">
+              <span className="text-4xl font-bold">{displayPrice}</span>
+              <span className="text-muted-foreground/50">{displayPeriod}</span>
+            </div>
+
+            <div className="inline-flex items-center bg-white/[0.04] border border-white/[0.06] rounded-full p-1 mb-6 w-fit" data-testid="billing-toggle">
+              <button
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  billingInterval === "monthly" ? "bg-blue-500 text-white" : "text-muted-foreground/60"
+                }`}
+                onClick={() => setBillingInterval("monthly")}
+                data-testid="button-billing-monthly"
+              >
+                Monthly
+              </button>
+              <button
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  billingInterval === "annual" ? "bg-blue-500 text-white" : "text-muted-foreground/60"
+                }`}
+                onClick={() => setBillingInterval("annual")}
+                data-testid="button-billing-annual"
+              >
+                Annual
+              </button>
+            </div>
+
+            <div className="space-y-2.5 mb-8 flex-1">
+              {plan.features.map((feature) => (
+                <div key={feature} className="flex items-center gap-2.5">
+                  <div className="w-4 h-4 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-2.5 h-2.5 text-emerald-400" />
+                  </div>
+                  <span className="text-sm text-foreground/70">{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2.5">
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => handlePlanSelect(plan.id)}
+                disabled={isPlanLoading}
+                data-testid={`button-plan-${plan.id}`}
+              >
+                {isPlanLoading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" />Setting up...</>
+                ) : plan.id === "free" ? "Get started free" : "Start 14-day free trial"}
+              </Button>
+              <button
+                type="button"
+                onClick={() => setShowAllPlans(true)}
+                className="w-full text-sm text-muted-foreground/50 hover:text-foreground transition-colors py-2"
+                data-testid="button-view-all-plans"
+              >
+                View all plans
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6 sm:p-8 bg-gradient-to-br from-blue-500/[0.04] via-transparent to-violet-500/[0.04] flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-white/[0.06]">
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs text-muted-foreground/50 mb-1.5">Based on your email volume</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold text-emerald-400">{yearlyTimeSaved}+</span>
+                  <span className="text-lg text-muted-foreground/50">hours saved/year</span>
+                </div>
+                <p className="text-xs text-muted-foreground/40 mt-1">
+                  That's like getting <span className="text-foreground/70 font-medium">{Math.round(yearlyTimeSaved / 8)} extra workdays</span> back
+                </p>
+              </div>
+
+              <div className="h-px bg-white/[0.06]" />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground/50 mb-1">AI emails/day</p>
+                  <p className="text-2xl font-bold text-blue-400">{emailsAutomated}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground/50 mb-1">Draft speed</p>
+                  <p className="text-2xl font-bold text-violet-400">{responseTime}</p>
+                </div>
+              </div>
+
+              <div className="h-px bg-white/[0.06]" />
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Stop wasting time on repetitive emails</p>
+                    <p className="text-xs text-muted-foreground/50">AI drafts replies in seconds</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Brain className="w-3.5 h-3.5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Your writing, amplified by AI</p>
+                    <p className="text-xs text-muted-foreground/50">Replies sound exactly like you</p>
+                  </div>
+                </div>
+                {plan.id !== "free" && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-full bg-violet-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Rocket className="w-3.5 h-3.5 text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">14 days free, cancel anytime</p>
+                      <p className="text-xs text-muted-foreground/50">No commitment required</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-lg mx-auto">
+      <div className="text-center mb-6">
+        <p className="text-xs text-blue-400/70 font-medium uppercase tracking-widest mb-2">Choose your plan</p>
+        <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Pick what works for you</h1>
+      </div>
+
+      <div className="space-y-2.5">
+        {basePlans.map((plan) => {
+          const isRecommended = plan.id === recommendedPlan;
+          const displayPrice = plan.id === "free" ? "$0" : billingInterval === "annual" ? `$${plan.annualPrice}` : `$${plan.monthlyPrice}`;
+          const displayPeriod = plan.id === "free" ? "forever" : billingInterval === "annual" ? "/year" : "/month";
+
+          return (
+            <button
+              key={plan.id}
+              type="button"
+              onClick={() => handlePlanSelect(plan.id)}
+              disabled={isPlanLoading}
+              className={`w-full p-4 rounded-xl border text-left transition-all relative ${
+                isRecommended
+                  ? "border-blue-500/30 bg-blue-500/[0.06]"
+                  : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]"
+              } ${isPlanLoading ? "opacity-50" : ""}`}
+              data-testid={`button-plan-${plan.id}`}
+            >
+              {isRecommended && (
+                <Badge className="absolute -top-2.5 left-4 bg-blue-500 text-white text-[10px]">
+                  <Star className="w-2.5 h-2.5 mr-0.5" />
+                  Recommended
+                </Badge>
+              )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-sm">{plan.name}</div>
+                  <div className="text-xs text-muted-foreground/50 mt-0.5">{plan.description}</div>
+                  <div className="flex flex-wrap gap-x-2 mt-2">
+                    {plan.features.slice(0, 2).map((f) => (
+                      <span key={f} className="text-[10px] text-muted-foreground/40 flex items-center gap-1">
+                        <Check className="w-2.5 h-2.5 text-emerald-400 flex-shrink-0" />
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0 ml-4">
+                  <div className="text-lg font-bold">{displayPrice}</div>
+                  <div className="text-[10px] text-muted-foreground/40">{displayPeriod}</div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={() => setShowAllPlans(false)}
+          className="w-full text-sm text-muted-foreground/50 hover:text-foreground transition-colors py-2"
+          data-testid="button-hide-all-plans"
+        >
+          Show recommended only
+        </button>
+      </div>
+
+      {isPlanLoading && (
+        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Setting up your account...</span>
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground/30 text-center mt-4">
+        Pro and Business plans include a 14-day free trial. Cancel anytime.
+      </p>
     </div>
   );
 }

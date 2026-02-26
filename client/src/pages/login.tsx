@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft, Building2, Inbox } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft, Building2, Inbox, Shield, Sparkles } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
 
@@ -20,15 +20,27 @@ function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden bg-background">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[20%] left-[30%] w-[500px] h-[500px] bg-blue-600/[0.06] rounded-full blur-[120px]" />
-        <div className="absolute bottom-[15%] right-[20%] w-[400px] h-[400px] bg-violet-600/[0.04] rounded-full blur-[120px]" />
+        <div className="absolute top-[15%] left-[25%] w-[600px] h-[600px] bg-blue-600/[0.04] rounded-full blur-[150px]" />
+        <div className="absolute bottom-[10%] right-[15%] w-[500px] h-[500px] bg-violet-600/[0.03] rounded-full blur-[150px]" />
+        <div className="absolute top-[60%] left-[10%] w-[300px] h-[300px] bg-cyan-600/[0.02] rounded-full blur-[100px]" />
       </div>
-      <div className="relative z-10 w-full max-w-[400px]">
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/20 p-7 sm:p-8">
-          <div className="flex justify-center mb-6">
-            <img src={logoPath} alt="MyDraft" className="h-7 w-auto" />
-          </div>
+      <div className="relative z-10 w-full max-w-[420px]">
+        <div className="flex justify-center mb-8">
+          <img src={logoPath} alt="MyDraft" className="h-7 w-auto opacity-60" />
+        </div>
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl shadow-2xl shadow-black/30 p-7 sm:p-8">
           {children}
+        </div>
+        <div className="mt-6 flex items-center justify-center gap-4 text-[11px] text-muted-foreground/30">
+          <div className="flex items-center gap-1.5">
+            <Shield className="w-3 h-3" />
+            <span>256-bit encryption</span>
+          </div>
+          <div className="w-px h-3 bg-white/[0.06]" />
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3" />
+            <span>AI-powered inbox</span>
+          </div>
         </div>
       </div>
     </div>
@@ -315,11 +327,11 @@ export default function LoginPage() {
     return (
       <AuthShell>
         <div className="text-center mb-6">
-          <div className="w-11 h-11 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
-            <Inbox className="w-5 h-5 text-blue-400" />
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Inbox className="w-5 h-5 text-primary" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground mb-1">Welcome back!</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-lg font-semibold text-foreground mb-1">Welcome back</h2>
+          <p className="text-sm text-muted-foreground/60">
             Signed in as {authData?.user?.email}
           </p>
         </div>
@@ -353,24 +365,24 @@ export default function LoginPage() {
     return (
       <AuthShell>
         <div className="text-center mb-6">
-          <div className="w-11 h-11 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
-            <Mail className="w-5 h-5 text-blue-400" />
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Mail className="w-5 h-5 text-primary" />
           </div>
           <h2 className="text-lg font-semibold text-foreground mb-1">
             {authStep === "verify-registration" ? "Verify your email" : "Two-factor authentication"}
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground/60">
             We sent a 6-digit code to{" "}
-            <span className="font-medium text-foreground">{pendingEmail}</span>
+            <span className="font-medium text-foreground/80">{pendingEmail}</span>
           </p>
-          <p className="text-xs text-muted-foreground/50 mt-1.5">
+          <p className="text-xs text-muted-foreground/30 mt-2">
             Check your spam folder if you don't see it.
           </p>
         </div>
 
         <form onSubmit={handleVerifyCode} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="code" className="text-xs font-medium text-muted-foreground/70">Verification Code</Label>
+            <Label htmlFor="code" className="text-xs font-medium text-muted-foreground/60">Verification Code</Label>
             <Input
               id="code"
               type="text"
@@ -406,7 +418,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleBack}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+            className="text-sm text-muted-foreground/50 hover:text-foreground transition-colors inline-flex items-center gap-1"
             data-testid="button-back-to-login"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -416,7 +428,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleResendCode}
             disabled={resendCodeMutation.isPending}
-            className="text-sm text-blue-400 hover:text-blue-300 disabled:opacity-50 transition-colors"
+            className="text-sm text-primary/80 hover:text-primary disabled:opacity-50 transition-colors"
             data-testid="button-resend-code"
           >
             {resendCodeMutation.isPending ? "Sending..." : "Resend code"}
@@ -429,18 +441,18 @@ export default function LoginPage() {
   return (
     <AuthShell>
       <div className="text-center mb-6">
-        <h2 className="text-lg font-semibold text-foreground mb-1">
+        <h2 className="text-xl font-semibold text-foreground mb-1">
           {isRegister ? "Create your account" : "Welcome back"}
         </h2>
-        {!isRegister && (
-          <p className="text-[13px] text-muted-foreground">Sign in to your inbox</p>
-        )}
+        <p className="text-[13px] text-muted-foreground/50">
+          {isRegister ? "Start your free trial today" : "Sign in to your inbox"}
+        </p>
       </div>
 
       <div className="space-y-2.5 mb-5">
-        <Button
-          variant="outline"
-          className="w-full gap-3 text-sm font-medium"
+        <button
+          type="button"
+          className="w-full flex items-center justify-center gap-3 text-sm font-medium h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] text-foreground/80 transition-colors disabled:opacity-50"
           onClick={() => handleOAuthLogin('google')}
           disabled={oauthConnecting !== null || isPending}
           data-testid="button-oauth-google"
@@ -451,10 +463,10 @@ export default function LoginPage() {
             <SiGoogle className="w-4 h-4" />
           )}
           {isRegister ? "Sign up with Google" : "Continue with Google"}
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full gap-3 text-sm font-medium"
+        </button>
+        <button
+          type="button"
+          className="w-full flex items-center justify-center gap-3 text-sm font-medium h-11 rounded-xl border border-white/[0.08] bg-white/[0.03] text-foreground/80 transition-colors disabled:opacity-50"
           onClick={() => handleOAuthLogin('microsoft')}
           disabled={oauthConnecting !== null || isPending}
           data-testid="button-oauth-microsoft"
@@ -465,7 +477,7 @@ export default function LoginPage() {
             <Building2 className="w-4 h-4" />
           )}
           {isRegister ? "Sign up with Microsoft" : "Continue with Microsoft"}
-        </Button>
+        </button>
       </div>
 
       <div className="relative mb-5">
@@ -473,13 +485,13 @@ export default function LoginPage() {
           <div className="w-full border-t border-white/[0.06]" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-white/[0.03] px-3 text-[11px] text-muted-foreground/40 uppercase tracking-wider">or</span>
+          <span className="bg-white/[0.02] backdrop-blur-sm px-3 text-[11px] text-muted-foreground/30 uppercase tracking-wider">or</span>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3.5">
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-xs font-medium text-muted-foreground/70">Email address</Label>
+          <Label htmlFor="email" className="text-xs font-medium text-muted-foreground/60">Email address</Label>
           <Input
             id="email"
             type="email"
@@ -493,7 +505,7 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-xs font-medium text-muted-foreground/70">Password</Label>
+          <Label htmlFor="password" className="text-xs font-medium text-muted-foreground/60">Password</Label>
           <div className="relative flex items-center">
             <Input
               id="password"
@@ -507,7 +519,7 @@ export default function LoginPage() {
             />
             <button
               type="button"
-              className="absolute right-3 text-muted-foreground/40 hover:text-foreground transition-colors"
+              className="absolute right-3 text-muted-foreground/30 hover:text-foreground transition-colors"
               onClick={() => setShowPassword(!showPassword)}
               data-testid="button-toggle-password-visibility"
             >
@@ -519,7 +531,7 @@ export default function LoginPage() {
 
         {isRegister && (
           <div className="space-y-1.5">
-            <Label htmlFor="confirmPassword" className="text-xs font-medium text-muted-foreground/70">Confirm password</Label>
+            <Label htmlFor="confirmPassword" className="text-xs font-medium text-muted-foreground/60">Confirm password</Label>
             <div className="relative flex items-center">
               <Input
                 id="confirmPassword"
@@ -533,7 +545,7 @@ export default function LoginPage() {
               />
               <button
                 type="button"
-                className="absolute right-3 text-muted-foreground/40 hover:text-foreground transition-colors"
+                className="absolute right-3 text-muted-foreground/30 hover:text-foreground transition-colors"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 data-testid="button-toggle-confirm-password-visibility"
               >
@@ -556,25 +568,25 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-5 text-center text-sm text-muted-foreground">
+      <p className="mt-5 text-center text-sm text-muted-foreground/50">
         {isRegister ? "Already have an account? " : "Don't have an account? "}
         <button
           type="button"
           onClick={handleToggleMode}
-          className="text-blue-400 font-medium hover:text-blue-300 transition-colors"
+          className="text-primary/80 font-medium hover:text-primary transition-colors"
           data-testid="button-toggle-auth-mode"
         >
           {isRegister ? "Sign in" : "Start free trial"}
         </button>
       </p>
 
-      <p className="mt-5 text-[11px] text-center text-muted-foreground/30 leading-relaxed">
+      <p className="mt-5 text-[11px] text-center text-muted-foreground/25 leading-relaxed">
         By {isRegister ? "creating an account" : "signing in"}, you agree to our{" "}
-        <Link href="/terms" className="underline hover:text-muted-foreground/50 transition-colors">
+        <Link href="/terms" className="underline hover:text-muted-foreground/40 transition-colors">
           Terms
         </Link>
         {" "}and{" "}
-        <Link href="/privacy" className="underline hover:text-muted-foreground/50 transition-colors">
+        <Link href="/privacy" className="underline hover:text-muted-foreground/40 transition-colors">
           Privacy Policy
         </Link>
       </p>
