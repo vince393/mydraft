@@ -194,6 +194,9 @@ function MobileSettingsNav({ onChange, showTeam }: { onChange: (s: SettingsSecti
           </div>
         </div>
       ))}
+      <div className="px-1">
+        <TestimonialWidget />
+      </div>
     </div>
   );
 }
@@ -296,6 +299,9 @@ export default function SettingsPage() {
         <div className="flex gap-8">
           <div className="w-48 flex-shrink-0 sticky top-8 self-start">
             <SettingsNav active={activeSection || "account"} onChange={setActiveSection} showTeam={showTeam} />
+            <div className="mt-5">
+              <TestimonialWidget />
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <SettingsContent section={activeSection || "account"} settings={settings} />
@@ -466,8 +472,6 @@ function AccountTab({ settings }: { settings: Settings }) {
         </div>
       </SettingsPanel>
 
-      <TestimonialCard />
-
       <SettingsPanel className="border-destructive/20">
         <SectionHeader icon={Trash2} title="Danger Zone" description="Irreversible actions" />
         <AlertDialog>
@@ -511,11 +515,11 @@ interface UserTestimonial {
   createdAt: string;
 }
 
-function TestimonialCard() {
+function TestimonialWidget() {
   const { toast } = useToast();
+  const [expanded, setExpanded] = useState(false);
   const [content, setContent] = useState("");
   const [rating, setRating] = useState(5);
-  const [isEditing, setIsEditing] = useState(false);
 
   const { data: existingTestimonial, isLoading } = useQuery<UserTestimonial | null>({
     queryKey: ["/api/testimonials/mine"],
@@ -527,92 +531,87 @@ function TestimonialCard() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Thank you for your testimonial!", description: "It will be reviewed before appearing on our site." });
-      setIsEditing(false);
+      toast({ title: "Thank you!", description: "Your testimonial will be reviewed." });
+      setExpanded(false);
+      setContent("");
       queryClient.invalidateQueries({ queryKey: ["/api/testimonials/mine"] });
     },
     onError: (error: Error) => {
-      toast({ title: "Failed to submit testimonial", description: error.message, variant: "destructive" });
+      toast({ title: "Failed to submit", description: error.message, variant: "destructive" });
     },
   });
 
-  if (isLoading) {
+  if (isLoading) return null;
+
+  if (existingTestimonial) {
     return (
-      <SettingsPanel>
-        <SectionHeader icon={Star} title="Leave a Testimonial" description="Share your experience" />
-        <div className="flex items-center justify-center py-6">
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground/40" />
+      <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          {[...Array(existingTestimonial.rating)].map((_, i) => (
+            <Star key={i} className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+          ))}
         </div>
-      </SettingsPanel>
+        <p className="text-[11px] text-muted-foreground/50 italic leading-relaxed line-clamp-2">"{existingTestimonial.content}"</p>
+        <p className="text-[10px] text-muted-foreground/25 mt-1.5 capitalize">{existingTestimonial.status}</p>
+      </div>
     );
   }
 
-  if (existingTestimonial && !isEditing) {
+  if (!expanded) {
     return (
-      <SettingsPanel>
-        <SectionHeader icon={Star} title="Your Testimonial" description={
-          existingTestimonial.status === "approved" ? "Approved" :
-          existingTestimonial.status === "denied" ? "Not approved" : "Pending review"
-        } />
-        <div className="space-y-3">
-          <div className="flex gap-1">
-            {[...Array(existingTestimonial.rating)].map((_, i) => (
-              <Star key={i} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground/70 italic">"{existingTestimonial.content}"</p>
+      <button
+        onClick={() => setExpanded(true)}
+        className="w-full rounded-lg border border-dashed border-white/[0.08] bg-white/[0.01] p-3 text-left hover:bg-white/[0.03] transition-colors group"
+        data-testid="button-open-testimonial"
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <Star className="w-3.5 h-3.5 text-yellow-500/60 group-hover:text-yellow-500 transition-colors" />
+          <span className="text-[12px] font-medium text-foreground/60 group-hover:text-foreground/80 transition-colors">Enjoying MyDraft?</span>
         </div>
-      </SettingsPanel>
+        <p className="text-[11px] text-muted-foreground/30">Leave a testimonial</p>
+      </button>
     );
   }
 
   return (
-    <SettingsPanel>
-      <SectionHeader icon={Star} title="Leave a Testimonial" description="Share your experience with MyDraft" />
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground/60">Rating</Label>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                onClick={() => setRating(star)}
-                className="p-1 hover:scale-110 transition-transform"
-                data-testid={`star-rating-${star}`}
-              >
-                <Star 
-                  className={`w-5 h-5 ${star <= rating ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground/30"}`} 
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="testimonial-content" className="text-xs text-muted-foreground/60">Your Experience</Label>
-          <Textarea
-            id="testimonial-content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Tell us what you love about MyDraft..."
-            className="min-h-[100px]"
-            data-testid="textarea-testimonial"
-          />
-          <p className="text-[11px] text-muted-foreground/40">
-            Minimum 10 characters. Your testimonial will be reviewed before appearing on our site.
-          </p>
-        </div>
-        <Button
-          onClick={() => submitMutation.mutate()}
-          disabled={submitMutation.isPending || content.trim().length < 10}
-          size="sm"
-          data-testid="button-submit-testimonial"
-        >
-          {submitMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Submit Testimonial
-        </Button>
+    <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[12px] font-medium text-foreground/70">Your rating</span>
+        <button onClick={() => setExpanded(false)} className="text-muted-foreground/30 hover:text-foreground/60 transition-colors">
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
-    </SettingsPanel>
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => setRating(star)}
+            className="p-0.5 hover:scale-110 transition-transform"
+            data-testid={`star-rating-${star}`}
+          >
+            <Star className={`w-4 h-4 ${star <= rating ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground/20"}`} />
+          </button>
+        ))}
+      </div>
+      <Textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="What do you love about MyDraft?"
+        className="min-h-[60px] text-[12px] resize-none"
+        data-testid="textarea-testimonial"
+      />
+      <Button
+        onClick={() => submitMutation.mutate()}
+        disabled={submitMutation.isPending || content.trim().length < 10}
+        size="sm"
+        className="w-full text-[12px]"
+        data-testid="button-submit-testimonial"
+      >
+        {submitMutation.isPending && <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />}
+        Submit
+      </Button>
+    </div>
   );
 }
 
