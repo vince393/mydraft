@@ -16,6 +16,25 @@ interface AuthResponse {
 
 type AuthStep = "credentials" | "verify-registration" | "verify-2fa";
 
+function AuthShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden bg-background">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[20%] left-[30%] w-[500px] h-[500px] bg-blue-600/[0.06] rounded-full blur-[120px]" />
+        <div className="absolute bottom-[15%] right-[20%] w-[400px] h-[400px] bg-violet-600/[0.04] rounded-full blur-[120px]" />
+      </div>
+      <div className="relative z-10 w-full max-w-[400px]">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/20 p-7 sm:p-8">
+          <div className="flex justify-center mb-6">
+            <img src={logoPath} alt="MyDraft" className="h-7 w-auto" />
+          </div>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const urlParams = new URLSearchParams(window.location.search);
   const [isRegister, setIsRegister] = useState(urlParams.get("mode") === "register");
@@ -291,23 +310,6 @@ export default function LoginPage() {
 
   const isPending = loginMutation.isPending || registerMutation.isPending;
   const isVerifying = verifyRegistrationMutation.isPending || verify2FAMutation.isPending;
-
-  const AuthShell = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden bg-background">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[20%] left-[30%] w-[500px] h-[500px] bg-blue-600/[0.06] rounded-full blur-[120px]" />
-        <div className="absolute bottom-[15%] right-[20%] w-[400px] h-[400px] bg-violet-600/[0.04] rounded-full blur-[120px]" />
-      </div>
-      <div className="relative z-10 w-full max-w-[400px]">
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl shadow-2xl shadow-black/20 p-7 sm:p-8">
-          <div className="flex justify-center mb-6">
-            <img src={logoPath} alt="MyDraft" className="h-7 w-auto" />
-          </div>
-          {children}
-        </div>
-      </div>
-    </div>
-  );
 
   if (isLoggedIn) {
     return (
