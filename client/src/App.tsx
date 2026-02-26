@@ -189,6 +189,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { data: authData, isLoading, isError } = useQuery<AuthResponse>({
     queryKey: ["/api/auth/me"],
     retry: false,
+    staleTime: 0,
   });
 
   if (isLoading) {
@@ -226,6 +227,7 @@ function PublicRoute({ children, redirectIfAuthenticated = true }: { children: R
   const { data: authData, isLoading } = useQuery<AuthResponse>({
     queryKey: ["/api/auth/me"],
     retry: false,
+    staleTime: 0,
   });
 
   if (isLoading) {
