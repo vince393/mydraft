@@ -59,6 +59,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
+  timezone: text("timezone"),
   plan: text("plan").$type<Plan>().default("free").notNull(),
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   aiPreferences: jsonb("ai_preferences").$type<AiPreferences>(),

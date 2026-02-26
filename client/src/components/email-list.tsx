@@ -698,13 +698,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         data-pull-to-refresh
         className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin relative pt-[52px]"
         onTouchStart={(e) => {
-          if (scrollContainerRef.current?.scrollTop === 0 && !isRefreshing && !isSyncing) {
+          if (scrollContainerRef.current?.scrollTop === 0 && !isRefreshing) {
             setIsPulling(true);
             (scrollContainerRef.current as any)._startY = e.touches[0].clientY;
           }
         }}
         onTouchMove={(e) => {
-          if (!isPulling || isRefreshing || isSyncing) return;
+          if (!isPulling || isRefreshing) return;
           const startY = (scrollContainerRef.current as any)?._startY;
           if (startY == null) return;
           const currentY = e.touches[0].clientY;
@@ -715,7 +715,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           if (damped > 5) e.preventDefault();
         }}
         onTouchEnd={() => {
-          if (pullDistance >= pullThreshold && onRefresh && !isRefreshing && !isSyncing) {
+          if (pullDistance >= pullThreshold && onRefresh && !isRefreshing) {
             onRefresh();
           }
           setPullDistance(0);
