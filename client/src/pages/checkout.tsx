@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap } from "lucide-react";
+import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap, Ticket, X, CheckCircle2 } from "lucide-react";
 import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
 import type { User } from "@shared/schema";
 
@@ -58,6 +58,10 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
   const [cardNumberComplete, setCardNumberComplete] = useState(false);
   const [cardExpiryComplete, setCardExpiryComplete] = useState(false);
   const [cardCvcComplete, setCardCvcComplete] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoApplied, setPromoApplied] = useState<{ code: string; creditMonths: number } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoValidating, setPromoValidating] = useState(false);
   const cardComplete = cardNumberComplete && cardExpiryComplete && cardCvcComplete && fullName.trim().length > 0;
 
   const setupIntentMutation = useMutation({
@@ -79,7 +83,8 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
       const response = await apiRequest("POST", "/api/stripe/confirm-subscription", { 
         plan, 
         interval, 
-        paymentMethodId 
+        paymentMethodId,
+        promoCode: promoApplied?.code,
       });
       if (!response.ok) {
         const error = await response.json();
@@ -88,6 +93,33 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
       return response.json();
     },
   });
+
+  const handleApplyPromo = async () => {
+    const code = promoCode.trim().toUpperCase();
+    if (!code) return;
+    setPromoError(null);
+    setPromoValidating(true);
+    try {
+      const response = await apiRequest("POST", "/api/promo/validate", { code });
+      if (!response.ok) {
+        const err = await response.json();
+        setPromoError(err.error || "Invalid promo code");
+        return;
+      }
+      const data = await response.json();
+      setPromoApplied({ code, creditMonths: data.creditMonths });
+    } catch {
+      setPromoError("Failed to validate promo code");
+    } finally {
+      setPromoValidating(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoApplied(null);
+    setPromoCode("");
+    setPromoError(null);
+  };
 
   useEffect(() => {
     setSetupError(null);

@@ -235,6 +235,21 @@ export const referrals = pgTable("referrals", {
 
 export type Referral = typeof referrals.$inferSelect;
 
+export const promoCodes = pgTable("promo_codes", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 20 }).notNull().unique(),
+  ownerUserId: varchar("owner_user_id").notNull(),
+  redeemedByUserId: varchar("redeemed_by_user_id"),
+  type: text("type").$type<"referral_reward" | "admin">().default("referral_reward").notNull(),
+  creditMonths: integer("credit_months").default(1).notNull(),
+  redeemed: boolean("redeemed").default(false).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  redeemedAt: timestamp("redeemed_at"),
+  expiresAt: timestamp("expires_at"),
+});
+
+export type PromoCode = typeof promoCodes.$inferSelect;
+
 // Linked accounts for account switching without re-authentication
 export const linkedAccounts = pgTable("linked_accounts", {
   id: serial("id").primaryKey(),

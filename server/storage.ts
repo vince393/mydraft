@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type EmailAccount, type InsertEmailAccount, users, referrals, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -274,6 +274,13 @@ export interface IStorage {
   getReferralStats(userId: string): Promise<{ total: number; subscribed: number }>;
   getReferrals(userId: string): Promise<Referral[]>;
   applyProCredit(userId: string, months: number): Promise<void>;
+
+  // Promo code methods
+  createPromoCode(ownerUserId: string, type?: "referral_reward" | "admin", creditMonths?: number): Promise<PromoCode>;
+  getPromoCodeByCode(code: string): Promise<PromoCode | undefined>;
+  getPromoCodesByOwner(userId: string): Promise<PromoCode[]>;
+  redeemPromoCode(code: string, redeemedByUserId: string): Promise<PromoCode>;
+  getUnclaimedReferralReward(userId: string): Promise<boolean>;
 }
 
 const avatarColors = [
@@ -2584,11 +2591,6 @@ Business Development`,
     await db.update(referrals)
       .set({ status: "subscribed", connectedAt: new Date() })
       .where(eq(referrals.id, existing.id));
-
-    const stats = await this.getReferralStats(existing.referrerUserId);
-    if (stats.subscribed >= 2 && stats.subscribed % 2 === 0) {
-      await this.applyProCredit(existing.referrerUserId, 1);
-    }
   }
 
   async getReferralStats(userId: string): Promise<{ total: number; subscribed: number }> {
@@ -2615,6 +2617,65 @@ Business Development`,
     const newEnd = new Date(currentEnd);
     newEnd.setMonth(newEnd.getMonth() + months);
     await db.update(users).set({ proCreditsUntil: newEnd }).where(eq(users.id, userId));
+  }
+
+  async createPromoCode(ownerUserId: string, type: "referral_reward" | "admin" = "referral_reward", creditMonths: number = 1): Promise<PromoCode> {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "MD-";
+    for (let i = 0; i < 8; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 6);
+    const [promoCode] = await db.insert(promoCodes).values({
+      code,
+      ownerUserId,
+      type,
+      creditMonths,
+      expiresAt,
+    }).returning();
+    return promoCode;
+  }
+
+  async getPromoCodeByCode(code: string): Promise<PromoCode | undefined> {
+    const [promoCode] = await db.select().from(promoCodes).where(eq(promoCodes.code, code.toUpperCase()));
+    return promoCode;
+  }
+
+  async getPromoCodesByOwner(userId: string): Promise<PromoCode[]> {
+    return db.select().from(promoCodes)
+      .where(eq(promoCodes.ownerUserId, userId))
+      .orderBy(desc(promoCodes.createdAt));
+  }
+
+  async redeemPromoCode(code: string, redeemedByUserId: string): Promise<PromoCode> {
+    const promoCode = await this.getPromoCodeByCode(code);
+    if (!promoCode) throw new Error("Invalid promo code");
+    if (promoCode.redeemed) throw new Error("This promo code has already been used");
+    if (promoCode.expiresAt && new Date(promoCode.expiresAt) < new Date()) throw new Error("This promo code has expired");
+
+    const [updated] = await db.update(promoCodes).set({
+      redeemed: true,
+      redeemedByUserId,
+      redeemedAt: new Date(),
+    }).where(eq(promoCodes.id, promoCode.id)).returning();
+
+    await this.applyProCredit(redeemedByUserId, promoCode.creditMonths);
+
+    return updated;
+  }
+
+  async getUnclaimedReferralReward(userId: string): Promise<boolean> {
+    const stats = await this.getReferralStats(userId);
+    if (stats.subscribed < 2) return false;
+    const rewardsEarned = Math.floor(stats.subscribed / 2);
+    const codesClaimed = await db.select({ count: count() }).from(promoCodes)
+      .where(and(
+        eq(promoCodes.ownerUserId, userId),
+        eq(promoCodes.type, "referral_reward")
+      ));
+    const claimedCount = codesClaimed[0]?.count ?? 0;
+    return rewardsEarned > claimedCount;
   }
 }
 

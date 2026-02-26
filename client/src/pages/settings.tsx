@@ -56,6 +56,7 @@ import {
   Gift,
   Trophy,
   ArrowRight,
+  Ticket,
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
@@ -2168,20 +2169,37 @@ function ReferralTab() {
     proCreditsUntil: string | null;
     progressToNextReward: number;
     subscribedNeeded: number;
+    canClaimReward: boolean;
+    claimedCodes: { code: string; redeemed: boolean; creditMonths: number; expiresAt: string | null; createdAt: string }[];
   }>({
     queryKey: ["/api/referrals/stats"],
+  });
+
+  const claimRewardMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/referrals/claim-reward");
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to claim reward");
+      }
+      return response.json();
+    },
+    onSuccess: (result) => {
+      toast({ title: "Reward claimed!", description: `Your promo code is ${result.promoCode}. Use it at checkout or apply it in billing.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/referrals/stats"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Cannot claim reward", description: error.message, variant: "destructive" });
+    },
   });
 
   const referralLink = data?.referralCode
     ? `https://mydraft.io/login?mode=register&ref=${data.referralCode}`
     : "";
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, label = "Link") => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied",
-      description: "Link copied to clipboard.",
-    });
+    toast({ title: "Copied", description: `${label} copied to clipboard.` });
   };
 
   if (isLoading) {
@@ -2196,6 +2214,7 @@ function ReferralTab() {
   const subscribedCount = data?.stats.subscribed ?? 0;
   const totalReferred = data?.stats.total ?? 0;
   const creditsActive = data?.proCreditsUntil && new Date(data.proCreditsUntil) > new Date();
+  const unredeemedCodes = data?.claimedCodes?.filter(c => !c.redeemed) ?? [];
 
   return (
     <div className="space-y-5">
@@ -2208,7 +2227,7 @@ function ReferralTab() {
         </div>
         <h2 className="text-xl sm:text-2xl font-bold mb-2">Give Pro, Get Pro</h2>
         <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-          Share MyDraft with friends and colleagues. When just 2 of them become paying members, you'll unlock a full month of Pro — on us. There's no cap. Keep sharing, keep earning.
+          Share MyDraft with friends. When 2 of them become paying members, press the claim button to get a unique promo code for 1 free month of Pro.
         </p>
       </div>
 
@@ -2220,71 +2239,117 @@ function ReferralTab() {
         />
         <ReferralStepCard
           icon={<Users className="w-5 h-5" />}
-          title="They Sign Up"
-          description="Your friend creates an account and picks a plan that works for them."
+          title="They Subscribe"
+          description="Your friend creates an account and starts a paid subscription."
         />
         <ReferralStepCard
-          icon={<Trophy className="w-5 h-5" />}
-          title="You Both Win"
-          description="Once 2 friends subscribe, you get a free month of Pro automatically."
+          icon={<Ticket className="w-5 h-5" />}
+          title="Claim Code"
+          description="Press the claim button to get a unique promo code for 1 free month."
         />
       </div>
 
-      <Card>
-        <CardContent className="p-4 sm:p-6 space-y-5">
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Personal Invite Link</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={referralLink}
-                readOnly
-                className="font-mono text-xs sm:text-sm"
-                data-testid="input-referral-link"
-              />
-              <Button
-                variant="default"
-                onClick={() => copyToClipboard(referralLink)}
-                className="flex-shrink-0"
-                data-testid="button-copy-referral"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                Copy
-              </Button>
-            </div>
-          </div>
+      <SettingsPanel>
+        <SectionHeader icon={Link2} title="Your Invite Link" description="Share this link with friends" />
+        <div className="flex items-center gap-2">
+          <Input
+            value={referralLink}
+            readOnly
+            className="font-mono text-xs sm:text-sm bg-white/[0.03] border-white/[0.06]"
+            data-testid="input-referral-link"
+          />
+          <Button
+            variant="default"
+            onClick={() => copyToClipboard(referralLink)}
+            className="flex-shrink-0"
+            data-testid="button-copy-referral"
+          >
+            <Copy className="w-4 h-4 mr-2" />
+            Copy
+          </Button>
+        </div>
+      </SettingsPanel>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Progress to Next Reward</span>
-              <Badge variant="secondary">
-                {data?.progressToNextReward ?? 0} / 2
-              </Badge>
-            </div>
-            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700 ease-out"
-                style={{
-                  width: `${Math.max(progress, 2)}%`,
-                  background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
-                }}
-              />
-            </div>
-            {data && data.subscribedNeeded > 0 ? (
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                <ArrowRight className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                {data.subscribedNeeded === 1
-                  ? "You're so close — just 1 more friend and you unlock free Pro."
-                  : `Invite ${data.subscribedNeeded} friends who subscribe to earn your next reward.`}
-              </p>
-            ) : (
+      <SettingsPanel>
+        <SectionHeader icon={Trophy} title="Progress to Next Reward" description="Earn a code for every 2 subscribed referrals" />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground/60">Subscribed referrals</span>
+            <Badge variant="secondary">
+              {data?.progressToNextReward ?? 0} / 2
+            </Badge>
+          </div>
+          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700 ease-out"
+              style={{
+                width: `${Math.max(progress, 2)}%`,
+                background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+              }}
+            />
+          </div>
+          {data?.canClaimReward ? (
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-primary/20" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--primary) / 0.03))" }}>
               <p className="text-sm font-medium text-primary flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
-                Reward earned! Keep inviting for more free months.
+                You have a reward ready to claim!
               </p>
-            )}
+              <Button
+                size="sm"
+                onClick={() => claimRewardMutation.mutate()}
+                disabled={claimRewardMutation.isPending}
+                data-testid="button-claim-reward"
+              >
+                {claimRewardMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Gift className="w-4 h-4 mr-1" />}
+                Claim
+              </Button>
+            </div>
+          ) : data && data.subscribedNeeded > 0 ? (
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <ArrowRight className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+              {data.subscribedNeeded === 1
+                ? "Almost there! 1 more friend needs to subscribe."
+                : `${data.subscribedNeeded} more friends need to subscribe to earn a reward.`}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+              All rewards claimed. Keep inviting for more!
+            </p>
+          )}
+        </div>
+      </SettingsPanel>
+
+      {unredeemedCodes.length > 0 && (
+        <SettingsPanel>
+          <SectionHeader icon={Ticket} title="Your Promo Codes" description="Use these at checkout or apply in billing" />
+          <div className="space-y-2">
+            {unredeemedCodes.map((code) => (
+              <div key={code.code} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Ticket className="w-4 h-4 text-primary flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-mono font-medium truncate" data-testid={`text-promo-code-${code.code}`}>{code.code}</p>
+                    <p className="text-[11px] text-muted-foreground/50">
+                      {code.creditMonths} month free
+                      {code.expiresAt && ` · Expires ${new Date(code.expiresAt).toLocaleDateString()}`}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(code.code, "Code")}
+                  data-testid={`button-copy-promo-${code.code}`}
+                >
+                  <Copy className="w-3.5 h-3.5 mr-1.5" />
+                  Copy
+                </Button>
+              </div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </SettingsPanel>
+      )}
 
       {creditsActive && (
         <div
@@ -2299,22 +2364,18 @@ function ReferralTab() {
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        <Card>
-          <CardContent className="p-4 sm:p-5 text-center">
-            <p className="text-3xl font-bold" data-testid="text-total-referrals">{totalReferred}</p>
-            <p className="text-sm text-muted-foreground mt-1">Friends Invited</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 sm:p-5 text-center">
-            <p className="text-3xl font-bold" data-testid="text-subscribed-referrals">{subscribedCount}</p>
-            <p className="text-sm text-muted-foreground mt-1">Became Members</p>
-          </CardContent>
-        </Card>
+        <SettingsPanel className="text-center">
+          <p className="text-3xl font-bold" data-testid="text-total-referrals">{totalReferred}</p>
+          <p className="text-sm text-muted-foreground/50 mt-1">Friends Invited</p>
+        </SettingsPanel>
+        <SettingsPanel className="text-center">
+          <p className="text-3xl font-bold" data-testid="text-subscribed-referrals">{subscribedCount}</p>
+          <p className="text-sm text-muted-foreground/50 mt-1">Became Members</p>
+        </SettingsPanel>
       </div>
 
       <p className="text-xs text-muted-foreground/60 leading-relaxed text-center">
-        Your reward is applied automatically when 2 referrals subscribe. Free trials don't count — only active paid subscriptions qualify.
+        Free trials don't count — only active paid subscriptions qualify. Promo codes are one-time use and expire after 6 months.
       </p>
     </div>
   );

@@ -8029,6 +8029,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       const stats = await storage.getReferralStats(userId);
       const referralsList = await storage.getReferrals(userId);
+      const canClaimReward = await storage.getUnclaimedReferralReward(userId);
+      const claimedCodes = await storage.getPromoCodesByOwner(userId);
 
       res.json({
         referralCode,
@@ -8037,6 +8039,14 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         proCreditsUntil: user.proCreditsUntil,
         progressToNextReward: stats.subscribed % 2,
         subscribedNeeded: 2 - (stats.subscribed % 2),
+        canClaimReward,
+        claimedCodes: claimedCodes.map(c => ({
+          code: c.code,
+          redeemed: c.redeemed,
+          creditMonths: c.creditMonths,
+          expiresAt: c.expiresAt,
+          createdAt: c.createdAt,
+        })),
       });
     } catch (error) {
       console.error("Error getting referral stats:", error);
@@ -8052,6 +8062,83 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error generating referral code:", error);
       res.status(500).json({ error: "Failed to generate referral code" });
+    }
+  });
+
+  app.post("/api/referrals/claim-reward", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const canClaim = await storage.getUnclaimedReferralReward(userId);
+      if (!canClaim) {
+        return res.status(400).json({ error: "No unclaimed reward available. You need 2 subscribed referrals per reward." });
+      }
+      const promoCode = await storage.createPromoCode(userId, "referral_reward", 1);
+      res.json({
+        success: true,
+        promoCode: promoCode.code,
+        creditMonths: promoCode.creditMonths,
+        expiresAt: promoCode.expiresAt,
+      });
+    } catch (error) {
+      console.error("Error claiming referral reward:", error);
+      res.status(500).json({ error: "Failed to claim reward" });
+    }
+  });
+
+  app.get("/api/referrals/my-codes", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const codes = await storage.getPromoCodesByOwner(userId);
+      res.json({ codes });
+    } catch (error) {
+      console.error("Error fetching promo codes:", error);
+      res.status(500).json({ error: "Failed to fetch promo codes" });
+    }
+  });
+
+  app.post("/api/promo/validate", requireAuth, async (req, res) => {
+    try {
+      const { code } = req.body;
+      if (!code || typeof code !== "string") {
+        return res.status(400).json({ error: "Promo code is required" });
+      }
+      const promoCode = await storage.getPromoCodeByCode(code.toUpperCase().trim());
+      if (!promoCode) {
+        return res.status(404).json({ error: "Invalid promo code" });
+      }
+      if (promoCode.redeemed) {
+        return res.status(400).json({ error: "This promo code has already been used" });
+      }
+      if (promoCode.expiresAt && new Date(promoCode.expiresAt) < new Date()) {
+        return res.status(400).json({ error: "This promo code has expired" });
+      }
+      res.json({
+        valid: true,
+        creditMonths: promoCode.creditMonths,
+        type: promoCode.type,
+      });
+    } catch (error) {
+      console.error("Error validating promo code:", error);
+      res.status(500).json({ error: "Failed to validate promo code" });
+    }
+  });
+
+  app.post("/api/promo/redeem", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { code } = req.body;
+      if (!code || typeof code !== "string") {
+        return res.status(400).json({ error: "Promo code is required" });
+      }
+      const redeemed = await storage.redeemPromoCode(code.toUpperCase().trim(), userId);
+      res.json({
+        success: true,
+        creditMonths: redeemed.creditMonths,
+        message: `${redeemed.creditMonths} month${redeemed.creditMonths > 1 ? "s" : ""} of Pro added to your account!`,
+      });
+    } catch (error: any) {
+      console.error("Error redeeming promo code:", error);
+      res.status(400).json({ error: error.message || "Failed to redeem promo code" });
     }
   });
 
