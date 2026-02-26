@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts, aiCostLog } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -148,6 +148,10 @@ export interface IStorage {
   // AI usage tracking methods
   getAiUsageToday(userId: string): Promise<number>;
   incrementAiUsage(userId: string): Promise<void>;
+
+  // AI cost tracking
+  logAiCost(entry: { userId?: string; endpoint: string; model: string; promptTokens: number; completionTokens: number; totalTokens: number; estimatedCostCents: number }): Promise<void>;
+  getAiCostSummary(startDate: string, endDate: string): Promise<{ totalCostCents: number; totalPromptTokens: number; totalCompletionTokens: number; totalCalls: number; byModel: Record<string, { calls: number; costCents: number; tokens: number }>; byEndpoint: Record<string, { calls: number; costCents: number; tokens: number }>; dailyCosts: { date: string; costCents: number; calls: number }[] }>;
 
   // Financial tracking methods
   createExpense(expense: InsertExpense): Promise<Expense>;
@@ -1632,6 +1636,66 @@ Business Development`,
         draftsGenerated: 1,
       });
     }
+  }
+
+  // AI cost tracking
+  async logAiCost(entry: { userId?: string; endpoint: string; model: string; promptTokens: number; completionTokens: number; totalTokens: number; estimatedCostCents: number }): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      await db.insert(aiCostLog).values({
+        userId: entry.userId || null,
+        endpoint: entry.endpoint,
+        model: entry.model,
+        promptTokens: entry.promptTokens,
+        completionTokens: entry.completionTokens,
+        totalTokens: entry.totalTokens,
+        estimatedCostCents: entry.estimatedCostCents,
+        usageDate: today,
+      });
+    } catch (err) {
+      console.error("[AiCostLog] Failed to log cost:", err);
+    }
+  }
+
+  async getAiCostSummary(startDate: string, endDate: string): Promise<{ totalCostCents: number; totalPromptTokens: number; totalCompletionTokens: number; totalCalls: number; byModel: Record<string, { calls: number; costCents: number; tokens: number }>; byEndpoint: Record<string, { calls: number; costCents: number; tokens: number }>; dailyCosts: { date: string; costCents: number; calls: number }[] }> {
+    const rows = await db.select().from(aiCostLog)
+      .where(and(
+        sql`${aiCostLog.usageDate} >= ${startDate}`,
+        sql`${aiCostLog.usageDate} <= ${endDate}`
+      ));
+
+    let totalCostCents = 0;
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
+    const byModel: Record<string, { calls: number; costCents: number; tokens: number }> = {};
+    const byEndpoint: Record<string, { calls: number; costCents: number; tokens: number }> = {};
+    const dailyMap: Record<string, { costCents: number; calls: number }> = {};
+
+    for (const row of rows) {
+      totalCostCents += row.estimatedCostCents;
+      totalPromptTokens += row.promptTokens;
+      totalCompletionTokens += row.completionTokens;
+
+      if (!byModel[row.model]) byModel[row.model] = { calls: 0, costCents: 0, tokens: 0 };
+      byModel[row.model].calls++;
+      byModel[row.model].costCents += row.estimatedCostCents;
+      byModel[row.model].tokens += row.totalTokens;
+
+      if (!byEndpoint[row.endpoint]) byEndpoint[row.endpoint] = { calls: 0, costCents: 0, tokens: 0 };
+      byEndpoint[row.endpoint].calls++;
+      byEndpoint[row.endpoint].costCents += row.estimatedCostCents;
+      byEndpoint[row.endpoint].tokens += row.totalTokens;
+
+      if (!dailyMap[row.usageDate]) dailyMap[row.usageDate] = { costCents: 0, calls: 0 };
+      dailyMap[row.usageDate].costCents += row.estimatedCostCents;
+      dailyMap[row.usageDate].calls++;
+    }
+
+    const dailyCosts = Object.entries(dailyMap)
+      .map(([date, data]) => ({ date, ...data }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return { totalCostCents, totalPromptTokens, totalCompletionTokens, totalCalls: rows.length, byModel, byEndpoint, dailyCosts };
   }
 
   // Financial tracking methods

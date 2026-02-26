@@ -50,7 +50,8 @@ async function triggerStyleAnalysis(userId: string) {
   
   try {
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI();
+    const { wrapOpenAIWithTracking } = await import("./ai-cost-tracker");
+    const openai = wrapOpenAIWithTracking(new OpenAI());
     
     const samples = await storage.getWritingSamples(userId, 20);
     if (samples.length < 3) return;

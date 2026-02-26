@@ -5,6 +5,7 @@ import { db } from "./db";
 import { sql, desc, eq } from "drizzle-orm";
 import { ownerNotes } from "@shared/schema";
 import OpenAI from "openai";
+import { wrapOpenAIWithTracking } from "./ai-cost-tracker";
 
 import { gmailProvider } from "./gmail";
 import { microsoftProvider } from "./microsoft";
@@ -85,10 +86,10 @@ const assistantPermissionsUpdateSchema = z
 
 const scryptAsync = promisify(scrypt);
 
-const openai = new OpenAI({
+const openai = wrapOpenAIWithTracking(new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+}));
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
@@ -7961,6 +7962,25 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error fetching daily financials:", error);
       res.status(500).json({ error: "Failed to fetch daily financials" });
+    }
+  });
+
+  // AI cost summary for owner dashboard
+  app.get("/api/owner/ai-costs", requireOwner, async (req, res) => {
+    try {
+      const { days = "30" } = req.query;
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - parseInt(days as string));
+
+      const summary = await storage.getAiCostSummary(
+        startDate.toISOString().split("T")[0],
+        endDate.toISOString().split("T")[0]
+      );
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching AI costs:", error);
+      res.status(500).json({ error: "Failed to fetch AI costs" });
     }
   });
 

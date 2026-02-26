@@ -722,6 +722,22 @@ export const insertAiUsageSchema = createInsertSchema(aiUsage).omit({
 export type AiUsage = typeof aiUsage.$inferSelect;
 export type InsertAiUsage = z.infer<typeof insertAiUsageSchema>;
 
+// AI cost tracking per API call
+export const aiCostLog = pgTable("ai_cost_log", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id"),
+  endpoint: text("endpoint").notNull(),
+  model: text("model").notNull(),
+  promptTokens: integer("prompt_tokens").default(0).notNull(),
+  completionTokens: integer("completion_tokens").default(0).notNull(),
+  totalTokens: integer("total_tokens").default(0).notNull(),
+  estimatedCostCents: integer("estimated_cost_cents").default(0).notNull(),
+  usageDate: text("usage_date").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type AiCostLog = typeof aiCostLog.$inferSelect;
+
 // Expense categories for tracking service costs
 export const expenseCategorySchema = z.enum([
   "replit",
