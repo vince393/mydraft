@@ -5597,8 +5597,8 @@ SECURITY:
 
 USER ACCOUNT:
 - User email: ${user?.email || "Unknown"}
-- Connected email: ${grant?.email || "Not connected"}
-- Email provider: ${grant?.provider || "None"}
+- Connected email: ${providerResult?.account?.email || "Not connected"}
+- Email provider: ${providerResult?.account?.provider || "None"}
 - Plan: ${user?.plan || "free"}
 
 INBOX STATUS:

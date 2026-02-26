@@ -38,7 +38,40 @@ import CheckoutPage from "@/pages/checkout";
 import type { Email, User } from "@shared/schema";
 import { getCategoryCounts, type EmailCategory } from "@/lib/email-categories";
 import { Loader2 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, Component, type ReactNode, type ErrorInfo } from "react";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("ErrorBoundary caught:", error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-8">
+          <div className="max-w-lg text-center">
+            <h1 className="text-2xl font-bold text-destructive mb-4">Something went wrong</h1>
+            <pre className="text-sm text-muted-foreground bg-muted p-4 rounded-lg text-left overflow-auto max-h-[300px] whitespace-pre-wrap">
+              {this.state.error?.message}
+              {"\n\n"}
+              {this.state.error?.stack}
+            </pre>
+            <button className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md" onClick={() => window.location.reload()}>
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface AuthResponse {
   user: (User & { emailConnected?: boolean }) | null;
@@ -343,7 +376,9 @@ function AppRoutes() {
       </Route>
       <Route path="/owner">
         <ProtectedRoute>
-          <OwnerPanel />
+          <ErrorBoundary>
+            <OwnerPanel />
+          </ErrorBoundary>
         </ProtectedRoute>
       </Route>
       <Route path="/campaigns">
