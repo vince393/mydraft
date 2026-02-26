@@ -768,13 +768,13 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
         )}
       </div>
       
-      {/* Email Detail Panel - replaces list when viewing an email (always visible on tablet) */}
-      {(showDetail || hidingDetail || screen.isTablet) && (
+      {/* Email Detail Panel - split view on tablet/desktop, slide-over on mobile */}
+      {(showDetail || hidingDetail || screen.isTablet || screen.isDesktop) && (
         <div className={`email-detail-panel ${showDetail && !hidingDetail ? 'show-detail' : ''} ${hidingDetail ? 'hide-detail' : ''}`}>
-          {selectedEmailId || !screen.isTablet ? (
+          {selectedEmailId ? (
             <>
               <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-4 sm:px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
-                {!screen.isTablet && (
+                {screen.isMobile && (
                   <Button
                     size="icon"
                     variant="ghost"
@@ -823,10 +823,13 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground/30">
-              <div className="text-center">
-                <Mail className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="text-sm">Select an email to read</p>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center max-w-[280px]">
+                <div className="w-16 h-16 rounded-2xl bg-muted/30 border border-border/20 flex items-center justify-center mx-auto mb-5">
+                  <Mail className="w-7 h-7 text-muted-foreground/25" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground/40 mb-1">No email selected</p>
+                <p className="text-xs text-muted-foreground/25 leading-relaxed">Choose an email from the list to read, reply, or draft a response</p>
               </div>
             </div>
           )}

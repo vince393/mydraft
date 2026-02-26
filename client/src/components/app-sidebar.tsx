@@ -535,7 +535,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   };
 
   const handleSidebarClick = () => {
-    if (isCollapsed && isHoverExpanded) {
+    if (isCollapsed) {
       setIsCollapsed(false);
       setIsHoverExpanded(false);
     }

@@ -361,8 +361,8 @@ body {
     display: none;
   }
 
-  /* Tablet: two-column split view (iPad) */
-  @media (min-width: 768px) and (max-width: 1023px) {
+  /* Tablet & Desktop: two-column split view */
+  @media (min-width: 768px) {
     .email-layout {
       display: grid;
       grid-template-columns: 340px 1fr;
@@ -370,7 +370,7 @@ body {
 
     .email-list-panel {
       width: 100%;
-      border-right: 1px solid hsl(var(--border) / 0.3);
+      border-right: 1px solid hsl(var(--border) / 0.15);
     }
 
     .email-list-panel.hide-for-detail {
@@ -384,6 +384,18 @@ body {
 
     .email-detail-panel.show-detail {
       display: flex;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .email-layout {
+      grid-template-columns: 380px 1fr;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .email-layout {
+      grid-template-columns: 420px 1fr;
     }
   }
 
