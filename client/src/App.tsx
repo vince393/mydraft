@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { saveDeviceAccount } from "@/lib/device-accounts";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -205,6 +206,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   const user = authData.user;
+
+  useEffect(() => {
+    if (user) {
+      saveDeviceAccount({
+        userId: user.id,
+        email: user.email,
+        displayName: user.displayName || null,
+        plan: user.plan || null,
+      });
+    }
+  }, [user?.id, user?.email, user?.displayName, user?.plan]);
 
   // New flow: Login → Onboarding → Checkout → Connect Email
   // Step 1: Complete onboarding first (but allow checkout since it's part of onboarding)

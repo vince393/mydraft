@@ -69,8 +69,9 @@ function AuthShell({ children }: { children: React.ReactNode }) {
 
 export default function LoginPage() {
   const urlParams = new URLSearchParams(window.location.search);
-  const [isRegister, setIsRegister] = useState(urlParams.get("mode") === "register");
-  const [email, setEmail] = useState("");
+  const switchEmail = urlParams.get("switch") || "";
+  const [isRegister, setIsRegister] = useState(!switchEmail && urlParams.get("mode") === "register");
+  const [email, setEmail] = useState(switchEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
@@ -462,10 +463,10 @@ export default function LoginPage() {
     <AuthShell>
       <div className="text-center mb-7">
         <h2 className="text-[22px] font-semibold text-white/90 mb-1.5 tracking-tight">
-          {isRegister ? "Create your account" : "Welcome back"}
+          {switchEmail ? "Switch Account" : isRegister ? "Create your account" : "Welcome back"}
         </h2>
         <p className="text-[13px] text-white/30">
-          {isRegister ? "Start managing your inbox with AI" : "Sign in to your inbox"}
+          {switchEmail ? `Sign in as ${switchEmail}` : isRegister ? "Start managing your inbox with AI" : "Sign in to your inbox"}
         </p>
       </div>
 
@@ -545,6 +546,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={isRegister ? "new-password" : "current-password"}
+              autoFocus={!!switchEmail}
               className="pr-10 bg-white/[0.03] border-white/[0.07] focus:border-white/[0.15] text-white placeholder:text-white/15 h-11"
               data-testid={isRegister ? "input-register-password" : "input-login-password"}
             />

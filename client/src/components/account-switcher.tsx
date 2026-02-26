@@ -1,130 +1,91 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Check, Plus, Loader2, User, X, Crown, Sparkles } from "lucide-react";
+import { Check, Plus, Loader2, X, Crown, Sparkles, LogOut } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { LinkedAccount } from "@shared/schema";
+import { getDeviceAccounts, removeDeviceAccount, type DeviceAccount } from "@/lib/device-accounts";
 
 interface AccountSwitcherProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface LinkedAccountsResponse {
-  linkedAccounts: LinkedAccount[];
-  currentUser: {
-    id: string;
-    email: string;
-    displayName: string | null;
-    plan: string | null;
-  } | null;
+interface AuthResponse {
+  user: { id: string; email: string; plan?: string; onboardingCompleted?: boolean } | null;
 }
 
 export function AccountSwitcher({ open, onOpenChange }: AccountSwitcherProps) {
-  const [showAddAccount, setShowAddAccount] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [deviceAccounts, setDeviceAccounts] = useState<DeviceAccount[]>([]);
+  const [switchingTo, setSwitchingTo] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery<LinkedAccountsResponse>({
-    queryKey: ["/api/auth/linked-accounts"],
-    enabled: open,
+  const { data: authData } = useQuery<AuthResponse>({
+    queryKey: ["/api/auth/me"],
+    retry: false,
   });
 
-  const switchAccountMutation = useMutation({
-    mutationFn: async (targetUserId: string) => {
-      const response = await apiRequest("POST", "/api/auth/switch-account", { targetUserId });
+  const currentUserId = authData?.user?.id;
+
+  useEffect(() => {
+    if (open) {
+      setDeviceAccounts(getDeviceAccounts());
+    }
+  }, [open]);
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/logout");
       return response.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/linked-accounts"] });
-      toast({
-        title: "Account switched",
-        description: `Now signed in as ${data.user.email}`,
-      });
+  });
+
+  const handleSwitchAccount = async (account: DeviceAccount) => {
+    setSwitchingTo(account.userId);
+    try {
+      await logoutMutation.mutateAsync();
+      queryClient.clear();
       onOpenChange(false);
-      
-      if (!data.user.onboardingCompleted) {
-        setLocation("/onboarding");
-      } else {
-        setLocation("/inbox");
-      }
-    },
-    onError: (error: Error) => {
+      setLocation(`/login?switch=${encodeURIComponent(account.email)}`);
+    } catch {
       toast({
         title: "Switch failed",
-        description: error.message || "Could not switch accounts",
+        description: "Could not sign out of current account.",
         variant: "destructive",
       });
-    },
-  });
+      setSwitchingTo(null);
+    }
+  };
 
-  const linkAccountMutation = useMutation({
-    mutationFn: async (data: { email: string; password: string }) => {
-      const response = await apiRequest("POST", "/api/auth/link-account", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/linked-accounts"] });
+  const handleAddAccount = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      queryClient.clear();
+      onOpenChange(false);
+      setLocation("/login");
+    } catch {
       toast({
-        title: "Account linked",
-        description: "You can now switch between accounts instantly.",
-      });
-      setShowAddAccount(false);
-      setEmail("");
-      setPassword("");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to link account",
-        description: error.message || "Could not link account",
+        title: "Could not sign out",
+        description: "Please try again.",
         variant: "destructive",
       });
-    },
-  });
+    }
+  };
 
-  const removeAccountMutation = useMutation({
-    mutationFn: async (linkedUserId: string) => {
-      const response = await apiRequest("DELETE", `/api/auth/linked-accounts/${linkedUserId}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/linked-accounts"] });
-      toast({
-        title: "Account removed",
-        description: "Account has been unlinked.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to remove",
-        description: error.message || "Could not remove account",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleLinkAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
-    linkAccountMutation.mutate({ email, password });
+  const handleRemoveAccount = (userId: string) => {
+    removeDeviceAccount(userId);
+    setDeviceAccounts(getDeviceAccounts());
+    toast({ title: "Account removed from this device" });
   };
 
   const getInitials = (email: string, displayName?: string | null) => {
-    if (displayName) {
-      return displayName.slice(0, 2).toUpperCase();
-    }
+    if (displayName) return displayName.slice(0, 2).toUpperCase();
     return email.split("@")[0].slice(0, 2).toUpperCase();
   };
 
@@ -149,8 +110,8 @@ export function AccountSwitcher({ open, onOpenChange }: AccountSwitcherProps) {
     return null;
   };
 
-  const currentUser = data?.currentUser;
-  const linkedAccounts = data?.linkedAccounts || [];
+  const currentAccount = deviceAccounts.find((a) => a.userId === currentUserId);
+  const otherAccounts = deviceAccounts.filter((a) => a.userId !== currentUserId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -158,145 +119,101 @@ export function AccountSwitcher({ open, onOpenChange }: AccountSwitcherProps) {
         <DialogHeader>
           <DialogTitle>Switch Account</DialogTitle>
           <DialogDescription>
-            Switch between your linked accounts without signing in again.
+            Accounts you've signed into on this device.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          {currentAccount && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Current Account</p>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <Avatar className="w-10 h-10">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {getInitials(currentAccount.email, currentAccount.displayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">
+                      {currentAccount.displayName || currentAccount.email.split("@")[0]}
+                    </p>
+                    {getPlanBadge(currentAccount.plan)}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{currentAccount.email}</p>
+                </div>
+                <Check className="w-5 h-5 text-primary flex-shrink-0" />
+              </div>
             </div>
-          ) : (
-            <>
-              {currentUser && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Current Account</p>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+          )}
+
+          {otherAccounts.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Other Accounts on This Device</p>
+              <div className="space-y-1">
+                {otherAccounts.map((account) => (
+                  <div
+                    key={account.userId}
+                    className="group flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-all"
+                    onClick={() => handleSwitchAccount(account)}
+                    data-testid={`account-switch-${account.userId}`}
+                  >
                     <Avatar className="w-10 h-10">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {getInitials(currentUser.email, currentUser.displayName)}
+                      <AvatarFallback>
+                        {getInitials(account.email, account.displayName)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {currentUser.displayName || currentUser.email.split("@")[0]}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">{currentUser.email}</p>
-                    </div>
-                    <Check className="w-5 h-5 text-primary" />
-                  </div>
-                </div>
-              )}
-
-              {linkedAccounts.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Other Accounts</p>
-                  <div className="space-y-1">
-                    {linkedAccounts.map((account) => (
-                      <div
-                        key={account.id}
-                        className="group flex items-center gap-3 p-3 rounded-lg hover-elevate cursor-pointer transition-all"
-                        onClick={() => switchAccountMutation.mutate(account.linkedUserId)}
-                        data-testid={`account-switch-${account.linkedUserId}`}
-                      >
-                        <Avatar className="w-10 h-10">
-                          <AvatarFallback>
-                            {getInitials(account.linkedEmail, account.linkedDisplayName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">
-                              {account.linkedDisplayName || account.linkedEmail.split("@")[0]}
-                            </p>
-                            {getPlanBadge(account.linkedPlan)}
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">{account.linkedEmail}</p>
-                        </div>
-                        {switchAccountMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeAccountMutation.mutate(account.linkedUserId);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                            data-testid={`account-remove-${account.linkedUserId}`}
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">
+                          {account.displayName || account.email.split("@")[0]}
+                        </p>
+                        {getPlanBadge(account.plan)}
                       </div>
-                    ))}
+                      <p className="text-xs text-muted-foreground truncate">{account.email}</p>
+                    </div>
+                    {switchingTo === account.userId ? (
+                      <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveAccount(account.userId);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
+                        data-testid={`account-remove-${account.userId}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                </div>
-              )}
-
-              <Separator />
-
-              {showAddAccount ? (
-                <form onSubmit={handleLinkAccount} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="link-email">Email</Label>
-                    <Input
-                      id="link-email"
-                      type="email"
-                      placeholder="other@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      data-testid="input-link-email"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="link-password">Password</Label>
-                    <Input
-                      id="link-password"
-                      type="password"
-                      placeholder="Account password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      data-testid="input-link-password"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setShowAddAccount(false);
-                        setEmail("");
-                        setPassword("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="flex-1"
-                      disabled={linkAccountMutation.isPending || !email || !password}
-                      data-testid="button-link-account-submit"
-                    >
-                      {linkAccountMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Link Account
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => setShowAddAccount(true)}
-                  data-testid="button-add-account"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Another Account
-                </Button>
-              )}
-            </>
+                ))}
+              </div>
+            </div>
           )}
+
+          {otherAccounts.length === 0 && (
+            <p className="text-sm text-muted-foreground/60 text-center py-2">
+              No other accounts on this device yet. Sign into another account to see it here.
+            </p>
+          )}
+
+          <Separator />
+
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={handleAddAccount}
+            disabled={logoutMutation.isPending}
+            data-testid="button-add-account"
+          >
+            {logoutMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            Sign into Another Account
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
