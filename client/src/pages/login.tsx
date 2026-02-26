@@ -31,17 +31,17 @@ function AuthShell({ children }: { children: React.ReactNode }) {
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl shadow-2xl shadow-black/30 p-7 sm:p-8">
           {children}
         </div>
-        <div className="mt-6 flex items-center justify-center gap-4 text-[11px] text-muted-foreground/30">
+        <div className="mt-6 flex items-center justify-center flex-wrap gap-x-4 gap-y-2 text-[11px] text-muted-foreground/30">
           <div className="flex items-center gap-1.5">
             <Shield className="w-3 h-3" />
             <span>CASA Tier 2 Certified</span>
           </div>
-          <div className="w-px h-3 bg-white/[0.06]" />
+          <div className="w-px h-3 bg-white/[0.06] hidden sm:block" />
           <div className="flex items-center gap-1.5">
             <Shield className="w-3 h-3" />
             <span>256-bit encryption</span>
           </div>
-          <div className="w-px h-3 bg-white/[0.06]" />
+          <div className="w-px h-3 bg-white/[0.06] hidden sm:block" />
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3 h-3" />
             <span>AI-powered inbox</span>

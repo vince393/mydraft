@@ -103,6 +103,28 @@ const NAV_ITEMS: NavItem[] = [
 
 const TEAM_NAV_ITEM: NavItem = { id: "team", label: "Team", description: "Manage members", icon: Users, group: "General" };
 
+function SettingsPanel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 sm:p-6 ${className || ""}`}>
+      {children}
+    </div>
+  );
+}
+
+function SectionHeader({ icon: Icon, title, description }: { icon: typeof User; title: string; description: string }) {
+  return (
+    <div className="flex items-start gap-3 mb-5">
+      <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0 mt-0.5">
+        <Icon className="w-4 h-4 text-muted-foreground/60" />
+      </div>
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <p className="text-[12px] text-muted-foreground/50 mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+}
+
 function SettingsNav({ active, onChange, showTeam }: { active: SettingsSection; onChange: (s: SettingsSection) => void; showTeam: boolean }) {
   const items = showTeam ? [...NAV_ITEMS.slice(0, 3), TEAM_NAV_ITEM, ...NAV_ITEMS.slice(3)] : NAV_ITEMS;
   const groups = Array.from(new Set(items.map(i => i.group)));
@@ -111,7 +133,7 @@ function SettingsNav({ active, onChange, showTeam }: { active: SettingsSection; 
     <nav className="space-y-5">
       {groups.map(group => (
         <div key={group}>
-          <p className="text-[11px] font-medium text-muted-foreground/40 uppercase tracking-wider px-3 mb-1.5">{group}</p>
+          <p className="text-[10px] font-semibold text-muted-foreground/30 uppercase tracking-widest px-3 mb-1.5">{group}</p>
           <div className="space-y-0.5">
             {items.filter(i => i.group === group).map(item => {
               const Icon = item.icon;
@@ -121,17 +143,14 @@ function SettingsNav({ active, onChange, showTeam }: { active: SettingsSection; 
                   key={item.id}
                   onClick={() => onChange(item.id)}
                   data-testid={`tab-${item.id}`}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-150 ${
                     isActive
                       ? "bg-white/[0.06] text-foreground"
-                      : "text-muted-foreground/60 hover:text-foreground hover:bg-white/[0.03]"
+                      : "text-muted-foreground/50 hover:text-foreground/80 hover:bg-white/[0.03]"
                   }`}
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium leading-tight">{item.label}</p>
-                    <p className="text-[11px] text-muted-foreground/40 leading-tight mt-0.5 hidden lg:block">{item.description}</p>
-                  </div>
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary/80" : ""}`} />
+                  <span className="text-[13px] font-medium">{item.label}</span>
                 </button>
               );
             })}
@@ -142,16 +161,16 @@ function SettingsNav({ active, onChange, showTeam }: { active: SettingsSection; 
   );
 }
 
-function MobileSettingsNav({ active, onChange, showTeam }: { active: SettingsSection | null; onChange: (s: SettingsSection) => void; showTeam: boolean }) {
+function MobileSettingsNav({ onChange, showTeam }: { onChange: (s: SettingsSection) => void; showTeam: boolean }) {
   const items = showTeam ? [...NAV_ITEMS.slice(0, 3), TEAM_NAV_ITEM, ...NAV_ITEMS.slice(3)] : NAV_ITEMS;
   const groups = Array.from(new Set(items.map(i => i.group)));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {groups.map(group => (
         <div key={group}>
-          <p className="text-[11px] font-medium text-muted-foreground/40 uppercase tracking-wider mb-2">{group}</p>
-          <div className="rounded-xl border border-white/[0.06] overflow-hidden divide-y divide-white/[0.06]">
+          <p className="text-[10px] font-semibold text-muted-foreground/30 uppercase tracking-widest mb-2 px-1">{group}</p>
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] overflow-hidden divide-y divide-white/[0.04]">
             {items.filter(i => i.group === group).map(item => {
               const Icon = item.icon;
               return (
@@ -159,16 +178,16 @@ function MobileSettingsNav({ active, onChange, showTeam }: { active: SettingsSec
                   key={item.id}
                   onClick={() => onChange(item.id)}
                   data-testid={`tab-${item.id}`}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-white/[0.01] hover:bg-white/[0.03] transition-colors"
+                  className="w-full flex items-center gap-3.5 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors active:bg-white/[0.05]"
                 >
                   <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-4 h-4 text-muted-foreground/60" />
+                    <Icon className="w-4 h-4 text-muted-foreground/50" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground">{item.label}</p>
-                    <p className="text-[12px] text-muted-foreground/40">{item.description}</p>
+                    <p className="text-[13px] font-medium text-foreground/90">{item.label}</p>
+                    <p className="text-[11px] text-muted-foreground/35 mt-0.5">{item.description}</p>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground/20 flex-shrink-0" />
+                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/15 flex-shrink-0" />
                 </button>
               );
             })}
@@ -214,7 +233,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/40" />
       </div>
     );
   }
@@ -222,38 +241,39 @@ export default function SettingsPage() {
   if (!settings) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Failed to load settings</p>
+        <p className="text-sm text-muted-foreground/50">Failed to load settings</p>
       </div>
     );
   }
 
   const showTeam = settings.plan === "premium";
-  const sectionLabel = activeSection ? [...NAV_ITEMS, TEAM_NAV_ITEM].find(i => i.id === activeSection)?.label : null;
+  const activeItem = activeSection ? [...NAV_ITEMS, TEAM_NAV_ITEM].find(i => i.id === activeSection) : null;
 
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="px-4 py-6">
-          <div className="flex items-center gap-3 mb-6">
-            <Button
-              variant="ghost"
-              size="icon"
+        <div className="px-4 py-5">
+          <div className="flex items-center gap-3 mb-5">
+            <button
               onClick={() => activeSection ? setActiveSection(null) : setLocation("/inbox")}
               data-testid="button-back"
-              className="touch-target"
+              className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="text-xl font-semibold text-foreground">
-              {activeSection ? sectionLabel : "Settings"}
-            </h1>
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">
+                {activeItem ? activeItem.label : "Settings"}
+              </h1>
+              {activeItem && (
+                <p className="text-[11px] text-muted-foreground/40">{activeItem.description}</p>
+              )}
+            </div>
           </div>
           {activeSection ? (
-            <div className="space-y-6">
-              <SettingsContent section={activeSection} settings={settings} />
-            </div>
+            <SettingsContent section={activeSection} settings={settings} />
           ) : (
-            <MobileSettingsNav active={activeSection} onChange={setActiveSection} showTeam={showTeam} />
+            <MobileSettingsNav onChange={setActiveSection} showTeam={showTeam} />
           )}
         </div>
       </div>
@@ -263,26 +283,22 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-6 py-8">
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            size="icon"
+        <div className="flex items-center gap-3 mb-8">
+          <button
             onClick={() => setLocation("/inbox")}
             data-testid="button-back"
-            className="touch-target"
+            className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <h1 className="text-xl font-semibold text-foreground">Settings</h1>
         </div>
         <div className="flex gap-8">
-          <div className="w-52 flex-shrink-0 sticky top-8 self-start">
+          <div className="w-48 flex-shrink-0 sticky top-8 self-start">
             <SettingsNav active={activeSection || "account"} onChange={setActiveSection} showTeam={showTeam} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="space-y-6">
-              <SettingsContent section={activeSection || "account"} settings={settings} />
-            </div>
+            <SettingsContent section={activeSection || "account"} settings={settings} />
           </div>
         </div>
       </div>
@@ -356,28 +372,20 @@ function AccountTab({ settings }: { settings: Settings }) {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Information</CardTitle>
-          <CardDescription>Your account details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input value={settings.email} disabled className="bg-muted" data-testid="input-email" />
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-5">
+      <SettingsPanel>
+        <SectionHeader icon={User} title="Account Information" description="Your account details" />
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground/60">Email</Label>
+          <Input value={settings.email} disabled className="bg-white/[0.03] border-white/[0.06]" data-testid="input-email" />
+        </div>
+      </SettingsPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>Update your account password</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SettingsPanel>
+        <SectionHeader icon={Shield} title="Change Password" description="Update your account password" />
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="current-password">Current Password</Label>
+            <Label htmlFor="current-password" className="text-xs text-muted-foreground/60">Current Password</Label>
             <div className="relative">
               <Input
                 id="current-password"
@@ -388,7 +396,7 @@ function AccountTab({ settings }: { settings: Settings }) {
               />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
               >
                 {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -396,7 +404,7 @@ function AccountTab({ settings }: { settings: Settings }) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-password">New Password</Label>
+            <Label htmlFor="new-password" className="text-xs text-muted-foreground/60">New Password</Label>
             <div className="relative">
               <Input
                 id="new-password"
@@ -407,7 +415,7 @@ function AccountTab({ settings }: { settings: Settings }) {
               />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors"
                 onClick={() => setShowNewPassword(!showNewPassword)}
               >
                 {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -415,7 +423,7 @@ function AccountTab({ settings }: { settings: Settings }) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm New Password</Label>
+            <Label htmlFor="confirm-password" className="text-xs text-muted-foreground/60">Confirm New Password</Label>
             <Input
               id="confirm-password"
               type="password"
@@ -432,65 +440,65 @@ function AccountTab({ settings }: { settings: Settings }) {
             {changePasswordMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Change Password
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Session</CardTitle>
-          <CardDescription>Manage your session</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <SettingsPanel>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center">
+              <LogOut className="w-4 h-4 text-muted-foreground/60" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Session</h3>
+              <p className="text-[12px] text-muted-foreground/50">Sign out of your account</p>
+            </div>
+          </div>
           <Button 
             variant="outline" 
+            size="sm"
             onClick={() => logoutMutation.mutate()}
             disabled={logoutMutation.isPending}
             data-testid="button-logout"
           >
-            <LogOut className="w-4 h-4 mr-2" />
-            Log Out
+            {logoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Log Out"}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsPanel>
 
       <TestimonialCard />
 
-      <Card className="border-destructive/50">
-        <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" data-testid="button-delete-account">
-                <Trash2 className="w-4 h-4 mr-2" />
+      <SettingsPanel className="border-destructive/20">
+        <SectionHeader icon={Trash2} title="Danger Zone" description="Irreversible actions" />
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm" data-testid="button-delete-account">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Account
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete your account, 
+                disconnect your email, and remove all your data from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteAccountMutation.mutate()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                data-testid="button-confirm-delete"
+              >
+                {deleteAccountMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Delete Account
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your account, 
-                  disconnect your email, and remove all your data from our servers.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => deleteAccountMutation.mutate()}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  data-testid="button-confirm-delete"
-                >
-                  {deleteAccountMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Delete Account
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardContent>
-      </Card>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SettingsPanel>
     </div>
   );
 }
@@ -530,62 +538,40 @@ function TestimonialCard() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
-            Leave a Testimonial
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <SettingsPanel>
+        <SectionHeader icon={Star} title="Leave a Testimonial" description="Share your experience" />
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground/40" />
+        </div>
+      </SettingsPanel>
     );
   }
 
   if (existingTestimonial && !isEditing) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
-            Your Testimonial
-          </CardTitle>
-          <CardDescription>
-            Status: {existingTestimonial.status === "approved" ? (
-              <span className="text-green-500">Approved</span>
-            ) : existingTestimonial.status === "denied" ? (
-              <span className="text-red-500">Not Approved</span>
-            ) : (
-              <span className="text-yellow-500">Pending Review</span>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SettingsPanel>
+        <SectionHeader icon={Star} title="Your Testimonial" description={
+          existingTestimonial.status === "approved" ? "Approved" :
+          existingTestimonial.status === "denied" ? "Not approved" : "Pending review"
+        } />
+        <div className="space-y-3">
           <div className="flex gap-1">
             {[...Array(existingTestimonial.rating)].map((_, i) => (
               <Star key={i} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
             ))}
           </div>
-          <p className="text-muted-foreground">"{existingTestimonial.content}"</p>
-        </CardContent>
-      </Card>
+          <p className="text-sm text-muted-foreground/70 italic">"{existingTestimonial.content}"</p>
+        </div>
+      </SettingsPanel>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
-          Leave a Testimonial
-        </CardTitle>
-        <CardDescription>Share your experience with MyDraft</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <SettingsPanel>
+      <SectionHeader icon={Star} title="Leave a Testimonial" description="Share your experience with MyDraft" />
+      <div className="space-y-4">
         <div className="space-y-2">
-          <Label>Rating</Label>
+          <Label className="text-xs text-muted-foreground/60">Rating</Label>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((star) => (
               <button
@@ -596,14 +582,14 @@ function TestimonialCard() {
                 data-testid={`star-rating-${star}`}
               >
                 <Star 
-                  className={`w-6 h-6 ${star <= rating ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} 
+                  className={`w-5 h-5 ${star <= rating ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground/30"}`} 
                 />
               </button>
             ))}
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="testimonial-content">Your Experience</Label>
+          <Label htmlFor="testimonial-content" className="text-xs text-muted-foreground/60">Your Experience</Label>
           <Textarea
             id="testimonial-content"
             value={content}
@@ -612,20 +598,21 @@ function TestimonialCard() {
             className="min-h-[100px]"
             data-testid="textarea-testimonial"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground/40">
             Minimum 10 characters. Your testimonial will be reviewed before appearing on our site.
           </p>
         </div>
         <Button
           onClick={() => submitMutation.mutate()}
           disabled={submitMutation.isPending || content.trim().length < 10}
+          size="sm"
           data-testid="button-submit-testimonial"
         >
           {submitMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Submit Testimonial
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </SettingsPanel>
   );
 }
 
@@ -780,152 +767,122 @@ function SecurityTab({ settings }: { settings: Settings }) {
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            Security Certification
-          </CardTitle>
-          <CardDescription>
-            MyDraft meets rigorous security standards to protect your data
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04]">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-emerald-300 text-sm">CASA Tier 2 Certified</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Cloud Application Security Assessment — independently verified security controls for data protection, encryption, and access management.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            Two-Factor Authentication
-          </CardTitle>
-          <CardDescription>
-            Add an extra layer of security to your account by requiring a verification code when signing in
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="font-medium">Email verification codes</p>
-              <p className="text-sm text-muted-foreground">
-                {twoFactorEnabled 
-                  ? "You'll receive a 6-digit code via email when signing in" 
-                  : "Enable to receive verification codes when signing in"}
-              </p>
-            </div>
-            <Switch
-              checked={twoFactorEnabled}
-              onCheckedChange={handleToggle2FA}
-              disabled={toggle2FAMutation.isPending}
-              data-testid="switch-2fa-toggle"
-            />
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-5">
+      <div className="flex items-center gap-4 p-4 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03]">
+        <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+          <Shield className="w-4 h-4 text-emerald-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-emerald-300 text-sm">CASA Tier 2 Certified</p>
+          <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+            Independently verified security controls for data protection and encryption.
+          </p>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="w-5 h-5" />
-                Active Sessions
-              </CardTitle>
-              <CardDescription>
-                Devices where your account is currently logged in
-              </CardDescription>
-            </div>
-            {securitySettings && securitySettings.sessions.length > 1 && (
-              <AlertDialog open={showLogoutAllDialog} onOpenChange={setShowLogoutAllDialog}>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" data-testid="button-logout-all-devices">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Log out all devices
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Log out all other devices?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will sign you out from all other devices except this one. 
-                      You'll stay signed in on this device.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel data-testid="button-cancel-logout-all">Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => logoutAllDevicesMutation.mutate(undefined)}
-                      data-testid="button-confirm-logout-all"
-                    >
-                      {logoutAllDevicesMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Log out all
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+      <SettingsPanel>
+        <SectionHeader icon={Shield} title="Two-Factor Authentication" description="Require a verification code when signing in" />
+        <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-foreground/90">Email verification codes</p>
+            <p className="text-[12px] text-muted-foreground/40">
+              {twoFactorEnabled 
+                ? "You'll receive a 6-digit code via email when signing in" 
+                : "Enable to receive verification codes when signing in"}
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {securitySettings?.sessions && securitySettings.sessions.length > 0 ? (
-              securitySettings.sessions.map((session) => (
-                <div 
-                  key={session.id} 
-                  className={`flex items-center justify-between p-4 rounded-lg border ${
-                    session.isCurrent ? "border-primary bg-primary/5" : ""
-                  }`}
-                  data-testid={`session-item-${session.id}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                      <Globe className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{formatDeviceInfo(session.userAgent)}</p>
-                        {session.isCurrent && (
-                          <Badge variant="secondary" className="text-xs">
-                            Current
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {formatLocation(session)}
-                        </span>
-                        {session.ipAddress && (
-                          <span className="text-xs">IP: {session.ipAddress}</span>
-                        )}
-                      </div>
-                    </div>
+          <Switch
+            checked={twoFactorEnabled}
+            onCheckedChange={handleToggle2FA}
+            disabled={toggle2FAMutation.isPending}
+            data-testid="switch-2fa-toggle"
+          />
+        </div>
+      </SettingsPanel>
+
+      <SettingsPanel>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Smartphone className="w-4 h-4 text-muted-foreground/60" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Active Sessions</h3>
+              <p className="text-[12px] text-muted-foreground/50 mt-0.5">Devices currently logged in</p>
+            </div>
+          </div>
+          {securitySettings && securitySettings.sessions.length > 1 && (
+            <AlertDialog open={showLogoutAllDialog} onOpenChange={setShowLogoutAllDialog}>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" data-testid="button-logout-all-devices">
+                  <LogOut className="w-3.5 h-3.5 mr-1.5" />
+                  Log out all
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Log out all other devices?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will sign you out from all other devices except this one. 
+                    You'll stay signed in on this device.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-testid="button-cancel-logout-all">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => logoutAllDevicesMutation.mutate(undefined)}
+                    data-testid="button-confirm-logout-all"
+                  >
+                    {logoutAllDevicesMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Log out all
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+        <div className="space-y-2">
+          {securitySettings?.sessions && securitySettings.sessions.length > 0 ? (
+            securitySettings.sessions.map((session) => (
+              <div 
+                key={session.id} 
+                className={`flex items-center justify-between p-3 rounded-lg border ${
+                  session.isCurrent ? "border-primary/20 bg-primary/[0.03]" : "border-white/[0.04] bg-white/[0.01]"
+                }`}
+                data-testid={`session-item-${session.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center">
+                    <Globe className="w-4 h-4 text-muted-foreground/50" />
                   </div>
-                  <div className="text-right text-sm text-muted-foreground">
-                    <p>Active {formatTime(session.lastActiveAt)}</p>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground/90">{formatDeviceInfo(session.userAgent)}</p>
+                      {session.isCurrent && (
+                        <span className="text-[10px] font-medium text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded">Current</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground/40">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {formatLocation(session)}
+                      </span>
+                      {session.ipAddress && (
+                        <span>IP: {session.ipAddress}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No active sessions found
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                <p className="text-[11px] text-muted-foreground/40">{formatTime(session.lastActiveAt)}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground/40 text-center py-4">
+              No active sessions found
+            </p>
+          )}
+        </div>
+      </SettingsPanel>
 
       <AlertDialog open={showVerificationDialog} onOpenChange={(open) => {
         setShowVerificationDialog(open);
@@ -1093,184 +1050,154 @@ function BillingTab({ settings }: { settings: Settings }) {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Current Plan</CardTitle>
-          <CardDescription>Your subscription details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-lg bg-primary/10 border border-primary/20">
+    <div className="space-y-5">
+      <SettingsPanel>
+        <SectionHeader icon={CreditCard} title="Current Plan" description="Your subscription details" />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3.5 rounded-lg bg-primary/[0.04] border border-primary/15">
             <div>
-              <h3 className="text-lg font-semibold text-foreground">{currentPlan.name}</h3>
-              <p className="text-sm text-muted-foreground">{currentPlan.price}</p>
+              <h3 className="text-base font-semibold text-foreground">{currentPlan.name}</h3>
+              <p className="text-[12px] text-muted-foreground/50">{currentPlan.price}</p>
             </div>
             {billingInfo?.cancelAtPeriodEnd ? (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-500 text-sm font-medium">
-                Canceling
-              </div>
+              <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400">Canceling</span>
             ) : (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
-                <Check className="w-4 h-4" />
-                Active
-              </div>
+              <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-primary/15 text-primary flex items-center gap-1">
+                <Check className="w-3 h-3" /> Active
+              </span>
             )}
           </div>
 
           {billingInfo?.cancelAtPeriodEnd && billingInfo?.nextBillDate && (
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <p className="text-sm text-foreground">
-                Your subscription is set to cancel on <span className="font-medium">{formatDate(billingInfo.nextBillDate)}</span>. 
-                You'll retain access to {currentPlan.name} features until then.
+            <div className="p-3 rounded-lg bg-amber-500/[0.05] border border-amber-500/15">
+              <p className="text-[12px] text-foreground/80">
+                Cancels on <span className="font-medium">{formatDate(billingInfo.nextBillDate)}</span>. 
+                You'll keep {currentPlan.name} features until then.
               </p>
             </div>
           )}
 
           {settings.plan && settings.plan !== "free" && billingInfo?.nextBillDate && !billingInfo?.cancelAtPeriodEnd && (
-            <div className="p-4 rounded-lg bg-muted/50 border">
-              <p className="text-sm text-muted-foreground">Next billing date</p>
-              <p className="text-lg font-medium text-foreground">{formatDate(billingInfo.nextBillDate)}</p>
+            <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <p className="text-[11px] text-muted-foreground/40">Next billing date</p>
+              <p className="text-sm font-medium text-foreground mt-0.5">{formatDate(billingInfo.nextBillDate)}</p>
               {billingInfo.planAmount && billingInfo.planInterval && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-[12px] text-muted-foreground/50 mt-0.5">
                   {formatCurrency(billingInfo.planAmount, 'usd')} / {billingInfo.planInterval}
                 </p>
               )}
             </div>
           )}
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Plan features:</p>
-            <ul className="space-y-1">
-              {currentPlan.features.map((feature, index) => (
-                <li key={index} className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
+          <div className="space-y-1.5">
+            {currentPlan.features.map((feature, index) => (
+              <div key={index} className="text-[12px] text-muted-foreground/60 flex items-center gap-2">
+                <Check className="w-3.5 h-3.5 text-primary/60" />
+                {feature}
+              </div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsPanel>
 
       {settings.plan && settings.plan !== "free" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Method</CardTitle>
-            <CardDescription>Your card on file</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {billingLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Loading payment details...
+        <SettingsPanel>
+          <SectionHeader icon={CreditCard} title="Payment Method" description="Your card on file" />
+          {billingLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground/40 text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading...
+            </div>
+          ) : billingInfo?.paymentMethod ? (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-7 rounded bg-white/[0.04] flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-muted-foreground/50" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground/90">
+                    {getCardBrandIcon(billingInfo.paymentMethod.brand)} ending in {billingInfo.paymentMethod.last4}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/40">
+                    Expires {billingInfo.paymentMethod.expMonth}/{billingInfo.paymentMethod.expYear}
+                  </p>
+                </div>
               </div>
-            ) : billingInfo?.paymentMethod ? (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-8 rounded bg-background flex items-center justify-center border">
-                    <CreditCard className="w-5 h-5 text-muted-foreground" />
-                  </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => portalMutation.mutate()}
+                disabled={portalMutation.isPending}
+                data-testid="button-update-card"
+              >
+                Update
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground/40">No payment method on file</p>
+          )}
+        </SettingsPanel>
+      )}
+
+      {settings.plan && settings.plan !== "free" && (
+        <SettingsPanel>
+          <SectionHeader icon={CreditCard} title="Billing History" description="Your past invoices" />
+          {billingLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground/40 text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading...
+            </div>
+          ) : billingInfo?.invoices && billingInfo.invoices.length > 0 ? (
+            <div className="space-y-2">
+              {billingInfo.invoices.map((invoice) => (
+                <div 
+                  key={invoice.id} 
+                  className="flex items-center justify-between p-3 rounded-lg bg-white/[0.01] border border-white/[0.04]"
+                >
                   <div>
-                    <p className="font-medium text-foreground">
-                      {getCardBrandIcon(billingInfo.paymentMethod.brand)} ending in {billingInfo.paymentMethod.last4}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Expires {billingInfo.paymentMethod.expMonth}/{billingInfo.paymentMethod.expYear}
-                    </p>
+                    <p className="text-sm font-medium text-foreground/90">{invoice.number || 'Invoice'}</p>
+                    <p className="text-[11px] text-muted-foreground/40">{formatDate(invoice.date)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-foreground/90">
+                        {formatCurrency(invoice.amount, invoice.currency)}
+                      </p>
+                      <span className={`text-[10px] font-medium ${invoice.status === 'paid' ? 'text-emerald-400' : 'text-muted-foreground/40'}`}>
+                        {invoice.status === 'paid' ? 'Paid' : invoice.status}
+                      </span>
+                    </div>
+                    {invoice.pdfUrl && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => window.open(invoice.pdfUrl!, '_blank')}
+                        data-testid={`button-download-invoice-${invoice.id}`}
+                      >
+                        Download
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => portalMutation.mutate()}
-                  disabled={portalMutation.isPending}
-                  data-testid="button-update-card"
-                >
-                  Update
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No payment method on file</p>
-            )}
-          </CardContent>
-        </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground/40">No invoices yet</p>
+          )}
+        </SettingsPanel>
       )}
 
-      {settings.plan && settings.plan !== "free" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Billing History</CardTitle>
-            <CardDescription>Your past invoices</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {billingLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Loading invoices...
-              </div>
-            ) : billingInfo?.invoices && billingInfo.invoices.length > 0 ? (
-              <div className="space-y-2">
-                {billingInfo.invoices.map((invoice) => (
-                  <div 
-                    key={invoice.id} 
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-medium text-foreground text-sm">
-                          {invoice.number || 'Invoice'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(invoice.date)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="font-medium text-foreground text-sm">
-                          {formatCurrency(invoice.amount, invoice.currency)}
-                        </p>
-                        <Badge 
-                          variant={invoice.status === 'paid' ? 'default' : 'secondary'} 
-                          className="text-xs"
-                        >
-                          {invoice.status === 'paid' ? 'Paid' : invoice.status}
-                        </Badge>
-                      </div>
-                      {invoice.pdfUrl && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => window.open(invoice.pdfUrl!, '_blank')}
-                          data-testid={`button-download-invoice-${invoice.id}`}
-                        >
-                          Download
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No invoices yet</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Manage Subscription</CardTitle>
-          <CardDescription>Change or cancel your plan</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={() => setLocation("/select-plan?change=true")} data-testid="button-change-plan">
+      <SettingsPanel>
+        <SectionHeader icon={CreditCard} title="Manage Subscription" description="Change or cancel your plan" />
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => setLocation("/select-plan?change=true")} data-testid="button-change-plan">
               Change Plan
             </Button>
             {settings.plan && settings.plan !== "free" && (
               <Button 
                 variant="outline" 
+                size="sm"
                 onClick={() => portalMutation.mutate()}
                 disabled={portalMutation.isPending}
                 data-testid="button-manage-billing"
@@ -1282,23 +1209,22 @@ function BillingTab({ settings }: { settings: Settings }) {
           </div>
 
           {settings.plan && settings.plan !== "free" && !showCancelConfirm && !billingInfo?.cancelAtPeriodEnd && (
-            <div className="pt-4 border-t">
-              <Button 
-                variant="ghost" 
-                className="text-destructive"
+            <div className="pt-3 border-t border-white/[0.04]">
+              <button 
+                className="text-[12px] text-destructive/60 hover:text-destructive transition-colors"
                 onClick={() => setShowCancelConfirm(true)}
                 data-testid="button-cancel-subscription"
               >
                 Cancel subscription
-              </Button>
+              </button>
             </div>
           )}
 
           {showCancelConfirm && (
-            <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/5 space-y-3">
-              <h4 className="font-medium text-foreground">Are you sure you want to cancel?</h4>
-              <p className="text-sm text-muted-foreground">
-                You'll lose access to all {currentPlan.name} features. Choose how you'd like to proceed:
+            <div className="p-4 rounded-lg border border-destructive/20 bg-destructive/[0.03] space-y-3">
+              <h4 className="text-sm font-medium text-foreground">Are you sure you want to cancel?</h4>
+              <p className="text-[12px] text-muted-foreground/60">
+                You'll lose access to all {currentPlan.name} features.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -1332,8 +1258,8 @@ function BillingTab({ settings }: { settings: Settings }) {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsPanel>
     </div>
   );
 }
@@ -1414,190 +1340,111 @@ function AIPreferencesTab({ settings }: { settings: Settings }) {
   ];
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5" />
-            Language & Region
-          </CardTitle>
-          <CardDescription>Set your region and language preferences for culturally-aware AI translations</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <div className="space-y-5">
+      <SettingsPanel>
+        <SectionHeader icon={Globe} title="Language & Region" description="For culturally-aware AI translations" />
+        <div className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="region-select">Region</Label>
-            <Select
-              value={preferences.region}
-              onValueChange={(value) => setPreferences((p) => ({ ...p, region: value }))}
-            >
-              <SelectTrigger id="region-select" data-testid="select-region">
-                <SelectValue placeholder="Select region" />
-              </SelectTrigger>
+            <Label htmlFor="region-select" className="text-xs text-muted-foreground/60">Region</Label>
+            <Select value={preferences.region} onValueChange={(value) => setPreferences((p) => ({ ...p, region: value }))}>
+              <SelectTrigger id="region-select" data-testid="select-region"><SelectValue placeholder="Select region" /></SelectTrigger>
               <SelectContent>
                 {Object.entries(REGION_LABELS).map(([code, label]) => (
-                  <SelectItem key={code} value={code} data-testid={`select-region-${code}`}>
-                    {label}
-                  </SelectItem>
+                  <SelectItem key={code} value={code} data-testid={`select-region-${code}`}>{label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="language-select">Preferred Language</Label>
-            <Select
-              value={preferences.preferredLanguage}
-              onValueChange={(value) => setPreferences((p) => ({ ...p, preferredLanguage: value }))}
-            >
-              <SelectTrigger id="language-select" data-testid="select-preferred-language">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
+            <Label htmlFor="language-select" className="text-xs text-muted-foreground/60">Preferred Language</Label>
+            <Select value={preferences.preferredLanguage} onValueChange={(value) => setPreferences((p) => ({ ...p, preferredLanguage: value }))}>
+              <SelectTrigger id="language-select" data-testid="select-preferred-language"><SelectValue placeholder="Select language" /></SelectTrigger>
               <SelectContent>
                 {Object.entries(LANGUAGE_LABELS).map(([code, label]) => (
-                  <SelectItem key={code} value={code} data-testid={`select-language-${code}`}>
-                    {label}
-                  </SelectItem>
+                  <SelectItem key={code} value={code} data-testid={`select-language-${code}`}>{label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-3">
-            <Label>Formality Level</Label>
-            <RadioGroup
-              value={preferences.formalityLevel}
-              onValueChange={(value) => setPreferences((p) => ({ ...p, formalityLevel: value }))}
-              className="space-y-3"
-            >
+          <div className="space-y-2.5">
+            <Label className="text-xs text-muted-foreground/60">Formality Level</Label>
+            <RadioGroup value={preferences.formalityLevel} onValueChange={(value) => setPreferences((p) => ({ ...p, formalityLevel: value }))} className="space-y-2">
               {FORMALITY_OPTIONS.map((option) => (
                 <div key={option.value} className="flex items-center space-x-3">
                   <RadioGroupItem value={option.value} id={`formality-${option.value}`} data-testid={`radio-formality-${option.value}`} />
-                  <Label htmlFor={`formality-${option.value}`}>{option.label}</Label>
+                  <Label htmlFor={`formality-${option.value}`} className="text-sm text-foreground/80">{option.label}</Label>
                 </div>
               ))}
             </RadioGroup>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Primary Use</CardTitle>
-          <CardDescription>How do you primarily use email?</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={preferences.primaryUse}
-            onValueChange={(value) => setPreferences((p) => ({ ...p, primaryUse: value }))}
-            className="space-y-3"
-          >
-            <div className="flex items-center space-x-3">
-              <RadioGroupItem value="work" id="use-work" data-testid="radio-use-work" />
-              <Label htmlFor="use-work">Work</Label>
+      <SettingsPanel>
+        <SectionHeader icon={Sparkles} title="Primary Use" description="How you primarily use email" />
+        <RadioGroup value={preferences.primaryUse} onValueChange={(value) => setPreferences((p) => ({ ...p, primaryUse: value }))} className="space-y-2">
+          {[{ value: "work", label: "Work" }, { value: "personal", label: "Personal" }, { value: "both", label: "Both" }].map((opt) => (
+            <div key={opt.value} className="flex items-center space-x-3">
+              <RadioGroupItem value={opt.value} id={`use-${opt.value}`} data-testid={`radio-use-${opt.value}`} />
+              <Label htmlFor={`use-${opt.value}`} className="text-sm text-foreground/80">{opt.label}</Label>
             </div>
-            <div className="flex items-center space-x-3">
-              <RadioGroupItem value="personal" id="use-personal" data-testid="radio-use-personal" />
-              <Label htmlFor="use-personal">Personal</Label>
-            </div>
-            <div className="flex items-center space-x-3">
-              <RadioGroupItem value="both" id="use-both" data-testid="radio-use-both" />
-              <Label htmlFor="use-both">Both</Label>
-            </div>
-          </RadioGroup>
-        </CardContent>
-      </Card>
+          ))}
+        </RadioGroup>
+      </SettingsPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>AI Features</CardTitle>
-          <CardDescription>Select which AI features to enable</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SettingsPanel>
+        <SectionHeader icon={Sparkles} title="AI Features" description="Select which AI features to enable" />
+        <div className="space-y-3">
           {featureOptions.map((feature) => (
             <div key={feature.id} className="flex items-start space-x-3">
-              <Checkbox
-                id={feature.id}
-                checked={preferences.aiFeatures.includes(feature.id)}
-                onCheckedChange={() => toggleFeature(feature.id)}
-                data-testid={`checkbox-${feature.id}`}
-              />
-              <div className="space-y-1">
-                <Label htmlFor={feature.id} className="cursor-pointer">{feature.label}</Label>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
+              <Checkbox id={feature.id} checked={preferences.aiFeatures.includes(feature.id)} onCheckedChange={() => toggleFeature(feature.id)} data-testid={`checkbox-${feature.id}`} />
+              <div className="space-y-0.5">
+                <Label htmlFor={feature.id} className="cursor-pointer text-sm text-foreground/80">{feature.label}</Label>
+                <p className="text-[11px] text-muted-foreground/40">{feature.description}</p>
               </div>
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Automation Level</CardTitle>
-          <CardDescription>How much should AI automate?</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={preferences.automationLevel}
-            onValueChange={(value) => setPreferences((p) => ({ ...p, automationLevel: value }))}
-            className="space-y-3"
-          >
-            <div className="flex items-start space-x-3">
-              <RadioGroupItem value="low" id="auto-low" data-testid="radio-auto-low" />
-              <div className="space-y-1">
-                <Label htmlFor="auto-low">Low</Label>
-                <p className="text-sm text-muted-foreground">AI suggests, you decide everything</p>
+      <SettingsPanel>
+        <SectionHeader icon={Sparkles} title="Automation Level" description="How much should AI automate?" />
+        <RadioGroup value={preferences.automationLevel} onValueChange={(value) => setPreferences((p) => ({ ...p, automationLevel: value }))} className="space-y-3">
+          {[
+            { value: "low", label: "Low", desc: "AI suggests, you decide everything" },
+            { value: "medium", label: "Medium", desc: "AI drafts replies, you review before sending" },
+            { value: "high", label: "High", desc: "AI handles routine emails automatically" },
+          ].map((opt) => (
+            <div key={opt.value} className="flex items-start space-x-3">
+              <RadioGroupItem value={opt.value} id={`auto-${opt.value}`} data-testid={`radio-auto-${opt.value}`} />
+              <div className="space-y-0.5">
+                <Label htmlFor={`auto-${opt.value}`} className="text-sm text-foreground/80">{opt.label}</Label>
+                <p className="text-[11px] text-muted-foreground/40">{opt.desc}</p>
               </div>
             </div>
-            <div className="flex items-start space-x-3">
-              <RadioGroupItem value="medium" id="auto-medium" data-testid="radio-auto-medium" />
-              <div className="space-y-1">
-                <Label htmlFor="auto-medium">Medium</Label>
-                <p className="text-sm text-muted-foreground">AI drafts replies, you review before sending</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <RadioGroupItem value="high" id="auto-high" data-testid="radio-auto-high" />
-              <div className="space-y-1">
-                <Label htmlFor="auto-high">High</Label>
-                <p className="text-sm text-muted-foreground">AI handles routine emails automatically</p>
-              </div>
-            </div>
-          </RadioGroup>
-        </CardContent>
-      </Card>
+          ))}
+        </RadioGroup>
+      </SettingsPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Reply Tone</CardTitle>
-          <CardDescription>Default tone for AI-generated replies</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <RadioGroup
-            value={preferences.replyTone}
-            onValueChange={(value) => setPreferences((p) => ({ ...p, replyTone: value }))}
-            className="grid grid-cols-2 gap-4"
-          >
+      <SettingsPanel>
+        <SectionHeader icon={Sparkles} title="Reply Tone" description="Default tone for AI-generated replies" />
+        <div className="space-y-4">
+          <RadioGroup value={preferences.replyTone} onValueChange={(value) => setPreferences((p) => ({ ...p, replyTone: value }))} className="grid grid-cols-2 gap-3">
             {["professional", "friendly", "concise", "custom"].map((tone) => (
               <div key={tone} className="flex items-center space-x-3">
                 <RadioGroupItem value={tone} id={`tone-${tone}`} data-testid={`radio-tone-${tone}`} />
-                <Label htmlFor={`tone-${tone}`} className="capitalize">{tone}</Label>
+                <Label htmlFor={`tone-${tone}`} className="capitalize text-sm text-foreground/80">{tone}</Label>
               </div>
             ))}
           </RadioGroup>
           {preferences.replyTone === "custom" && (
             <div className="space-y-2">
-              <Label htmlFor="custom-tone">Describe your preferred tone</Label>
-              <Input
-                id="custom-tone"
-                value={preferences.customTone}
-                onChange={(e) => setPreferences((p) => ({ ...p, customTone: e.target.value }))}
-                placeholder="e.g., casual but informative"
-                data-testid="input-custom-tone"
-              />
+              <Label htmlFor="custom-tone" className="text-xs text-muted-foreground/60">Describe your preferred tone</Label>
+              <Input id="custom-tone" value={preferences.customTone} onChange={(e) => setPreferences((p) => ({ ...p, customTone: e.target.value }))} placeholder="e.g., casual but informative" data-testid="input-custom-tone" />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsPanel>
 
       <Button 
         onClick={() => updateMutation.mutate()} 
@@ -1635,24 +1482,16 @@ function EmailSettingsTab({ settings }: { settings: Settings }) {
   });
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Email Signature</CardTitle>
-          <CardDescription>Create a signature that will be added to your outgoing emails</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="signature-toggle">Enable signature</Label>
-            <Switch
-              id="signature-toggle"
-              checked={signatureEnabled}
-              onCheckedChange={setSignatureEnabled}
-              data-testid="switch-signature-enabled"
-            />
+    <div className="space-y-5">
+      <SettingsPanel>
+        <SectionHeader icon={Mail} title="Email Signature" description="Added to your outgoing emails" />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <Label htmlFor="signature-toggle" className="text-sm text-foreground/80">Enable signature</Label>
+            <Switch id="signature-toggle" checked={signatureEnabled} onCheckedChange={setSignatureEnabled} data-testid="switch-signature-enabled" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="signature">Your signature</Label>
+            <Label htmlFor="signature" className="text-xs text-muted-foreground/60">Your signature</Label>
             <Textarea
               id="signature"
               value={signature}
@@ -1660,30 +1499,22 @@ function EmailSettingsTab({ settings }: { settings: Settings }) {
               placeholder="Best regards,&#10;John Doe&#10;john@company.com"
               rows={5}
               disabled={!signatureEnabled}
-              className={!signatureEnabled ? "opacity-50" : ""}
+              className={!signatureEnabled ? "opacity-40" : ""}
               data-testid="textarea-signature"
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground/40">
               Use plain text. Line breaks will be preserved.
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Multiple Inboxes</CardTitle>
-          <CardDescription>Connect additional email accounts</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Support for multiple inboxes is coming soon. You'll be able to manage all your email accounts in one place.
-          </p>
-          <Button variant="outline" disabled>
-            Coming Soon
-          </Button>
-        </CardContent>
-      </Card>
+      <SettingsPanel>
+        <SectionHeader icon={Mail} title="Multiple Inboxes" description="Connect additional email accounts" />
+        <p className="text-[12px] text-muted-foreground/50">
+          Support for multiple inboxes is coming soon.
+        </p>
+      </SettingsPanel>
 
       <Button 
         onClick={() => updateMutation.mutate()} 
@@ -1728,101 +1559,71 @@ function ConnectionsTab({ settings }: { settings: Settings }) {
   });
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Connected Email Account</CardTitle>
-          <CardDescription>Manage your connected email provider</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {settings.connectedEmail ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
-                <div className="flex items-center gap-3">
-                  {settings.connectedEmail.provider === "google" ? (
-                    <SiGoogle className="w-5 h-5 text-foreground" />
-                  ) : (
-                    <Building2 className="w-5 h-5 text-foreground" />
-                  )}
-                  <div>
-                    <p className="font-medium text-foreground">{settings.connectedEmail.email}</p>
-                    <p className="text-sm text-muted-foreground capitalize">{settings.connectedEmail.provider}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-sm font-medium">
-                  <Check className="w-4 h-4" />
-                  Connected
+    <div className="space-y-5">
+      <SettingsPanel>
+        <SectionHeader icon={Link2} title="Connected Email" description="Manage your email provider" />
+        {settings.connectedEmail ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <div className="flex items-center gap-3">
+                {settings.connectedEmail.provider === "google" ? (
+                  <SiGoogle className="w-4 h-4 text-foreground/70" />
+                ) : (
+                  <Building2 className="w-4 h-4 text-foreground/70" />
+                )}
+                <div>
+                  <p className="text-sm font-medium text-foreground/90">{settings.connectedEmail.email}</p>
+                  <p className="text-[11px] text-muted-foreground/40 capitalize">{settings.connectedEmail.provider}</p>
                 </div>
               </div>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" className="text-destructive hover:text-destructive" data-testid="button-disconnect">
-                    Disconnect Account
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Disconnect Email?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will disconnect your email account. You'll need to reconnect to access your emails through MyDraft.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => disconnectMutation.mutate()}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {disconnectMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Disconnect
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center gap-1">
+                <Check className="w-3 h-3" /> Connected
+              </span>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                No email account connected. Connect your email to start using MyDraft.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => connectMutation.mutate("google")}
-                  disabled={connectMutation.isPending}
-                  className="flex items-center gap-2"
-                  data-testid="button-connect-google"
-                >
-                  <SiGoogle className="w-4 h-4" />
-                  Connect Gmail
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => connectMutation.mutate("microsoft")}
-                  disabled={connectMutation.isPending}
-                  className="flex items-center gap-2"
-                  data-testid="button-connect-microsoft"
-                >
-                  <Building2 className="w-4 h-4" />
-                  Connect Outlook
-                </Button>
-              </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="text-[12px] text-destructive/60 hover:text-destructive transition-colors" data-testid="button-disconnect">
+                  Disconnect Account
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Disconnect Email?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will disconnect your email account. You'll need to reconnect to access your emails through MyDraft.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => disconnectMutation.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {disconnectMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Disconnect
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-[12px] text-muted-foreground/50">No email account connected.</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button variant="outline" size="sm" onClick={() => connectMutation.mutate("google")} disabled={connectMutation.isPending} className="gap-2" data-testid="button-connect-google">
+                <SiGoogle className="w-3.5 h-3.5" /> Connect Gmail
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => connectMutation.mutate("microsoft")} disabled={connectMutation.isPending} className="gap-2" data-testid="button-connect-microsoft">
+                <Building2 className="w-3.5 h-3.5" /> Connect Outlook
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </SettingsPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Additional Connections</CardTitle>
-          <CardDescription>Connect more services to enhance your experience</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Additional integrations coming soon. Connect your calendar, task manager, and more.
-          </p>
-        </CardContent>
-      </Card>
+      <SettingsPanel>
+        <SectionHeader icon={Link2} title="Additional Connections" description="More integrations" />
+        <p className="text-[12px] text-muted-foreground/50">
+          Calendar, task manager, and more integrations coming soon.
+        </p>
+      </SettingsPanel>
     </div>
   );
 }
@@ -2158,104 +1959,75 @@ function AppearanceTab() {
   ] as const;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="w-5 h-5" />
-            Appearance
-          </CardTitle>
-          <CardDescription>
-            Customize how MyDraft looks on your device
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <Label className="text-base font-medium">Theme</Label>
-            <RadioGroup
-              value={theme}
-              onValueChange={(value) => handleThemeChange(value as "light" | "dark")}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-            >
-              {themeOptions.map((option) => {
-                const Icon = option.icon;
-                const isSelected = theme === option.value;
-                return (
-                  <Label
-                    key={option.value}
-                    htmlFor={`theme-${option.value}`}
-                    className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-border"
-                    }`}
-                  >
-                    <RadioGroupItem
-                      value={option.value}
-                      id={`theme-${option.value}`}
-                      className="sr-only"
-                      data-testid={`radio-theme-${option.value}`}
-                    />
-                    {isSelected && (
-                      <div className="absolute top-2 right-2">
-                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                          <Check className="w-3 h-3 text-primary-foreground" />
-                        </div>
-                      </div>
-                    )}
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      isSelected 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-muted text-muted-foreground"
-                    }`}>
-                      <Icon className="w-6 h-6" />
+    <div className="space-y-5">
+      <SettingsPanel>
+        <SectionHeader icon={Palette} title="Theme" description="Customize how MyDraft looks" />
+        <RadioGroup
+          value={theme}
+          onValueChange={(value) => handleThemeChange(value as "light" | "dark")}
+          className="grid grid-cols-2 gap-3"
+        >
+          {themeOptions.map((option) => {
+            const Icon = option.icon;
+            const isSelected = theme === option.value;
+            return (
+              <Label
+                key={option.value}
+                htmlFor={`theme-${option.value}`}
+                className={`relative flex flex-col items-center gap-2.5 p-4 rounded-xl border cursor-pointer transition-all ${
+                  isSelected
+                    ? "border-primary/30 bg-primary/[0.04]"
+                    : "border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.03]"
+                }`}
+              >
+                <RadioGroupItem value={option.value} id={`theme-${option.value}`} className="sr-only" data-testid={`radio-theme-${option.value}`} />
+                {isSelected && (
+                  <div className="absolute top-2 right-2">
+                    <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5 text-primary-foreground" />
                     </div>
-                    <div className="text-center">
-                      <p className="font-medium text-sm">{option.label}</p>
-                      <p className="text-xs text-muted-foreground">{option.description}</p>
-                    </div>
-                  </Label>
-                );
-              })}
-            </RadioGroup>
-          </div>
+                  </div>
+                )}
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  isSelected ? "bg-primary/15 text-primary" : "bg-white/[0.04] text-muted-foreground/50"
+                }`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground/90">{option.label}</p>
+                  <p className="text-[11px] text-muted-foreground/40">{option.description}</p>
+                </div>
+              </Label>
+            );
+          })}
+        </RadioGroup>
+      </SettingsPanel>
 
-          <div className="border-t pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base font-medium">Preview</Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  See how your inbox looks with the current theme
-                </p>
+      <SettingsPanel>
+        <SectionHeader icon={Monitor} title="Preview" description="See how your inbox looks" />
+        <div className="rounded-lg border border-white/[0.04] bg-white/[0.01] overflow-hidden">
+          <div className="flex items-center gap-3 p-3 border-b border-white/[0.04]">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/60 to-purple-500/60" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-foreground/80">John Doe</span>
+                <span className="text-[10px] text-muted-foreground/30">2:30 PM</span>
               </div>
-            </div>
-            <div className="mt-4 p-4 rounded-xl border bg-muted/20">
-              <div className="flex items-center gap-3 p-3 bg-background rounded-lg border mb-2">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500" />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">John Doe</span>
-                    <span className="text-xs text-muted-foreground">2:30 PM</span>
-                  </div>
-                  <p className="text-sm font-medium">Project Update</p>
-                  <p className="text-xs text-muted-foreground truncate">Here's the latest on our project...</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500" />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">Jane Smith</span>
-                    <span className="text-xs text-muted-foreground">1:45 PM</span>
-                  </div>
-                  <p className="text-sm font-medium">Meeting Reminder</p>
-                  <p className="text-xs text-muted-foreground truncate">Don't forget about tomorrow's meeting...</p>
-                </div>
-              </div>
+              <p className="text-[11px] text-muted-foreground/50 truncate">Here's the latest on our project...</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center gap-3 p-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500/60 to-cyan-500/60" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-foreground/80">Jane Smith</span>
+                <span className="text-[10px] text-muted-foreground/30">1:45 PM</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground/50 truncate">Don't forget about tomorrow's meeting...</p>
+            </div>
+          </div>
+        </div>
+      </SettingsPanel>
     </div>
   );
 }
@@ -2330,138 +2102,84 @@ function FeedbackTab({ settings }: { settings: Settings }) {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5" />
-            Send Feedback
-          </CardTitle>
-          <CardDescription>
-            Share your thoughts, report bugs, or request features
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {submitted ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" />
-              <p className="font-medium">Thank you for your feedback!</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                We'll review it and get back to you if needed.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="feedback-type">Type</Label>
-                <div className="flex gap-2">
-                  {FEEDBACK_TYPES.map((type) => {
-                    const Icon = type.icon;
-                    return (
-                      <Button
-                        key={type.id}
-                        type="button"
-                        variant={feedbackType === type.id ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setFeedbackType(type.id)}
-                        className="flex items-center gap-2"
-                        data-testid={`feedback-type-${type.id}`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {type.label}
-                      </Button>
-                    );
-                  })}
-                </div>
+    <div className="space-y-5">
+      <SettingsPanel>
+        <SectionHeader icon={MessageSquare} title="Send Feedback" description="Share thoughts, report bugs, or request features" />
+        {submitted ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400 mb-3" />
+            <p className="text-sm font-medium text-foreground/90">Thank you for your feedback!</p>
+            <p className="text-[12px] text-muted-foreground/50 mt-1">We'll review it and get back to you if needed.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground/60">Type</Label>
+              <div className="flex gap-2">
+                {FEEDBACK_TYPES.map((type) => {
+                  const Icon = type.icon;
+                  return (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => setFeedbackType(type.id)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium transition-all ${
+                        feedbackType === type.id
+                          ? "bg-primary/10 text-primary border border-primary/20"
+                          : "bg-white/[0.02] text-muted-foreground/60 border border-white/[0.06] hover:bg-white/[0.04]"
+                      }`}
+                      data-testid={`feedback-type-${type.id}`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {type.label}
+                    </button>
+                  );
+                })}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="feedback-message">Message</Label>
-                <Textarea
-                  id="feedback-message"
-                  placeholder="Tell us what's on your mind..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={4}
-                  data-testid="input-feedback-message"
-                />
-              </div>
-
-              <Button
-                onClick={handleSubmit}
-                disabled={!message.trim() || submitMutation.isPending}
-                className="w-full sm:w-auto"
-                data-testid="button-submit-feedback"
-              >
-                {submitMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit Feedback"
-                )}
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Feedback History</CardTitle>
-          <CardDescription>
-            Your previously submitted feedback
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingHistory ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
-          ) : pastFeedback.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">
-                No feedback submitted yet.
-              </p>
+            <div className="space-y-2">
+              <Label htmlFor="feedback-message" className="text-xs text-muted-foreground/60">Message</Label>
+              <Textarea id="feedback-message" placeholder="Tell us what's on your mind..." value={message} onChange={(e) => setMessage(e.target.value)} rows={4} data-testid="input-feedback-message" />
             </div>
-          ) : (
-            <div className="space-y-3">
-              {pastFeedback.map((item) => {
-                const typeInfo = FEEDBACK_TYPES.find(t => t.id === item.feedbackType);
-                const Icon = typeInfo?.icon || MessageSquare;
-                return (
-                  <div
-                    key={item.id}
-                    className="p-4 rounded-lg border bg-muted/20"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        <Icon className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          {typeInfo?.label || item.feedbackType}
-                        </span>
-                      </div>
-                      {getStatusBadge(item.status)}
+            <Button size="sm" onClick={handleSubmit} disabled={!message.trim() || submitMutation.isPending} data-testid="button-submit-feedback">
+              {submitMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</> : "Submit Feedback"}
+            </Button>
+          </div>
+        )}
+      </SettingsPanel>
+
+      <SettingsPanel>
+        <SectionHeader icon={MessageSquare} title="Feedback History" description="Your previously submitted feedback" />
+        {isLoadingHistory ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground/40" />
+          </div>
+        ) : pastFeedback.length === 0 ? (
+          <p className="text-[12px] text-muted-foreground/40 text-center py-6">No feedback submitted yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {pastFeedback.map((item) => {
+              const typeInfo = FEEDBACK_TYPES.find(t => t.id === item.feedbackType);
+              const Icon = typeInfo?.icon || MessageSquare;
+              return (
+                <div key={item.id} className="p-3 rounded-lg border border-white/[0.04] bg-white/[0.01]">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-3.5 h-3.5 text-muted-foreground/40" />
+                      <span className="text-[12px] font-medium text-foreground/80">{typeInfo?.label || item.feedbackType}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {item.message}
-                    </p>
-                    <p className="text-xs text-muted-foreground/70">
-                      {new Date(item.createdAt).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </p>
+                    {getStatusBadge(item.status)}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  <p className="text-[12px] text-muted-foreground/60 mb-1">{item.message}</p>
+                  <p className="text-[10px] text-muted-foreground/30">
+                    {new Date(item.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SettingsPanel>
     </div>
   );
 }
