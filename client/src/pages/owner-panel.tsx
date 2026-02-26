@@ -189,6 +189,16 @@ interface ApiHealthLog {
   createdAt: string;
 }
 
+interface AiCostSummary {
+  totalCostCents: number;
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
+  totalCalls: number;
+  byModel: Record<string, { calls: number; costCents: number; tokens: number }>;
+  byEndpoint: Record<string, { calls: number; costCents: number; tokens: number }>;
+  dailyCosts: { date: string; costCents: number; calls: number }[];
+}
+
 const EXPENSE_CATEGORIES = [
   { value: "replit", label: "Replit", color: "#3B82F6" },
   { value: "google", label: "Google", color: "#4285F4" },
@@ -298,16 +308,6 @@ export default function OwnerPanel() {
     queryKey: ["/api/owner/finances/revenue"],
     enabled: isOwnerData?.isOwner === true && activeTab === "finances",
   });
-
-  interface AiCostSummary {
-    totalCostCents: number;
-    totalPromptTokens: number;
-    totalCompletionTokens: number;
-    totalCalls: number;
-    byModel: Record<string, { calls: number; costCents: number; tokens: number }>;
-    byEndpoint: Record<string, { calls: number; costCents: number; tokens: number }>;
-    dailyCosts: { date: string; costCents: number; calls: number }[];
-  }
 
   const { data: aiCosts, isLoading: aiCostsLoading } = useQuery<AiCostSummary>({
     queryKey: ["/api/owner/ai-costs", financePeriod],
