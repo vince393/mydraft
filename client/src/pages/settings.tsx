@@ -690,6 +690,30 @@ function SecurityTab({ settings }: { settings: Settings }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
+            Security Certification
+          </CardTitle>
+          <CardDescription>
+            MyDraft meets rigorous security standards to protect your data
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04]">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-emerald-300 text-sm">CASA Tier 2 Certified</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Cloud Application Security Assessment — independently verified security controls for data protection, encryption, and access management.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
             Two-Factor Authentication
           </CardTitle>
           <CardDescription>

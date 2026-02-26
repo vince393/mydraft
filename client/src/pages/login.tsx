@@ -34,6 +34,11 @@ function AuthShell({ children }: { children: React.ReactNode }) {
         <div className="mt-6 flex items-center justify-center gap-4 text-[11px] text-muted-foreground/30">
           <div className="flex items-center gap-1.5">
             <Shield className="w-3 h-3" />
+            <span>CASA Tier 2 Certified</span>
+          </div>
+          <div className="w-px h-3 bg-white/[0.06]" />
+          <div className="flex items-center gap-1.5">
+            <Shield className="w-3 h-3" />
             <span>256-bit encryption</span>
           </div>
           <div className="w-px h-3 bg-white/[0.06]" />
