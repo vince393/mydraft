@@ -3717,45 +3717,54 @@ Return ONLY valid JSON, no other text.`,
         });
       }
 
-      const formalityInstruction =
-        userFormality === "formal"
-          ? "Use highly formal, professional language. Include proper honorifics and formal greetings/closings."
-          : userFormality === "casual"
-            ? "Use a relaxed, conversational tone. Keep it natural and approachable."
-            : userFormality === "neutral"
-              ? "Use a balanced, professional but approachable tone."
-              : `Adapt the formality to match ${culturalContext.culture} business norms: ${culturalContext.formality}`;
+      const stripHtml = (html: string): string => {
+        let text = html;
+        text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+        text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
+        text = text.replace(/<!--[\s\S]*?-->/g, "");
+        text = text.replace(/<br\s*\/?>/gi, "\n");
+        text = text.replace(/<\/p>/gi, "\n\n");
+        text = text.replace(/<\/div>/gi, "\n");
+        text = text.replace(/<\/li>/gi, "\n");
+        text = text.replace(/<\/tr>/gi, "\n");
+        text = text.replace(/<[^>]+>/g, "");
+        text = text.replace(/&nbsp;/gi, " ");
+        text = text.replace(/&amp;/gi, "&");
+        text = text.replace(/&lt;/gi, "<");
+        text = text.replace(/&gt;/gi, ">");
+        text = text.replace(/&quot;/gi, '"');
+        text = text.replace(/&#39;/gi, "'");
+        text = text.replace(/\n{3,}/g, "\n\n");
+        text = text.replace(/[ \t]+/g, " ");
+        return text.trim();
+      };
+
+      const isHtml = /<[a-z][\s\S]*>/i.test(body);
+      const cleanBody = isHtml ? stripHtml(body) : body;
+      const MAX_BODY_LENGTH = 6000;
+      const truncatedBody = cleanBody.length > MAX_BODY_LENGTH
+        ? cleanBody.slice(0, MAX_BODY_LENGTH) + "\n[...]"
+        : cleanBody;
+
+      const formalityNote =
+        userFormality === "formal" ? "Use formal, professional language."
+        : userFormality === "casual" ? "Use a casual, conversational tone."
+        : userFormality === "neutral" ? "Use a balanced, professional tone."
+        : `Match ${culturalContext.culture} business norms (${culturalContext.formality}).`;
 
       const completion = await openai.chat.completions.create({
-        model: getAiModel(userPlan),
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: `You are an expert multilingual translator specializing in culturally-aware email translation. Translate the email from ${sourceLanguage || "the source language"} to ${targetLangName}.
-
-Cultural Context: You are translating for a user based in a ${culturalContext.culture}-speaking region.
-Tone: ${formalityInstruction}
-
-Translation Rules:
-- Produce natural, fluent prose that reads as if originally written in ${targetLangName} — never word-for-word
-- Adapt idioms, expressions, and cultural references to equivalents that make sense in the target culture
-- Maintain the sender's original intent, emotion, and level of urgency
-- Preserve HTML tags, formatting, links, and structure
-- Keep proper nouns, brand names, email addresses, and URLs unchanged
-- Adapt greetings and sign-offs to culturally appropriate equivalents (e.g., "Sehr geehrte/r" → "Dear" in formal English, or vice versa)
-- If the source email has a culturally specific tone (e.g., Japanese keigo, German formal Sie), reflect the equivalent level of formality in the target language
-- Return a JSON object with three fields:
-  "subject": translated subject line,
-  "body": translated body,
-  "culturalNotes": a brief note (1-2 sentences) about any cultural nuances in the original email that the reader should be aware of (or empty string if none)
-- Return ONLY valid JSON, no other text`,
+            content: `Translate the email to ${targetLangName}. ${formalityNote} Keep proper nouns, names, emails, URLs unchanged. Adapt idioms naturally. Return JSON only: {"subject":"...","body":"...","culturalNotes":"..."}`,
           },
           {
             role: "user",
-            content: JSON.stringify({ subject: subject || "", body }),
+            content: JSON.stringify({ subject: subject || "", body: truncatedBody }),
           },
         ],
-        max_tokens: 4000,
+        max_tokens: 2000,
         temperature: 0.3,
       });
 
@@ -4624,11 +4633,20 @@ Please modify the response according to the instruction.`,
         const toneDesc =
           toneDescriptions[tone] || toneDescriptions.professional;
 
+        let learnedStyle: any = null;
+        let styleHint = "";
+        if (hasPlan(userPlan, "pro")) {
+          learnedStyle = await storage.getLearnedWritingStyle(req.session.userId!);
+          if (learnedStyle && learnedStyle.samplesAnalyzed > 0) {
+            styleHint = ` Match the user's writing style: ${learnedStyle.toneDescription || tone} tone, ${learnedStyle.avgSentenceLength || "medium"} sentences.`;
+          }
+        }
+
         let prompt: string;
         let systemMessage: string;
 
         if (mode === "reply" || mode === "replyAll") {
-          systemMessage = `You are an email assistant that writes clear, concise email replies. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Re:", or any subject prefix in the body.`;
+          systemMessage = `You are an email assistant that writes clear, concise email replies.${styleHint} Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Re:", or any subject prefix in the body.`;
 
           // If there's existing body content, user wants to refine/tweak it
           const existingContent = existingBody?.trim() || "";
@@ -4675,7 +4693,7 @@ Write a reply that:
 Respond with JSON only: {"subject": "Re: ${originalEmail?.subject || ""}", "body": "Your reply text here (no subject line in body)..."}`;
           }
         } else if (mode === "forward") {
-          systemMessage = `You are an email assistant. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Fwd:", or any subject prefix in the body.`;
+          systemMessage = `You are an email assistant.${styleHint} Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line, "Fwd:", or any subject prefix in the body.`;
 
           const existingContent = existingBody?.trim() || "";
 
@@ -4705,7 +4723,7 @@ Respond with JSON only: {"subject": "Fwd: ${originalEmail?.subject || ""}", "bod
           }
         } else {
           // New email
-          systemMessage = `You are an email assistant that helps compose professional emails. Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line or any subject prefix in the body.`;
+          systemMessage = `You are an email assistant that helps compose professional emails.${styleHint} Always respond in JSON format with "subject" and "body" fields. IMPORTANT: The "body" field should contain ONLY the email body text - never include the subject line or any subject prefix in the body.`;
 
           const existingContent = existingBody?.trim() || "";
 
