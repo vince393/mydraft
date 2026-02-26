@@ -338,7 +338,7 @@ function AppRoutes() {
         </ProtectedRoute>
       </Route>
       <Route path="/">
-        <PublicRoute redirectIfAuthenticated={false}>
+        <PublicRoute redirectIfAuthenticated={true}>
           <LandingPage />
         </PublicRoute>
       </Route>
