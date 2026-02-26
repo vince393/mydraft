@@ -9,9 +9,9 @@ MyDraft is an AI-powered email inbox management application inspired by modern e
 - **Logo**: Located at `attached_assets/image_1768612031318.png`
 
 ## Pricing
-- **Free**: $0 - Basic inbox management (5 emails/day limit)
-- **Pro**: $10/month or $99/year - Advanced AI features, 14-day trial, unlimited emails
-- **Business**: $29/month or $299/year - Enterprise features, 14-day trial, unlimited emails
+- **Free**: $0 - Basic inbox management, 5 AI drafts/day, no writing style memory
+- **Pro**: $10/month or $99/year - Writing style memory, 100 AI emails/day, 14-day trial (GPT-4o-mini)
+- **Business**: $29/month or $299/year - Enhanced AI quality (GPT-4o), unlimited AI, team features, 14-day trial
 
 ## User Preferences
 
@@ -40,7 +40,9 @@ Preferred communication style: Simple, everyday language.
 - **Storage Pattern**: Interface-based storage abstraction (`IStorage`) with in-memory implementation for development
 
 ### AI Integration
-- **Primary Provider**: OpenAI (gpt-4o-mini) via Replit AI Integrations for all text tasks (chat, drafts, translations, summaries) and voice/audio features (whisper transcription, audio chat)
+- **Primary Provider**: OpenAI via Replit AI Integrations for all text tasks (chat, drafts, translations, summaries) and voice/audio features (whisper transcription, audio chat)
+- **Per-Plan Models**: Business/premium users get GPT-4o for user-facing AI (drafts, summaries, translations, suggestions); all other users get GPT-4o-mini. Background tasks (email scheduler, chat, batch) always use GPT-4o-mini for cost control
+- **Writing Style Learning**: Pro+ only — sent emails are captured as writing samples, analyzed after 3+ samples to build a personalized style profile injected into draft prompts. Free users get generic tone-based drafts only
 - **Features**: Email reply draft generation, inbox sorting, translation, summarization, chatbot assistant
 - **Utilities**: Batch processing with rate limiting, chat conversation management, image generation capabilities
 - **Client Setup**: Single `openai` client in `server/routes.ts` using `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL`

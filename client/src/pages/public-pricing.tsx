@@ -166,10 +166,10 @@ export default function PublicPricingPage() {
               description="Perfect for trying out MyDraft"
               features={[
                 { text: "Connect 1 email account", included: true },
+                { text: "5 AI drafts per day", included: true },
                 { text: "Basic inbox management", included: true },
                 { text: "Standard support", included: true },
-                { text: "Unlimited AI replies", included: false },
-                { text: "Email scheduling", included: false },
+                { text: "Writing style memory", included: false },
                 { text: "Voice assistant", included: false },
               ]}
               onSelect={() => handlePlanSelect("free")}
@@ -187,7 +187,7 @@ export default function PublicPricingPage() {
               features={[
                 { text: "Connect 1 email account", included: true },
                 { text: "Unlimited AI replies", included: true },
-                { text: "Advanced tone customization", included: true },
+                { text: "Writing style memory", included: true },
                 { text: "Email scheduling", included: true },
                 { text: "Priority support", included: true },
                 { text: "14-day free trial", included: true },
@@ -207,11 +207,11 @@ export default function PublicPricingPage() {
               description="For teams and power users"
               features={[
                 { text: "Connect 1 email account", included: true },
+                { text: "Enhanced AI quality (GPT-4o)", included: true },
                 { text: "Unlimited AI replies", included: true },
                 { text: "Voice assistant", included: true },
                 { text: "Custom AI training", included: true },
                 { text: "Team collaboration", included: true },
-                { text: "Dedicated support", included: true },
                 { text: "14-day free trial", included: true },
               ]}
               onSelect={() => handlePlanSelect("business")}
@@ -353,9 +353,10 @@ function FeatureComparison() {
   const features = [
     { name: "Email accounts", free: "1", pro: "1", business: "1" },
     { name: "Free trial", free: "x", pro: "14 days", business: "14 days" },
-    { name: "AI replies", free: "Limited", pro: "Unlimited", business: "Unlimited" },
+    { name: "AI replies", free: "5/day", pro: "Unlimited", business: "Unlimited" },
+    { name: "Writing style memory", free: "x", pro: "check", business: "check" },
+    { name: "AI model", free: "Standard", pro: "Standard", business: "Enhanced (GPT-4o)" },
     { name: "Inbox management", free: "Basic", pro: "Advanced", business: "Advanced" },
-    { name: "Tone customization", free: "x", pro: "check", business: "check" },
     { name: "Email scheduling", free: "x", pro: "check", business: "check" },
     { name: "Voice assistant", free: "x", pro: "x", business: "check" },
     { name: "Custom AI training", free: "x", pro: "x", business: "check" },

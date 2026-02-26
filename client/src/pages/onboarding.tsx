@@ -40,24 +40,9 @@ const basePlans = [
     description: "Perfect for trying out MyDraft",
     features: [
       "Connect 1 email account",
+      "5 AI drafts per day",
       "Basic inbox management",
       "Standard support",
-    ],
-  },
-  {
-    id: "student",
-    name: "Student",
-    monthlyPrice: 5,
-    annualPrice: 45,
-    annualSavings: 15,
-    description: "50% student discount",
-    badge: "Student Discount",
-    features: [
-      "Unlimited AI replies",
-      "Email humanizer",
-      "Make AI text sound natural",
-      "Tone customization",
-      "Priority support",
     ],
   },
   {
@@ -87,6 +72,7 @@ const basePlans = [
     description: "For teams and power users",
     features: [
       "Everything in Pro",
+      "Enhanced AI quality (GPT-4o)",
       "Unlimited AI assistance",
       "Voice assistant",
       "Custom AI training",
@@ -608,10 +594,10 @@ function PlanSelectionStep({
     const displayPeriod = plan.id === "free" ? "forever" : billingInterval === "annual" ? "/year" : "/month";
 
     const emailsPerDay = preferences.emailVolume === "very-high" ? 120 : preferences.emailVolume === "high" ? 75 : preferences.emailVolume === "medium" ? 35 : 15;
-    const timeSavedPerEmail = plan.id === "business" ? 3 : plan.id === "pro" ? 2.5 : plan.id === "student" ? 2 : 1;
+    const timeSavedPerEmail = plan.id === "business" ? 3 : plan.id === "pro" ? 2.5 : 1;
     const yearlyTimeSaved = Math.round((emailsPerDay * timeSavedPerEmail * 22 * 12) / 60);
-    const emailsAutomated = plan.id === "business" ? "Unlimited" : plan.id === "pro" ? "100" : plan.id === "student" ? "50" : "5";
-    const responseTime = plan.id === "business" ? "< 30 sec" : plan.id === "pro" ? "< 1 min" : plan.id === "student" ? "< 2 min" : "< 5 min";
+    const emailsAutomated = plan.id === "business" ? "Unlimited" : plan.id === "pro" ? "100" : "5";
+    const responseTime = plan.id === "business" ? "< 30 sec" : plan.id === "pro" ? "< 1 min" : "< 5 min";
 
     return (
       <div className="max-w-4xl mx-auto">

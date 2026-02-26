@@ -197,6 +197,10 @@ function hasPlan(userPlan: string, minPlan: "pro" | "premium"): boolean {
   return (planHierarchy[userPlan] || 0) >= planHierarchy[minPlan];
 }
 
+function getAiModel(userPlan: string): string {
+  return userPlan === "premium" ? "gpt-4o" : "gpt-4o-mini";
+}
+
 function getEmailRedirectUri(req: any, provider: string): string {
   const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
   const host = req.headers['x-forwarded-host'] || req.headers.host || req.hostname;
@@ -1572,6 +1576,15 @@ export async function registerRoutes(
 
   app.get("/api/writing-style", requireAuth, async (req, res) => {
     try {
+      const userPlan = await getUserPlan(req.session.userId!);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({
+          error: "Plan upgrade required",
+          requiredPlan: "pro",
+          currentPlan: userPlan,
+        });
+      }
+
       const style = await storage.getLearnedWritingStyle(req.session.userId!);
       const sampleCount = await storage.getWritingSampleCount(
         req.session.userId!,
@@ -1589,6 +1602,15 @@ export async function registerRoutes(
 
   app.post("/api/writing-style/analyze", requireAuth, async (req, res) => {
     try {
+      const userPlan = await getUserPlan(req.session.userId!);
+      if (!hasPlan(userPlan, "pro")) {
+        return res.status(403).json({
+          error: "Plan upgrade required",
+          requiredPlan: "pro",
+          currentPlan: userPlan,
+        });
+      }
+
       const samples = await storage.getWritingSamples(req.session.userId!, 20);
 
       if (samples.length < 3) {
@@ -2879,9 +2901,12 @@ If truly nothing matches, return: []`,
         });
       }
 
-      // Get user's learned writing style and preferences for context
-      const learnedStyle = await storage.getLearnedWritingStyle(userId);
+      // Get user's learned writing style and preferences for context (Pro+ only)
       const user = await storage.getUser(userId);
+      const refreshUserPlan = user?.plan || "free";
+      const learnedStyle = hasPlan(refreshUserPlan, "pro")
+        ? await storage.getLearnedWritingStyle(userId)
+        : null;
 
       // Get user's deletion/archive history patterns for smarter recommendations
       const actionPatterns = await storage.getEmailActionPatterns(userId);
@@ -3303,6 +3328,8 @@ JSON response only:
         return res.status(400).json({ error: "Email body is required" });
       }
 
+      const userPlan = await getUserPlan(req.session.userId!);
+
       const cacheKey = `${req.session.userId}-${id}`;
       cleanupSummaryCache();
       const cached = summaryCache.get(cacheKey);
@@ -3315,7 +3342,7 @@ JSON response only:
       }
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: getAiModel(userPlan),
         messages: [
           {
             role: "system",
@@ -3684,7 +3711,7 @@ Return ONLY valid JSON, no other text.`,
               : `Adapt the formality to match ${culturalContext.culture} business norms: ${culturalContext.formality}`;
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: getAiModel(userPlan),
         messages: [
           {
             role: "system",
@@ -4189,14 +4216,17 @@ Translation Rules:
         const toneDesc =
           toneDescriptions[tone] || toneDescriptions.professional;
 
-        // Fetch user's learned writing style for personalization
-        const learnedStyle = await storage.getLearnedWritingStyle(
-          req.session.userId!,
-        );
+        // Fetch user's learned writing style for personalization (Pro+ only)
+        let learnedStyle: any = null;
         let styleContext = "";
 
-        if (learnedStyle && learnedStyle.samplesAnalyzed > 0) {
-          styleContext = `
+        if (hasPlan(userPlan, "pro")) {
+          learnedStyle = await storage.getLearnedWritingStyle(
+            req.session.userId!,
+          );
+
+          if (learnedStyle && learnedStyle.samplesAnalyzed > 0) {
+            styleContext = `
 IMPORTANT - Match the user's personal writing style:
 - Style: ${learnedStyle.styleAnalysis || "Direct and clear"}
 - Tone: ${learnedStyle.toneDescription || tone}
@@ -4204,6 +4234,7 @@ IMPORTANT - Match the user's personal writing style:
 - Sentence length: ${learnedStyle.avgSentenceLength || "medium"}
 Try to naturally incorporate their writing patterns while maintaining the requested ${tone} tone.
 `;
+          }
         }
 
         const prompt = `You are an email assistant. Generate a reply to the following email. The reply should be ${toneDesc}.
@@ -4229,7 +4260,7 @@ Reply:`;
             : `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`;
 
         const response = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: getAiModel(userPlan),
           messages: [
             {
               role: "system",
@@ -4452,6 +4483,7 @@ Reply:`;
   // AI Refine - modify existing response based on instructions
   app.post("/api/ai/refine", requireAuth, async (req, res) => {
     try {
+      const userPlan = await getUserPlan(req.session.userId!);
       const { text, instruction, originalEmail } = req.body;
 
       if (!text || text.trim().length === 0) {
@@ -4474,7 +4506,7 @@ ${originalEmail.body || originalEmail.preview || ""}
       }
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: getAiModel(userPlan),
         messages: [
           {
             role: "system",
@@ -4699,7 +4731,7 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
         }
 
         const response = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: getAiModel(userPlan),
           messages: [
             { role: "system", content: systemMessage },
             { role: "user", content: prompt },
@@ -6085,7 +6117,7 @@ Respond with ONLY a brief suggestion, like:
 - "Request more details about the project requirements"`;
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: getAiModel(userPlan),
         messages: [{ role: "user", content: prompt }],
         max_tokens: 100,
         temperature: 0.7,
@@ -6253,7 +6285,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         }
 
         const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: getAiModel(userPlan),
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
@@ -6352,7 +6384,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         improvementPrompts[improvementType] || improvementPrompts.clearer;
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: getAiModel(userPlan),
         messages: [
           {
             role: "system",

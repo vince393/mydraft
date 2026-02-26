@@ -217,6 +217,7 @@ const basePlans = [
     color: "text-muted-foreground",
     features: [
       "Connect 1 email account",
+      "5 AI drafts per day",
       "Basic inbox management",
       "Standard support",
     ],
@@ -254,6 +255,7 @@ const basePlans = [
     stripeName: "MyDraft Business",
     features: [
       "Everything in Pro",
+      "Enhanced AI quality (GPT-4o)",
       "Unlimited AI assistance",
       "Voice assistant",
       "Custom AI training",

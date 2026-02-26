@@ -161,7 +161,11 @@ async function processPendingSends() {
           }
         }
 
-        await captureWritingSample(claimed.userId, subject, body);
+        const sendUser = await storage.getUser(claimed.userId);
+        const sendUserPlan = sendUser?.plan || "free";
+        if (sendUserPlan === "pro" || sendUserPlan === "premium") {
+          await captureWritingSample(claimed.userId, subject, body);
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         await storage.markPendingSendFailed(send.id, errorMessage);
