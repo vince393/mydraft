@@ -449,29 +449,6 @@ function AccountTab({ settings }: { settings: Settings }) {
         </div>
       </SettingsPanel>
 
-      <SettingsPanel>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center">
-              <LogOut className="w-4 h-4 text-muted-foreground/60" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Session</h3>
-              <p className="text-[12px] text-muted-foreground/50">Sign out of your account</p>
-            </div>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-            data-testid="button-logout"
-          >
-            {logoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Log Out"}
-          </Button>
-        </div>
-      </SettingsPanel>
-
       <SettingsPanel className="border-destructive/20">
         <SectionHeader icon={Trash2} title="Danger Zone" description="Irreversible actions" />
         <AlertDialog>
