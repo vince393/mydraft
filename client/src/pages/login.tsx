@@ -49,7 +49,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
         <div className="mt-8 flex items-center justify-center flex-wrap gap-x-5 gap-y-2 text-[11px] text-white/15">
           <div className="flex items-center gap-1.5">
             <Shield className="w-3 h-3" />
-            <span>CASA Tier 2</span>
+            <span>CASA Tier 2 Approved</span>
           </div>
           <div className="w-px h-3 bg-white/[0.04]" />
           <div className="flex items-center gap-1.5">

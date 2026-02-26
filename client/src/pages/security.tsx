@@ -88,13 +88,14 @@ export default function SecurityPage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
-                  <h2 className="text-xl font-semibold" data-testid="text-casa-title">CASA Tier 2 Compliant</h2>
-                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30" data-testid="badge-casa">Verified</Badge>
+                  <h2 className="text-xl font-semibold" data-testid="text-casa-title">CASA Tier 2 Approved</h2>
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30" data-testid="badge-casa">Google Approved</Badge>
                 </div>
                 <p className="text-muted-foreground mb-6 leading-relaxed">
-                  MyDraft meets the Cloud Application Security Assessment (CASA) Tier 2 requirements, 
-                  the security standard required by Google for applications that access user data through 
-                  OAuth scopes. This covers data handling, authentication, encryption, and vulnerability management.
+                  MyDraft has passed Google's Cloud Application Security Assessment (CASA) Tier 2 and received 
+                  a Letter of Validation (LOV). This is the security standard required by Google for applications 
+                  that access user data through OAuth scopes, covering data handling, authentication, encryption, 
+                  and vulnerability management. Our assessment has been independently verified and approved by Google.
                 </p>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="flex items-start gap-3">
@@ -217,7 +218,7 @@ export default function SecurityPage() {
             <DetailSection
               title="Compliance & Transparency"
               items={[
-                "CASA Tier 2 compliant for Google OAuth applications",
+                "CASA Tier 2 approved by Google with Letter of Validation (LOV)",
                 "GDPR compliant - request data export or deletion anytime",
                 "Clear privacy policy with no hidden terms",
                 "Transparent about what data we collect and why",
@@ -250,7 +251,7 @@ export default function SecurityPage() {
             />
             <FAQItem 
               q="What is CASA Tier 2?" 
-              a="CASA (Cloud Application Security Assessment) is Google's security framework for apps that access user data via OAuth. Tier 2 requires verified security controls including encryption, access management, vulnerability handling, and audit logging. MyDraft has been assessed against these requirements." 
+              a="CASA (Cloud Application Security Assessment) is Google's security framework for apps that access user data via OAuth. Tier 2 requires verified security controls including encryption, access management, vulnerability handling, and audit logging. MyDraft has been independently assessed, approved by Google, and issued a Letter of Validation (LOV) confirming our compliance." 
             />
             <FAQItem 
               q="How do I report a security issue?" 

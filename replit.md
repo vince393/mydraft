@@ -116,7 +116,7 @@ shared/           # Shared types and schemas
 - `wouter`: Client-side routing
 - Radix UI primitives: Accessible UI components
 
-## CASA Security Compliance
+## CASA Security Compliance (Approved by Google)
 
 ### Data Classification (Q4)
 All sensitive data is identified and classified into 4 protection levels:
@@ -154,7 +154,7 @@ Email content stored in the `cached_emails` table is encrypted at rest using AES
 - **Transparency**: Decryption happens automatically in storage layer - AI features receive decrypted content
 - **Startup Validation**: Server validates encryption key on startup and logs status
 
-This ensures that even database administrators cannot read user email content, meeting CASA Tier 2 data protection requirements.
+This ensures that even database administrators cannot read user email content, meeting CASA Tier 2 data protection requirements. MyDraft has been officially approved by Google for CASA Tier 2 and received a Letter of Validation (LOV).
 
 ### Security Files
 - `server/rate-limiter.ts`: Rate limiting middleware

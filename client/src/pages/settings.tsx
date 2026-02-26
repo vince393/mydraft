@@ -701,9 +701,9 @@ function SecurityTab({ settings }: { settings: Settings }) {
           <Shield className="w-4 h-4 text-emerald-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-emerald-300 text-sm">CASA Tier 2 Certified</p>
+          <p className="font-medium text-emerald-300 text-sm">CASA Tier 2 Approved by Google</p>
           <p className="text-[11px] text-muted-foreground/50 mt-0.5">
-            Independently verified security controls for data protection and encryption.
+            Approved by Google with Letter of Validation for data protection and encryption.
           </p>
         </div>
       </div>
