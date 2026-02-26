@@ -15,7 +15,6 @@ import {
   Send,
   Archive,
   Sparkles,
-  Brain,
   Globe,
   Zap,
   Languages,
@@ -27,6 +26,8 @@ import {
   RotateCcw,
   Plus,
   FolderPlus,
+  FileText,
+  X,
 } from "lucide-react";
 
 
@@ -434,64 +435,116 @@ function MockupAIReply() {
 }
 
 function MockupThreadSummary() {
-  const [visibleItems, setVisibleItems] = useState(0);
+  const [phase, setPhase] = useState(0);
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.3 });
 
+  const summaryText = "The team agreed on the Q4 marketing budget of $45K. Launch date is set for November 15. Vendor pricing is still pending and needs follow-up by Friday.";
+  const [typedChars, setTypedChars] = useState(0);
+
   useEffect(() => {
-    if (isVisible) {
-      const timers: ReturnType<typeof setTimeout>[] = [];
-      const items = [600, 900, 1200, 1500];
-      items.forEach((delay, i) => {
-        timers.push(setTimeout(() => setVisibleItems(i + 1), delay));
-      });
-      return () => timers.forEach(clearTimeout);
+    if (!isVisible) {
+      setPhase(0);
+      setTypedChars(0);
+      return;
     }
+    const t1 = setTimeout(() => setPhase(1), 400);
+    const t2 = setTimeout(() => setPhase(2), 800);
+    const t3 = setTimeout(() => setPhase(3), 2400);
+    const t4 = setTimeout(() => setPhase(4), 2800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, [isVisible]);
 
-  const summaryItems = [
-    { color: 'bg-green-500', text: 'Budget approved for Q4 marketing campaign', tag: 'Decision', tagColor: 'text-green-400/70 border-green-500/20' },
-    { color: 'bg-amber-500', text: 'Waiting on vendor pricing by end of week', tag: 'Pending', tagColor: 'text-amber-400/70 border-amber-500/20' },
-    { color: 'bg-blue-500', text: 'Launch date confirmed: November 15', tag: 'Confirmed', tagColor: 'text-blue-400/70 border-blue-500/20' },
-    { color: 'bg-purple-500', text: 'Sarah to send revised timeline on Monday', tag: 'Action', tagColor: 'text-purple-400/70 border-purple-500/20' },
+  useEffect(() => {
+    if (phase < 2) { setTypedChars(0); return; }
+    if (typedChars >= summaryText.length) return;
+    const speed = 8;
+    const timer = setTimeout(() => setTypedChars(prev => Math.min(prev + 1, summaryText.length)), speed);
+    return () => clearTimeout(timer);
+  }, [phase, typedChars]);
+
+  const keyPoints = [
+    "Budget approved at $45K for Q4 campaign",
+    "Launch date confirmed: November 15",
+    "Creative assets due by October 28",
+  ];
+  const actionItems = [
+    "Follow up on vendor pricing by Friday",
+    "Sarah to send revised timeline Monday",
   ];
 
   return (
-    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
-      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
+    <div ref={ref} className="rounded-2xl border border-white/[0.10] bg-gradient-to-br from-background/90 via-background/70 to-muted/50 overflow-hidden shadow-xl shadow-black/10 backdrop-blur-md">
+      <div className="px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center">
-            <Brain className="w-3.5 h-3.5 text-foreground/60" />
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-foreground/10 to-foreground/5 border border-foreground/10 flex items-center justify-center shadow-inner">
+            <FileText className="w-3.5 h-3.5 text-foreground/60" />
           </div>
-          <div>
-            <p className="text-sm font-medium">Thread Summary</p>
-            <p className="text-[11px] text-muted-foreground/50">Q4 Budget Discussion</p>
-          </div>
+          <span className="text-sm font-medium text-foreground/90">Summary</span>
+          {phase >= 1 && phase < 3 && (
+            <span className="flex items-center gap-1 ml-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.2s' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.4s' }} />
+            </span>
+          )}
         </div>
-        <span className="text-[10px] text-muted-foreground/30 border border-white/[0.08] rounded-md px-2 py-0.5">18 messages</span>
+        <div className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-foreground/10 cursor-pointer transition-colors">
+          <X className="w-3.5 h-3.5 text-foreground/40" />
+        </div>
       </div>
-      <div className="p-5 space-y-2">
-        {summaryItems.map((item, i) => (
-          <div 
-            key={i} 
-            className="flex items-start gap-3 p-3 rounded-md border border-white/[0.06] bg-white/[0.01] transition-all duration-500 ease-out"
-            style={{ 
-              opacity: visibleItems > i ? 1 : 0,
-              transform: visibleItems > i ? 'translateX(0)' : 'translateX(-16px)',
-            }}
-          >
-            <div className={`w-1.5 h-1.5 rounded-full ${item.color} flex-shrink-0 mt-2`} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-foreground/70">{item.text}</p>
+
+      <div className="px-4 pb-4">
+        <div className="space-y-3">
+          <p className="text-sm text-foreground/85 leading-relaxed" style={{ minHeight: '3.2em' }}>
+            {phase >= 2 ? summaryText.slice(0, typedChars) : ''}
+            {phase >= 2 && typedChars < summaryText.length && (
+              <span className="inline-block w-0.5 h-4 bg-foreground/50 ml-0.5 animate-pulse align-text-bottom" />
+            )}
+          </p>
+
+          {phase >= 3 && (
+            <div className="pt-2">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Key Points</p>
+              <ul className="space-y-1.5">
+                {keyPoints.map((point, i) => (
+                  <li 
+                    key={i} 
+                    className="text-sm text-foreground/75 flex items-start gap-2 transition-all duration-300 ease-out"
+                    style={{ 
+                      opacity: phase >= 3 ? 1 : 0,
+                      transform: phase >= 3 ? 'translateX(0)' : 'translateX(-8px)',
+                      transitionDelay: `${i * 80}ms`,
+                    }}
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-foreground/30 mt-2 flex-shrink-0" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <span className={`text-[10px] px-2 py-0.5 rounded-md border flex-shrink-0 ${item.tagColor}`}>{item.tag}</span>
-          </div>
-        ))}
-        <div 
-          className="flex items-center justify-between pt-3 mt-1 border-t border-white/[0.06] transition-all duration-500"
-          style={{ opacity: visibleItems >= 4 ? 1 : 0 }}
-        >
-          <span className="text-[11px] text-muted-foreground/40">2 action items pending</span>
-          <span className="text-[11px] text-foreground/50 cursor-pointer hover:text-foreground/70">View full thread</span>
+          )}
+
+          {phase >= 4 && (
+            <div className="pt-2">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Action Items</p>
+              <ul className="space-y-1.5">
+                {actionItems.map((item, i) => (
+                  <li 
+                    key={i} 
+                    className="text-sm text-foreground/75 flex items-start gap-2 transition-all duration-300 ease-out"
+                    style={{
+                      opacity: phase >= 4 ? 1 : 0,
+                      transform: phase >= 4 ? 'translateX(0)' : 'translateX(-8px)',
+                      transitionDelay: `${i * 80}ms`,
+                    }}
+                  >
+                    <ArrowRight className="w-3 h-3 text-foreground/40 mt-1 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </div>
