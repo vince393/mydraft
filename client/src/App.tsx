@@ -387,9 +387,7 @@ function AppRoutes() {
         </ProtectedRoute>
       </Route>
       <Route path="/">
-        <PublicRoute redirectIfAuthenticated={true}>
-          <LandingPage />
-        </PublicRoute>
+        <LandingPage />
       </Route>
       <Route component={NotFound} />
     </Switch>
