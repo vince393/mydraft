@@ -226,19 +226,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     staleTime: 0,
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (isError || !authData?.user) {
-    return <Redirect to="/login" />;
-  }
-
-  const user = authData.user;
+  const user = authData?.user ?? null;
 
   useEffect(() => {
     if (user) {
@@ -250,6 +238,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       });
     }
   }, [user?.id, user?.email, user?.displayName, user?.plan]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isError || !user) {
+    return <Redirect to="/login" />;
+  }
 
   // New flow: Login → Onboarding → Checkout → Connect Email
   // Step 1: Complete onboarding first (but allow checkout since it's part of onboarding)
