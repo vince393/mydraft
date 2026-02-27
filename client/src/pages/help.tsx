@@ -51,7 +51,6 @@ import {
   ShieldAlert,
   AtSign,
 } from "lucide-react";
-import { demoMap } from "@/components/help-demos";
 
 interface HelpArticle {
   id: string;
@@ -1137,12 +1136,6 @@ function ArticleView({ article, onBack }: { article: HelpArticle; onBack: () => 
       </div>
 
       <div className="h-px w-full mb-8" style={{ background: "rgba(255,255,255,0.06)" }} />
-
-      {demoMap[article.id] && (
-        <div className="mb-8 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
-          {(() => { const Demo = demoMap[article.id]; return <Demo />; })()}
-        </div>
-      )}
 
       <div className="space-y-5">
         <p className="text-base text-foreground/60 leading-relaxed font-medium">
