@@ -624,40 +624,6 @@ export function DemoCustomFolders() {
   );
 }
 
-export function DemoSettings() {
-  const t = useAnimationLoop(6000);
-  const phase = t < 2000 ? 0 : t < 4000 ? 1 : 2;
-  const tabs = ["Account", "Security", "AI", "Email", "Billing"];
-
-  return (
-    <div style={{ ...S.panel, height: 180, position: "relative" }}>
-      <div style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>Settings</span>
-      </div>
-      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,0.04)", padding: "0 12px" }}>
-        {tabs.map((tab, i) => (
-          <div key={i} style={{
-            padding: "8px 10px", fontSize: 10,
-            color: (phase === 0 && i === 0) || (phase === 1 && i === 2) || (phase === 2 && i === 4) ? "#60A5FA" : "rgba(255,255,255,0.3)",
-            borderBottom: (phase === 0 && i === 0) || (phase === 1 && i === 2) || (phase === 2 && i === 4) ? "2px solid #3B82F6" : "2px solid transparent",
-            transition: "all 0.3s",
-          }}>
-            {tab}
-          </div>
-        ))}
-      </div>
-      <div style={{ padding: 12 }}>
-        {phase === 0 && <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>Manage your account details, password, and profile...</p>}
-        {phase === 1 && <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>Tone: Professional | Language: English | Region: US...</p>}
-        {phase === 2 && <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>Plan: Pro | Next billing: March 15, 2026...</p>}
-      </div>
-      <div style={S.label}>
-        {phase === 0 ? "Account settings" : phase === 1 ? "AI preferences" : "Billing & subscription"}
-      </div>
-    </div>
-  );
-}
-
 export function DemoReferral() {
   const t = useAnimationLoop(7000);
   const phase = t < 2000 ? 0 : t < 4000 ? 1 : t < 5500 ? 2 : 3;
@@ -939,7 +905,6 @@ export function DemoWritingStyle() {
 }
 
 export const demoMap: Record<string, () => JSX.Element> = {
-  "create-account": DemoConnectEmail,
   "connect-email": DemoConnectEmail,
   "navigate-inbox": DemoNavigateInbox,
   "compose-email": DemoComposeEmail,
@@ -950,41 +915,13 @@ export const demoMap: Record<string, () => JSX.Element> = {
   "ai-cleanup": DemoAiCleanup,
   "writing-style": DemoWritingStyle,
   "email-translation": DemoTranslate,
-  "ai-assistant": DemoAiDraft,
+  "multilingual": DemoTranslate,
   "plans-pricing": DemoBilling,
   "upgrade-plan": DemoBilling,
   "referral-program": DemoReferral,
   "delete-account": DemoDeleteAccount,
-  "disconnect-email": DemoSettings,
   "two-factor-auth": DemoSecurity,
-  "change-appearance": DemoSettings,
-  "ai-preferences": DemoSettings,
   "email-signature": DemoSignature,
   "search-inbox": DemoSearch,
   "select-multiple": DemoMultiSelect,
-  "change-password": DemoSecurity,
-  "mark-read-unread": DemoNavigateInbox,
-  "email-scheduling": DemoComposeEmail,
-  "attachments": DemoComposeEmail,
-  "swipe-gestures": DemoStarArchiveDelete,
-  "ai-refine": DemoAiDraft,
-  "email-summary": DemoTranslate,
-  "promo-codes": DemoBilling,
-  "voice-assistant": DemoAiDraft,
-  "data-security": DemoSecurity,
-  "email-storage": DemoSecurity,
-  "contact-support": DemoSettings,
-  "free-trial": DemoBilling,
-  "cancel-subscription": DemoSettings,
-  "payment-methods": DemoBilling,
-  "supported-providers": DemoConnectEmail,
-  "mobile-use": DemoNavigateInbox,
-  "inbox-zero": DemoAiCleanup,
-  "multilingual": DemoTranslate,
-  "ai-limits": DemoAiDraft,
-  "spam-phishing": DemoAiCleanup,
-  "cc-bcc": DemoComposeEmail,
-  "email-notifications": DemoSettings,
-  "export-data": DemoSettings,
-  "billing-annual": DemoBilling,
 };
