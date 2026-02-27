@@ -40,7 +40,8 @@ Preferred communication style: Simple, everyday language.
 - **Storage Pattern**: Interface-based storage abstraction (`IStorage`) with in-memory implementation for development
 
 ### AI Integration
-- **Primary Provider**: OpenAI via Replit AI Integrations for all text tasks (chat, drafts, translations, summaries) and voice/audio features (whisper transcription, audio chat)
+- **Primary Provider**: OpenAI via Replit AI Integrations for all text tasks (chat, drafts, translations, summaries) and voice/audio features
+- **Audio Models**: `gpt-4o-mini-transcribe` for speech-to-text, `gpt-audio-mini` for voice chat (text+audio output) and TTS
 - **Per-Plan Models**: Business/premium users get GPT-4o for user-facing AI (drafts, summaries, translations, suggestions); all other users get GPT-4o-mini. Background tasks (email scheduler, chat, batch) always use GPT-4o-mini for cost control
 - **Writing Style Learning**: Pro+ only — sent emails are captured as writing samples, analyzed after 3+ samples to build a personalized style profile injected into draft prompts. Free users get generic tone-based drafts only
 - **Features**: Email reply draft generation, inbox sorting, translation, summarization, chatbot assistant
