@@ -25,7 +25,11 @@ import {
   Download,
   Image as ImageIcon,
   File,
-  Send
+  Send,
+  Volume2,
+  Square,
+  Pause,
+  Play
 } from "lucide-react";
 import { EmailNotePanel } from "./email-note";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,7 +46,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { SmartAvatar } from "@/components/smart-avatar";
-import { isHtmlContent } from "@/lib/email-formatter";
+import { isHtmlContent, stripHtmlToPlainText } from "@/lib/email-formatter";
 import { EmailIframeRenderer } from "@/components/email-iframe-renderer";
 import type { Email, Draft } from "@shared/schema";
 
@@ -111,6 +115,9 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   const [showSummary, setShowSummary] = useState(false);
   const [displayedSummary, setDisplayedSummary] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [readAloudState, setReadAloudState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
+  const readAloudAudioRef = useRef<HTMLAudioElement | null>(null);
+  const readAloudRequestIdRef = useRef(0);
   const { toast } = useToast();
 
   const emailId = email ? ((email as any).nylasId || email.id) : null;
@@ -177,6 +184,90 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     }
     onAiDraft?.();
   };
+
+  const stopReadAloud = () => {
+    readAloudRequestIdRef.current++;
+    if (readAloudAudioRef.current) {
+      readAloudAudioRef.current.pause();
+      readAloudAudioRef.current.src = "";
+      readAloudAudioRef.current = null;
+    }
+    setReadAloudState("idle");
+  };
+
+  const togglePauseResume = () => {
+    if (!readAloudAudioRef.current) return;
+    if (readAloudState === "playing") {
+      readAloudAudioRef.current.pause();
+      setReadAloudState("paused");
+    } else if (readAloudState === "paused") {
+      readAloudAudioRef.current.play();
+      setReadAloudState("playing");
+    }
+  };
+
+  const handleReadAloud = async () => {
+    if (readAloudState === "playing" || readAloudState === "paused") {
+      stopReadAloud();
+      return;
+    }
+    if (!email?.body) return;
+
+    const requestId = ++readAloudRequestIdRef.current;
+    setReadAloudState("loading");
+    try {
+      const plainText = isHtmlContent(email.body)
+        ? stripHtmlToPlainText(email.body)
+        : email.body;
+
+      const textToRead = `${email.subject}. ${plainText}`.slice(0, 4000);
+
+      const res = await apiRequest("POST", "/api/voice/tts", { text: textToRead });
+      const data = await res.json();
+
+      if (requestId !== readAloudRequestIdRef.current) return;
+
+      if (!data.audio) {
+        throw new Error("No audio returned");
+      }
+
+      const audioSrc = `data:audio/wav;base64,${data.audio}`;
+      const audio = new Audio(audioSrc);
+      readAloudAudioRef.current = audio;
+
+      audio.onended = () => {
+        setReadAloudState("idle");
+        readAloudAudioRef.current = null;
+      };
+      audio.onerror = () => {
+        setReadAloudState("idle");
+        readAloudAudioRef.current = null;
+        toast({ title: "Playback failed", description: "Could not play the audio.", variant: "destructive" });
+      };
+
+      await audio.play();
+      setReadAloudState("playing");
+    } catch (error) {
+      if (requestId !== readAloudRequestIdRef.current) return;
+      console.error("Read aloud error:", error);
+      setReadAloudState("idle");
+      toast({ title: "Read Aloud failed", description: "Could not generate audio for this email.", variant: "destructive" });
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (readAloudAudioRef.current) {
+        readAloudAudioRef.current.pause();
+        readAloudAudioRef.current.src = "";
+        readAloudAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    stopReadAloud();
+  }, [emailId]);
   
   // Get the selected email's ID for highlighting
   const selectedEmailId = email ? ((email as any).nylasId || email.id) : null;
@@ -592,21 +683,40 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
               ? 'opacity-100 max-h-10' 
               : 'opacity-0 max-h-0 overflow-hidden'
           }`}>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 gap-1.5 text-xs"
-              onClick={handleAiDraftClick}
-              data-testid="button-ai-draft-top"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Draft Reply
-              {!hasPro && (
-                <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
-                  Pro
-                </span>
-              )}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 gap-1.5 text-xs"
+                onClick={handleAiDraftClick}
+                data-testid="button-ai-draft-top"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Draft Reply
+                {!hasPro && (
+                  <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
+                    Pro
+                  </span>
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 gap-1.5 text-xs"
+                onClick={handleReadAloud}
+                disabled={readAloudState === "loading"}
+                data-testid="button-read-aloud-top"
+              >
+                {readAloudState === "loading" ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : readAloudState === "playing" || readAloudState === "paused" ? (
+                  <Square className="w-3 h-3 fill-current" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5" />
+                )}
+                {readAloudState === "loading" ? "Generating..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
+              </Button>
+            </div>
           </div>
 
           {/* Summary section - button transforms into glossy card */}
@@ -688,9 +798,67 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       </span>
                     )}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 gap-1.5 text-xs rounded-full"
+                    onClick={handleReadAloud}
+                    disabled={readAloudState === "loading"}
+                    data-testid="button-read-aloud"
+                  >
+                    {readAloudState === "loading" ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : readAloudState === "playing" || readAloudState === "paused" ? (
+                      <Square className="w-3 h-3 fill-current" />
+                    ) : (
+                      <Volume2 className="w-3.5 h-3.5" />
+                    )}
+                    {readAloudState === "loading" ? "Generating..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
+                  </Button>
                 </>
               )}
             </div>
+
+            {(readAloudState === "playing" || readAloudState === "paused") && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-foreground/[0.03] border border-border/30">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 rounded-full"
+                  onClick={togglePauseResume}
+                  data-testid="button-read-aloud-pause"
+                >
+                  {readAloudState === "playing" ? (
+                    <Pause className="w-3.5 h-3.5" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5" />
+                  )}
+                </Button>
+                <div className="flex-1 flex items-center gap-2">
+                  <Volume2 className="w-3.5 h-3.5 text-foreground/40" />
+                  <span className="text-xs text-foreground/70">
+                    {readAloudState === "playing" ? "Reading aloud..." : "Paused"}
+                  </span>
+                  {readAloudState === "playing" && (
+                    <div className="flex items-center gap-0.5">
+                      <span className="w-0.5 h-3 bg-foreground/30 rounded-full animate-pulse" />
+                      <span className="w-0.5 h-4 bg-foreground/30 rounded-full animate-pulse" style={{ animationDelay: "0.15s" }} />
+                      <span className="w-0.5 h-2.5 bg-foreground/30 rounded-full animate-pulse" style={{ animationDelay: "0.3s" }} />
+                      <span className="w-0.5 h-3.5 bg-foreground/30 rounded-full animate-pulse" style={{ animationDelay: "0.45s" }} />
+                    </div>
+                  )}
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 rounded-full"
+                  onClick={stopReadAloud}
+                  data-testid="button-read-aloud-stop"
+                >
+                  <Square className="w-3 h-3 fill-current" />
+                </Button>
+              </div>
+            )}
 
             {/* Summary content - expands with smooth animation */}
             <div 
