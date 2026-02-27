@@ -165,7 +165,7 @@ const articles: HelpArticle[] = [
       intro: "MyDraft organizes your email into familiar folders with a clean sidebar for easy navigation.",
       paragraphs: [
         "Your sidebar on the left shows all your email folders: Inbox, Starred, Sent, Drafts, Archive, Spam, and Trash. Each folder shows a count of unread messages so you always know where your attention is needed. Click any folder to see its emails in the main list view.",
-        "The email list shows your messages with the sender name, subject line, and a preview snippet. Unread emails are highlighted so they're easy to spot. Click any email to open it and read the full message. You can also use keyboard shortcuts or swipe gestures on mobile to quickly archive, delete, or star emails.",
+        "The email list shows your messages with the sender name, subject line, and a preview snippet. Unread emails are highlighted so they're easy to spot. Click any email to open it and read the full message. On mobile, you can use swipe gestures to quickly archive or delete emails.",
         "Pro and Business users can also create custom folders with AI-powered auto-sorting. Set a description for your folder and MyDraft's AI will automatically suggest moving matching emails there during cleanup scans."
       ],
       steps: [
@@ -694,21 +694,6 @@ const articles: HelpArticle[] = [
         { title: "Send or continue editing", description: "Edit the transcribed text if needed, then proceed." },
       ],
       tip: "Speak clearly and at a natural pace for the best transcription accuracy."
-    }
-  },
-  {
-    id: "keyboard-shortcuts",
-    question: "Are there keyboard shortcuts?",
-    readTime: "2 min read",
-    category: "Tips & Tricks",
-    icon: MousePointerClick,
-    iconColor: "#6366F1",
-    content: {
-      intro: "MyDraft supports common keyboard shortcuts to help you navigate and manage your inbox faster.",
-      paragraphs: [
-        "You can use keyboard shortcuts for common actions like composing a new email, archiving, deleting, starring, and navigating between emails. These shortcuts work when you're in the inbox view and help power users manage email much faster than using the mouse.",
-        "Swipe gestures are also available on mobile devices — swipe right to archive and swipe left to delete. These touch-based shortcuts make mobile email management quick and intuitive."
-      ],
     }
   },
   {

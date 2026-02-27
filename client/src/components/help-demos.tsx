@@ -979,7 +979,6 @@ export const demoMap: Record<string, () => JSX.Element> = {
   "payment-methods": DemoBilling,
   "supported-providers": DemoConnectEmail,
   "mobile-use": DemoNavigateInbox,
-  "keyboard-shortcuts": DemoNavigateInbox,
   "inbox-zero": DemoAiCleanup,
   "multilingual": DemoTranslate,
   "ai-limits": DemoAiDraft,
