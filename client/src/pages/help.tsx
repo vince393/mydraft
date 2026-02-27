@@ -38,7 +38,20 @@ import {
   UserPlus,
   MousePointerClick,
   ChevronRight,
+  Lock,
+  Bell,
+  Pencil,
+  CalendarClock,
+  Paperclip,
+  Smartphone,
+  RefreshCw,
+  Eye,
+  Download,
+  TicketPercent,
+  ShieldAlert,
+  AtSign,
 } from "lucide-react";
+import { demoMap } from "@/components/help-demos";
 
 interface HelpArticle {
   id: string;
@@ -745,6 +758,296 @@ const articles: HelpArticle[] = [
       ],
     }
   },
+  {
+    id: "search-inbox",
+    question: "How do I search for emails?",
+    readTime: "2 min read",
+    category: "Inbox & Email",
+    icon: Search,
+    iconColor: "#8B5CF6",
+    content: {
+      intro: "MyDraft has a built-in search bar that lets you quickly find any email by subject, sender, or content.",
+      paragraphs: [
+        "The search bar is located at the top of your email list. Click on it and start typing — results appear instantly as you type. You can search by sender name, email address, subject line, or keywords from the email body. The search covers all your emails across every folder.",
+        "Search results are displayed in the same list format as your inbox, so you can click on any result to open and read the full email. You can also use search to find specific conversations or track down an email you remember receiving but can't locate in your inbox."
+      ],
+      steps: [
+        { title: "Click the search bar", description: "Find it at the top of your email list." },
+        { title: "Type your search", description: "Enter a name, subject, or keyword." },
+        { title: "Browse results", description: "Matching emails appear instantly as you type." },
+        { title: "Open an email", description: "Click any result to read the full message." },
+      ],
+    }
+  },
+  {
+    id: "select-multiple",
+    question: "How do I select and manage multiple emails at once?",
+    readTime: "2 min read",
+    category: "Inbox & Email",
+    icon: CheckCircle2,
+    iconColor: "#8B5CF6",
+    content: {
+      intro: "You can select multiple emails at once to archive, delete, or move them in bulk — saving time when cleaning up your inbox.",
+      paragraphs: [
+        "To enter selection mode, long-press (press and hold) on any email in your list. You'll see a checkbox appear next to each email. Tap additional emails to add them to your selection. The action bar at the top shows how many emails you've selected and gives you bulk action buttons.",
+        "Once you've selected the emails you want, use the action buttons to archive all of them, delete them, or move them to a folder. This is much faster than handling emails one by one, especially when you're catching up on a full inbox.",
+        "On desktop, you can also click the checkbox area that appears when hovering over an email to select it without long-pressing."
+      ],
+      steps: [
+        { title: "Long-press an email", description: "Press and hold on any email to start selecting." },
+        { title: "Tap more emails", description: "Tap additional emails to add them to your selection." },
+        { title: "Use bulk actions", description: "Archive, delete, or move all selected emails at once." },
+        { title: "Exit selection mode", description: "Tap the X or deselect all emails to return to normal view." },
+      ],
+    }
+  },
+  {
+    id: "mark-read-unread",
+    question: "How do I mark emails as read or unread?",
+    readTime: "2 min read",
+    category: "Inbox & Email",
+    icon: Eye,
+    iconColor: "#8B5CF6",
+    content: {
+      intro: "You can mark emails as read or unread to keep track of which messages still need your attention.",
+      paragraphs: [
+        "Emails are automatically marked as read when you open them. If you want to mark an email as unread again (to remind yourself to deal with it later), open the email and use the action menu to toggle its read status. This puts the bold/unread styling back so it stands out in your list.",
+        "You can also mark multiple emails as read at once by selecting them in bulk and using the mark-as-read action. This is useful when you've quickly scanned a batch of emails and know they don't need responses."
+      ],
+      steps: [
+        { title: "Open the email", description: "Click on any email to view it." },
+        { title: "Find the action menu", description: "Look for the more options menu in the email view." },
+        { title: "Toggle read/unread", description: "Click 'Mark as unread' to flag it for later attention." },
+      ],
+    }
+  },
+  {
+    id: "swipe-gestures",
+    question: "How do swipe gestures work on mobile?",
+    readTime: "2 min read",
+    category: "Inbox & Email",
+    icon: Smartphone,
+    iconColor: "#8B5CF6",
+    content: {
+      intro: "On mobile devices, you can swipe left or right on emails for quick actions — no need to open menus.",
+      paragraphs: [
+        "Swipe gestures make managing your inbox fast and intuitive on phones and tablets. Swipe right on an email to archive it instantly. Swipe left to delete it. These gestures work throughout the email list and feel natural once you get used to them.",
+        "The swipe actions are designed to match what most people do most often — archive things they've dealt with and delete things they don't need. For other actions like starring, replying, or moving to folders, open the email and use the action buttons.",
+        "Swipe gestures are only available on touch devices (phones and tablets). On desktop, use the action buttons that appear when you hover over an email or open it."
+      ],
+    }
+  },
+  {
+    id: "cc-bcc",
+    question: "How do I use Cc and Bcc in emails?",
+    readTime: "2 min read",
+    category: "Inbox & Email",
+    icon: AtSign,
+    iconColor: "#8B5CF6",
+    content: {
+      intro: "Cc (Carbon Copy) and Bcc (Blind Carbon Copy) let you send emails to additional recipients beyond the main To field.",
+      paragraphs: [
+        "When composing an email, you'll see Cc and Bcc fields below the To field. Cc is used when you want someone to receive a copy of the email and everyone can see they're included. Bcc is for when you want to include someone without other recipients knowing — their address is hidden from everyone else.",
+        "Both Cc and Bcc fields support the same contact autocomplete as the To field. As you type, MyDraft suggests people you've previously emailed. You can add multiple addresses to each field. Cc'd recipients can see all other recipients, while Bcc'd recipients are completely hidden."
+      ],
+      steps: [
+        { title: "Open compose", description: "Click Compose to start a new email." },
+        { title: "Expand Cc/Bcc", description: "Click the Cc or Bcc labels to show those fields." },
+        { title: "Add recipients", description: "Type email addresses in the Cc or Bcc fields." },
+        { title: "Send normally", description: "Compose your message and send as usual." },
+      ],
+    }
+  },
+  {
+    id: "attachments",
+    question: "How do I view and download attachments?",
+    readTime: "2 min read",
+    category: "Inbox & Email",
+    icon: Paperclip,
+    iconColor: "#8B5CF6",
+    content: {
+      intro: "MyDraft lets you view and download file attachments from emails you receive.",
+      paragraphs: [
+        "When an email has attachments, you'll see them listed at the bottom of the email or indicated by an attachment icon in the email list. Click on an attachment to download it to your device. Common file types like images, PDFs, and documents can often be previewed directly.",
+        "For security, MyDraft scans attachments for potential threats. Certain file types that are commonly used for malware (like .exe files) may be blocked. This helps protect your device from malicious attachments while still letting you access legitimate files."
+      ],
+      steps: [
+        { title: "Open the email", description: "Click on an email that has attachments." },
+        { title: "Find the attachments", description: "Scroll down to see attached files listed at the bottom." },
+        { title: "Download or preview", description: "Click an attachment to download it or preview it inline." },
+      ],
+      tip: "MyDraft automatically scans attachments for security threats to keep you safe."
+    }
+  },
+  {
+    id: "email-scheduling",
+    question: "Can I schedule emails to send later?",
+    readTime: "2 min read",
+    category: "Inbox & Email",
+    icon: CalendarClock,
+    iconColor: "#8B5CF6",
+    content: {
+      intro: "Pro and Business users can schedule emails to be sent at a specific date and time, perfect for working across time zones or planning ahead.",
+      paragraphs: [
+        "When composing an email, instead of clicking Send immediately, look for the schedule option. You can pick a specific date and time for the email to be delivered. This is useful when you're writing emails outside business hours or want to reach someone in a different time zone at the right moment.",
+        "Scheduled emails are saved and sent automatically at the time you specify. You can view and manage your scheduled emails before they're sent, including editing the content or cancelling the scheduled send if you change your mind."
+      ],
+      steps: [
+        { title: "Compose your email", description: "Write your email as normal." },
+        { title: "Click the schedule option", description: "Look for the clock icon or Schedule Send button." },
+        { title: "Pick a date and time", description: "Choose when you want the email delivered." },
+        { title: "Confirm", description: "The email will be sent automatically at the scheduled time." },
+      ],
+    }
+  },
+  {
+    id: "ai-refine",
+    question: "How do I use AI to improve a draft I've written?",
+    readTime: "2 min read",
+    category: "AI Features",
+    icon: Pencil,
+    iconColor: "#F59E0B",
+    content: {
+      intro: "Already started writing a reply? The AI refine feature can polish your draft — fix grammar, improve tone, and make it more professional.",
+      paragraphs: [
+        "When you've written a draft but want to improve it, use the AI refine option. The AI will take your existing text and enhance it — fixing grammar and spelling, improving sentence structure, adjusting the tone to match your preferences, and making the overall message more polished and professional.",
+        "The refine feature preserves your original intent and key points. It doesn't rewrite your message from scratch — it improves what you've already written. This is perfect when you've gotten your thoughts down but want to make sure the email reads well before sending.",
+        "You can refine as many times as you want. Each refinement builds on the previous version, so you can keep polishing until you're happy with the result."
+      ],
+      steps: [
+        { title: "Write your draft", description: "Type your reply or new email in the editor." },
+        { title: "Click AI Refine", description: "Look for the refine option in the compose toolbar." },
+        { title: "Review improvements", description: "The AI enhances your text while keeping your message intact." },
+        { title: "Send when ready", description: "Make any final tweaks and send." },
+      ],
+    }
+  },
+  {
+    id: "ai-limits",
+    question: "What are the daily AI limits for each plan?",
+    readTime: "2 min read",
+    category: "AI Features",
+    icon: RefreshCw,
+    iconColor: "#F59E0B",
+    content: {
+      intro: "Each plan has a daily limit on AI-generated replies. Here's how many you get and what counts toward the limit.",
+      paragraphs: [
+        "Free users get 5 AI-generated replies per day. This includes AI draft generation, quick replies, and AI refinements. The counter resets every 24 hours at midnight UTC. If you hit your limit, you can still compose and send emails manually — only the AI generation feature is paused.",
+        "Pro users get 100 AI-generated replies per day, which is more than enough for heavy email users. Business users get unlimited AI assistance with no daily cap at all. If you find yourself regularly hitting the Free limit, upgrading to Pro gives you 20x more AI replies plus writing style learning.",
+        "Translations, summaries, and the AI chat assistant also count toward your daily AI usage. The limit applies to all AI features combined, not each one separately."
+      ],
+    }
+  },
+  {
+    id: "spam-phishing",
+    question: "How does MyDraft handle spam and phishing emails?",
+    readTime: "3 min read",
+    category: "Security & Privacy",
+    icon: ShieldAlert,
+    iconColor: "#EF4444",
+    content: {
+      intro: "MyDraft works alongside your email provider's spam filters and adds its own AI-powered detection during inbox cleanup scans.",
+      paragraphs: [
+        "Your email provider (Gmail or Outlook) already filters most spam before it reaches your inbox. MyDraft respects these filters and shows spam emails in a separate Spam folder. You can move emails to spam manually if something slips through, or rescue legitimate emails that were incorrectly flagged.",
+        "During AI cleanup scans, MyDraft's AI can identify potentially suspicious or phishing emails and suggest moving them to spam. It looks for red flags like deceptive sender addresses, urgent language designed to trick you, suspicious links, and emails pretending to be from known companies.",
+        "The AI is careful to distinguish between legitimate promotional emails and actual phishing attempts. Known companies (Google, Apple, Amazon, banks, etc.) are never marked as spam, even if their emails are unwanted — those are flagged as junk instead."
+      ],
+      steps: [
+        { title: "Check your Spam folder", description: "Open the Spam folder from the sidebar to review filtered emails." },
+        { title: "Report spam manually", description: "Move suspicious emails to Spam using the action menu." },
+        { title: "Run AI cleanup", description: "The AI scan can catch phishing emails your provider missed." },
+        { title: "Rescue false positives", description: "Move legitimate emails out of Spam back to your inbox." },
+      ],
+      tip: "Never click links or download attachments from emails you don't recognize. When in doubt, delete it."
+    }
+  },
+  {
+    id: "change-password",
+    question: "How do I change my password?",
+    readTime: "2 min read",
+    category: "Security & Privacy",
+    icon: Lock,
+    iconColor: "#EF4444",
+    content: {
+      intro: "You can change your MyDraft password at any time from your account settings.",
+      paragraphs: [
+        "Go to Settings > Security and look for the password change option. You'll need to enter your current password first for verification, then type your new password. Choose a strong password — at least 8 characters with a mix of letters, numbers, and symbols.",
+        "When you change your password, all active sessions on other devices are automatically terminated for security. You'll need to log in again on any other devices you use. This prevents unauthorized access if your old password was compromised."
+      ],
+      steps: [
+        { title: "Go to Settings", description: "Open Settings from the sidebar." },
+        { title: "Click Security", description: "Navigate to the Security tab." },
+        { title: "Enter current password", description: "Type your existing password for verification." },
+        { title: "Set new password", description: "Enter and confirm your new password." },
+      ],
+    }
+  },
+  {
+    id: "email-notifications",
+    question: "How do email notifications work?",
+    readTime: "2 min read",
+    category: "Customization",
+    icon: Bell,
+    iconColor: "#EC4899",
+    content: {
+      intro: "MyDraft syncs your inbox in real time so you always see the latest emails when you open the app.",
+      paragraphs: [
+        "When you open MyDraft, your inbox is automatically synced with your email provider to show the latest messages. New emails appear at the top of your inbox list. The sync happens in the background so you don't need to manually refresh.",
+        "If you want to manually trigger a sync, you can pull down to refresh on mobile or click the refresh button in the inbox toolbar. MyDraft also shows unread counts on each folder in the sidebar so you can see at a glance where new messages are waiting."
+      ],
+    }
+  },
+  {
+    id: "promo-codes",
+    question: "How do I use a promo code?",
+    readTime: "2 min read",
+    category: "Billing & Plans",
+    icon: TicketPercent,
+    iconColor: "#10B981",
+    content: {
+      intro: "If you have a promo code, you can apply it during checkout or in your billing settings to get a discount on your subscription.",
+      paragraphs: [
+        "Promo codes can be applied when you're subscribing to a paid plan. During the checkout process, look for a \"Promo Code\" or \"Discount Code\" field. Enter your code there and the discount will be applied to your subscription. You'll see the updated price before confirming your payment.",
+        "Promo codes earned through the referral program work the same way. Each code is single-use and has an expiration date. If you have a code, we recommend applying it as soon as possible. Some codes give you a percentage off, while others (like referral rewards) give you a free month of Pro."
+      ],
+      steps: [
+        { title: "Start checkout", description: "Choose a plan and go to the payment page." },
+        { title: "Find the promo code field", description: "Look for 'Promo Code' or 'Discount Code' on the checkout form." },
+        { title: "Enter your code", description: "Type or paste your promo code." },
+        { title: "Verify the discount", description: "Check that the price updated before completing payment." },
+      ],
+    }
+  },
+  {
+    id: "billing-annual",
+    question: "Should I choose monthly or annual billing?",
+    readTime: "2 min read",
+    category: "Billing & Plans",
+    icon: CreditCard,
+    iconColor: "#10B981",
+    content: {
+      intro: "Annual billing saves you money — up to $49 per year on the Business plan compared to paying monthly.",
+      paragraphs: [
+        "Both Pro and Business plans offer monthly and annual billing options. With annual billing, you pay for the whole year upfront at a discounted rate. Pro is $10/month or $99/year (saving $21). Business is $29/month or $299/year (saving $49).",
+        "Annual billing is the better value if you plan to use MyDraft long-term. You can switch from monthly to annual billing at any time from Settings > Billing. The change takes effect at your next billing cycle. If you're not sure yet, start with monthly and switch to annual once you've decided MyDraft is right for you."
+      ],
+    }
+  },
+  {
+    id: "export-data",
+    question: "Can I export my data from MyDraft?",
+    readTime: "2 min read",
+    category: "Security & Privacy",
+    icon: Download,
+    iconColor: "#EF4444",
+    content: {
+      intro: "Your emails always remain in your Gmail or Outlook account. MyDraft doesn't hold your emails hostage — they're always accessible through your email provider.",
+      paragraphs: [
+        "Since MyDraft connects to your existing email account through OAuth, all your emails remain stored by Google or Microsoft. If you ever stop using MyDraft, your emails are exactly where they've always been — in your Gmail or Outlook inbox. Nothing is lost.",
+        "Your AI drafts, writing style profile, and preferences are stored in MyDraft. If you want to stop using the service, you can disconnect your email account and delete your MyDraft account. Your emails continue to exist in your email provider's servers regardless of what you do in MyDraft."
+      ],
+    }
+  },
 ];
 
 const categoryColors: Record<string, string> = {
@@ -849,6 +1152,12 @@ function ArticleView({ article, onBack }: { article: HelpArticle; onBack: () => 
       </div>
 
       <div className="h-px w-full mb-8" style={{ background: "rgba(255,255,255,0.06)" }} />
+
+      {demoMap[article.id] && (
+        <div className="mb-8 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+          {(() => { const Demo = demoMap[article.id]; return <Demo />; })()}
+        </div>
+      )}
 
       <div className="space-y-5">
         <p className="text-base text-foreground/60 leading-relaxed font-medium">
