@@ -3,6 +3,11 @@ import { speechToText, voiceChat, textToSpeech } from "./client";
 import { storage } from "../../storage";
 import { gmailProvider } from "../../gmail";
 import { microsoftProvider } from "../../microsoft";
+import { stripEmailNoise } from "../../email-utils";
+
+const ttsCache: Map<string, { audio: string; timestamp: number }> = new Map();
+const TTS_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+const TTS_CACHE_MAX_SIZE = 30;
 
 async function getEmailContext(userId: string): Promise<string> {
   try {
@@ -131,18 +136,38 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { text } = req.body;
+      const { text, emailId } = req.body;
       
       if (!text || typeof text !== "string") {
         return res.status(400).json({ error: "Text required" });
       }
 
-      const audio = await textToSpeech(text);
+      const cacheKey = emailId
+        ? `${req.session.userId}-${emailId}`
+        : `${req.session.userId}-${text.slice(0, 100)}`;
+
+      const now = Date.now();
+      const cached = ttsCache.get(cacheKey);
+      if (cached && now - cached.timestamp < TTS_CACHE_TTL_MS) {
+        return res.json({ audio: cached.audio, audioFormat: "wav", cached: true });
+      }
+
+      const cleanText = stripEmailNoise(text).slice(0, 4000);
+      const audio = await textToSpeech(cleanText);
+
+      if (audio) {
+        ttsCache.set(cacheKey, { audio, timestamp: now });
+
+        if (ttsCache.size > TTS_CACHE_MAX_SIZE) {
+          const entries = Array.from(ttsCache.entries()).sort(
+            (a, b) => a[1].timestamp - b[1].timestamp,
+          );
+          entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE)
+            .forEach(([key]) => ttsCache.delete(key));
+        }
+      }
       
-      res.json({ 
-        audio,
-        audioFormat: "wav",
-      });
+      res.json({ audio, audioFormat: "wav" });
     } catch (error) {
       console.error("TTS error:", error);
       res.status(500).json({ error: "Failed to generate speech" });

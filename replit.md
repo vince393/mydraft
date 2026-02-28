@@ -1,201 +1,80 @@
 # MyDraft - AI Email Inbox Management
 
 ## Overview
-
-MyDraft is an AI-powered email inbox management application inspired by modern email clients like Hey.com and Superhuman. The application features a minimalist dark interface with AI-assisted reply drafting capabilities for business and service use. Users can view emails, read detailed content, and leverage AI to generate contextual reply drafts.
-
-## Branding
-- **Business Name**: MyDraft
-- **Logo**: Located at `attached_assets/image_1768612031318.png`
-
-## Pricing
-- **Free**: $0 - Basic inbox management, 5 AI drafts/day, no writing style memory
-- **Pro**: $10/month or $99/year - Writing style memory, 100 AI emails/day, 14-day trial
-- **Business**: $29/month or $299/year - Enhanced AI quality, unlimited AI, team features, 14-day trial
+MyDraft is an AI-powered email inbox management application inspired by modern email clients. It features a minimalist dark interface and AI-assisted reply drafting for business and service use. Users can view emails, read content, and leverage AI to generate contextual reply drafts, translate, summarize, and interact with a chatbot. The project aims to provide a sophisticated, AI-driven email experience with a focus on user efficiency and global communication.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
-- **Framework**: React with TypeScript
-- **Routing**: Wouter (lightweight React router)
-- **State Management**: TanStack React Query for server state and data fetching
-- **UI Components**: shadcn/ui component library built on Radix UI primitives
-- **Styling**: Tailwind CSS with custom dark theme variables and CSS custom properties
-- **Design System**: Dark mode first with accent blue (#3B82F6), following Hey.com/Superhuman aesthetic
+### Frontend
+- **Framework**: React with TypeScript, Wouter for routing.
+- **State Management**: TanStack React Query.
+- **UI Components**: shadcn/ui built on Radix UI.
+- **Styling**: Tailwind CSS with a custom dark theme, accent blue (#3B82F6), inspired by Hey.com/Superhuman.
 
-### Backend Architecture
-- **Runtime**: Node.js with Express
-- **Language**: TypeScript with ES modules
-- **API Design**: RESTful endpoints under `/api` prefix
-- **Build Tool**: Vite for frontend, esbuild for server bundling
+### Backend
+- **Runtime**: Node.js with Express.
+- **Language**: TypeScript with ES modules.
+- **API Design**: RESTful endpoints under `/api`.
+- **Build Tool**: Vite for frontend, esbuild for server.
 
 ### Data Layer
-- **ORM**: Drizzle ORM with PostgreSQL dialect
-- **Schema Location**: `shared/schema.ts` contains all database table definitions
-- **Validation**: Zod schemas generated from Drizzle schemas via drizzle-zod
-- **Storage Pattern**: Interface-based storage abstraction (`IStorage`) with in-memory implementation for development
+- **ORM**: Drizzle ORM with PostgreSQL dialect.
+- **Schema**: Defined in `shared/schema.ts`.
+- **Validation**: Zod schemas generated from Drizzle schemas.
+- **Storage Pattern**: Interface-based storage abstraction (`IStorage`).
 
 ### AI Integration
-- **Primary Provider**: OpenAI via Replit AI Integrations for all text tasks (chat, drafts, translations, summaries) and voice/audio features
-- **Audio Models**: `gpt-4o-mini-transcribe` for speech-to-text, `gpt-audio-mini` for voice chat (text+audio output) and TTS
-- **Per-Plan Models**: Business/premium users get GPT-4o for user-facing AI (drafts, summaries, translations, suggestions); all other users get GPT-4o-mini. Background tasks (email scheduler, chat, batch) always use GPT-4o-mini for cost control
-- **Writing Style Learning**: Pro+ only — sent emails are captured as writing samples, analyzed after 3+ samples to build a personalized style profile injected into draft prompts. Free users get generic tone-based drafts only
-- **Features**: Email reply draft generation, inbox sorting, translation, summarization, chatbot assistant
-- **Utilities**: Batch processing with rate limiting, chat conversation management, image generation capabilities
-- **Client Setup**: Single `openai` client in `server/routes.ts` using `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL`
+- **Provider**: OpenAI via Replit AI Integrations.
+- **Models**: `gpt-4o-mini-transcribe` for speech-to-text, `gpt-audio-mini` for voice chat and TTS. GPT-4o for Business/Pro users, GPT-4o-mini for others and background tasks.
+- **Features**: Email reply drafting, inbox sorting, translation, summarization, chatbot, Read Aloud (TTS), writing style learning (Pro+).
+- **Cost Optimizations**: Language detection (franc), email noise stripping, persisted email summaries, cached TTS audio.
+- **Global Inbox**: Supports multilingual features with region, preferred language, and formality level settings. Provides culturally-aware translation and etiquette suggestions.
 
 ### Application Structure
-```
-client/           # React frontend
-  src/
-    components/   # UI components including shadcn/ui
-    pages/        # Route pages (inbox, login, pricing, onboarding, connect-email)
-    hooks/        # Custom React hooks
-    lib/          # Utilities and query client
-server/           # Express backend
-  routes.ts       # API route definitions with authentication
-  storage.ts      # Data access layer
-  index.ts        # Express app with session middleware
-  replit_integrations/  # AI integration modules
-shared/           # Shared types and schemas
-  schema.ts       # Drizzle database schema
-```
+- `client/`: React frontend (components, pages, hooks, lib).
+- `server/`: Express backend (routes, storage, index, replit_integrations).
+- `shared/`: Shared types and schemas.
 
 ### Key Data Models
-- **Users**: Authentication with email/password, plan selection (free/pro/business), onboarding status, AI preferences (JSONB)
-- **Emails**: Inbox messages with sender, subject, body, read status, folder organization
-- **Drafts**: AI-generated reply drafts linked to emails
-- **NylasGrants**: OAuth tokens linking users to their connected email accounts
-- **Conversations/Messages**: Chat history for AI interactions
+- **Users**: Authentication, plan selection, AI preferences.
+- **Emails**: Inbox messages, content, status, folders.
+- **Drafts**: AI-generated replies.
+- **NylasGrants**: OAuth tokens (legacy).
+- **Conversations/Messages**: Chat history.
+- **Email Accounts**: Stores provider, tokens, expiry for connected email accounts.
 
 ### Authentication & User Flow
-- **Session-based auth**: express-session with secure cookies (httpOnly, sameSite:lax, 7-day expiry)
-- **Password security**: scrypt hashing with random salt, timing-safe verification
-- **OAuth security**: Cryptographically secure state tokens with 10-minute expiration
-- **User flow**: Login/Register → Plan Selection → AI Preferences Onboarding → Email Connection → Inbox
-- **Route protection**: requireAuth middleware on all protected API routes, frontend route guards with redirects
+- **Authentication**: Session-based auth with `express-session`, scrypt hashing for passwords.
+- **OAuth**: Secure state tokens for Google/Microsoft.
+- **User Flow**: Login/Register → Plan Selection → AI Preferences → Email Connection → Inbox.
+- **Security**: `requireAuth` middleware for protected routes.
+
+### CASA Security Compliance (Approved by Google)
+- **Data Classification**: RESTRICTED, CONFIDENTIAL, INTERNAL, PUBLIC levels with defined protection requirements (encryption, auth, MFA, logging, retention).
+- **Security Features**: Rate limiting, httpOnly cookies, XSS prevention (SVG sanitization), audit logging, malware scanning, AES-256-GCM email content encryption at rest.
 
 ## External Dependencies
 
-### Email Provider Integration (Google & Microsoft)
-- **Providers**: Google Gmail API and Microsoft Graph API (direct integration, no middleware)
-- **Authentication**: OAuth 2.0 with automatic token refresh (5-min buffer)
-- **Required Secrets**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`
-- **Features**: 
-  - Real email inbox access via OAuth (Gmail and Outlook/Microsoft 365)
-  - Send/receive emails through connected accounts
-  - Message actions: read, star, archive, trash, delete, attachments
-  - Automatic token refresh with expiry tracking
-- **Architecture**:
-  - `server/email-provider.ts`: Unified IEmailProvider interface
-  - `server/gmail.ts`: Google OAuth + Gmail API implementation
-  - `server/microsoft.ts`: Microsoft OAuth + Graph API implementation
-  - `server/api-health.ts`: API health monitoring and error logging
-- **API Routes**: `/api/email/auth-url`, `/api/auth/google/callback`, `/api/auth/microsoft/callback`, `/api/email/status`, `/api/email/disconnect`
-- **Storage**: `email_accounts` table stores provider, tokens, expiry per user
-- **Health Monitoring**: `api_health_logs` table tracks API errors/auth failures with severity levels, owner dashboard panel
-- **Legacy**: `nylas_grants` table and `nylasId` column kept for backwards compatibility (no longer actively used)
+### Email Provider Integration
+- **Providers**: Google Gmail API and Microsoft Graph API.
+- **Authentication**: OAuth 2.0 with automatic token refresh.
+- **Features**: Real email inbox access, send/receive, message actions (read, star, archive, trash, delete, attachments).
+- **Architecture**: Unified `IEmailProvider` interface with specific implementations for Google (`server/gmail.ts`) and Microsoft (`server/microsoft.ts`).
 
 ### AI Services
-- **OpenAI API**: Accessed via Replit AI Integrations environment variables (`AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL`)
-- Used for generating email reply drafts and image generation
+- **OpenAI API**: Used for all AI text and audio tasks, accessed via Replit AI Integrations environment variables.
 
 ### Database
-- **PostgreSQL**: Primary database configured via `DATABASE_URL` environment variable
-- Migrations managed via Drizzle Kit (`drizzle-kit push`)
-- **Tables**: users, emails, drafts, email_accounts, api_health_logs, nylas_grants (legacy)
+- **PostgreSQL**: Primary database, configured via `DATABASE_URL`.
+- **Migrations**: Managed by Drizzle Kit.
 
 ### Key NPM Dependencies
-- `@tanstack/react-query`: Server state management
-- `drizzle-orm` / `drizzle-zod`: Database ORM and schema validation
-- `express` / `express-session`: HTTP server and session management
-- `openai`: OpenAI API client
-- `wouter`: Client-side routing
-- Radix UI primitives: Accessible UI components
-
-## CASA Security Compliance (Approved by Google)
-
-### Data Classification (Q4)
-All sensitive data is identified and classified into 4 protection levels:
-- **RESTRICTED**: Passwords, API keys, OAuth tokens, session tokens, 2FA codes, payment info
-- **CONFIDENTIAL**: Email content, user email addresses, AI drafts, writing style data, audit logs
-- **INTERNAL**: User preferences, subscription status, custom folders, usage metrics
-- **PUBLIC**: Application metadata, pricing information
-
-Full classification schema: `shared/data-classification.ts`
-
-### Protection Requirements (Q5)
-Each protection level has defined requirements:
-
-| Level | Encryption | Auth Required | MFA | Access Logged | Retention |
-|-------|------------|---------------|-----|---------------|-----------|
-| RESTRICTED | At-rest + Transit (scrypt/AES-256) | Yes | Yes | Yes | 365 days |
-| CONFIDENTIAL | At-rest + Transit (PostgreSQL/TLS) | Yes | No | Yes | 90 days |
-| INTERNAL | At-rest + Transit | Yes | No | Modifications only | 30 days |
-| PUBLIC | Transit only (TLS) | No | No | No | N/A |
-
-### Security Features Implemented
-- **Rate Limiting**: Auth (10/15min), Password Reset (5/hour), 2FA (5/5min), API (100/min), AI (20/min), Email (30/min), Files (50/min)
-- **Session Security**: httpOnly cookies, 7-day expiry, terminated on password change
-- **XSS Prevention**: SVG sanitization on upload and download (DOMPurify)
-- **Audit Logging**: Login attempts, password changes, email sends, attachment downloads
-- **Malware Scanning**: File type blocking, ClamAV integration for attachments
-- **Email Content Encryption**: AES-256-GCM encryption for email body and preview stored in database
-
-### Email Content Encryption (CASA Q5 Compliance)
-Email content stored in the `cached_emails` table is encrypted at rest using AES-256-GCM:
-- **Algorithm**: AES-256-GCM (authenticated encryption with associated data)
-- **Key Derivation**: scrypt with salt from `EMAIL_ENCRYPTION_KEY` environment variable
-- **Implementation**: `server/encryption.ts` provides `encryptEmailContent()` and `decryptEmailContent()` functions
-- **Storage**: Encrypted content is prefixed with `ENC:` for identification
-- **Transparency**: Decryption happens automatically in storage layer - AI features receive decrypted content
-- **Startup Validation**: Server validates encryption key on startup and logs status
-
-This ensures that even database administrators cannot read user email content, meeting CASA Tier 2 data protection requirements. MyDraft has been officially approved by Google for CASA Tier 2 and received a Letter of Validation (LOV).
-
-### Security Files
-- `server/rate-limiter.ts`: Rate limiting middleware
-- `server/antivirus.ts`: Malware scanning and SVG sanitization
-- `server/storage.ts`: Security audit log storage
-- `server/encryption.ts`: AES-256-GCM email content encryption
-- `shared/data-classification.ts`: Data classification schema and protection requirements
-
-## Recent Changes
-
-### February 2026
-- **Global Inbox / Multilingual Features**: 
-  - Region, preferred language, and formality level settings in AI Preferences (50+ countries, 30+ languages)
-  - Culturally-aware translation with tone adaptation per country (formal Japanese keigo, casual Australian, indirect British, etc.)
-  - Cultural etiquette suggestions banner appears when viewing emails from different regions (auto-detected from sender domain TLD)
-  - Formal/casual/neutral/auto formality toggle in translation popover
-  - Cultural notes displayed alongside translations explaining nuances
-  - REGION_CULTURAL_CONTEXT mapping for 20+ regions with culture, formality norms, and tips
-  - Landing page updated to highlight global inbox positioning
-- **Contact Autocomplete**: Added email autocomplete for To, Cc, Bcc fields in compose dialog. Contacts are automatically saved when emails are sent and appear as suggestions when composing new emails. Uses `contacts` table with deduplication by (userId, email)
-- **AI Subject-in-Body Bug Fix**: Fixed issue where AI regeneration would put subject line text in the email body. Added explicit instructions to AI prompts and post-processing to strip subject-like prefixes
-- **Email Signature Feature**: Signature saved to user account, auto-appended when composing new/reply/forward emails, included in all AI-generated drafts. Suggestion banner appears in compose dialog if signature is missing. Signature data exposed via `/api/auth/me` endpoint.
-- **Email Formatting**: Implemented `formatEmailBody()` function that converts plain text newlines to HTML breaks for proper email rendering
-- **Legal Pages**: All 7 legal policy pages rewritten with professional business language, 18+ age requirement, mydraft.io domains, and 2026 copyright
-- **Stripe Subscription Management**: Full subscription lifecycle with plan switching, cancellations, and upgrade/downgrade flows
-  - `/api/stripe/cancel`: Cancel immediately (downgrades to free) or at period end (keeps plan until expiry)
-  - `/api/stripe/change-plan`: Switch between Pro/Business plans with Stripe proration
-  - `/api/stripe/confirm-subscription`: Handles both new subscriptions (14-day trial) and upgrades of existing subscriptions
-  - `/api/user/plan`: Downgrade to free properly cancels Stripe subscription (fails safely if Stripe cancel fails)
-  - Pricing page shows Upgrade/Downgrade/Switch labels for existing subscribers
-  - Settings billing tab shows pending cancellation status with cancel date, cancel confirmation flow
-  - Billing info includes `cancelAtPeriodEnd` and `cancelAt` fields from Stripe
-- **Referral Program**: Users earn 1 free month of Pro for every 2 referrals who sign up and subscribe (payment must go through, trial doesn't count)
-  - Database: `referral_code`, `referred_by_user_id`, `pro_credits_until` on users table; `referrals` table tracks status
-  - Registration captures `?ref=CODE` from URL, links referral on verification
-  - `invoice.paid` Stripe webhook marks referral as "subscribed" (only fires on real payment, not $0 trial invoices) and auto-applies Pro credit at every 2nd subscription
-  - API: `/api/referrals/stats` (GET), `/api/referrals/generate-code` (POST)
-  - Settings page "Referrals" tab: "Give Pro, Get Pro" messaging, copy link, progress bar (X/2), stats cards
-- **Pricing Page Fix**: Grid corrected from 4 to 3 columns, centered with max-width
-- **Custom Checkout Page**: Redesigned checkout with frosted glass dark theme, embedded Stripe Elements card form, branded layout with logo, plan summary sidebar, trust badges (SSL/PCI/secure payment), savings percentage for annual plans
-- **OAuth Login Flow Fix**: Google/Microsoft sign-in on login page now only creates/logs in the user account without auto-connecting their email. Users go through normal onboarding and email connection flow separately
-- **Microsoft Publisher Verification**: Added `/.well-known/microsoft-identity-association.json` route for domain verification
-- **Email List Search Bar**: Desktop search bar now stretches full width across the column instead of being fixed-width centered; refreshing and syncing indicators no longer overlap
+- `@tanstack/react-query`: Server state management.
+- `drizzle-orm` / `drizzle-zod`: ORM and schema validation.
+- `express` / `express-session`: HTTP server and session management.
+- `openai`: OpenAI API client.
+- `wouter`: Client-side routing.
+- Radix UI primitives: Accessible UI components.

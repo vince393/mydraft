@@ -20,6 +20,7 @@ import { registerImageRoutes } from "./replit_integrations/image";
 import { sendVerificationEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
 import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
+import { stripEmailNoise, stripHtml } from "./email-utils";
 import {
   authLimiter,
   passwordResetLimiter,
@@ -274,8 +275,19 @@ interface ResponseTimeCache {
 
 const responseTimeCache: Map<string, ResponseTimeCache> = new Map();
 
-const formattedBodyCache: Map<string, { body: string; timestamp: number }> =
-  new Map();
+const languageDetectionCache: Map<
+  string,
+  {
+    languageCode: string;
+    languageName: string;
+    confidence: number;
+    isEnglish: boolean;
+    timestamp: number;
+  }
+> = new Map();
+const LANG_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const LANG_CACHE_MAX_SIZE = 500;
+
 const translationCache: Map<
   string,
   {
@@ -297,22 +309,6 @@ const summaryCache: Map<
 > = new Map();
 const CACHE_MAX_SIZE = 100;
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
-function cleanupFormattedBodyCache() {
-  const now = Date.now();
-  for (const [key, value] of Array.from(formattedBodyCache.entries())) {
-    if (now - value.timestamp > CACHE_TTL_MS) {
-      formattedBodyCache.delete(key);
-    }
-  }
-  if (formattedBodyCache.size > CACHE_MAX_SIZE) {
-    const entries = Array.from(formattedBodyCache.entries()).sort(
-      (a, b) => a[1].timestamp - b[1].timestamp,
-    );
-    const toRemove = entries.slice(0, formattedBodyCache.size - CACHE_MAX_SIZE);
-    toRemove.forEach(([key]) => formattedBodyCache.delete(key));
-  }
-}
 
 function cleanupTranslationCache() {
   const now = Date.now();
@@ -3357,6 +3353,19 @@ JSON response only:
         });
       }
 
+      const dbCached = await storage.getMessageSummary(req.session.userId!, id);
+      if (dbCached) {
+        let dbParsed = { summary: dbCached.summary, keyPoints: [] as string[], actionItems: [] as string[] };
+        try {
+          const extra = JSON.parse(dbCached.summary);
+          if (extra.summary) dbParsed = extra;
+        } catch {}
+        summaryCache.set(cacheKey, { ...dbParsed, timestamp: Date.now() });
+        return res.json(dbParsed);
+      }
+
+      const cleanBody = stripEmailNoise(body).substring(0, 4000);
+
       const completion = await openai.chat.completions.create({
         model: getAiModel(userPlan),
         messages: [
@@ -3378,12 +3387,11 @@ Rules:
 - Be concise and clear
 - Focus on the most important information
 - If there are no action items, return an empty array
-- If there are no notable key points, return fewer or none
-- Strip HTML tags when analyzing content`,
+- If there are no notable key points, return fewer or none`,
           },
           {
             role: "user",
-            content: `Subject: ${subject || "(No subject)"}\n\nBody:\n${body.replace(/<[^>]*>/g, " ").substring(0, 4000)}`,
+            content: `Subject: ${subject || "(No subject)"}\n\nBody:\n${cleanBody}`,
           },
         ],
         temperature: 0.3,
@@ -3391,7 +3399,7 @@ Rules:
       });
 
       const responseText = completion.choices[0]?.message?.content || "{}";
-      let parsed = { summary: "", keyPoints: [], actionItems: [] };
+      let parsed = { summary: "", keyPoints: [] as string[], actionItems: [] as string[] };
 
       try {
         parsed = JSON.parse(
@@ -3407,80 +3415,16 @@ Rules:
 
       summaryCache.set(cacheKey, { ...parsed, timestamp: Date.now() });
 
+      try {
+        await storage.cacheMessageSummary(req.session.userId!, id, JSON.stringify(parsed));
+      } catch (dbErr) {
+        console.error("Failed to persist summary to DB:", dbErr);
+      }
+
       res.json(parsed);
     } catch (error) {
       console.error("Error generating summary:", error);
       res.status(500).json({ error: "Failed to generate summary" });
-    }
-  });
-
-  app.post("/api/emails/:id/format", requireAuth, async (req, res) => {
-    try {
-      const id = req.params.id;
-      const { body } = req.body;
-
-      if (!body) {
-        return res.status(400).json({ error: "Email body is required" });
-      }
-
-      const cacheKey = `${req.session.userId}-${id}`;
-      cleanupFormattedBodyCache();
-      const cached = formattedBodyCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-        return res.json({ formattedBody: cached.body });
-      }
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are an email formatting assistant. Your job is to clean up and reformat email content to make it easier to read while preserving important formatting.
-
-Rules:
-- Remove excessive whitespace, broken formatting, and messy HTML artifacts
-- Clean up the structure with proper paragraphs using <p> tags
-- PRESERVE these HTML tags: <b>, <strong>, <i>, <em>, <a href="...">
-- Keep bold text wrapped in <strong> or <b> tags
-- Keep italic text wrapped in <em> or <i> tags  
-- Keep links as clickable <a href="url">text</a> tags
-- Use <br> for line breaks within paragraphs
-- Format lists using <ul>/<ol> and <li> tags
-- Remove email signatures, legal disclaimers, and repeated quoted text from previous emails
-- Remove tracking pixels, image placeholders, and broken links
-- Keep important links but remove tracking parameters from URLs
-- Remove any other HTML tags not mentioned above (tables, divs, spans, etc.)
-
-Output clean, well-formatted HTML that preserves bold, italic, and link formatting.
-IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code blocks like \`\`\`html. Do NOT include any markdown formatting.`,
-          },
-          {
-            role: "user",
-            content: `Please clean up and format this email content:\n\n${body}`,
-          },
-        ],
-        max_tokens: 2000,
-        temperature: 0.3,
-      });
-
-      let formattedBody = completion.choices[0]?.message?.content || body;
-
-      // Strip markdown code block markers if present
-      formattedBody = formattedBody
-        .replace(/^```html\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-
-      formattedBodyCache.set(cacheKey, {
-        body: formattedBody,
-        timestamp: Date.now(),
-      });
-
-      res.json({ formattedBody });
-    } catch (error) {
-      console.error("Error formatting email:", error);
-      res.status(500).json({ error: "Failed to format email" });
     }
   });
 
@@ -3493,61 +3437,72 @@ IMPORTANT: Output ONLY the HTML content directly. Do NOT wrap in markdown code b
         return res.status(400).json({ error: "Email body is required" });
       }
 
-      const sampleText =
-        (subject ? subject + "\n\n" : "") + body.slice(0, 1000);
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are a language detection system. Analyze the text and return ONLY a JSON object with these fields:
-- languageCode: ISO 639-1 two-letter code (e.g., "en", "es", "fr", "de", "zh", "ja", "ko", "ar", "ru", "pt")
-- languageName: Full name in English (e.g., "English", "Spanish", "French")
-- confidence: number between 0 and 1
-
-If the text is primarily in English, return languageCode: "en".
-Return ONLY valid JSON, no other text.`,
-          },
-          {
-            role: "user",
-            content: sampleText,
-          },
-        ],
-        max_tokens: 100,
-        temperature: 0,
-      });
-
-      const responseText =
-        completion.choices[0]?.message?.content ||
-        '{"languageCode":"en","languageName":"English","confidence":0.5}';
-
-      try {
-        const parsed = JSON.parse(
-          responseText.replace(/```json\n?|\n?```/g, "").trim(),
-        );
-        const languageCode = (parsed.languageCode || "en")
-          .toLowerCase()
-          .split("-")[0]
-          .split("_")[0];
-        const isEnglish = languageCode === "en";
-        res.json({
-          languageCode,
-          languageName: parsed.languageName || "English",
-          confidence: parsed.confidence || 0.5,
-          isEnglish,
-        });
-      } catch {
-        res.json({
-          languageCode: "en",
-          languageName: "English",
-          confidence: 0.5,
-          isEnglish: true,
+      const cacheKey = `${req.session.userId}-${id}`;
+      const now = Date.now();
+      const cached = languageDetectionCache.get(cacheKey);
+      if (cached && now - cached.timestamp < LANG_CACHE_TTL_MS) {
+        return res.json({
+          languageCode: cached.languageCode,
+          languageName: cached.languageName,
+          confidence: cached.confidence,
+          isEnglish: cached.isEnglish,
         });
       }
+
+      const { franc } = await import("franc");
+
+      const sampleText = stripEmailNoise(
+        (subject ? subject + "\n\n" : "") + body.slice(0, 1000),
+      );
+
+      const iso3Map: Record<string, [string, string]> = {
+        eng: ["en", "English"], spa: ["es", "Spanish"], fra: ["fr", "French"],
+        deu: ["de", "German"], por: ["pt", "Portuguese"], ita: ["it", "Italian"],
+        nld: ["nl", "Dutch"], rus: ["ru", "Russian"], zho: ["zh", "Chinese"],
+        jpn: ["ja", "Japanese"], kor: ["ko", "Korean"], ara: ["ar", "Arabic"],
+        hin: ["hi", "Hindi"], ben: ["bn", "Bengali"], tur: ["tr", "Turkish"],
+        pol: ["pl", "Polish"], ukr: ["uk", "Ukrainian"], vie: ["vi", "Vietnamese"],
+        tha: ["th", "Thai"], swe: ["sv", "Swedish"], nor: ["no", "Norwegian"],
+        dan: ["da", "Danish"], fin: ["fi", "Finnish"], ell: ["el", "Greek"],
+        heb: ["he", "Hebrew"], ind: ["id", "Indonesian"], msa: ["ms", "Malay"],
+        ron: ["ro", "Romanian"], ces: ["cs", "Czech"], hun: ["hu", "Hungarian"],
+        bul: ["bg", "Bulgarian"], hrv: ["hr", "Croatian"], slk: ["sk", "Slovak"],
+        cat: ["ca", "Catalan"], lit: ["lt", "Lithuanian"], lav: ["lv", "Latvian"],
+        est: ["et", "Estonian"], fas: ["fa", "Persian"], urd: ["ur", "Urdu"],
+        fil: ["tl", "Filipino"], tam: ["ta", "Tamil"], tel: ["te", "Telugu"],
+        mar: ["mr", "Marathi"], guj: ["gu", "Gujarati"], kan: ["kn", "Kannada"],
+        mal: ["ml", "Malayalam"], pan: ["pa", "Punjabi"], afr: ["af", "Afrikaans"],
+        swh: ["sw", "Swahili"], amh: ["am", "Amharic"],
+      };
+
+      const detected = franc(sampleText, { minLength: 10 });
+      const mapped = iso3Map[detected];
+
+      const languageCode = mapped ? mapped[0] : "en";
+      const languageName = mapped ? mapped[1] : "English";
+      const confidence = detected === "und" ? 0.3 : 0.85;
+      const isEnglish = languageCode === "en";
+
+      const result = { languageCode, languageName, confidence, isEnglish, timestamp: now };
+      languageDetectionCache.set(cacheKey, result);
+
+      if (languageDetectionCache.size > LANG_CACHE_MAX_SIZE) {
+        const entries = Array.from(languageDetectionCache.entries()).sort(
+          (a, b) => a[1].timestamp - b[1].timestamp,
+        );
+        entries.slice(0, languageDetectionCache.size - LANG_CACHE_MAX_SIZE)
+          .forEach(([key]) => languageDetectionCache.delete(key));
+      }
+
+      res.json({ languageCode, languageName, confidence, isEnglish });
     } catch (error) {
       console.error("Error detecting language:", error);
-      res.status(500).json({ error: "Failed to detect language" });
+      res.json({
+        languageCode: "en",
+        languageName: "English",
+        confidence: 0.5,
+        isEnglish: true,
+      });
     }
   });
 
@@ -3717,30 +3672,7 @@ Return ONLY valid JSON, no other text.`,
         });
       }
 
-      const stripHtml = (html: string): string => {
-        let text = html;
-        text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
-        text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
-        text = text.replace(/<!--[\s\S]*?-->/g, "");
-        text = text.replace(/<br\s*\/?>/gi, "\n");
-        text = text.replace(/<\/p>/gi, "\n\n");
-        text = text.replace(/<\/div>/gi, "\n");
-        text = text.replace(/<\/li>/gi, "\n");
-        text = text.replace(/<\/tr>/gi, "\n");
-        text = text.replace(/<[^>]+>/g, "");
-        text = text.replace(/&nbsp;/gi, " ");
-        text = text.replace(/&amp;/gi, "&");
-        text = text.replace(/&lt;/gi, "<");
-        text = text.replace(/&gt;/gi, ">");
-        text = text.replace(/&quot;/gi, '"');
-        text = text.replace(/&#39;/gi, "'");
-        text = text.replace(/\n{3,}/g, "\n\n");
-        text = text.replace(/[ \t]+/g, " ");
-        return text.trim();
-      };
-
-      const isHtml = /<[a-z][\s\S]*>/i.test(body);
-      const cleanBody = isHtml ? stripHtml(body) : body;
+      const cleanBody = stripEmailNoise(body);
       const MAX_BODY_LENGTH = 6000;
       const truncatedBody = cleanBody.length > MAX_BODY_LENGTH
         ? cleanBody.slice(0, MAX_BODY_LENGTH) + "\n[...]"
@@ -4225,8 +4157,8 @@ Return ONLY valid JSON, no other text.`,
             .json({ error: "Email ID or content is required" });
         }
 
-        // Use preview or body - some emails only have preview
-        const emailBody = emailData.body || emailData.preview || "";
+        const rawEmailBody = emailData.body || emailData.preview || "";
+        const emailBody = stripEmailNoise(rawEmailBody);
 
         const toneDescriptions: Record<string, string> = {
           professional: "professional, courteous, and business-appropriate",
@@ -6237,10 +6169,11 @@ Respond with ONLY a brief suggestion, like:
               const fullMessage = await providerResult.provider.getMessage(providerResult.accessToken, messageId);
               if (fullMessage) {
                 originalMessage = fullMessage;
-                originalBody =
+                originalBody = stripEmailNoise(
                   typeof fullMessage.body === "string"
                     ? fullMessage.body
-                    : "";
+                    : "",
+                );
                 recipientEmail = fullMessage.fromEmail || "";
                 recipientName = fullMessage.from || "";
                 originalSubject = fullMessage.subject || "";

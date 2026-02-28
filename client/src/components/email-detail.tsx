@@ -222,7 +222,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
 
       const textToRead = `${email.subject}. ${plainText}`.slice(0, 4000);
 
-      const res = await apiRequest("POST", "/api/voice/tts", { text: textToRead });
+      const res = await apiRequest("POST", "/api/voice/tts", { text: textToRead, emailId });
       const data = await res.json();
 
       if (requestId !== readAloudRequestIdRef.current) return;
