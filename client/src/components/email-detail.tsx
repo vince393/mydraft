@@ -191,21 +191,33 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     const temp = document.createElement("div");
     temp.innerHTML = body;
 
+    temp.querySelectorAll("style, script, head, title, meta, link, noscript").forEach((el) => el.remove());
+
     temp.querySelectorAll("img").forEach((img) => {
       const alt = img.getAttribute("alt");
       if (alt && alt.trim()) {
-        img.replaceWith(` ${alt.trim()} `);
+        const textNode = document.createTextNode(` ${alt.trim()} `);
+        img.parentNode?.replaceChild(textNode, img);
+      } else {
+        img.remove();
       }
     });
 
-    temp.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
-    temp.querySelectorAll("p, div").forEach((block) => {
-      const text = block.textContent || "";
-      block.replaceWith(text + "\n");
+    temp.querySelectorAll("br").forEach((br) => {
+      br.replaceWith(document.createTextNode("\n"));
     });
 
-    let text = temp.textContent || "";
-    text = text.replace(/\n{3,}/g, "\n\n").trim();
+    temp.querySelectorAll("p, div, tr, li, h1, h2, h3, h4, h5, h6").forEach((block) => {
+      block.prepend(document.createTextNode("\n"));
+      block.append(document.createTextNode("\n"));
+    });
+
+    const text = (temp.textContent || temp.innerText || "")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n\s*\n/g, "\n\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
     return text;
   };
 
@@ -232,7 +244,10 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     }
     if (!email) return;
 
-    const bodyText = extractReadableText(email.body || "");
+    let bodyText = extractReadableText(email.body || "");
+    if (!bodyText && email.preview) {
+      bodyText = email.preview.trim();
+    }
     const subjectText = email.subject?.trim() || "";
 
     if (!bodyText && !subjectText) {
@@ -275,15 +290,13 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   // Get the selected email's ID for highlighting
   const selectedEmailId = email ? ((email as any).nylasId || email.id) : null;
   
-  // Sort ALL thread emails chronologically (oldest first)
   const sortedThreadEmails = [...threadEmails].sort((a, b) => 
     new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime()
   );
   
-  // All other thread emails except the selected one
   const otherThreadEmails = sortedThreadEmails.filter(e => {
-    const emailId = (e as any).nylasId || e.id;
-    return emailId !== selectedEmailId;
+    const eid = (e as any).nylasId || e.id;
+    return eid !== selectedEmailId;
   });
   
   const hasThread = threadEmails.length > 1;
@@ -293,16 +306,24 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     return senderEmail.toLowerCase() === currentUserEmail.toLowerCase();
   };
   
-  const toggleThreadEmail = (emailId: string | number) => {
+  const toggleThreadEmail = (id: string | number) => {
     setExpandedThreadEmails(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(emailId)) {
-        newSet.delete(emailId);
-      } else {
-        newSet.add(emailId);
-      }
-      return newSet;
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
+  };
+
+  const getSnippet = (body: string) => {
+    if (!body) return "";
+    if (isHtmlContent(body)) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = body;
+      tmp.querySelectorAll("style, script, head").forEach(el => el.remove());
+      return (tmp.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120);
+    }
+    return body.replace(/\s+/g, " ").trim().slice(0, 120);
   };
 
   const showDraft = !!generatedDraft;
@@ -317,6 +338,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     setDetectedLanguage(null);
     setTranslatedContent(null);
     setShowTranslated(false);
+    setExpandedThreadEmails(new Set());
   }, [email?.id]);
 
 
@@ -922,105 +944,78 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
 
       <ScrollArea className="flex-1 scrollbar-thin">
         <div className="px-4 sm:px-6 pt-4 pb-6 sm:pb-8">
-          {/* Full conversation thread - chronological order */}
-          {hasThread && otherThreadEmails.length > 0 && (() => {
-            const firstEmail = otherThreadEmails[0];
-            const middleEmails = otherThreadEmails.slice(1);
-            const isThreadExpanded = expandedThreadEmails.has('all');
+          {/* Conversation thread - Gmail style */}
+          {hasThread && otherThreadEmails.length > 0 && (
+            <div className="mb-4 space-y-0">
+              {otherThreadEmails.map((threadEmail) => {
+                const threadEmailId = (threadEmail as any).nylasId || threadEmail.id;
+                const isSent = isOwnEmail(threadEmail.senderEmail);
+                const isExpanded = expandedThreadEmails.has(threadEmailId);
+                const emailContent = threadEmail.body || threadEmail.preview || "";
+                const snippet = getSnippet(emailContent);
 
-            const renderThreadMessage = (threadEmail: ExtendedEmail) => {
-              const threadEmailId = (threadEmail as any).nylasId || threadEmail.id;
-              const isSent = isOwnEmail(threadEmail.senderEmail);
-              const emailContent = threadEmail.body || threadEmail.preview || "";
-              
-              return (
-                <div 
-                  key={threadEmailId}
-                  className={`border rounded-lg p-4 ${
-                    isSent 
-                      ? "border-primary/20 bg-primary/5 ml-4" 
-                      : "border-border/40 bg-muted/10"
-                  }`}
-                  data-testid={`thread-email-${threadEmailId}`}
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <SmartAvatar 
-                      email={threadEmail.senderEmail}
-                      name={threadEmail.sender}
-                      className="w-8 h-8 ring-1 ring-border/30"
-                      fallbackClassName="text-white font-medium text-xs"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{isSent ? "You" : threadEmail.sender}</span>
-                        {isSent && (
-                          <span className="text-[10px] font-medium text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded-full">Sent</span>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {formatSmartDate(new Date(threadEmail.receivedAt))}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{threadEmail.senderEmail}</p>
-                    </div>
-                  </div>
-                  <div className="email-body-container">
-                    {isHtmlContent(emailContent) ? (
-                      <EmailIframeRenderer html={emailContent} />
-                    ) : (
-                      <div className="email-content-plain">
-                        {emailContent.split("\n").map((p, i) => (
-                          p.trim() ? <p key={i}>{p}</p> : <br key={i} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            };
-
-            return (
-              <div className="mb-4 space-y-2">
-                {renderThreadMessage(firstEmail)}
-
-                {middleEmails.length > 0 && (
-                  <>
-                    {!isThreadExpanded ? (
-                      <button
-                        onClick={() => toggleThreadEmail('all')}
-                        className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-dashed border-border/50 transition-colors"
-                        data-testid="button-expand-thread"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                        <span>{middleEmails.length} more {middleEmails.length === 1 ? "message" : "messages"}</span>
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => toggleThreadEmail('all')}
-                          className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-dashed border-border/50 transition-colors"
-                          data-testid="button-collapse-thread"
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                          <span>Hide messages</span>
-                        </button>
-                        <div className="space-y-2">
-                          {middleEmails.map(renderThreadMessage)}
+                return (
+                  <div 
+                    key={threadEmailId}
+                    className="border-b border-border/20 last:border-b-0"
+                    data-testid={`thread-email-${threadEmailId}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleThreadEmail(threadEmailId)}
+                      className="w-full flex items-center gap-3 py-3 px-1 text-left transition-colors hover:bg-foreground/[0.03] cursor-pointer"
+                      data-testid={`thread-toggle-${threadEmailId}`}
+                    >
+                      <SmartAvatar 
+                        email={threadEmail.senderEmail}
+                        name={threadEmail.sender}
+                        className="w-8 h-8 ring-1 ring-border/30 flex-shrink-0"
+                        fallbackClassName="text-white font-medium text-xs"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm truncate">
+                            {isSent ? "You" : threadEmail.sender}
+                          </span>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">
+                            {formatSmartDate(new Date(threadEmail.receivedAt))}
+                          </span>
                         </div>
-                      </>
+                        {!isExpanded && snippet && (
+                          <p className="text-xs text-muted-foreground/60 truncate mt-0.5">{snippet}</p>
+                        )}
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground/40 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isExpanded && (
+                      <div className="pb-4 px-1 pl-12">
+                        <p className="text-xs text-muted-foreground mb-3">{threadEmail.senderEmail}</p>
+                        <div className="email-body-container">
+                          {isHtmlContent(emailContent) ? (
+                            <EmailIframeRenderer html={emailContent} />
+                          ) : (
+                            <div className="email-content-plain">
+                              {emailContent.split("\n").map((p, i) => (
+                                p.trim() ? <p key={i}>{p}</p> : <br key={i} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
-                  </>
-                )}
+                  </div>
+                );
+              })}
 
-                <div className="flex items-center gap-3 py-3">
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">
-                    {isOwnEmail(email.senderEmail) ? "Your Reply" : "Latest Message"}
-                  </span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-border via-border to-transparent" />
-                </div>
+              <div className="flex items-center gap-3 py-3">
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium">
+                  Latest
+                </span>
+                <div className="flex-1 h-px bg-gradient-to-r from-border via-border to-transparent" />
               </div>
-            );
-          })()}
+            </div>
+          )}
           
           {/* Current/Latest email */}
           <div className="flex items-start gap-3 mb-5">
