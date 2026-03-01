@@ -647,32 +647,32 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
           <Button 
             size="icon" 
             variant="ghost" 
-            className="w-8 h-8 sm:w-9 sm:h-9"
+            className="w-10 h-10 sm:w-9 sm:h-9"
             data-testid="button-archive"
             onClick={onArchive}
           >
-            <Archive className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Archive className="w-[18px] h-[18px] sm:w-4 sm:h-4" />
           </Button>
           <Button 
             size="icon" 
             variant="ghost" 
-            className="w-8 h-8 sm:w-9 sm:h-9"
+            className="w-10 h-10 sm:w-9 sm:h-9"
             data-testid="button-trash"
             onClick={onTrash}
           >
-            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Trash2 className="w-[18px] h-[18px] sm:w-4 sm:h-4" />
           </Button>
           <Button 
             size="icon" 
             variant="ghost" 
-            className="w-8 h-8 sm:w-9 sm:h-9"
+            className="w-10 h-10 sm:w-9 sm:h-9"
             data-testid="button-star"
             onClick={onStar}
           >
-            <Star className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${email.isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
+            <Star className={`w-[18px] h-[18px] sm:w-4 sm:h-4 ${email.isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
           </Button>
-          <Button size="icon" variant="ghost" className="w-8 h-8 sm:w-9 sm:h-9" data-testid="button-more">
-            <MoreHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <Button size="icon" variant="ghost" className="w-10 h-10 sm:w-9 sm:h-9" data-testid="button-more">
+            <MoreHorizontal className="w-[18px] h-[18px] sm:w-4 sm:h-4" />
           </Button>
         </div>
       </div>
@@ -690,11 +690,11 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-8 gap-1.5 text-xs"
+                className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs px-3"
                 onClick={handleAiDraftClick}
                 data-testid="button-ai-draft-top"
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                 Draft Reply
                 {!hasPro && (
                   <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
@@ -705,14 +705,14 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-8 gap-1.5 text-xs"
+                className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs px-3"
                 onClick={handleReadAloud}
                 data-testid="button-read-aloud-top"
               >
                 {readAloudState === "playing" || readAloudState === "paused" ? (
-                  <Square className="w-3 h-3 fill-current" />
+                  <Square className="w-3.5 h-3.5 sm:w-3 sm:h-3 fill-current" />
                 ) : (
-                  <Volume2 className="w-3.5 h-3.5" />
+                  <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                 )}
                 {readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
               </Button>
@@ -753,11 +753,11 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 rounded-full hover:bg-foreground/10 transition-all duration-200"
+                    className="h-9 w-9 sm:h-7 sm:w-7 p-0 rounded-full hover:bg-foreground/10 transition-all duration-200"
                     onClick={() => setShowSummary(false)}
                     data-testid="button-hide-summary"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   </Button>
                 </div>
               ) : (
@@ -766,15 +766,15 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 gap-1.5 text-xs rounded-full"
+                    className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs rounded-full px-3"
                     onClick={handleSummarize}
                     disabled={isSummaryLoading}
                     data-testid="button-summarize"
                   >
                     {isSummaryLoading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 animate-spin" />
                     ) : (
-                      <FileText className="w-3.5 h-3.5" />
+                      <FileText className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                     )}
                     Summarize
                     {!hasPro && (
@@ -786,11 +786,11 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 gap-1.5 text-xs rounded-full"
+                    className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs rounded-full px-3"
                     onClick={handleAiDraftClick}
                     data-testid="button-ai-draft"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Sparkles className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                     Draft Reply
                     {!hasPro && (
                       <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
@@ -801,14 +801,14 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 gap-1.5 text-xs rounded-full"
+                    className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs rounded-full px-3"
                     onClick={handleReadAloud}
                     data-testid="button-read-aloud"
                   >
                     {readAloudState === "playing" || readAloudState === "paused" ? (
-                      <Square className="w-3 h-3 fill-current" />
+                      <Square className="w-3.5 h-3.5 sm:w-3 sm:h-3 fill-current" />
                     ) : (
-                      <Volume2 className="w-3.5 h-3.5" />
+                      <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                     )}
                     {readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
                   </Button>
@@ -1283,11 +1283,11 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   )}
                 </div>
                 <button 
-                  className="w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
+                  className="w-8 h-8 sm:w-7 sm:h-7 rounded-full flex items-center justify-center backdrop-blur-sm bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
                   onClick={handleCloseDraft} 
                   data-testid="button-close-draft"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                 </button>
               </div>
               <Textarea
@@ -1527,19 +1527,19 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
           <div className="flex items-center gap-2 sm:gap-3 pt-6 border-t border-border/50 flex-wrap">
             <Button 
               size="sm"
-              className="gap-1.5 sm:gap-2 px-3 sm:px-5 text-xs sm:text-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
+              className="gap-1.5 sm:gap-2 px-4 sm:px-5 h-10 sm:h-8 text-[13px] sm:text-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
               data-testid="button-reply"
               onClick={onReply}
             >
-              <Reply className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <Reply className="w-4 h-4 sm:w-4 sm:h-4" />
               Reply
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 text-xs sm:text-sm" data-testid="button-reply-all" onClick={onReplyAll}>
-              <ReplyAll className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 px-4 sm:px-3 h-10 sm:h-8 text-[13px] sm:text-sm" data-testid="button-reply-all" onClick={onReplyAll}>
+              <ReplyAll className="w-4 h-4 sm:w-4 sm:h-4" />
               Reply All
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 text-xs sm:text-sm" data-testid="button-forward" onClick={onForward}>
-              <Forward className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 px-4 sm:px-3 h-10 sm:h-8 text-[13px] sm:text-sm" data-testid="button-forward" onClick={onForward}>
+              <Forward className="w-4 h-4 sm:w-4 sm:h-4" />
               Forward
             </Button>
           </div>

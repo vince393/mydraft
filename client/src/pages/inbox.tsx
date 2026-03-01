@@ -773,13 +773,13 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
         <div className={`email-detail-panel ${showDetail && !hidingDetail ? 'show-detail' : ''} ${hidingDetail ? 'hide-detail' : ''}`}>
           {selectedEmailId ? (
             <>
-              <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-12 px-3' : 'h-14 px-4 sm:px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
+              <header className={`flex items-center justify-between gap-2 ${screen.isMobile ? 'h-14 px-3' : 'h-14 px-4 sm:px-6'} border-b border-border/30 bg-background/95 backdrop-blur-xl sticky top-0 z-50 flex-shrink-0`}>
                 {screen.isMobile && (
                   <Button
                     size="icon"
                     variant="ghost"
                     onClick={handleBackToList}
-                    className="flex-shrink-0"
+                    className="flex-shrink-0 w-10 h-10"
                     data-testid="button-back-to-list"
                   >
                     <ArrowLeft className="w-5 h-5" />

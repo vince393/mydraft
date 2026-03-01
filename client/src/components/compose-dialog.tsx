@@ -1198,13 +1198,13 @@ export function ComposeDialog({
             {hasUserContent() && (
               <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-white/[0.04]">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 flex-1 rounded-full px-3 py-1.5 border border-white/[0.06]" style={{ background: "rgba(255,255,255,0.02)" }}>
-                    <Sparkles className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
+                  <div className={`flex items-center gap-2 flex-1 rounded-full ${screen.isMobile ? 'px-3.5 py-2' : 'px-3 py-1.5'} border border-white/[0.06]`} style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <Sparkles className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} text-primary/60 flex-shrink-0`} />
                     <Input
                       value={refineInput}
                       onChange={(e) => setRefineInput(e.target.value)}
                       placeholder="Ask AI to refine..."
-                      className="flex-1 border-0 bg-transparent px-0 h-7 text-xs placeholder:text-foreground/20 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className={`flex-1 border-0 bg-transparent px-0 ${screen.isMobile ? 'h-8 text-[13px]' : 'h-7 text-xs'} placeholder:text-foreground/20 focus-visible:ring-0 focus-visible:ring-offset-0`}
                       disabled={isRefining || isGenerating}
                       data-testid="input-ai-refine"
                     />
@@ -1212,14 +1212,14 @@ export function ComposeDialog({
                   <button
                     type="submit"
                     disabled={!refineInput.trim() || isRefining || isGenerating}
-                    className="w-8 h-8 rounded-full flex items-center justify-center border border-primary/20 text-primary disabled:opacity-30 transition-all cursor-pointer"
+                    className={`${screen.isMobile ? 'w-10 h-10' : 'w-8 h-8'} rounded-full flex items-center justify-center border border-primary/20 text-primary disabled:opacity-30 transition-all cursor-pointer`}
                     style={{ background: "rgba(59,130,246,0.08)" }}
                     data-testid="button-ai-refine"
                   >
                     {isRefining ? (
-                      <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <div className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} border-2 border-primary border-t-transparent rounded-full animate-spin`} />
                     ) : (
-                      <Send className="w-3.5 h-3.5" />
+                      <Send className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
                     )}
                   </button>
                 </div>
@@ -1289,7 +1289,7 @@ export function ComposeDialog({
         )}
 
         {/* Footer Actions */}
-        <div className="flex-shrink-0 px-5 py-2.5 border-t border-white/[0.04]">
+        <div className={`flex-shrink-0 ${screen.isMobile ? 'px-4 py-3 safe-area-bottom' : 'px-5 py-2.5'} border-t border-white/[0.04]`}>
           <div className="flex items-center justify-between gap-2">
             {/* Hidden file input */}
             <input
@@ -1308,11 +1308,11 @@ export function ComposeDialog({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={sendMutation.isPending}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-foreground/30 hover:text-foreground/50 hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30"
+                className={`${screen.isMobile ? 'w-10 h-10' : 'w-8 h-8'} rounded-full flex items-center justify-center text-foreground/30 hover:text-foreground/50 hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30`}
                 data-testid="button-attach-file"
                 title="Attach files"
               >
-                <Paperclip className="w-4 h-4" />
+                <Paperclip className={`${screen.isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
               </button>
               
               <DropdownMenu>
@@ -1320,14 +1320,14 @@ export function ComposeDialog({
                   <button
                     type="button"
                     disabled={isGenerating || sendMutation.isPending}
-                    className="h-8 px-3 rounded-full flex items-center gap-1.5 text-primary/70 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-30 text-xs font-medium"
+                    className={`${screen.isMobile ? 'h-10 px-3.5' : 'h-8 px-3'} rounded-full flex items-center gap-1.5 text-primary/70 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-30 text-xs font-medium`}
                     data-testid="button-ai-menu"
                     title="AI features"
                   >
                     {isGenerating ? (
-                      <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <div className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} border-2 border-primary border-t-transparent rounded-full animate-spin`} />
                     ) : (
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <Sparkles className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
                     )}
                     <span>{isGenerating ? "Writing..." : userPlan === "free" ? `AI (${aiRemaining}/5)` : "AI"}</span>
                     <ChevronDown className="w-3 h-3 opacity-50" />
@@ -1541,7 +1541,7 @@ export function ComposeDialog({
             )}
             
             {/* Right Actions */}
-            <div className="flex items-center gap-1.5">
+            <div className={`flex items-center ${screen.isMobile ? 'gap-2' : 'gap-1.5'}`}>
               {/* Schedule Send - Pro/Business only */}
               {canScheduleSend && (
                 <Popover open={showSchedulePicker} onOpenChange={setShowSchedulePicker}>
@@ -1549,11 +1549,11 @@ export function ComposeDialog({
                     <button
                       type="button"
                       disabled={sendMutation.isPending || !to.trim() || isGenerating}
-                      className="h-8 px-3 rounded-full flex items-center gap-1.5 text-xs font-medium text-foreground/40 hover:text-foreground/60 border border-white/[0.08] hover:border-white/15 transition-all cursor-pointer disabled:opacity-30"
+                      className={`${screen.isMobile ? 'h-10 px-3.5 text-[13px]' : 'h-8 px-3 text-xs'} rounded-full flex items-center gap-1.5 font-medium text-foreground/40 hover:text-foreground/60 border border-white/[0.08] hover:border-white/15 transition-all cursor-pointer disabled:opacity-30`}
                       style={{ background: "rgba(255,255,255,0.03)" }}
                       data-testid="button-schedule-send"
                     >
-                      <Clock className="w-3.5 h-3.5" />
+                      <Clock className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
                       Schedule
                     </button>
                   </PopoverTrigger>
@@ -1603,14 +1603,14 @@ export function ComposeDialog({
                 type="button"
                 onClick={() => sendMutation.mutate({})}
                 disabled={sendMutation.isPending || !to.trim() || isGenerating}
-                className="h-8 px-4 rounded-full flex items-center gap-1.5 text-xs font-medium text-white border border-primary/30 transition-all cursor-pointer disabled:opacity-30"
+                className={`${screen.isMobile ? 'h-10 px-5 text-[13px]' : 'h-8 px-4 text-xs'} rounded-full flex items-center gap-1.5 font-medium text-white border border-primary/30 transition-all cursor-pointer disabled:opacity-30`}
                 style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.4), rgba(147,51,234,0.3))" }}
                 data-testid="button-compose-send"
               >
                 {sendMutation.isPending ? (
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} border-2 border-white border-t-transparent rounded-full animate-spin`} />
                 ) : (
-                  <Send className="w-3.5 h-3.5" />
+                  <Send className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
                 )}
                 <span>Send</span>
               </button>

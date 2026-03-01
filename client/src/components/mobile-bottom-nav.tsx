@@ -30,7 +30,7 @@ export function MobileBottomNav({ activeFolder, onFolderChange, unreadCounts, on
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border/20 safe-area-bottom md:hidden">
-      <div className="flex items-center justify-around h-14 px-2">
+      <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
           const isActive = activeFolder.toLowerCase() === item.id;
           const count = unreadCounts?.[item.id as keyof UnreadCounts] || 0;
@@ -39,20 +39,20 @@ export function MobileBottomNav({ activeFolder, onFolderChange, unreadCounts, on
             <button
               key={item.id}
               onClick={() => onFolderChange(item.id)}
-              className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors touch-target ${
+              className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors min-w-[56px] touch-target ${
                 isActive ? "text-foreground" : "text-muted-foreground/70"
               }`}
               data-testid={`mobile-nav-${item.id}`}
             >
               <div className="relative">
-                <item.icon className={`w-[22px] h-[22px] ${isActive ? "text-foreground" : ""}`} />
+                <item.icon className={`w-6 h-6 ${isActive ? "text-foreground" : ""}`} />
                 {count > 0 && (
-                  <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] font-semibold bg-primary text-primary-foreground rounded-full px-0.5">
+                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] flex items-center justify-center text-[10px] font-semibold bg-primary text-primary-foreground rounded-full px-0.5">
                     {count > 99 ? "99+" : count}
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] ${isActive ? "font-medium" : "font-normal"}`}>
+              <span className={`text-[11px] ${isActive ? "font-medium" : "font-normal"}`}>
                 {item.label}
               </span>
             </button>
@@ -61,11 +61,11 @@ export function MobileBottomNav({ activeFolder, onFolderChange, unreadCounts, on
         
         <button
           onClick={onCompose}
-          className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 touch-target"
+          className="flex flex-col items-center justify-center flex-1 h-full gap-1 min-w-[56px] touch-target"
           data-testid="mobile-nav-compose"
         >
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-sm">
-            <PenSquare className="w-5 h-5 text-primary-foreground" />
+          <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center shadow-sm">
+            <PenSquare className="w-[22px] h-[22px] text-primary-foreground" />
           </div>
         </button>
       </div>
