@@ -115,9 +115,8 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   const [showSummary, setShowSummary] = useState(false);
   const [displayedSummary, setDisplayedSummary] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [readAloudState, setReadAloudState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
-  const readAloudAudioRef = useRef<HTMLAudioElement | null>(null);
-  const readAloudRequestIdRef = useRef(0);
+  const [readAloudState, setReadAloudState] = useState<"idle" | "playing" | "paused">("idle");
+  const readAloudUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const { toast } = useToast();
 
   const emailId = email ? ((email as any).nylasId || email.id) : null;
@@ -185,83 +184,87 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     onAiDraft?.();
   };
 
+  const extractReadableText = (body: string): string => {
+    if (!body) return "";
+    if (!isHtmlContent(body)) return body.trim();
+
+    const temp = document.createElement("div");
+    temp.innerHTML = body;
+
+    temp.querySelectorAll("img").forEach((img) => {
+      const alt = img.getAttribute("alt");
+      if (alt && alt.trim()) {
+        img.replaceWith(` ${alt.trim()} `);
+      }
+    });
+
+    temp.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+    temp.querySelectorAll("p, div").forEach((block) => {
+      const text = block.textContent || "";
+      block.replaceWith(text + "\n");
+    });
+
+    let text = temp.textContent || "";
+    text = text.replace(/\n{3,}/g, "\n\n").trim();
+    return text;
+  };
+
   const stopReadAloud = () => {
-    readAloudRequestIdRef.current++;
-    if (readAloudAudioRef.current) {
-      readAloudAudioRef.current.pause();
-      readAloudAudioRef.current.src = "";
-      readAloudAudioRef.current = null;
-    }
+    window.speechSynthesis.cancel();
+    readAloudUtteranceRef.current = null;
     setReadAloudState("idle");
   };
 
   const togglePauseResume = () => {
-    if (!readAloudAudioRef.current) return;
     if (readAloudState === "playing") {
-      readAloudAudioRef.current.pause();
+      window.speechSynthesis.pause();
       setReadAloudState("paused");
     } else if (readAloudState === "paused") {
-      readAloudAudioRef.current.play();
+      window.speechSynthesis.resume();
       setReadAloudState("playing");
     }
   };
 
-  const handleReadAloud = async () => {
+  const handleReadAloud = () => {
     if (readAloudState === "playing" || readAloudState === "paused") {
       stopReadAloud();
       return;
     }
-    if (!email?.body) return;
+    if (!email) return;
 
-    const requestId = ++readAloudRequestIdRef.current;
-    setReadAloudState("loading");
-    try {
-      const plainText = isHtmlContent(email.body)
-        ? stripHtmlToPlainText(email.body)
-        : email.body;
+    const bodyText = extractReadableText(email.body || "");
+    const subjectText = email.subject?.trim() || "";
 
-      const textToRead = `${email.subject}. ${plainText}`.slice(0, 4000);
-
-      const res = await apiRequest("POST", "/api/voice/tts", { text: textToRead, emailId });
-      const data = await res.json();
-
-      if (requestId !== readAloudRequestIdRef.current) return;
-
-      if (!data.audio) {
-        throw new Error("No audio returned");
-      }
-
-      const audioSrc = `data:audio/wav;base64,${data.audio}`;
-      const audio = new Audio(audioSrc);
-      readAloudAudioRef.current = audio;
-
-      audio.onended = () => {
-        setReadAloudState("idle");
-        readAloudAudioRef.current = null;
-      };
-      audio.onerror = () => {
-        setReadAloudState("idle");
-        readAloudAudioRef.current = null;
-        toast({ title: "Playback failed", description: "Could not play the audio.", variant: "destructive" });
-      };
-
-      await audio.play();
-      setReadAloudState("playing");
-    } catch (error) {
-      if (requestId !== readAloudRequestIdRef.current) return;
-      console.error("Read aloud error:", error);
-      setReadAloudState("idle");
-      toast({ title: "Read Aloud failed", description: "Could not generate audio for this email.", variant: "destructive" });
+    if (!bodyText && !subjectText) {
+      toast({ title: "Nothing to read", description: "This email has no readable text content.", variant: "destructive" });
+      return;
     }
+
+    const fullText = subjectText ? `${subjectText}. ${bodyText}` : bodyText;
+
+    const utterance = new SpeechSynthesisUtterance(fullText);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    utterance.onend = () => {
+      readAloudUtteranceRef.current = null;
+      setReadAloudState("idle");
+    };
+    utterance.onerror = (e) => {
+      if (e.error === "canceled") return;
+      readAloudUtteranceRef.current = null;
+      setReadAloudState("idle");
+      toast({ title: "Read Aloud failed", description: "Your browser couldn't read this email aloud.", variant: "destructive" });
+    };
+
+    readAloudUtteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+    setReadAloudState("playing");
   };
 
   useEffect(() => {
     return () => {
-      if (readAloudAudioRef.current) {
-        readAloudAudioRef.current.pause();
-        readAloudAudioRef.current.src = "";
-        readAloudAudioRef.current = null;
-      }
+      window.speechSynthesis.cancel();
     };
   }, []);
 
@@ -704,17 +707,14 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                 variant="ghost"
                 className="h-8 gap-1.5 text-xs"
                 onClick={handleReadAloud}
-                disabled={readAloudState === "loading"}
                 data-testid="button-read-aloud-top"
               >
-                {readAloudState === "loading" ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : readAloudState === "playing" || readAloudState === "paused" ? (
+                {readAloudState === "playing" || readAloudState === "paused" ? (
                   <Square className="w-3 h-3 fill-current" />
                 ) : (
                   <Volume2 className="w-3.5 h-3.5" />
                 )}
-                {readAloudState === "loading" ? "Generating..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
+                {readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
               </Button>
             </div>
           </div>
@@ -803,17 +803,14 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     variant="ghost"
                     className="h-8 gap-1.5 text-xs rounded-full"
                     onClick={handleReadAloud}
-                    disabled={readAloudState === "loading"}
                     data-testid="button-read-aloud"
                   >
-                    {readAloudState === "loading" ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : readAloudState === "playing" || readAloudState === "paused" ? (
+                    {readAloudState === "playing" || readAloudState === "paused" ? (
                       <Square className="w-3 h-3 fill-current" />
                     ) : (
                       <Volume2 className="w-3.5 h-3.5" />
                     )}
-                    {readAloudState === "loading" ? "Generating..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
+                    {readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
                   </Button>
                 </>
               )}
