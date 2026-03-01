@@ -2731,8 +2731,8 @@ Business Development`,
 
   async getUnclaimedReferralReward(userId: string): Promise<boolean> {
     const stats = await this.getReferralStats(userId);
-    if (stats.subscribed < 2) return false;
-    const rewardsEarned = Math.floor(stats.subscribed / 2);
+    if (stats.subscribed < 1) return false;
+    const rewardsEarned = stats.subscribed;
     const codesClaimed = await db.select({ count: count() }).from(promoCodes)
       .where(and(
         eq(promoCodes.ownerUserId, userId),

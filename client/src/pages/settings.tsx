@@ -2201,7 +2201,7 @@ function ReferralTab() {
     );
   }
 
-  const progress = data ? (data.progressToNextReward / 2) * 100 : 0;
+  const progress = data ? data.progressToNextReward * 100 : 0;
   const subscribedCount = data?.stats.subscribed ?? 0;
   const totalReferred = data?.stats.total ?? 0;
   const creditsActive = data?.proCreditsUntil && new Date(data.proCreditsUntil) > new Date();
@@ -2218,7 +2218,7 @@ function ReferralTab() {
         </div>
         <h2 className="text-xl sm:text-2xl font-bold mb-2">Give Pro, Get Pro</h2>
         <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-          Share MyDraft with friends. When 2 of them become paying members, press the claim button to get a unique promo code for 1 free month of Pro.
+          Share MyDraft with friends. When 1 of them becomes a paying member (past their trial), press the claim button to get a promo code for 1 free month of your current plan.
         </p>
       </div>
 
@@ -2231,7 +2231,7 @@ function ReferralTab() {
         <ReferralStepCard
           icon={<Users className="w-5 h-5" />}
           title="They Subscribe"
-          description="Your friend creates an account and starts a paid subscription."
+          description="Your friend creates an account, subscribes, and makes their first payment."
         />
         <ReferralStepCard
           icon={<Ticket className="w-5 h-5" />}
@@ -2262,12 +2262,12 @@ function ReferralTab() {
       </SettingsPanel>
 
       <SettingsPanel>
-        <SectionHeader icon={Trophy} title="Progress to Next Reward" description="Earn a code for every 2 subscribed referrals" />
+        <SectionHeader icon={Trophy} title="Progress to Next Reward" description="Earn a code for every subscribed referral" />
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground/60">Subscribed referrals</span>
             <Badge variant="secondary">
-              {data?.progressToNextReward ?? 0} / 2
+              {data?.progressToNextReward ?? 0} / 1
             </Badge>
           </div>
           <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
@@ -2298,9 +2298,7 @@ function ReferralTab() {
           ) : data && data.subscribedNeeded > 0 ? (
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               <ArrowRight className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-              {data.subscribedNeeded === 1
-                ? "Almost there! 1 more friend needs to subscribe."
-                : `${data.subscribedNeeded} more friends need to subscribe to earn a reward.`}
+              1 friend needs to subscribe and make a payment to earn a reward.
             </p>
           ) : (
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
@@ -2366,7 +2364,7 @@ function ReferralTab() {
       </div>
 
       <p className="text-xs text-muted-foreground/60 leading-relaxed text-center">
-        Only active paid subscriptions qualify. Promo codes are one-time use and expire after 6 months.
+        Only active paid subscriptions past the trial period qualify. Promo codes are one-time use and expire after 6 months.
       </p>
     </div>
   );

@@ -37,7 +37,7 @@ export function ReferralBanner({ collapsed }: { collapsed?: boolean }) {
 
   if (isDismissed || !data) return null;
 
-  const progress = (data.progressToNextReward / 2) * 100;
+  const progress = data.progressToNextReward * 100;
   const creditsActive = data.proCreditsUntil && new Date(data.proCreditsUntil) > new Date();
 
   const copyLink = () => {
@@ -101,10 +101,10 @@ export function ReferralBanner({ collapsed }: { collapsed?: boolean }) {
           </Button>
           <div className="flex items-center gap-2 mb-1.5">
             <Gift className="w-4 h-4 text-primary flex-shrink-0" />
-            <span className="text-xs font-semibold text-foreground">Free Pro Month</span>
+            <span className="text-xs font-semibold text-foreground">Free Month</span>
           </div>
           <p className="text-[11px] text-muted-foreground leading-relaxed mb-2.5">
-            Invite 2 friends who subscribe and get a free month of Pro.
+            Invite a friend who subscribes and get a free month of your plan.
           </p>
           <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden mb-1.5">
             <div
@@ -114,7 +114,7 @@ export function ReferralBanner({ collapsed }: { collapsed?: boolean }) {
           </div>
           <div className="flex items-center justify-between gap-1">
             <span className="text-[10px] text-muted-foreground">
-              {data.progressToNextReward}/2 subscribed
+              {data.progressToNextReward}/1 subscribed
             </span>
             <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
               Learn more <ArrowRight className="w-3 h-3" />
@@ -165,7 +165,7 @@ function ReferralModal({
 
         <div className="space-y-5 pt-2">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Love MyDraft? Share it with people you know. When 2 of your referrals become paying members, you'll get a full month of Pro for free. No limit on how many you can earn.
+            Love MyDraft? Share it with people you know. When 1 of your referrals becomes a paying member (past their trial), you'll get a free month of your current plan. No limit on how many you can earn.
           </p>
 
           <div className="grid grid-cols-3 gap-3">
@@ -210,7 +210,7 @@ function ReferralModal({
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Progress</span>
               <Badge variant="secondary">
-                {data.progressToNextReward} / 2
+                {data.progressToNextReward} / 1
               </Badge>
             </div>
             <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
@@ -224,9 +224,7 @@ function ReferralModal({
             </div>
             {data.subscribedNeeded > 0 ? (
               <p className="text-xs text-muted-foreground">
-                {data.subscribedNeeded === 1
-                  ? "Just 1 more friend away from your free Pro month."
-                  : `${data.subscribedNeeded} friends away from your free Pro month.`}
+                1 friend needs to subscribe and make a payment to earn a reward.
               </p>
             ) : (
               <p className="text-xs text-primary font-medium flex items-center gap-1">
@@ -257,7 +255,7 @@ function ReferralModal({
           </div>
 
           <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-            Referrals count when your friend signs up with your link and starts a paid subscription. Free trials don't count toward rewards.
+            Referrals count when your friend signs up with your link, subscribes, and makes their first payment past the trial. Free trials alone don't count.
           </p>
         </div>
       </DialogContent>

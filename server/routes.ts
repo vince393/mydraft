@@ -8130,8 +8130,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         stats,
         referrals: referralsList,
         proCreditsUntil: user.proCreditsUntil,
-        progressToNextReward: stats.subscribed % 2,
-        subscribedNeeded: 2 - (stats.subscribed % 2),
+        progressToNextReward: canClaimReward ? 1 : 0,
+        subscribedNeeded: canClaimReward ? 0 : 1,
         canClaimReward,
         claimedCodes: claimedCodes.map(c => ({
           code: c.code,
@@ -8163,7 +8163,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const userId = req.session.userId!;
       const canClaim = await storage.getUnclaimedReferralReward(userId);
       if (!canClaim) {
-        return res.status(400).json({ error: "No unclaimed reward available. You need 2 subscribed referrals per reward." });
+        return res.status(400).json({ error: "No unclaimed reward available. You need 1 subscribed referral per reward." });
       }
       const promoCode = await storage.createPromoCode(userId, "referral_reward", 1);
       res.json({
