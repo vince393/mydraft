@@ -206,7 +206,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   });
 
   // Step 2: Fetch fresh emails from provider in background
-  const { data: freshEmails, isFetching: isFetchingFresh, isSuccess: hasFreshData } = useQuery<EmailWithNylasId[]>({
+  const { data: freshEmails, isFetching: isFetchingFresh, isSuccess: hasFreshData, isLoading: isFreshInitialLoading } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", "fresh"],
     queryFn: async () => {
       const response = await fetch(`/api/emails?allFolders=true`);
@@ -214,10 +214,10 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return response.json();
     },
     enabled: !!userData?.user && !isCustomFolder,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: "always",
     retry: 2,
     retryDelay: 500,
   });
@@ -225,11 +225,11 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   // Show fresh emails once available, otherwise show cached
   const allEmails = hasFreshData && freshEmails ? freshEmails : cachedEmails;
   
-  // Only show full loading skeleton when we truly have NO data yet
-  // Case 1: Cache is still loading and we have nothing
-  // Case 2: Cache returned empty (first-time user) and fresh is still loading
+  // Show loading skeleton when:
+  // 1. Neither cache nor fresh data has resolved yet
+  // 2. Cache is empty (no cached emails) and fresh data hasn't arrived yet
   const isLoadingEmails = (!hasCachedData && !hasFreshData) || 
-                          (hasCachedData && cachedEmails.length === 0 && isFetchingFresh && !hasFreshData);
+                          (cachedEmails.length === 0 && !hasFreshData);
   
   // Show subtle syncing banner when we have cached data displaying and are fetching fresh
   const isSyncing = isFetchingFresh && cachedEmails.length > 0 && !isLoadingEmails;
