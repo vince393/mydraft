@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2, Image, FileImage, Loader2, Paperclip, File, PenLine } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2, Image, FileImage, Loader2, Paperclip, File, PenLine, SpellCheck, Check, AlertCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -94,6 +94,15 @@ export function ComposeDialog({
   // AI Refine bar state
   const [refineInput, setRefineInput] = useState("");
   const [isRefining, setIsRefining] = useState(false);
+  
+  // Grammar check state
+  const [grammarSuggestions, setGrammarSuggestions] = useState<{
+    suggestions: { type: string; original: string; replacement: string; explanation: string }[];
+    overallScore: number;
+    correctedText: string;
+  } | null>(null);
+  const [isCheckingGrammar, setIsCheckingGrammar] = useState(false);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
   
   // AI Image generation state
   const [showImageGenerator, setShowImageGenerator] = useState(false);
@@ -418,6 +427,9 @@ export function ComposeDialog({
     setFileAttachments([]);
     setAttachedImages([]);
     setGeneratedImages([]);
+    setGrammarSuggestions(null);
+    setDismissedSuggestions(new Set());
+    setIsCheckingGrammar(false);
     initializedRef.current = false;
     lastEmailIdRef.current = undefined;
   };
@@ -739,6 +751,65 @@ export function ComposeDialog({
     },
   });
 
+  const grammarCheckMutation = useMutation({
+    mutationFn: async () => {
+      const userContent = getUserContent();
+      if (!userContent || userContent.length < 5) {
+        throw new Error("Write at least a few words before checking");
+      }
+      setIsCheckingGrammar(true);
+      const response = await apiRequest("POST", "/api/ai/grammar-check", {
+        text: userContent,
+      });
+      return response.json();
+    },
+    onSuccess: (data: { suggestions: { type: string; original: string; replacement: string; explanation: string }[]; overallScore: number; correctedText: string }) => {
+      setIsCheckingGrammar(false);
+      setDismissedSuggestions(new Set());
+      if (!data.suggestions || data.suggestions.length === 0) {
+        setGrammarSuggestions(null);
+        toast({ title: "Looking good", description: "No grammar or style issues found." });
+      } else {
+        setGrammarSuggestions(data);
+        toast({
+          title: `${data.suggestions.length} suggestion${data.suggestions.length !== 1 ? "s" : ""} found`,
+          description: `Writing score: ${data.overallScore}/10`,
+        });
+      }
+    },
+    onError: (error: Error) => {
+      setIsCheckingGrammar(false);
+      toast({ title: "Grammar check failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const applySuggestion = (index: number) => {
+    if (!grammarSuggestions) return;
+    const suggestion = grammarSuggestions.suggestions[index];
+    if (!suggestion) return;
+    const newBody = body.replace(suggestion.original, suggestion.replacement);
+    setBody(newBody);
+    setDismissedSuggestions((prev) => new Set([...prev, index]));
+  };
+
+  const applyAllSuggestions = () => {
+    if (!grammarSuggestions?.correctedText) return;
+    const originalQuote = body.includes("---------- Original message ----------")
+      ? "\n\n" + body.substring(body.indexOf("---------- Original message ----------"))
+      : body.includes("---------- Forwarded message ----------")
+      ? "\n\n" + body.substring(body.indexOf("---------- Forwarded message ----------"))
+      : "";
+    setBody(grammarSuggestions.correctedText + originalQuote);
+    setGrammarSuggestions(null);
+    setDismissedSuggestions(new Set());
+    toast({ title: "All suggestions applied", description: "Your draft has been updated." });
+  };
+
+  const dismissGrammarCheck = () => {
+    setGrammarSuggestions(null);
+    setDismissedSuggestions(new Set());
+  };
+
   // AI Image generation handler
   const handleGenerateImage = async () => {
     if (!imagePrompt.trim()) {
@@ -936,7 +1007,13 @@ export function ComposeDialog({
           <div className="flex-1 min-h-0 px-5 py-3 flex flex-col">
             <Textarea
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={(e) => {
+                setBody(e.target.value);
+                if (grammarSuggestions) {
+                  setGrammarSuggestions(null);
+                  setDismissedSuggestions(new Set());
+                }
+              }}
               placeholder="Write your message..."
               className="flex-1 min-h-[160px] resize-none border-0 bg-transparent px-4 py-3 text-sm leading-relaxed placeholder:text-foreground/20 focus-visible:ring-0 focus-visible:ring-offset-0"
               data-testid="textarea-compose-body"
@@ -1021,6 +1098,98 @@ export function ComposeDialog({
                       <span className="text-[9px] text-foreground/25 truncate block w-14 text-center mt-0.5">{img.name}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Grammar & Style Suggestions */}
+            {grammarSuggestions && grammarSuggestions.suggestions.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-white/[0.04]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <SpellCheck className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-xs font-medium text-foreground/70">
+                      {grammarSuggestions.suggestions.filter((_, i) => !dismissedSuggestions.has(i)).length} suggestion{grammarSuggestions.suggestions.filter((_, i) => !dismissedSuggestions.has(i)).length !== 1 ? "s" : ""}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-500/30 text-amber-400">
+                      Score: {grammarSuggestions.overallScore}/10
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {grammarSuggestions.suggestions.filter((_, i) => !dismissedSuggestions.has(i)).length > 1 && (
+                      <button
+                        type="button"
+                        onClick={applyAllSuggestions}
+                        className="text-[10px] text-primary hover:text-primary/80 px-2 py-0.5 rounded-full hover:bg-primary/5 transition-colors cursor-pointer"
+                        data-testid="button-apply-all-suggestions"
+                      >
+                        Apply All
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={dismissGrammarCheck}
+                      className="p-1 rounded-full hover:bg-white/5 text-foreground/30 hover:text-foreground/50 transition-colors cursor-pointer"
+                      data-testid="button-dismiss-grammar"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                  {grammarSuggestions.suggestions.map((s, i) => {
+                    if (dismissedSuggestions.has(i)) return null;
+                    const typeColors: Record<string, string> = {
+                      grammar: "text-red-400 border-red-500/20 bg-red-500/5",
+                      spelling: "text-red-400 border-red-500/20 bg-red-500/5",
+                      style: "text-blue-400 border-blue-500/20 bg-blue-500/5",
+                      tone: "text-purple-400 border-purple-500/20 bg-purple-500/5",
+                      clarity: "text-amber-400 border-amber-500/20 bg-amber-500/5",
+                    };
+                    const color = typeColors[s.type] || typeColors.style;
+                    return (
+                      <div
+                        key={i}
+                        className="flex items-start gap-2 p-2 rounded-lg border border-white/[0.04]"
+                        style={{ background: "rgba(255,255,255,0.02)" }}
+                        data-testid={`grammar-suggestion-${i}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className={`text-[9px] uppercase font-semibold tracking-wider px-1.5 py-0 rounded border ${color}`}>
+                              {s.type}
+                            </span>
+                            <span className="text-[10px] text-foreground/40 truncate">{s.explanation}</span>
+                          </div>
+                          <div className="text-xs">
+                            <span className="text-red-400/70 line-through">{s.original}</span>
+                            <span className="text-foreground/30 mx-1.5">&rarr;</span>
+                            <span className="text-green-400/80">{s.replacement}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => applySuggestion(i)}
+                            className="p-1 rounded hover:bg-green-500/10 text-green-400/60 hover:text-green-400 transition-colors cursor-pointer"
+                            title="Apply this suggestion"
+                            data-testid={`button-apply-suggestion-${i}`}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDismissedSuggestions((prev) => new Set([...prev, i]))}
+                            className="p-1 rounded hover:bg-white/5 text-foreground/20 hover:text-foreground/40 transition-colors cursor-pointer"
+                            title="Dismiss"
+                            data-testid={`button-dismiss-suggestion-${i}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1218,6 +1387,15 @@ export function ComposeDialog({
                       More Concise
                     </div>
                     {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => grammarCheckMutation.mutate()}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent() || isCheckingGrammar}
+                    data-testid="button-grammar-check"
+                  >
+                    <SpellCheck className="w-4 h-4 mr-2" />
+                    {isCheckingGrammar ? "Checking..." : "Check Grammar & Style"}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

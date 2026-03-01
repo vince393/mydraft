@@ -4512,6 +4512,82 @@ Please modify the response according to the instruction.`,
     }
   });
 
+  app.post("/api/ai/grammar-check", requireAuth, async (req, res) => {
+    try {
+      const userPlan = await getUserPlan(req.session.userId!);
+      const { text } = req.body;
+
+      if (!text || typeof text !== "string" || text.trim().length < 5) {
+        return res.status(400).json({ error: "Text must be at least 5 characters" });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional email writing assistant. Analyze the given email draft for grammar errors, spelling mistakes, awkward phrasing, tone issues, and style improvements.
+
+Return a JSON object with this exact structure:
+{
+  "suggestions": [
+    {
+      "type": "grammar" | "spelling" | "style" | "tone" | "clarity",
+      "original": "the exact problematic text",
+      "replacement": "the corrected text",
+      "explanation": "brief reason for the change"
+    }
+  ],
+  "overallScore": number between 1-10,
+  "correctedText": "the full text with all corrections applied"
+}
+
+Rules:
+- Only flag genuine issues, not stylistic preferences
+- Keep explanations concise (under 15 words)
+- If the text is already well-written, return an empty suggestions array and the original text as correctedText
+- Score 10 means perfect, 1 means many issues
+- Focus on professional email writing standards
+- Do not change the meaning or intent of the text`,
+          },
+          {
+            role: "user",
+            content: text.slice(0, 3000),
+          },
+        ],
+        max_tokens: 1024,
+        response_format: { type: "json_object" },
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(422).json({ error: "Unable to check grammar" });
+      }
+
+      let result;
+      try {
+        result = JSON.parse(content);
+      } catch {
+        return res.status(422).json({ error: "Invalid response from AI" });
+      }
+
+      if (!result.suggestions || !Array.isArray(result.suggestions)) {
+        result.suggestions = [];
+      }
+      if (typeof result.overallScore !== "number") {
+        result.overallScore = 8;
+      }
+      if (typeof result.correctedText !== "string") {
+        result.correctedText = text;
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Grammar check error:", error);
+      res.status(500).json({ error: "Failed to check grammar" });
+    }
+  });
+
   // Quick AI draft generation for compose dialog (returns subject + body)
   // All plans can use AI drafts - free plan has 5/day limit
   app.post(
