@@ -1021,11 +1021,11 @@ export async function registerRoutes(
 
       console.log(`Support message received from ${email}: ${name}`);
 
-      const ownerAddr = process.env.OWNER_EMAIL;
-      if (ownerAddr && process.env.RESEND_API_KEY) {
+      const supportAddr = "support@mydraft.io";
+      if (process.env.RESEND_API_KEY) {
         try {
           const { sendSecurityContactEmail } = await import("./email");
-          await sendSecurityContactEmail(ownerAddr, {
+          await sendSecurityContactEmail(supportAddr, {
             name,
             email,
             message,
