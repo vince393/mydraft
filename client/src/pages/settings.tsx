@@ -961,9 +961,9 @@ function BillingTab({ settings }: { settings: Settings }) {
 
   const planDetails: Record<string, { name: string; price: string; features: string[] }> = {
     free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "5 emails/day limit", "Standard support"] },
-    pro: { name: "Pro", price: "$10/month or $99/year", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
-    premium: { name: "Business", price: "$29/month or $299/year", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
-    business: { name: "Business", price: "$29/month or $299/year", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
+    pro: { name: "Pro", price: "$10/mo or $8.25/mo billed annually", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
+    premium: { name: "Business", price: "$29/mo or $24.92/mo billed annually", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
+    business: { name: "Business", price: "$29/mo or $24.92/mo billed annually", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
   };
 
   const currentPlan = (settings?.plan && planDetails[settings.plan]) ? planDetails[settings.plan] : planDetails.free;

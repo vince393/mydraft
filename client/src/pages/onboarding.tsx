@@ -590,8 +590,8 @@ function PlanSelectionStep({
 }) {
   if (!showAllPlans) {
     const plan = basePlans.find(p => p.id === recommendedPlan)!;
-    const displayPrice = plan.id === "free" ? "$0" : billingInterval === "annual" ? `$${plan.annualPrice}` : `$${plan.monthlyPrice}`;
-    const displayPeriod = plan.id === "free" ? "forever" : billingInterval === "annual" ? "/year" : "/month";
+    const displayPrice = plan.id === "free" ? "$0" : billingInterval === "annual" ? `$${(plan.annualPrice / 12).toFixed(2).replace(/\.00$/, '')}` : `$${plan.monthlyPrice}`;
+    const displayPeriod = plan.id === "free" ? "forever" : "/month";
 
     const emailsPerDay = preferences.emailVolume === "very-high" ? 120 : preferences.emailVolume === "high" ? 75 : preferences.emailVolume === "medium" ? 35 : 15;
     const timeSavedPerEmail = plan.id === "business" ? 3 : plan.id === "pro" ? 2.5 : 1;
@@ -616,10 +616,19 @@ function PlanSelectionStep({
             <h2 className="text-3xl font-bold mb-1">{plan.name}</h2>
             <p className="text-sm text-muted-foreground/60 mb-5">{plan.description}</p>
 
-            <div className="flex items-baseline gap-1 mb-4">
+            <div className="flex items-baseline gap-1 mb-1">
               <span className="text-4xl font-bold">{displayPrice}</span>
               <span className="text-muted-foreground/50">{displayPeriod}</span>
             </div>
+            {billingInterval === "annual" && plan.id !== "free" && (
+              <p className="text-xs text-muted-foreground/50 mb-4">
+                Billed annually at ${plan.annualPrice}/year
+                {plan.annualSavings && (
+                  <span className="text-green-500 ml-1">· Save ${plan.annualSavings}</span>
+                )}
+              </p>
+            )}
+            {(billingInterval !== "annual" || plan.id === "free") && <div className="mb-4" />}
 
             <div className="inline-flex items-center bg-white/[0.04] border border-white/[0.06] rounded-full p-1 mb-6 w-fit" data-testid="billing-toggle">
               <button
@@ -752,8 +761,8 @@ function PlanSelectionStep({
       <div className="space-y-2.5">
         {basePlans.map((plan) => {
           const isRecommended = plan.id === recommendedPlan;
-          const displayPrice = plan.id === "free" ? "$0" : billingInterval === "annual" ? `$${plan.annualPrice}` : `$${plan.monthlyPrice}`;
-          const displayPeriod = plan.id === "free" ? "forever" : billingInterval === "annual" ? "/year" : "/month";
+          const displayPrice = plan.id === "free" ? "$0" : billingInterval === "annual" ? `$${(plan.annualPrice / 12).toFixed(2).replace(/\.00$/, '')}` : `$${plan.monthlyPrice}`;
+          const displayPeriod = plan.id === "free" ? "forever" : "/month";
 
           return (
             <button
@@ -790,6 +799,9 @@ function PlanSelectionStep({
                 <div className="text-right flex-shrink-0 ml-4">
                   <div className="text-lg font-bold">{displayPrice}</div>
                   <div className="text-[10px] text-muted-foreground/40">{displayPeriod}</div>
+                  {billingInterval === "annual" && plan.id !== "free" && (
+                    <div className="text-[10px] text-muted-foreground/30">${plan.annualPrice}/yr</div>
+                  )}
                 </div>
               </div>
             </button>

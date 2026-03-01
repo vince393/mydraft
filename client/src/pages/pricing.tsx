@@ -398,12 +398,16 @@ export default function PricingPage() {
 
   const displayPrice = (plan: typeof basePlans[0]) => {
     if (plan.id === "free") return "$0";
-    return billingInterval === "annual" ? `$${plan.annualPrice}` : `$${plan.monthlyPrice}`;
+    if (billingInterval === "annual") {
+      const monthlyEquivalent = (plan.annualPrice / 12).toFixed(2).replace(/\.00$/, '');
+      return `$${monthlyEquivalent}`;
+    }
+    return `$${plan.monthlyPrice}`;
   };
 
   const displayPeriod = (plan: typeof basePlans[0]) => {
     if (plan.id === "free") return "forever";
-    return billingInterval === "annual" ? "year" : "month";
+    return "month";
   };
 
   // Show loading state while fetching user data
@@ -457,10 +461,13 @@ export default function PricingPage() {
                 <span className="text-muted-foreground text-lg">/{displayPeriod(recommendedPlanData)}</span>
               </div>
               
-              {recommendedPlanData.annualSavings && billingInterval === "annual" && (
-                <Badge variant="secondary" className="mt-2 w-fit">
-                  Save ${recommendedPlanData.annualSavings}/year
-                </Badge>
+              {billingInterval === "annual" && recommendedPlanData.id !== "free" && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Billed annually at ${recommendedPlanData.annualPrice}/year
+                  {recommendedPlanData.annualSavings && (
+                    <span className="text-green-500 ml-2">Save ${recommendedPlanData.annualSavings}</span>
+                  )}
+                </p>
               )}
             </CardHeader>
 
@@ -654,10 +661,13 @@ export default function PricingPage() {
                     <span className="text-4xl font-bold">{displayPrice(plan)}</span>
                     <span className="text-muted-foreground">/{displayPeriod(plan)}</span>
                   </div>
-                  {plan.annualSavings && billingInterval === "annual" && (
-                    <Badge variant="secondary" className="mt-2 w-fit">
-                      Save ${plan.annualSavings}/year
-                    </Badge>
+                  {billingInterval === "annual" && plan.id !== "free" && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Billed annually at ${plan.annualPrice}/year
+                      {plan.annualSavings && (
+                        <span className="text-green-500 ml-2">Save ${plan.annualSavings}</span>
+                      )}
+                    </p>
                   )}
                 </CardHeader>
                 <CardContent>

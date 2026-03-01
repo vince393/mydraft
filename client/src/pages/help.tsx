@@ -412,8 +412,8 @@ const articles: HelpArticle[] = [
       intro: "MyDraft offers three plans to fit different needs: Free, Pro, and Business. Pro and Business include a 14-day free trial.",
       paragraphs: [
         "The Free plan gives you basic inbox management with up to 5 AI-generated replies per day. It's a great way to try MyDraft and see if it works for you. There's no time limit on the Free plan — it's free forever.",
-        "Pro is $10/month (or $99/year — saving $21). It includes writing style memory so the AI learns to write like you, up to 100 AI emails per day, email scheduling, advanced inbox management, and custom folders with AI sorting. Pro is the best value for individuals who use email heavily.",
-        "Business is $29/month (or $299/year — saving $49). It includes everything in Pro plus enhanced AI quality for better draft generation, unlimited AI assistance, voice assistant, custom AI training, and team collaboration features. Business is designed for professionals and teams who want the best AI email experience."
+        "Pro is $10/month (or $8.25/month billed annually — saving $21/year). It includes writing style memory so the AI learns to write like you, up to 100 AI emails per day, email scheduling, advanced inbox management, and custom folders with AI sorting. Pro is the best value for individuals who use email heavily.",
+        "Business is $29/month (or $24.92/month billed annually — saving $49/year). It includes everything in Pro plus enhanced AI quality for better draft generation, unlimited AI assistance, voice assistant, custom AI training, and team collaboration features. Business is designed for professionals and teams who want the best AI email experience."
       ],
       steps: [
         { title: "Compare plans", description: "Visit the Pricing page to see a full feature comparison." },
@@ -1012,7 +1012,7 @@ const articles: HelpArticle[] = [
     content: {
       intro: "Annual billing saves you money — up to $49 per year on the Business plan compared to paying monthly.",
       paragraphs: [
-        "Both Pro and Business plans offer monthly and annual billing options. With annual billing, you pay for the whole year upfront at a discounted rate. Pro is $10/month or $99/year (saving $21). Business is $29/month or $299/year (saving $49).",
+        "Both Pro and Business plans offer monthly and annual billing options. With annual billing, you pay for the whole year upfront at a discounted rate. Pro is $10/month or $8.25/month billed annually at $99/year (saving $21). Business is $29/month or $24.92/month billed annually at $299/year (saving $49).",
         "Annual billing is the better value if you plan to use MyDraft long-term. You can switch from monthly to annual billing at any time from Settings > Billing. The change takes effect at your next billing cycle. If you're not sure yet, start with monthly and switch to annual once you've decided MyDraft is right for you."
       ],
     }

@@ -180,8 +180,9 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Pro"
               planId="pro"
-              price={billingInterval === "annual" ? "$99" : "$10"}
-              period={billingInterval === "annual" ? "year" : "month"}
+              price={billingInterval === "annual" ? "$8.25" : "$10"}
+              period="month"
+              billedAnnually={billingInterval === "annual" ? 99 : undefined}
               annualSavings={billingInterval === "annual" ? 21 : undefined}
               description="For professionals who need more"
               features={[
@@ -201,8 +202,9 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Business"
               planId="business"
-              price={billingInterval === "annual" ? "$299" : "$29"}
-              period={billingInterval === "annual" ? "year" : "month"}
+              price={billingInterval === "annual" ? "$24.92" : "$29"}
+              period="month"
+              billedAnnually={billingInterval === "annual" ? 299 : undefined}
               annualSavings={billingInterval === "annual" ? 49 : undefined}
               description="For teams and power users"
               features={[
@@ -255,6 +257,7 @@ function PricingCard({
   planId,
   price, 
   period = "month",
+  billedAnnually,
   annualSavings,
   description, 
   features, 
@@ -268,6 +271,7 @@ function PricingCard({
   planId: string;
   price: string;
   period?: string;
+  billedAnnually?: number;
   annualSavings?: number;
   description: string;
   features: { text: string; included: boolean }[];
@@ -306,7 +310,15 @@ function PricingCard({
             <span className="text-5xl font-semibold tracking-tight">{price}</span>
             {price !== "$0" && <span className="text-muted-foreground/60">/{period}</span>}
           </div>
-          {annualSavings && (
+          {billedAnnually && (
+            <p className="text-xs text-muted-foreground/60 mt-2">
+              Billed annually at ${billedAnnually}/year
+              {annualSavings && (
+                <span className="text-green-500 ml-1 font-medium">· Save ${annualSavings}</span>
+              )}
+            </p>
+          )}
+          {!billedAnnually && annualSavings && (
             <p className="text-xs text-green-500 mt-2 font-medium">
               Save ${annualSavings}/year
             </p>
