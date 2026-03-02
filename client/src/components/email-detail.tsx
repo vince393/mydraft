@@ -579,7 +579,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
       toast({ title: "Reply sent", description: "Your reply has been sent successfully." });
       setDraftAttachments([]);
       handleCloseDraft();
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
     } catch (err: any) {
       toast({ title: "Send failed", description: err?.message || "Could not send reply. Please try again.", variant: "destructive" });
     } finally {

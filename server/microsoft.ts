@@ -20,15 +20,35 @@ const GRAPH_URL = "https://graph.microsoft.com/v1.0";
 const AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0";
 
 async function graphRequest(accessToken: string, path: string, options: RequestInit = {}): Promise<Response> {
-  const response = await fetch(`${GRAPH_URL}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-  return response;
+  const maxRetries = 3;
+  let lastResponse: Response | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(`${GRAPH_URL}${path}`, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+
+    if (response.status === 429 || response.status === 503 || response.status === 504) {
+      lastResponse = response;
+      if (attempt >= maxRetries) break;
+      const retryAfterRaw = response.headers.get("Retry-After");
+      const retryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : NaN;
+      const delayMs = !isNaN(retryAfterSec) && retryAfterSec > 0 ? retryAfterSec * 1000 : Math.min(1000 * Math.pow(2, attempt), 8000);
+      console.warn(`[Microsoft] ${response.status} on ${path}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      continue;
+    }
+
+    return response;
+  }
+
+  console.error(`[Microsoft] All ${maxRetries} retries exhausted for ${path}, returning last response (${lastResponse?.status})`);
+  return lastResponse!;
 }
 
 const FOLDER_MAP: Record<string, string> = {

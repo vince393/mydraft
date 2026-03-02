@@ -101,7 +101,7 @@ export function MultiEmailResponseModal({
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
     },
   });
 

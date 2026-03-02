@@ -586,6 +586,21 @@ body {
   margin-bottom: 0;
 }
 
+@keyframes emailItemEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.email-list-item-enter {
+  animation: emailItemEnter 0.25s ease-out both;
+}
+
 @keyframes mobileSlideUp {
   from {
     transform: translateY(100%);

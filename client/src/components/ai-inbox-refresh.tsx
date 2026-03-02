@@ -77,7 +77,7 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
       toast({ title: "Cleanup complete", description: `${data.executed} action${data.executed !== 1 ? "s" : ""} applied.` });
       setDeselected(new Set());
       refetchSuggestions();
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ai/inbox-suggestions"] });
       onRefreshComplete?.();

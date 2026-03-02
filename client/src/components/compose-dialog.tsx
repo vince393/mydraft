@@ -285,7 +285,7 @@ export function ComposeDialog({
           description: `Your message to ${recipientText} was sent.`,
           duration: 3000,
         });
-        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
         return;
       }
       update({
@@ -399,7 +399,7 @@ export function ComposeDialog({
           title: "Email sent",
           description: "Your message has been sent successfully.",
         });
-        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
       }
     },
     onError: (error: Error) => {

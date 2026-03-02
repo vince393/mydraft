@@ -158,6 +158,8 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const pullThreshold = 60;
+  const hasAnimatedRef = useRef(false);
+  const prevEmailIdsRef = useRef<Set<string | number>>(new Set());
   
   const { data: responseTime, isLoading: isLoadingTime } = useQuery<ResponseTimeEstimate>({
     queryKey: ['/api/response-time', activeFolder],
@@ -181,6 +183,21 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   const emailElementsRef = useRef<Map<string | number, HTMLDivElement>>(new Map());
 
   const hasActiveFilters = filters.unreadOnly || filters.dateRange !== "all" || filters.sender.trim() !== "";
+
+  useEffect(() => {
+    hasAnimatedRef.current = false;
+    prevEmailIdsRef.current = new Set();
+  }, [activeFolder]);
+
+  useEffect(() => {
+    if (emails.length > 0) {
+      const timer = setTimeout(() => {
+        prevEmailIdsRef.current = new Set(emails.map(e => getEmailId(e)));
+        hasAnimatedRef.current = true;
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [emails]);
 
   const filteredEmails = useMemo(() => {
     let result = emails;
@@ -785,15 +802,19 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </div>
         ) : (
         <div className="p-3" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {categoryFilteredEmails.map((email) => {
+        {categoryFilteredEmails.map((email, index) => {
           const emailId = getEmailId(email);
           const isSelected = getEmailId(email) === selectedEmailId;
           const isChecked = selectedIds.has(emailId);
+          const isNewItem = !prevEmailIdsRef.current.has(emailId);
+          const shouldAnimate = !hasAnimatedRef.current || isNewItem;
 
           return (
             <div 
               key={emailId}
               ref={(el) => registerEmailRef(emailId, el)}
+              className={shouldAnimate ? "email-list-item-enter" : undefined}
+              style={shouldAnimate ? { animationDelay: `${Math.min(index * 20, 300)}ms` } : undefined}
             >
               <SwipeableEmailItem
                 emailId={emailId}

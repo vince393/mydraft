@@ -154,14 +154,14 @@ function AuthenticatedApp() {
       if (targetFolderId) {
         await apiRequest("POST", `/api/folders/${targetFolderId}/bulk-assign`, { messageIds: [emailId] });
         queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
         toast({ title: "Email moved", description: "Added to folder successfully" });
       } else {
         const validSystemFolders = ["inbox", "archived", "trash", "sent", "drafts", "junk"];
         if (!validSystemFolders.includes(targetFolder)) return;
         
         await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder: targetFolder });
-        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
         queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
         const folderNames: Record<string, string> = { inbox: "Inbox", archived: "Archive", trash: "Trash", sent: "Sent", drafts: "Drafts", junk: "Junk" };
         toast({ title: "Email moved", description: `Moved to ${folderNames[targetFolder] || targetFolder}` });

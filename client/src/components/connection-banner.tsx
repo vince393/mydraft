@@ -37,7 +37,8 @@ export function ConnectionBanner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/email/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails", "fresh"], exact: true });
     },
   });
 

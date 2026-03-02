@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { isCategoryFolder } from "@/lib/email-categories";
@@ -190,6 +190,10 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     }
   }, [isCustomFolder, customFolderId, foldersData, onFolderChange]);
 
+  const invalidateEmailCache = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
+  }, []);
+
   // Step 1: Fetch cached emails from DB for instant display
   const { data: cachedEmails = [], isFetching: isFetchingCached, isSuccess: hasCachedData } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", "cached"],
@@ -203,6 +207,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     gcTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    placeholderData: keepPreviousData,
   });
 
   // Step 2: Fetch fresh emails from provider in background
@@ -219,20 +224,19 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     refetchOnWindowFocus: false,
     refetchOnMount: "always",
     retry: 2,
-    retryDelay: 500,
+    retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 8000),
+    placeholderData: keepPreviousData,
   });
   
   // Show fresh emails once available, otherwise show cached
   const allEmails = hasFreshData && freshEmails ? freshEmails : cachedEmails;
   
-  // Show loading skeleton when:
-  // 1. Neither cache nor fresh data has resolved yet
-  // 2. Cache is empty (no cached emails) and fresh data hasn't arrived yet
+  // Show loading skeleton only on very first load when no data exists at all
   const isLoadingEmails = (!hasCachedData && !hasFreshData) || 
-                          (cachedEmails.length === 0 && !hasFreshData);
+                          (cachedEmails.length === 0 && !hasFreshData && isFetchingFresh);
   
   // Show subtle syncing banner when we have cached data displaying and are fetching fresh
-  const isSyncing = isFetchingFresh && cachedEmails.length > 0 && !isLoadingEmails;
+  const isSyncing = isFetchingFresh && (cachedEmails.length > 0 || (hasFreshData && (freshEmails?.length ?? 0) > 0)) && !isLoadingEmails;
 
   useEffect(() => {
     if (!isFetchingFresh && isManualRefresh) {
@@ -364,7 +368,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      invalidateEmailCache();
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
     },
@@ -374,7 +378,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   const handleMarkUnread = async (emailId: string | number) => {
     try {
       await apiRequest("PATCH", `/api/emails/${emailId}/unread`, {});
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      invalidateEmailCache();
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       toast({ title: "Marked as unread" });
     } catch (error) {
@@ -416,7 +420,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return { emailId, folder };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      invalidateEmailCache();
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       toast({
         title: "Email restored",
@@ -477,7 +481,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return { emailId };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      invalidateEmailCache();
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
     },
@@ -629,7 +633,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       if (!response.ok) {
         throw new Error("Failed to delete email permanently");
       }
-      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      invalidateEmailCache();
       toast({
         title: "Email permanently deleted",
         duration: 3000,
@@ -869,7 +873,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
         }}
         onComplete={() => {
           setMultiEmailSelection([]);
-          queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+          invalidateEmailCache();
         }}
       />
 
