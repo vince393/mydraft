@@ -194,6 +194,24 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
   }, []);
 
+  const removeEmailFromCache = useCallback((emailId: string | number) => {
+    const filterOut = (old: EmailWithNylasId[] | undefined) => {
+      if (!old) return old;
+      return old.filter(e => (e.nylasId || e.id) !== emailId);
+    };
+    queryClient.setQueryData<EmailWithNylasId[]>(["/api/emails", "cached"], filterOut);
+    queryClient.setQueryData<EmailWithNylasId[]>(["/api/emails", "fresh"], filterOut);
+  }, []);
+
+  const updateEmailInCache = useCallback((emailId: string | number, updates: Partial<EmailWithNylasId>) => {
+    const updater = (old: EmailWithNylasId[] | undefined) => {
+      if (!old) return old;
+      return old.map(e => (e.nylasId || e.id) === emailId ? { ...e, ...updates } : e);
+    };
+    queryClient.setQueryData<EmailWithNylasId[]>(["/api/emails", "cached"], updater);
+    queryClient.setQueryData<EmailWithNylasId[]>(["/api/emails", "fresh"], updater);
+  }, []);
+
   // Step 1: Fetch cached emails from DB for instant display
   const { data: cachedEmails = [], isFetching: isFetchingCached, isSuccess: hasCachedData } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", "cached"],
@@ -367,18 +385,23 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/read`, {});
       return response.json();
     },
+    onMutate: async (emailId) => {
+      updateEmailInCache(emailId, { isRead: true });
+    },
     onSuccess: () => {
-      invalidateEmailCache();
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
+    },
+    onError: () => {
+      invalidateEmailCache();
     },
   });
 
 
   const handleMarkUnread = async (emailId: string | number) => {
     try {
+      updateEmailInCache(emailId, { isRead: false });
       await apiRequest("PATCH", `/api/emails/${emailId}/unread`, {});
-      invalidateEmailCache();
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       toast({ title: "Marked as unread" });
     } catch (error) {
@@ -449,12 +472,11 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return { ...result, emailId, folder, previousFolder, showUndo };
     },
     onMutate: async ({ emailId, folder, previousFolder, showUndo = true }) => {
-      setOptimisticRemovals(prev => new Set(prev).add(emailId));
       setSelectedEmailId(null);
       setShowDetail(false);
       setGeneratedDraft(null);
+      removeEmailFromCache(emailId);
       
-      // Show undo toast immediately
       if (showUndo && (folder === "trash" || folder === "archived")) {
         const actionLabel = folder === "trash" ? "deleted" : "archived";
         const undoFolder = previousFolder || "inbox";
@@ -481,30 +503,16 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return { emailId };
     },
     onSuccess: () => {
-      invalidateEmailCache();
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
     },
     onError: (error: Error, variables) => {
-      setOptimisticRemovals(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(variables.emailId);
-        return newSet;
-      });
+      invalidateEmailCache();
       toast({
         title: "Failed to move email",
         description: error.message,
         variant: "destructive",
       });
-    },
-    onSettled: (_, __, variables) => {
-      setTimeout(() => {
-        setOptimisticRemovals(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(variables.emailId);
-          return newSet;
-        });
-      }, 1000);
     },
   });
 
@@ -624,27 +632,21 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   };
 
   const handlePermanentDeleteSingleEmail = async (emailId: string | number) => {
-    setOptimisticRemovals(prev => new Set(prev).add(emailId));
     setSelectedEmailId(null);
     setShowDetail(false);
+    removeEmailFromCache(emailId);
     
     try {
       const response = await apiRequest("DELETE", `/api/emails/${emailId}`);
       if (!response.ok) {
         throw new Error("Failed to delete email permanently");
       }
-      invalidateEmailCache();
       toast({
         title: "Email permanently deleted",
         duration: 3000,
       });
     } catch (error) {
-      // Remove from optimistic removals on error
-      setOptimisticRemovals(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(emailId);
-        return newSet;
-      });
+      invalidateEmailCache();
       toast({
         title: "Failed to delete email",
         variant: "destructive",

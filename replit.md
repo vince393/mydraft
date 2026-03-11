@@ -30,7 +30,7 @@ Preferred communication style: Simple, everyday language.
 - **Provider**: OpenAI via Replit AI Integrations.
 - **Models**: `gpt-4o-mini-transcribe` for speech-to-text, `gpt-audio-mini` for voice chat and TTS. GPT-4o for Business/Pro users, GPT-4o-mini for others and background tasks.
 - **Features**: Email reply drafting, inbox sorting, translation, summarization, chatbot, Read Aloud (browser SpeechSynthesis — zero cost, instant), writing style learning (Pro+), grammar & style check in composer.
-- **Cost Optimizations**: Language detection (franc), email noise stripping, persisted email summaries.
+- **Cost Optimizations**: Deterministic language detection (`franc` — zero AI cost), email noise stripping (`server/email-utils.ts` — strips quoted replies, signatures, disclaimers before AI calls), persisted email summaries (DB-backed `message_summary_cache` table with upsert — summaries survive restarts), TTS audio caching (in-memory, 2hr TTL, max 30 entries, keyed by userId-emailId when available).
 - **Global Inbox**: Supports multilingual features with region, preferred language, and formality level settings. Provides culturally-aware translation and etiquette suggestions.
 
 ### Application Structure

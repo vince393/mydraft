@@ -1168,6 +1168,14 @@ Business Development`,
   }
 
   async cacheMessageSummary(userId: string, messageId: string, summary: string): Promise<MessageSummaryCache> {
+    const existing = await this.getMessageSummary(userId, messageId);
+    if (existing) {
+      const [updated] = await db.update(messageSummaryCache)
+        .set({ summary })
+        .where(and(eq(messageSummaryCache.userId, userId), eq(messageSummaryCache.messageId, messageId)))
+        .returning();
+      return updated;
+    }
     const [created] = await db.insert(messageSummaryCache)
       .values({ userId, messageId, summary })
       .returning();
