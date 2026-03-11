@@ -532,26 +532,40 @@ function isHtmlContent(body: string): boolean {
 }
 
 function formatEmailBody(body: string): string {
-  // If body already contains HTML tags, assume it's formatted
-  if (isHtmlContent(body)) {
+  if (/<!DOCTYPE\s+html/i.test(body) || /<html[\s>]/i.test(body)) {
     return body;
   }
-  
-  // Normalize all line endings to \n (handle Windows \r\n and old Mac \r)
-  const normalized = body.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  
-  // Convert plain text to HTML:
-  // 1. Escape HTML entities
-  // 2. Convert newlines to <br> tags
-  // 3. Wrap in basic HTML structure for proper rendering
-  const escaped = normalized
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  
-  const withBreaks = escaped.replace(/\n/g, '<br>');
-  
-  return `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #1a1a1a;">${withBreaks}</div>`;
+
+  let content: string;
+
+  if (isHtmlContent(body)) {
+    content = body;
+  } else {
+    const normalized = body.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const escaped = normalized
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    content = escaped.replace(/\n/g, '<br>');
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#ffffff;">
+<tr><td style="padding:20px 16px;">
+<div style="max-width:600px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#1a1a1a;word-wrap:break-word;overflow-wrap:break-word;">
+${content}
+</div>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 export async function sendMessage(

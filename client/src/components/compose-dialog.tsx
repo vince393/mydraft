@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2, Image, FileImage, Loader2, Paperclip, File, PenLine, SpellCheck, Check, AlertCircle } from "lucide-react";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import {
   Select,
   SelectContent,
@@ -159,7 +160,8 @@ export function ComposeDialog({
   const lastEmailIdRef = useRef<string | undefined>(undefined);
 
   const signatureBlock = hasSignature ? `\n\n--\n${userSignature}` : "";
-  const bodyContainsSignature = hasSignature && body.includes(`--\n${userSignature.trim()}`);
+  const signatureHtmlBlock = hasSignature ? `<br><br><div style="color:#666;">--<br>${userSignature.replace(/\n/g, '<br>')}</div>` : "";
+  const bodyContainsSignature = hasSignature && (body.includes(`--\n${userSignature.trim()}`) || body.includes(`--<br>${userSignature.trim().replace(/\n/g, '<br>')}`));
 
   // Reset form when dialog opens with new content
   useEffect(() => {
@@ -173,7 +175,7 @@ export function ComposeDialog({
         setCc("");
         setBcc("");
         setSubject("");
-        setBody(hasSignature ? signatureBlock : "");
+        setBody(hasSignature ? signatureHtmlBlock : "");
         setShowCcBcc(false);
         setSignatureSuggestionDismissed(false);
       }
@@ -202,8 +204,9 @@ export function ComposeDialog({
       setCc("");
       setSubject(originalEmail.subject.startsWith("Re:") ? originalEmail.subject : `Re: ${originalEmail.subject}`);
       const date = new Date(originalEmail.date).toLocaleString();
-      const quoted = `\n\n---------- Original message ----------\nFrom: ${originalEmail.from} <${originalEmail.fromEmail}>\nDate: ${date}\nSubject: ${originalEmail.subject}\n\n${originalEmail.body.replace(/<[^>]*>/g, '')}`;
-      setBody(hasSignature ? signatureBlock + quoted : quoted);
+      const sigHtml = hasSignature ? `<br><br><div style="color:#666;">--<br>${userSignature.replace(/\n/g, '<br>')}</div>` : "";
+      const quotedHtml = `<br><br><blockquote data-quote="original" style="border-left:2px solid #ccc;padding-left:12px;margin:0;color:#555;"><div style="font-size:12px;color:#777;margin-bottom:8px;">On ${date}, ${originalEmail.from} &lt;${originalEmail.fromEmail}&gt; wrote:</div>${originalEmail.body}</blockquote>`;
+      setBody(sigHtml + quotedHtml);
     } else if (mode === "replyAll") {
       setTo(originalEmail.fromEmail);
       const allRecipients = [...(originalEmail.to || []), ...(originalEmail.cc || [])];
@@ -215,15 +218,17 @@ export function ComposeDialog({
       setCc(uniqueCc.join(", "));
       setSubject(originalEmail.subject.startsWith("Re:") ? originalEmail.subject : `Re: ${originalEmail.subject}`);
       const date = new Date(originalEmail.date).toLocaleString();
-      const quoted = `\n\n---------- Original message ----------\nFrom: ${originalEmail.from} <${originalEmail.fromEmail}>\nDate: ${date}\nSubject: ${originalEmail.subject}\n\n${originalEmail.body.replace(/<[^>]*>/g, '')}`;
-      setBody(hasSignature ? signatureBlock + quoted : quoted);
+      const sigHtml = hasSignature ? `<br><br><div style="color:#666;">--<br>${userSignature.replace(/\n/g, '<br>')}</div>` : "";
+      const quotedHtml = `<br><br><blockquote data-quote="original" style="border-left:2px solid #ccc;padding-left:12px;margin:0;color:#555;"><div style="font-size:12px;color:#777;margin-bottom:8px;">On ${date}, ${originalEmail.from} &lt;${originalEmail.fromEmail}&gt; wrote:</div>${originalEmail.body}</blockquote>`;
+      setBody(sigHtml + quotedHtml);
     } else if (mode === "forward") {
       setTo("");
       setCc("");
       setSubject(originalEmail.subject.startsWith("Fwd:") ? originalEmail.subject : `Fwd: ${originalEmail.subject}`);
       const date = new Date(originalEmail.date).toLocaleString();
-      const quoted = `\n\n---------- Forwarded message ----------\nFrom: ${originalEmail.from} <${originalEmail.fromEmail}>\nDate: ${date}\nSubject: ${originalEmail.subject}\n\n${originalEmail.body.replace(/<[^>]*>/g, '')}`;
-      setBody(hasSignature ? signatureBlock + quoted : quoted);
+      const sigHtml = hasSignature ? `<br><br><div style="color:#666;">--<br>${userSignature.replace(/\n/g, '<br>')}</div>` : "";
+      const quotedHtml = `<br><br><blockquote data-quote="original" style="border-left:2px solid #ccc;padding-left:12px;margin:0;color:#555;"><div style="font-size:12px;color:#777;margin-bottom:8px;">---------- Forwarded message ----------<br>From: ${originalEmail.from} &lt;${originalEmail.fromEmail}&gt;<br>Date: ${date}<br>Subject: ${originalEmail.subject}</div>${originalEmail.body}</blockquote>`;
+      setBody(sigHtml + quotedHtml);
     }
   }, [open, mode, originalEmail, currentUserEmail, hasSignature, signatureBlock]);
 
@@ -552,8 +557,20 @@ export function ComposeDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [previousBody, setPreviousBody] = useState("");
 
-  // Extract user content (exclude original quote)
+  const stripHtmlTags = (html: string) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
   const getUserContent = () => {
+    const quoteIdx = body.indexOf('data-quote="original"');
+    if (quoteIdx !== -1) {
+      const tagStart = body.lastIndexOf("<blockquote", quoteIdx);
+      if (tagStart > 0) {
+        return body.substring(0, tagStart).replace(/<br\s*\/?>\s*$/gi, "").trim();
+      }
+    }
     if (body.includes("---------- Original message ----------")) {
       return body.substring(0, body.indexOf("---------- Original message ----------") - 2).trim();
     }
@@ -563,13 +580,19 @@ export function ComposeDialog({
     return body.trim();
   };
 
+  const hasUserContent = () => {
+    const content = getUserContent();
+    return stripHtmlTags(content).trim().length > 0;
+  };
+
   // AI Reply mutation - for all modes (5/day limit for free)
   const aiReplyMutation = useMutation({
     mutationFn: async () => {
       const userContent = getUserContent();
+      const plainUserContent = stripHtmlTags(userContent).trim();
       setPreviousBody(body);
       setIsGenerating(true);
-      setBody(userContent ? "Improving draft..." : "Generating draft...");
+      setBody(plainUserContent ? "Improving draft..." : "Generating draft...");
       
       const response = await apiRequest("POST", "/api/drafts/quick-generate", {
         mode,
@@ -581,7 +604,7 @@ export function ComposeDialog({
         } : undefined,
         instructions: aiInstructions.trim() || undefined,
         tone: aiTone,
-        existingBody: userContent || undefined,
+        existingBody: plainUserContent || undefined,
       });
       return response.json();
     },
@@ -595,27 +618,35 @@ export function ComposeDialog({
       }
       
       if (data.body) {
-        const originalQuote = previousBody.includes("---------- Original message ----------") 
-          ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
-          : previousBody.includes("---------- Forwarded message ----------")
-          ? previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2)
-          : "";
-        setBody(data.body + originalQuote);
+        const draftHtml = data.body.replace(/\n/g, '<br>');
+        const quoteMarker = previousBody.indexOf("border-left:2px solid #ccc");
+        let originalQuote = "";
+        if (quoteMarker !== -1) {
+          const divStart = previousBody.lastIndexOf("<div", quoteMarker);
+          if (divStart > 0) {
+            originalQuote = previousBody.substring(divStart);
+          }
+        } else if (previousBody.includes("---------- Original message ----------")) {
+          originalQuote = previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2);
+        } else if (previousBody.includes("---------- Forwarded message ----------")) {
+          originalQuote = previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2);
+        }
+        setBody(draftHtml + (originalQuote ? "<br><br>" + originalQuote : ""));
         
         // Set the AI-generated subject in the subject field
         if (data.subject) {
           setSubject(data.subject);
         }
         
-        const hasUserContent = getUserContent();
+        const hadExistingContent = stripHtmlTags(getUserContent()).trim().length > 0;
         if (data.usage && data.usage.remaining >= 0) {
           toast({
-            title: hasUserContent ? "Draft improved" : "Draft generated",
+            title: hadExistingContent ? "Draft improved" : "Draft generated",
             description: `${data.usage.remaining} AI uses remaining today`,
           });
         } else {
           toast({
-            title: hasUserContent ? "Draft improved" : "Draft generated",
+            title: hadExistingContent ? "Draft improved" : "Draft generated",
             description: "Your AI-powered draft is ready",
           });
         }
@@ -635,17 +666,27 @@ export function ComposeDialog({
     },
   });
 
-  // AI Polish mutation - for improving existing text
+  const getOriginalQuote = (fromBody: string) => {
+    const quoteIdx = fromBody.indexOf('data-quote="original"');
+    if (quoteIdx !== -1) {
+      const tagStart = fromBody.lastIndexOf("<blockquote", quoteIdx);
+      if (tagStart > 0) return "<br><br>" + fromBody.substring(tagStart);
+    }
+    if (fromBody.includes("---------- Original message ----------")) {
+      return fromBody.substring(fromBody.indexOf("---------- Original message ----------") - 2);
+    }
+    if (fromBody.includes("---------- Forwarded message ----------")) {
+      return fromBody.substring(fromBody.indexOf("---------- Forwarded message ----------") - 2);
+    }
+    return "";
+  };
+
   const aiPolishMutation = useMutation({
     mutationFn: async (polishType: "polish" | "longer" | "shorter" | "concise") => {
-      // Extract user's written content (before the original message quote)
-      const userContent = body.includes("---------- Original message ----------")
-        ? body.substring(0, body.indexOf("---------- Original message ----------") - 2).trim()
-        : body.includes("---------- Forwarded message ----------")
-        ? body.substring(0, body.indexOf("---------- Forwarded message ----------") - 2).trim()
-        : body.trim();
+      const userContent = getUserContent();
+      const plainContent = stripHtmlTags(userContent);
       
-      if (!userContent) {
+      if (!plainContent.trim()) {
         throw new Error("Please write some content first");
       }
       
@@ -653,7 +694,7 @@ export function ComposeDialog({
       setIsGenerating(true);
       
       const response = await apiRequest("POST", "/api/drafts/polish", {
-        content: userContent,
+        content: plainContent,
         polishType,
         subject,
       });
@@ -663,13 +704,9 @@ export function ComposeDialog({
       setIsGenerating(false);
       
       if (data.content) {
-        // Preserve original quote if present
-        const originalQuote = previousBody.includes("---------- Original message ----------") 
-          ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
-          : previousBody.includes("---------- Forwarded message ----------")
-          ? previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2)
-          : "";
-        setBody(data.content + originalQuote);
+        const polishedHtml = data.content.replace(/\n/g, '<br>');
+        const originalQuote = getOriginalQuote(previousBody);
+        setBody(polishedHtml + originalQuote);
         
         toast({
           title: "Text polished",
@@ -690,17 +727,12 @@ export function ComposeDialog({
     },
   });
 
-  // AI Refine mutation - for modifying draft based on user instructions
   const aiRefineMutation = useMutation({
     mutationFn: async (instruction: string) => {
-      // Extract user's written content (before the original message quote)
-      const userContent = body.includes("---------- Original message ----------")
-        ? body.substring(0, body.indexOf("---------- Original message ----------") - 2).trim()
-        : body.includes("---------- Forwarded message ----------")
-        ? body.substring(0, body.indexOf("---------- Forwarded message ----------") - 2).trim()
-        : body.trim();
+      const userContent = getUserContent();
+      const plainContent = stripHtmlTags(userContent);
       
-      if (!userContent) {
+      if (!plainContent.trim()) {
         throw new Error("Please write or generate some content first");
       }
       
@@ -708,7 +740,7 @@ export function ComposeDialog({
       setPreviousBody(body);
       
       const response = await apiRequest("POST", "/api/ai/refine", {
-        text: userContent,
+        text: plainContent,
         instruction,
         originalEmail: originalEmail ? {
           sender: originalEmail.from,
@@ -724,13 +756,9 @@ export function ComposeDialog({
       setRefineInput("");
       
       if (data.refined) {
-        // Preserve original quote if present
-        const originalQuote = previousBody.includes("---------- Original message ----------") 
-          ? previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2)
-          : previousBody.includes("---------- Forwarded message ----------")
-          ? previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2)
-          : "";
-        setBody(data.refined + originalQuote);
+        const refinedHtml = data.refined.replace(/\n/g, '<br>');
+        const originalQuote = getOriginalQuote(previousBody);
+        setBody(refinedHtml + originalQuote);
         
         toast({
           title: "Draft updated",
@@ -754,12 +782,13 @@ export function ComposeDialog({
   const grammarCheckMutation = useMutation({
     mutationFn: async () => {
       const userContent = getUserContent();
-      if (!userContent || userContent.length < 5) {
+      const plainContent = stripHtmlTags(userContent);
+      if (!plainContent || plainContent.trim().length < 5) {
         throw new Error("Write at least a few words before checking");
       }
       setIsCheckingGrammar(true);
       const response = await apiRequest("POST", "/api/ai/grammar-check", {
-        text: userContent,
+        text: plainContent,
       });
       return response.json();
     },
@@ -787,19 +816,23 @@ export function ComposeDialog({
     if (!grammarSuggestions) return;
     const suggestion = grammarSuggestions.suggestions[index];
     if (!suggestion) return;
-    const newBody = body.replace(suggestion.original, suggestion.replacement);
+    let newBody = body.replace(suggestion.original, suggestion.replacement);
+    if (newBody === body) {
+      const escaped = suggestion.original
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const escapedReplacement = suggestion.replacement
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      newBody = body.replace(escaped, escapedReplacement);
+    }
     setBody(newBody);
     setDismissedSuggestions((prev) => new Set([...prev, index]));
   };
 
   const applyAllSuggestions = () => {
     if (!grammarSuggestions?.correctedText) return;
-    const originalQuote = body.includes("---------- Original message ----------")
-      ? "\n\n" + body.substring(body.indexOf("---------- Original message ----------"))
-      : body.includes("---------- Forwarded message ----------")
-      ? "\n\n" + body.substring(body.indexOf("---------- Forwarded message ----------"))
-      : "";
-    setBody(grammarSuggestions.correctedText + originalQuote);
+    const correctedHtml = grammarSuggestions.correctedText.replace(/\n/g, '<br>');
+    const originalQuote = getOriginalQuote(body);
+    setBody(correctedHtml + originalQuote);
     setGrammarSuggestions(null);
     setDismissedSuggestions(new Set());
     toast({ title: "All suggestions applied", description: "Your draft has been updated." });
@@ -917,16 +950,6 @@ export function ComposeDialog({
     }
   };
 
-  // Check if there's user content to polish
-  const hasUserContent = () => {
-    const userContent = body.includes("---------- Original message ----------")
-      ? body.substring(0, body.indexOf("---------- Original message ----------") - 2).trim()
-      : body.includes("---------- Forwarded message ----------")
-      ? body.substring(0, body.indexOf("---------- Forwarded message ----------") - 2).trim()
-      : body.trim();
-    return userContent.length > 0;
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
@@ -1004,22 +1027,21 @@ export function ComposeDialog({
           </div>
           
           {/* Message Body */}
-          <div className="flex-1 min-h-0 px-5 py-3 flex flex-col">
-            <Textarea
+          <div className="flex-1 min-h-0 flex flex-col">
+            <RichTextEditor
               value={body}
-              onChange={(e) => {
-                setBody(e.target.value);
+              onChange={(html) => {
+                setBody(html);
                 if (grammarSuggestions) {
                   setGrammarSuggestions(null);
                   setDismissedSuggestions(new Set());
                 }
               }}
               placeholder="Write your message..."
-              className="flex-1 min-h-[160px] resize-none border-0 bg-transparent px-4 py-3 text-sm leading-relaxed placeholder:text-foreground/20 focus-visible:ring-0 focus-visible:ring-offset-0"
               data-testid="textarea-compose-body"
             />
 
-            {hasSignature && !bodyContainsSignature && !signatureSuggestionDismissed && body.replace(/\s/g, '').length > 0 && (
+            {hasSignature && !bodyContainsSignature && !signatureSuggestionDismissed && stripHtmlTags(body).trim().length > 0 && (
               <div
                 className="mx-4 mb-2 flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
                 style={{
@@ -1035,27 +1057,16 @@ export function ComposeDialog({
                   variant="ghost"
                   className="text-xs text-indigo-400"
                   onClick={() => {
-                    if (mode === "new") {
-                      setBody(prev => prev + signatureBlock);
-                    } else {
-                      const separatorPatterns = [
-                        "---------- Original message ----------",
-                        "---------- Forwarded message ----------",
-                      ];
-                      let insertIndex = -1;
-                      for (const sep of separatorPatterns) {
-                        const idx = body.indexOf(sep);
-                        if (idx !== -1) {
-                          const lineStart = body.lastIndexOf('\n', idx - 1);
-                          insertIndex = lineStart !== -1 ? lineStart : idx;
-                          break;
-                        }
-                      }
-                      if (insertIndex !== -1) {
-                        setBody(prev => prev.slice(0, insertIndex) + signatureBlock + prev.slice(insertIndex));
+                    const quoteMarker = body.indexOf("border-left:2px solid #ccc");
+                    if (quoteMarker !== -1) {
+                      const divStart = body.lastIndexOf("<div", quoteMarker);
+                      if (divStart > 0) {
+                        setBody(body.slice(0, divStart) + signatureHtmlBlock + body.slice(divStart));
                       } else {
-                        setBody(prev => prev + signatureBlock);
+                        setBody(body + signatureHtmlBlock);
                       }
+                    } else {
+                      setBody(prev => prev + signatureHtmlBlock);
                     }
                     setSignatureSuggestionDismissed(true);
                   }}

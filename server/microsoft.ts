@@ -1,5 +1,5 @@
 import type { IEmailProvider, EmailListItem, EmailDetail, GetMessagesOptions, TokenData, SendAttachment } from "./email-provider";
-import { getAvatarColor, sanitizeEmailHtml, formatEmailBody } from "./email-provider";
+import { getAvatarColor, sanitizeEmailHtml, formatEmailBody, isHtmlContent } from "./email-provider";
 import { logApiHealth } from "./api-health";
 
 const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID!;
@@ -282,13 +282,16 @@ export const microsoftProvider: IEmailProvider = {
     const formattedBody = formatEmailBody(params.body);
 
     if (params.replyToMessageId) {
+      const replyComment = isHtmlContent(params.body)
+        ? params.body
+        : params.body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
       const replyBody = {
         message: {
           toRecipients: params.to.map((email) => ({ emailAddress: { address: email } })),
           ...(params.cc?.length && { ccRecipients: params.cc.map((email) => ({ emailAddress: { address: email } })) }),
           ...(params.bcc?.length && { bccRecipients: params.bcc.map((email) => ({ emailAddress: { address: email } })) }),
         },
-        comment: formattedBody,
+        comment: replyComment,
       };
 
       try {
