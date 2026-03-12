@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
 import {
   Toast,
@@ -10,9 +11,17 @@ import {
 
 export function Toaster() {
   const { toasts } = useToast()
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640)
+    check()
+    window.addEventListener("resize", check)
+    return () => window.removeEventListener("resize", check)
+  }, [])
 
   return (
-    <ToastProvider>
+    <ToastProvider swipeDirection={isMobile ? "down" : "right"}>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>
