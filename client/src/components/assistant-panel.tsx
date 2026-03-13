@@ -56,6 +56,7 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
   const { toast } = useToast();
 
   // Fetch assistant settings
@@ -158,11 +159,14 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
     },
   });
 
-  // Cleanup media recorder on unmount
   useEffect(() => {
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
     };
   }, []);
@@ -194,6 +198,7 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
   const handleStartRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -205,7 +210,10 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
       };
       
       mediaRecorder.onstop = () => {
-        stream.getTracks().forEach(track => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         if (audioBlob.size > 0) {
           setIsTranscribing(true);
