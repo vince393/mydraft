@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,8 @@ import {
   Trophy,
   ArrowRight,
   Ticket,
+  Volume2,
+  Play,
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
@@ -74,6 +76,7 @@ interface Settings {
     region?: string;
     preferredLanguage?: string;
     formalityLevel?: string;
+    readAloudVoice?: string;
   } | null;
   emailSignature: string | null;
   signatureEnabled: boolean;
@@ -1297,7 +1300,69 @@ function AIPreferencesTab({ settings }: { settings: Settings }) {
     region: settings.aiPreferences?.region || "us",
     preferredLanguage: settings.aiPreferences?.preferredLanguage || "auto",
     formalityLevel: settings.aiPreferences?.formalityLevel || "auto",
+    readAloudVoice: settings.aiPreferences?.readAloudVoice || "nova",
   });
+
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        previewAudioRef.current.src = "";
+        previewAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const previewVoice = async (voiceId: string) => {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.src = "";
+      previewAudioRef.current = null;
+    }
+
+    if (previewingVoice === voiceId) {
+      setPreviewingVoice(null);
+      return;
+    }
+
+    setPreviewingVoice(voiceId);
+    try {
+      const response = await fetch("/api/voice/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ text: "Hi, I'm your Read Aloud voice. Here's how I sound reading your emails.", voice: voiceId }),
+      });
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      if (!data.audio) throw new Error();
+
+      const audioData = atob(data.audio);
+      const audioArray = new Uint8Array(audioData.length);
+      for (let i = 0; i < audioData.length; i++) {
+        audioArray[i] = audioData.charCodeAt(i);
+      }
+      const blob = new Blob([audioArray], { type: "audio/wav" });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      previewAudioRef.current = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        setPreviewingVoice(null);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        setPreviewingVoice(null);
+      };
+      await audio.play();
+    } catch {
+      setPreviewingVoice(null);
+      toast({ title: "Could not preview voice", variant: "destructive" });
+    }
+  };
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -1433,6 +1498,51 @@ function AIPreferencesTab({ settings }: { settings: Settings }) {
               <Input id="custom-tone" value={preferences.customTone} onChange={(e) => setPreferences((p) => ({ ...p, customTone: e.target.value }))} placeholder="e.g., casual but informative" data-testid="input-custom-tone" />
             </div>
           )}
+        </div>
+      </SettingsPanel>
+
+      <SettingsPanel>
+        <SectionHeader icon={Volume2} title="Read Aloud Voice" description="Choose a natural AI voice for reading emails" />
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { id: "nova", label: "Nova", desc: "Warm, friendly" },
+            { id: "alloy", label: "Alloy", desc: "Neutral, balanced" },
+            { id: "echo", label: "Echo", desc: "Smooth, clear" },
+            { id: "fable", label: "Fable", desc: "Expressive, British" },
+            { id: "onyx", label: "Onyx", desc: "Deep, authoritative" },
+            { id: "shimmer", label: "Shimmer", desc: "Bright, energetic" },
+            { id: "ash", label: "Ash", desc: "Calm, composed" },
+            { id: "ballad", label: "Ballad", desc: "Warm, melodic" },
+            { id: "coral", label: "Coral", desc: "Conversational" },
+            { id: "sage", label: "Sage", desc: "Wise, measured" },
+          ].map((v) => (
+            <div
+              key={v.id}
+              onClick={() => setPreferences((p) => ({ ...p, readAloudVoice: v.id }))}
+              className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
+                preferences.readAloudVoice === v.id
+                  ? "bg-primary/10 border-primary/40"
+                  : "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]"
+              }`}
+              data-testid={`voice-option-${v.id}`}
+            >
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium ${preferences.readAloudVoice === v.id ? "text-foreground" : "text-foreground/70"}`}>{v.label}</p>
+                <p className="text-[10px] text-muted-foreground/50">{v.desc}</p>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); previewVoice(v.id); }}
+                className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/[0.06] transition-colors"
+                data-testid={`button-preview-voice-${v.id}`}
+              >
+                {previewingVoice === v.id ? (
+                  <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                ) : (
+                  <Play className="w-3 h-3 text-foreground/40" />
+                )}
+              </button>
+            </div>
+          ))}
         </div>
       </SettingsPanel>
 

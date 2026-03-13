@@ -51,13 +51,13 @@ export async function voiceChat(
   return { text, audio };
 }
 
-export async function textToSpeech(text: string): Promise<string> {
+export async function textToSpeech(text: string, voice: string = "onyx"): Promise<string> {
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-audio-mini",
       modalities: ["text", "audio"],
       audio: {
-        voice: "onyx",
+        voice,
         format: "wav",
       },
       messages: [

@@ -136,15 +136,18 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { text, emailId } = req.body;
+      const { text, emailId, voice } = req.body;
       
       if (!text || typeof text !== "string") {
         return res.status(400).json({ error: "Text required" });
       }
 
+      const validVoices = ["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"];
+      const selectedVoice = voice && validVoices.includes(voice) ? voice : "nova";
+
       const cacheKey = emailId
-        ? `${req.session.userId}-${emailId}`
-        : `${req.session.userId}-${text.slice(0, 100)}`;
+        ? `${req.session.userId}-${emailId}-${selectedVoice}`
+        : `${req.session.userId}-${selectedVoice}-${text.slice(0, 100)}`;
 
       const now = Date.now();
       const cached = ttsCache.get(cacheKey);
@@ -153,7 +156,7 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       }
 
       const cleanText = stripEmailNoise(text).slice(0, 4000);
-      const audio = await textToSpeech(cleanText);
+      const audio = await textToSpeech(cleanText, selectedVoice);
 
       if (audio) {
         ttsCache.set(cacheKey, { audio, timestamp: now });
