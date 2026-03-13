@@ -156,18 +156,23 @@ export function SwipeableEmailItem({
     const touchY = e.touches[0].clientY;
     const deltaX = touchX - startX.current;
     const deltaY = touchY - startY.current;
+    const absDx = Math.abs(deltaX);
+    const absDy = Math.abs(deltaY);
 
-    if (Math.abs(deltaY) > 8) {
-      wasScrolling.current = true;
-    }
-
-    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+    if (absDx > 6 || absDy > 6) {
       onLongPressEnd();
     }
 
     if (isHorizontalSwipe.current === null) {
-      if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
-        isHorizontalSwipe.current = Math.abs(deltaX) > Math.abs(deltaY);
+      if (absDx > 6 || absDy > 6) {
+        isHorizontalSwipe.current = absDx > absDy * 0.7;
+        if (!isHorizontalSwipe.current) {
+          wasScrolling.current = true;
+          setIsSwiping(false);
+          return;
+        }
+      } else {
+        return;
       }
     }
 
@@ -530,7 +535,7 @@ export function SwipeableEmailItem({
         onTouchEnd={handleTouchEnd}
         className={`
           group relative py-3 px-4 cursor-pointer bg-background
-          transition-all select-none rounded-lg
+          transition-all select-none rounded-lg touch-pan-y
           ${!isSwiping ? "duration-200 ease-out" : "duration-0"}
           ${isSelectionMode && isChecked
             ? "bg-muted/50"
