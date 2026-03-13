@@ -514,54 +514,43 @@ body {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Professional Email Content Styling - Gmail / Apple Mail look */
+/* Email Content Container */
 .email-body-container {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
-  line-height: 1.6;
-  letter-spacing: -0.01em;
+  line-height: 1.5;
   color: hsl(var(--foreground));
-  overflow-x: hidden;
   max-width: 100%;
   width: 100%;
 }
 
 @media (min-width: 640px) {
   .email-body-container {
-    font-size: 15px;
-    line-height: 1.65;
+    font-size: 14px;
+    line-height: 1.5;
   }
 }
 
-/* Email iframe wrapper */
+/* Email iframe wrapper — minimal chrome, let the email speak */
 .email-iframe-wrapper {
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
-  border: 1px solid hsl(var(--border) / 0.15);
   background: #ffffff;
   max-width: 100%;
   width: 100%;
 }
 
-@media (min-width: 640px) {
-  .email-iframe-wrapper {
-    border-radius: 8px;
-  }
-}
-
 .dark .email-iframe-wrapper {
   background: #1a1a1e;
-  border-color: hsl(var(--border) / 0.12);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
+/* Plain text email styling */
 .email-content-plain {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 14px;
-  line-height: 1.6;
-  letter-spacing: -0.01em;
+  line-height: 1.5;
   color: hsl(var(--foreground));
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -573,13 +562,13 @@ body {
 
 @media (min-width: 640px) {
   .email-content-plain {
-    font-size: 15px;
-    line-height: 1.65;
+    font-size: 14px;
+    line-height: 1.5;
   }
 }
 
 .email-content-plain p {
-  margin: 0 0 0.85em 0;
+  margin: 0 0 0.65em 0;
 }
 
 .email-content-plain p:last-child {

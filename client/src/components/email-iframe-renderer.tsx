@@ -95,12 +95,43 @@ function sanitizeForIframe(html: string): string {
   return content.trim() || html;
 }
 
+function detectEmailType(rawHtml: string): "rich" | "simple" {
+  const tableCount = (rawHtml.match(/<table/gi) || []).length;
+  const hasMultipleTables = tableCount >= 2;
+  const hasTableWithWidth = /<table[^>]*width\s*=/i.test(rawHtml);
+  const hasInlineStyles = (rawHtml.match(/style\s*=/gi) || []).length >= 5;
+  const hasFixedWidths = /width\s*[:=]\s*["']?\d{3,}/i.test(rawHtml);
+  const hasBackgroundImages = /background-image|background\s*:\s*url/i.test(rawHtml);
+  const hasMediaQueries = /@media/i.test(rawHtml);
+  const hasCenterTag = /<center/i.test(rawHtml);
+  const hasAlignAttr = /align\s*=\s*["']center["']/i.test(rawHtml);
+  const hasRolePresentation = /role\s*=\s*["']presentation["']/i.test(rawHtml);
+
+  if (hasTableWithWidth && tableCount >= 1) return "rich";
+  if (hasCenterTag && tableCount >= 1) return "rich";
+
+  const richSignals = [
+    hasMultipleTables,
+    hasInlineStyles,
+    hasFixedWidths,
+    hasBackgroundImages,
+    hasMediaQueries,
+    hasCenterTag,
+    hasAlignAttr,
+    hasRolePresentation,
+  ].filter(Boolean).length;
+
+  return richSignals >= 2 ? "rich" : "simple";
+}
+
 export function EmailIframeRenderer({
   html,
   className = "",
 }: EmailIframeRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(200);
+  const [scale, setScale] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   const isDark = document.documentElement.classList.contains("dark");
@@ -108,7 +139,6 @@ export function EmailIframeRenderer({
   const buildIframeContent = useCallback((rawHtml: string, dark: boolean) => {
     const hasFullHtml = /<html/i.test(rawHtml);
     const hasBody = /<body/i.test(rawHtml);
-    const hasStyleTag = /<style[\s>]/i.test(rawHtml);
 
     let bodyContent = rawHtml;
     let headContent = "";
@@ -142,6 +172,7 @@ export function EmailIframeRenderer({
     }
 
     const sanitized = sanitizeForIframe(bodyContent);
+    const emailType = detectEmailType(rawHtml);
 
     const bgColor = dark ? "#1a1a1e" : "#ffffff";
     const textColor = dark ? "#e0e0e4" : "#1f1f1f";
@@ -150,15 +181,9 @@ export function EmailIframeRenderer({
     const quoteFg = dark ? "#9aa0a6" : "#5f6368";
     const hrColor = dark ? "rgba(255,255,255,0.08)" : "#dadce0";
 
-    const hasRichContent = hasStyleTag || /<table/i.test(rawHtml);
-    const isMobile = window.innerWidth < 640;
+    const isRich = emailType === "rich";
 
-    return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
+    const baseStyles = `
   html {
     margin: 0;
     padding: 0;
@@ -166,44 +191,18 @@ export function EmailIframeRenderer({
   }
   body {
     margin: 0;
-    padding: ${hasRichContent ? '0' : (isMobile ? '8px 10px' : '14px 16px')};
+    padding: ${isRich ? '0' : '16px 20px'};
     background: ${bgColor};
     color: ${textColor};
-    font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
-    font-size: ${isMobile ? '13px' : '14px'};
-    line-height: ${isMobile ? '1.55' : '1.58'};
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  * {
-    max-width: 100% !important;
-    box-sizing: border-box;
-  }
-  img {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-  table {
-    max-width: 100% !important;
-    border-collapse: collapse;
-    table-layout: fixed;
-    width: 100% !important;
-  }
-  td, th {
-    word-break: break-word;
-    overflow-wrap: break-word;
-  }
-  body > table,
-  body > div > table,
-  body > center > table {
-    margin: 0 auto;
-  }
-  a {
-    color: ${linkColor};
-  }
+  a { color: ${linkColor}; }
   blockquote {
     margin: 0 0 0 0.8ex;
     padding-left: 1ex;
@@ -237,58 +236,48 @@ export function EmailIframeRenderer({
   [style*="display:none"], [style*="display: none"],
   [style*="visibility:hidden"], [style*="visibility: hidden"] {
     display: none !important;
+  }`;
+
+    const richStyles = isRich ? `
+  img {
+    max-width: 100%;
+    height: auto;
   }
-  ${!dark ? `
-  span[style*="color: #c"], span[style*="color:#c"],
-  span[style*="color: #d"], span[style*="color:#d"],
-  span[style*="color: #e"], span[style*="color:#e"],
-  span[style*="color: #f"], span[style*="color:#f"],
-  span[style*="color: #C"], span[style*="color:#C"],
-  span[style*="color: #D"], span[style*="color:#D"],
-  span[style*="color: #E"], span[style*="color:#E"],
-  span[style*="color: #F"], span[style*="color:#F"],
-  span[style*="color: rgb(2"], span[style*="color:rgb(2"],
-  p[style*="color: #c"], p[style*="color:#c"],
-  p[style*="color: #d"], p[style*="color:#d"],
-  p[style*="color: #e"], p[style*="color:#e"],
-  p[style*="color: #f"], p[style*="color:#f"],
-  p[style*="color: #C"], p[style*="color:#C"],
-  p[style*="color: #D"], p[style*="color:#D"],
-  p[style*="color: #E"], p[style*="color:#E"],
-  p[style*="color: #F"], p[style*="color:#F"],
-  p[style*="color: rgb(2"], p[style*="color:rgb(2"],
-  div[style*="color: #c"], div[style*="color:#c"],
-  div[style*="color: #d"], div[style*="color:#d"],
-  div[style*="color: #e"], div[style*="color:#e"],
-  div[style*="color: #f"], div[style*="color:#f"],
-  div[style*="color: #C"], div[style*="color:#C"],
-  div[style*="color: #D"], div[style*="color:#D"],
-  div[style*="color: #E"], div[style*="color:#E"],
-  div[style*="color: #F"], div[style*="color:#F"],
-  div[style*="color: rgb(2"], div[style*="color:rgb(2"],
-  td[style*="color: #c"], td[style*="color:#c"],
-  td[style*="color: #d"], td[style*="color:#d"],
-  td[style*="color: #e"], td[style*="color:#e"],
-  td[style*="color: #f"], td[style*="color:#f"],
-  td[style*="color: #C"], td[style*="color:#C"],
-  td[style*="color: #D"], td[style*="color:#D"],
-  td[style*="color: #E"], td[style*="color:#E"],
-  td[style*="color: #F"], td[style*="color:#F"],
-  td[style*="color: rgb(2"], td[style*="color:rgb(2"],
-  font[color^="#c"], font[color^="#d"], font[color^="#e"], font[color^="#f"],
-  font[color^="#C"], font[color^="#D"], font[color^="#E"], font[color^="#F"],
-  font[style*="color: #c"], font[style*="color:#c"],
-  font[style*="color: #d"], font[style*="color:#d"],
-  font[style*="color: #e"], font[style*="color:#e"],
-  font[style*="color: #f"], font[style*="color:#f"] {
-    color: #555555 !important;
+  body > table,
+  body > div > table,
+  body > center > table,
+  body > div > center > table {
+    margin: 0 auto;
+  }` : `
+  img {
+    max-width: 100%;
+    height: auto;
   }
-  ` : ''}
-  ${dark ? `
-  body[bgcolor], body[style*="background"],
+  table {
+    max-width: 100%;
+  }`;
+
+    const darkBgOverrides = dark ? `
+  body[bgcolor], body[style*="background"] {
+    background-color: ${bgColor} !important;
+    background: ${bgColor} !important;
+  }
+  ${isRich ? `
   div[style*="background-color: #ffffff"], div[style*="background-color:#ffffff"],
   div[style*="background-color: #fff"], div[style*="background-color:#fff"],
   div[style*="background-color: white"], div[style*="background-color:white"],
+  div[style*="background: #ffffff"], div[style*="background:#ffffff"],
+  div[style*="background: white"], div[style*="background:white"],
+  table[bgcolor="#ffffff"], table[bgcolor="#fff"], table[bgcolor="white"],
+  td[bgcolor="#ffffff"], td[bgcolor="#fff"], td[bgcolor="white"],
+  td[style*="background-color: #ffffff"], td[style*="background-color:#ffffff"],
+  td[style*="background-color: #fff"], td[style*="background-color:#fff"],
+  td[style*="background-color: white"], td[style*="background-color:white"],
+  tr[bgcolor="#ffffff"], tr[bgcolor="#fff"], tr[bgcolor="white"] {
+    background-color: ${bgColor} !important;
+    background: ${bgColor} !important;
+  }
+  ` : `
   div[style*="background-color: #f"], div[style*="background-color:#f"],
   div[style*="background-color: #e"], div[style*="background-color:#e"],
   div[style*="background-color: #d"], div[style*="background-color:#d"],
@@ -302,19 +291,14 @@ export function EmailIframeRenderer({
   div[style*="background: #e"], div[style*="background:#e"],
   div[style*="background: #F"], div[style*="background:#F"],
   div[style*="background: #E"], div[style*="background:#E"],
-  table[bgcolor="#ffffff"], table[bgcolor="#fff"], table[bgcolor="white"],
   table[bgcolor^="#f"], table[bgcolor^="#F"],
   table[bgcolor^="#e"], table[bgcolor^="#E"],
   table[bgcolor^="#d"], table[bgcolor^="#D"],
   table[bgcolor^="#c"], table[bgcolor^="#C"],
-  td[bgcolor="#ffffff"], td[bgcolor="#fff"], td[bgcolor="white"],
   td[bgcolor^="#f"], td[bgcolor^="#F"],
   td[bgcolor^="#e"], td[bgcolor^="#E"],
   td[bgcolor^="#d"], td[bgcolor^="#D"],
   td[bgcolor^="#c"], td[bgcolor^="#C"],
-  td[style*="background-color: #ffffff"], td[style*="background-color:#ffffff"],
-  td[style*="background-color: #fff"], td[style*="background-color:#fff"],
-  td[style*="background-color: white"], td[style*="background-color:white"],
   td[style*="background-color: #f"], td[style*="background-color:#f"],
   td[style*="background-color: #e"], td[style*="background-color:#e"],
   td[style*="background-color: #d"], td[style*="background-color:#d"],
@@ -331,6 +315,7 @@ export function EmailIframeRenderer({
     background-color: ${bgColor} !important;
     background: ${bgColor} !important;
   }
+  `}
   body[text], 
   td[style*="color: #0"], td[style*="color:#0"],
   td[style*="color: #1"], td[style*="color:#1"],
@@ -391,8 +376,64 @@ export function EmailIframeRenderer({
   font[color^="#6"], font[color^="#7"], font[color^="#8"], font[color^="#9"],
   font[color^="#a"], font[color^="#A"], font[color^="#b"], font[color^="#B"] {
     color: #9aa0a6 !important;
-  }
-  ` : ''}
+  }` : '';
+
+    const lightTextOverrides = !dark ? `
+  span[style*="color: #c"], span[style*="color:#c"],
+  span[style*="color: #d"], span[style*="color:#d"],
+  span[style*="color: #e"], span[style*="color:#e"],
+  span[style*="color: #f"], span[style*="color:#f"],
+  span[style*="color: #C"], span[style*="color:#C"],
+  span[style*="color: #D"], span[style*="color:#D"],
+  span[style*="color: #E"], span[style*="color:#E"],
+  span[style*="color: #F"], span[style*="color:#F"],
+  span[style*="color: rgb(2"], span[style*="color:rgb(2"],
+  p[style*="color: #c"], p[style*="color:#c"],
+  p[style*="color: #d"], p[style*="color:#d"],
+  p[style*="color: #e"], p[style*="color:#e"],
+  p[style*="color: #f"], p[style*="color:#f"],
+  p[style*="color: #C"], p[style*="color:#C"],
+  p[style*="color: #D"], p[style*="color:#D"],
+  p[style*="color: #E"], p[style*="color:#E"],
+  p[style*="color: #F"], p[style*="color:#F"],
+  p[style*="color: rgb(2"], p[style*="color:rgb(2"],
+  div[style*="color: #c"], div[style*="color:#c"],
+  div[style*="color: #d"], div[style*="color:#d"],
+  div[style*="color: #e"], div[style*="color:#e"],
+  div[style*="color: #f"], div[style*="color:#f"],
+  div[style*="color: #C"], div[style*="color:#C"],
+  div[style*="color: #D"], div[style*="color:#D"],
+  div[style*="color: #E"], div[style*="color:#E"],
+  div[style*="color: #F"], div[style*="color:#F"],
+  div[style*="color: rgb(2"], div[style*="color:rgb(2"],
+  td[style*="color: #c"], td[style*="color:#c"],
+  td[style*="color: #d"], td[style*="color:#d"],
+  td[style*="color: #e"], td[style*="color:#e"],
+  td[style*="color: #f"], td[style*="color:#f"],
+  td[style*="color: #C"], td[style*="color:#C"],
+  td[style*="color: #D"], td[style*="color:#D"],
+  td[style*="color: #E"], td[style*="color:#E"],
+  td[style*="color: #F"], td[style*="color:#F"],
+  td[style*="color: rgb(2"], td[style*="color:rgb(2"],
+  font[color^="#c"], font[color^="#d"], font[color^="#e"], font[color^="#f"],
+  font[color^="#C"], font[color^="#D"], font[color^="#E"], font[color^="#F"],
+  font[style*="color: #c"], font[style*="color:#c"],
+  font[style*="color: #d"], font[style*="color:#d"],
+  font[style*="color: #e"], font[style*="color:#e"],
+  font[style*="color: #f"], font[style*="color:#f"] {
+    color: #555555 !important;
+  }` : '';
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+${baseStyles}
+${richStyles}
+${darkBgOverrides}
+${lightTextOverrides}
 </style>
 ${headContent}
 </head>
@@ -416,13 +457,31 @@ ${headContent}
       if (!doc.body) return;
       const scrollH =
         doc.documentElement?.scrollHeight || doc.body.scrollHeight;
-      const newHeight = Math.max(scrollH + 16, 100);
+      const newHeight = Math.max(scrollH + 8, 80);
       setHeight(newHeight);
+    };
+
+    const updateScale = () => {
+      if (!doc.body || !containerRef.current) return;
+      const containerWidth = containerRef.current.clientWidth;
+      const contentWidth = Math.max(
+        doc.body.scrollWidth,
+        doc.documentElement?.scrollWidth || 0
+      );
+      if (contentWidth > containerWidth + 10) {
+        const newScale = containerWidth / contentWidth;
+        setScale(newScale);
+      } else {
+        setScale(1);
+      }
     };
 
     const handleLoad = () => {
       const images = doc.querySelectorAll("img");
-      const onImageLoad = () => updateHeight();
+      const onImageLoad = () => {
+        updateHeight();
+        updateScale();
+      };
 
       images.forEach((img) => {
         if (!img.complete) {
@@ -432,18 +491,27 @@ ${headContent}
       });
 
       updateHeight();
-      setTimeout(updateHeight, 150);
-      setTimeout(updateHeight, 600);
-      setTimeout(updateHeight, 2000);
+      updateScale();
+      setTimeout(() => { updateHeight(); updateScale(); }, 200);
+      setTimeout(() => { updateHeight(); updateScale(); }, 800);
+      setTimeout(() => { updateHeight(); updateScale(); }, 2000);
     };
 
     if (resizeObserverRef.current) {
       resizeObserverRef.current.disconnect();
     }
 
+    const ro = new ResizeObserver(() => {
+      updateHeight();
+      updateScale();
+    });
+    resizeObserverRef.current = ro;
+
     if (doc.body) {
-      resizeObserverRef.current = new ResizeObserver(() => updateHeight());
-      resizeObserverRef.current.observe(doc.body);
+      ro.observe(doc.body);
+    }
+    if (containerRef.current) {
+      ro.observe(containerRef.current);
     }
 
     const links = doc.querySelectorAll("a");
@@ -459,8 +527,8 @@ ${headContent}
           const m = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
           return m ? [+m[1], +m[2], +m[3]] as const : null;
         };
-        const isLightBg = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 > 140;
-        const isDarkText = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 < 100;
+        const isLightBg = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 > 180;
+        const isDarkText = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 < 80;
         const els = doc.querySelectorAll("*");
         els.forEach((el) => {
           const s = doc.defaultView?.getComputedStyle(el);
@@ -488,19 +556,33 @@ ${headContent}
     };
   }, [html, isDark, buildIframeContent]);
 
+  const scaledHeight = scale < 1 ? height * scale : height;
+
   return (
-    <div className={`email-iframe-wrapper ${className}`}>
+    <div
+      ref={containerRef}
+      className={`email-iframe-wrapper ${className}`}
+      style={{
+        overflow: "hidden",
+        ...(scale < 1 ? { height: `${scaledHeight}px` } : {}),
+      }}
+    >
       <iframe
         ref={iframeRef}
         sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
         style={{
-          width: "100%",
+          width: scale < 1 ? `${100 / scale}%` : "100%",
           height: `${height}px`,
           border: "none",
           display: "block",
-          overflowX: "hidden",
-          overflowY: "hidden",
+          overflow: "hidden",
           background: isDark ? "#1a1a1e" : "#ffffff",
+          ...(scale < 1
+            ? {
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              }
+            : {}),
         }}
         title="Email content"
         data-testid="iframe-email-content"
