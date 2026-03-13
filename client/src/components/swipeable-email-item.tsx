@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Archive, Trash2, Star, Check, RotateCcw, MoreHorizontal, Reply, ReplyAll, Forward, FolderInput, Flag, MailOpen } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Archive, Trash2, Star, Check, RotateCcw, MoreHorizontal, Reply, ReplyAll, Forward, FolderInput, Flag, MailOpen, X } from "lucide-react";
 import { SmartAvatar } from "@/components/smart-avatar";
 import {
   DropdownMenu,
@@ -88,6 +89,8 @@ export function SwipeableEmailItem({
   const [isRevealed, setIsRevealed] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [showSheet, setShowSheet] = useState(false);
+  const sheetTouchStartY = useRef(0);
   const [exitHeight, setExitHeight] = useState<number | null>(null);
   const [containerWidth, setContainerWidth] = useState(300);
   const startX = useRef(0);
@@ -288,198 +291,214 @@ export function SwipeableEmailItem({
   const iconOpacity = Math.min((absSwipe - 10) / 40, 1);
   const iconScale = Math.min(absSwipe / revealThreshold, 1);
 
-  const PILL_HEIGHT = 42;
-  const FIXED_BTN_WIDTH = 50;
+  const BTN_SIZE = 40;
   const GAP = 6;
   const PAD = 8;
 
   const deleteButtonWidth = isFullSwipe
     ? absSwipe - PAD * 2
-    : Math.max(0, absSwipe - FIXED_BTN_WIDTH - GAP - PAD * 2);
+    : Math.max(0, absSwipe - BTN_SIZE - GAP - PAD * 2);
 
-  const glossyPill = (bg: string, w: number) => ({
+  const actionBtn = (bg: string, w: number) => ({
     width: w,
-    height: PILL_HEIGHT,
-    borderRadius: 9999,
+    height: BTN_SIZE,
+    borderRadius: 10,
     background: bg,
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
-    boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1)',
-    border: '1px solid rgba(255,255,255,0.15)',
   });
 
-  const redBg = 'linear-gradient(145deg, rgba(220,50,50,0.25) 0%, rgba(180,30,30,0.3) 100%)';
-  const greenBg = 'linear-gradient(145deg, rgba(40,180,90,0.2) 0%, rgba(20,140,60,0.25) 100%)';
-  const neutralBg = 'rgba(255,255,255,0.08)';
+  const openSheet = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowSheet(true);
+  }, []);
 
-  const renderLeftAction = () => {
-    if (isTrashFolder) {
-      const firstBtnW = FIXED_BTN_WIDTH;
-      const secondBtnW = Math.max(0, absSwipe - firstBtnW - GAP - PAD * 2);
-      if (isFullSwipe) {
-        return (
-          <div className="flex items-center w-full" style={{ padding: `0 ${PAD}px` }}>
-            <button
-              onClick={handleActionClick(onPermanentDelete || onDelete, true)}
-              className="flex items-center justify-center gap-2"
-              style={{ ...glossyPill(redBg, absSwipe - PAD * 2), opacity: iconOpacity }}
-              data-testid={`swipe-delete-${emailId}`}
-            >
-              <Trash2 className="w-5 h-5 text-white" style={{ transform: `scale(${iconScale})` }} />
-              <span className="text-xs font-semibold text-white/95">Delete</span>
-            </button>
-          </div>
-        );
-      }
-      return (
-        <div className="flex items-center justify-end w-full" style={{ padding: `0 ${PAD}px`, gap: GAP }}>
-          <button
-            onClick={handleActionClick(onRestore || (() => {}))}
-            className="flex items-center justify-center flex-shrink-0"
-            style={{ ...glossyPill(greenBg, firstBtnW), opacity: iconOpacity }}
-            data-testid={`swipe-restore-${emailId}`}
-          >
-            <RotateCcw className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
-          </button>
-          {secondBtnW > 0 && (
-            <button
-              onClick={handleActionClick(onPermanentDelete || onDelete, true)}
-              className="flex items-center justify-center"
-              style={{ ...glossyPill(redBg, secondBtnW), opacity: iconOpacity }}
-              data-testid={`swipe-delete-${emailId}`}
-            >
-              <Trash2 className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
-            </button>
-          )}
-        </div>
-      );
-    }
+  const closeSheet = useCallback(() => {
+    setShowSheet(false);
+    setSwipeX(0);
+    setIsRevealed(false);
+  }, []);
 
-    if (isArchiveFolder) {
-      const firstBtnW = FIXED_BTN_WIDTH;
-      const secondBtnW = Math.max(0, absSwipe - firstBtnW - GAP - PAD * 2);
-      if (isFullSwipe) {
-        return (
-          <div className="flex items-center w-full" style={{ padding: `0 ${PAD}px` }}>
-            <button
-              onClick={handleActionClick(onDelete, true)}
-              className="flex items-center justify-center gap-2"
-              style={{ ...glossyPill(redBg, absSwipe - PAD * 2), opacity: iconOpacity }}
-              data-testid={`swipe-delete-${emailId}`}
-            >
-              <Trash2 className="w-5 h-5 text-white" style={{ transform: `scale(${iconScale})` }} />
-              <span className="text-xs font-semibold text-white/95">Delete</span>
-            </button>
-          </div>
-        );
-      }
-      return (
-        <div className="flex items-center justify-end w-full" style={{ padding: `0 ${PAD}px`, gap: GAP }}>
-          <button
-            onClick={handleActionClick(onRestore || (() => {}))}
-            className="flex items-center justify-center flex-shrink-0"
-            style={{ ...glossyPill(greenBg, firstBtnW), opacity: iconOpacity }}
-            data-testid={`swipe-restore-${emailId}`}
-          >
-            <RotateCcw className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
-          </button>
-          {secondBtnW > 0 && (
-            <button
-              onClick={handleActionClick(onDelete, true)}
-              className="flex items-center justify-center"
-              style={{ ...glossyPill(redBg, secondBtnW), opacity: iconOpacity }}
-              data-testid={`swipe-delete-${emailId}`}
-            >
-              <Trash2 className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
-            </button>
-          )}
-        </div>
-      );
-    }
+  const sheetAction = useCallback((action: () => void) => {
+    closeSheet();
+    action();
+  }, [closeSheet]);
+
+  const renderSwipeActions = () => {
+    const deleteAction = isTrashFolder && onPermanentDelete ? onPermanentDelete : onDelete;
+    const restoreAction = onRestore || (() => {});
 
     if (isFullSwipe) {
       return (
         <div className="flex items-center w-full" style={{ padding: `0 ${PAD}px` }}>
           <button
-            onClick={handleActionClick(onDelete, true)}
-            className="flex items-center justify-center gap-2"
-            style={{ ...glossyPill(redBg, absSwipe - PAD * 2), opacity: iconOpacity }}
+            onClick={handleActionClick(deleteAction, true)}
+            className="flex items-center justify-center gap-2 rounded-[10px]"
+            style={{ ...actionBtn("rgba(239,68,68,0.2)", absSwipe - PAD * 2), opacity: iconOpacity }}
             data-testid={`swipe-delete-${emailId}`}
           >
-            <Trash2 className="w-5 h-5 text-white" style={{ transform: `scale(${iconScale})` }} />
-            <span className="text-xs font-semibold text-white/95">Delete</span>
+            <Trash2 className="w-4 h-4 text-red-400" style={{ transform: `scale(${iconScale})` }} />
+            <span className="text-xs font-medium text-red-400">Delete</span>
           </button>
         </div>
       );
     }
 
+    if (isTrashFolder || isArchiveFolder) {
+      const secondBtnW = Math.max(0, absSwipe - BTN_SIZE - GAP - PAD * 2);
+      return (
+        <div className="flex items-center justify-end w-full" style={{ padding: `0 ${PAD}px`, gap: GAP }}>
+          <button
+            onClick={handleActionClick(restoreAction)}
+            className="flex items-center justify-center flex-shrink-0 rounded-[10px]"
+            style={{ ...actionBtn("rgba(34,197,94,0.15)", BTN_SIZE), opacity: iconOpacity }}
+            data-testid={`swipe-restore-${emailId}`}
+          >
+            <RotateCcw className="w-4 h-4 text-green-400" style={{ transform: `scale(${iconScale})` }} />
+          </button>
+          {secondBtnW > 0 && (
+            <button
+              onClick={handleActionClick(deleteAction, true)}
+              className="flex items-center justify-center rounded-[10px]"
+              style={{ ...actionBtn("rgba(239,68,68,0.15)", secondBtnW), opacity: iconOpacity }}
+              data-testid={`swipe-delete-${emailId}`}
+            >
+              <Trash2 className="w-4 h-4 text-red-400" style={{ transform: `scale(${iconScale})` }} />
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
     return (
       <div className="flex items-center justify-end w-full" style={{ padding: `0 ${PAD}px`, gap: GAP }}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center justify-center flex-shrink-0"
-              style={{ ...glossyPill(neutralBg, FIXED_BTN_WIDTH), opacity: iconOpacity }}
-              data-testid={`swipe-more-${emailId}`}
-            >
-              <MoreHorizontal className="w-4 h-4 text-foreground/80" style={{ transform: `scale(${iconScale})` }} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            {onReply && (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReply(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-${emailId}`}>
-                <Reply className="w-4 h-4 mr-2" />
-                Reply
+        {isMobile ? (
+          <button
+            onClick={openSheet}
+            className="flex items-center justify-center flex-shrink-0 rounded-[10px]"
+            style={{ ...actionBtn("rgba(255,255,255,0.06)", BTN_SIZE), opacity: iconOpacity }}
+            data-testid={`swipe-more-${emailId}`}
+          >
+            <MoreHorizontal className="w-4 h-4 text-foreground/60" style={{ transform: `scale(${iconScale})` }} />
+          </button>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center justify-center flex-shrink-0 rounded-[10px]"
+                style={{ ...actionBtn("rgba(255,255,255,0.06)", BTN_SIZE), opacity: iconOpacity }}
+                data-testid={`swipe-more-${emailId}`}
+              >
+                <MoreHorizontal className="w-4 h-4 text-foreground/60" style={{ transform: `scale(${iconScale})` }} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {onReply && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReply(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-${emailId}`}>
+                  <Reply className="w-4 h-4 mr-2" /> Reply
+                </DropdownMenuItem>
+              )}
+              {onReplyAll && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReplyAll(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-all-${emailId}`}>
+                  <ReplyAll className="w-4 h-4 mr-2" /> Reply All
+                </DropdownMenuItem>
+              )}
+              {onForward && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onForward(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-forward-${emailId}`}>
+                  <Forward className="w-4 h-4 mr-2" /> Forward
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {onMoveToFolder && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToFolder(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-move-${emailId}`}>
+                  <FolderInput className="w-4 h-4 mr-2" /> Move to Folder
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-archive-${emailId}`}>
+                <Archive className="w-4 h-4 mr-2" /> Archive
               </DropdownMenuItem>
-            )}
-            {onReplyAll && (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReplyAll(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-all-${emailId}`}>
-                <ReplyAll className="w-4 h-4 mr-2" />
-                Reply All
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStar(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-star-${emailId}`}>
+                <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
+                {isStarred ? "Unstar" : "Star"}
               </DropdownMenuItem>
-            )}
-            {onForward && (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onForward(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-forward-${emailId}`}>
-                <Forward className="w-4 h-4 mr-2" />
-                Forward
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            {onMoveToFolder && (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToFolder(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-move-${emailId}`}>
-                <FolderInput className="w-4 h-4 mr-2" />
-                Move to Folder
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-archive-${emailId}`}>
-              <Archive className="w-4 h-4 mr-2" />
-              Archive
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStar(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-star-${emailId}`}>
-              <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
-              {isStarred ? "Unstar" : "Star"}
-            </DropdownMenuItem>
-            {isRead && onMarkUnread && (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMarkUnread(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-mark-unread-${emailId}`}>
-                <MailOpen className="w-4 h-4 mr-2" />
-                Mark as Unread
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {isRead && onMarkUnread && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMarkUnread(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-mark-unread-${emailId}`}>
+                  <MailOpen className="w-4 h-4 mr-2" /> Mark as Unread
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {deleteButtonWidth > 0 && (
           <button
             onClick={handleActionClick(onDelete, true)}
-            className="flex items-center justify-center"
-            style={{ ...glossyPill(redBg, deleteButtonWidth), opacity: iconOpacity }}
+            className="flex items-center justify-center rounded-[10px]"
+            style={{ ...actionBtn("rgba(239,68,68,0.15)", deleteButtonWidth), opacity: iconOpacity }}
             data-testid={`swipe-delete-${emailId}`}
           >
-            <Trash2 className="w-4 h-4 text-white" style={{ transform: `scale(${iconScale})` }} />
+            <Trash2 className="w-4 h-4 text-red-400" style={{ transform: `scale(${iconScale})` }} />
           </button>
         )}
       </div>
+    );
+  };
+
+  const renderBottomSheet = () => {
+    if (!showSheet) return null;
+
+    const sheetOptions: { icon: any; label: string; action: () => void; color?: string; testId: string }[] = [];
+    if (onReply) sheetOptions.push({ icon: Reply, label: "Reply", action: () => sheetAction(onReply), testId: `sheet-reply-${emailId}` });
+    if (onReplyAll) sheetOptions.push({ icon: ReplyAll, label: "Reply All", action: () => sheetAction(onReplyAll), testId: `sheet-reply-all-${emailId}` });
+    if (onForward) sheetOptions.push({ icon: Forward, label: "Forward", action: () => sheetAction(onForward), testId: `sheet-forward-${emailId}` });
+    if (onMoveToFolder) sheetOptions.push({ icon: FolderInput, label: "Move to Folder", action: () => sheetAction(onMoveToFolder), testId: `sheet-move-${emailId}` });
+    sheetOptions.push({ icon: Archive, label: "Archive", action: () => sheetAction(onArchive), testId: `sheet-archive-${emailId}` });
+    sheetOptions.push({ icon: Star, label: isStarred ? "Unstar" : "Star", action: () => sheetAction(onToggleStar), color: isStarred ? "text-yellow-400" : undefined, testId: `sheet-star-${emailId}` });
+    if (isRead && onMarkUnread) sheetOptions.push({ icon: MailOpen, label: "Mark as Unread", action: () => sheetAction(onMarkUnread), testId: `sheet-unread-${emailId}` });
+    sheetOptions.push({ icon: Trash2, label: "Delete", action: () => { closeSheet(); animateExit(onDelete); }, color: "text-red-400", testId: `sheet-delete-${emailId}` });
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999]" onClick={closeSheet}>
+        <div className="absolute inset-0 bg-black/50" />
+        <div
+          className="absolute bottom-0 left-0 right-0 rounded-t-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => { sheetTouchStartY.current = e.touches[0].clientY; }}
+          onTouchMove={(e) => {
+            const dy = e.touches[0].clientY - sheetTouchStartY.current;
+            if (dy > 60) closeSheet();
+          }}
+          style={{ background: "rgba(26,26,32,0.98)", borderTop: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-9 h-1 rounded-full bg-white/15" />
+          </div>
+          <div className="flex items-center justify-between px-5 pb-2">
+            <p className="text-xs text-foreground/30 truncate max-w-[80%]">{subject}</p>
+            <button onClick={closeSheet} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/[0.06] cursor-pointer" data-testid="button-close-sheet">
+              <X className="w-3.5 h-3.5 text-foreground/40" />
+            </button>
+          </div>
+          <div className="px-3 pb-6 pt-1">
+            {sheetOptions.map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.testId}
+                  onClick={opt.action}
+                  className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left cursor-pointer transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
+                  data-testid={opt.testId}
+                >
+                  <Icon className={`w-[18px] h-[18px] ${opt.color || "text-foreground/50"}`} />
+                  <span className={`text-sm ${opt.color || "text-foreground/80"}`}>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>,
+      document.body
     );
   };
 
@@ -520,7 +539,7 @@ export function SwipeableEmailItem({
         className="absolute inset-y-0 right-0 flex items-center"
         style={{ width: absSwipe > 4 ? absSwipe : 0 }}
       >
-        {absSwipe > 4 && renderLeftAction()}
+        {absSwipe > 4 && renderSwipeActions()}
       </div>
 
       <div
@@ -678,6 +697,7 @@ export function SwipeableEmailItem({
         </div>
       </div>
     </div>
+    {renderBottomSheet()}
     </div>
   );
 }
