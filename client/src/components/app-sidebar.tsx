@@ -164,15 +164,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [deleteFolderTitle, setDeleteFolderTitle] = useState<string>("");
   const [renameFolderName, setRenameFolderName] = useState("");
   const [folderActionMenuOpen, setFolderActionMenuOpen] = useState<string | null>(null);
-  
-  // AI folder suggestion state
-  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
-  const [suggestedEmails, setSuggestedEmails] = useState<any[]>([]);
-  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
-  const [suggestionFolderId, setSuggestionFolderId] = useState<number | null>(null);
-  const [suggestionFolderName, setSuggestionFolderName] = useState("");
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
   
@@ -291,89 +282,40 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     },
   });
 
-  // Mutation to get AI suggestions for a folder
-  const getAiSuggestionsMutation = useMutation({
+  const aiAutoSortMutation = useMutation({
     mutationFn: async (folderId: number) => {
-      const response = await apiRequest("POST", `/api/folders/${folderId}/ai-suggest`);
-      return response.json();
-    },
-  });
-
-  // Mutation to bulk assign emails to folder
-  const bulkAssignMutation = useMutation({
-    mutationFn: async ({ folderId, messageIds }: { folderId: number; messageIds: string[] }) => {
-      const response = await apiRequest("POST", `/api/folders/${folderId}/bulk-assign`, { messageIds });
+      const response = await apiRequest("POST", `/api/folders/${folderId}/ai-auto-sort`);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
     },
   });
 
-  // Function to fetch AI suggestions for a newly created folder
-  const fetchAiSuggestions = useCallback(async (folderId: number, folderName: string) => {
-    setIsLoadingSuggestions(true);
-    setSuggestionFolderId(folderId);
-    setSuggestionFolderName(folderName);
-    setIsSuggestionOpen(true);
-    
+  const runAiAutoSort = useCallback(async (folderId: number, folderName: string) => {
+    toast({
+      title: `Sorting emails into "${folderName}"`,
+      description: "AI is scanning your inbox...",
+    });
     try {
-      const result = await getAiSuggestionsMutation.mutateAsync(folderId);
-      setSuggestedEmails(result.suggestions || []);
-      setSelectedSuggestions(new Set((result.suggestions || []).map((e: any) => e.id)));
-    } catch (error) {
-      console.error("Failed to get AI suggestions:", error);
-      setSuggestedEmails([]);
+      const result = await aiAutoSortMutation.mutateAsync(folderId);
+      const count = result.sorted || 0;
       toast({
-        title: "Could not analyze emails",
-        description: "We couldn't find matching emails. You can still add emails manually later.",
+        title: count > 0 ? `${count} email${count !== 1 ? "s" : ""} sorted` : "No matching emails found",
+        description: count > 0
+          ? `Moved ${count} email${count !== 1 ? "s" : ""} into "${folderName}"`
+          : `New emails matching "${folderName}" will be sorted automatically.`,
+      });
+    } catch (error) {
+      console.error("AI auto-sort failed:", error);
+      toast({
+        title: "Could not auto-sort",
+        description: "AI sorting failed. You can still move emails manually.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoadingSuggestions(false);
     }
-  }, [getAiSuggestionsMutation, toast]);
-
-  // Handle confirming AI suggestions
-  const handleConfirmSuggestions = useCallback(async () => {
-    if (suggestionFolderId && selectedSuggestions.size > 0) {
-      try {
-        await bulkAssignMutation.mutateAsync({
-          folderId: suggestionFolderId,
-          messageIds: Array.from(selectedSuggestions),
-        });
-        toast({
-          title: "Emails added",
-          description: `${selectedSuggestions.size} email${selectedSuggestions.size !== 1 ? "s" : ""} added to ${suggestionFolderName}`,
-        });
-      } catch (error) {
-        console.error("Failed to assign emails:", error);
-        toast({
-          title: "Failed to add emails",
-          description: "Some emails could not be added to the folder. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }
-    setIsSuggestionOpen(false);
-    setSuggestedEmails([]);
-    setSelectedSuggestions(new Set());
-    setSuggestionFolderId(null);
-    setSuggestionFolderName("");
-  }, [suggestionFolderId, selectedSuggestions, bulkAssignMutation, suggestionFolderName, toast]);
-
-  // Toggle email selection in suggestions
-  const toggleSuggestionSelection = useCallback((emailId: string) => {
-    setSelectedSuggestions(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(emailId)) {
-        newSet.delete(emailId);
-      } else {
-        newSet.add(emailId);
-      }
-      return newSet;
-    });
-  }, []);
+  }, [aiAutoSortMutation, toast]);
 
   // Long press handlers for folder actions (0.5 seconds for responsive feel)
   const handleFolderTouchStart = useCallback((folder: FolderItem) => {
@@ -418,9 +360,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         setNewFolderAiDescription("");
         setIsCreateOpen(false);
         
-        // If folder has AI description and Pro plan, fetch AI suggestions
         if (aiDesc && result.folder?.id && hasPro) {
-          fetchAiSuggestions(result.folder.id, folderName);
+          runAiAutoSort(result.folder.id, folderName);
         }
       } catch (error) {
         console.error("Failed to create folder:", error);
@@ -972,7 +913,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                   data-testid="input-folder-ai-description"
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  AI will scan your inbox and suggest matching emails to add.
+                  AI will automatically sort matching emails into this folder.
                 </p>
               </div>
             )}
@@ -1083,118 +1024,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         </DialogContent>
       </Dialog>
 
-      {/* AI Email Suggestions Dialog */}
-      <Dialog open={isSuggestionOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsSuggestionOpen(false);
-          setSuggestedEmails([]);
-          setSelectedSuggestions(new Set());
-          setSuggestionFolderId(null);
-          setSuggestionFolderName("");
-        }
-      }}>
-        <DialogContent className="sm:max-w-[500px] h-full sm:h-auto sm:max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Sparkles className="w-5 h-5 text-primary" />
-              AI Found Matching Emails
-            </DialogTitle>
-            <DialogDescription className="text-sm">
-              {isLoadingSuggestions 
-                ? "Analyzing your emails..."
-                : suggestedEmails.length > 0
-                  ? `These emails match your "${suggestionFolderName}" folder. Select which ones to add.`
-                  : "No matching emails were found in your inbox."
-              }
-            </DialogDescription>
-          </DialogHeader>
-          
-          {suggestedEmails.length > 0 && !isLoadingSuggestions && (
-            <div className="flex items-center justify-between px-1">
-              <button
-                onClick={() => {
-                  if (selectedSuggestions.size === suggestedEmails.length) {
-                    setSelectedSuggestions(new Set());
-                  } else {
-                    setSelectedSuggestions(new Set(suggestedEmails.map(e => e.id)));
-                  }
-                }}
-                className="text-xs text-primary font-medium"
-                data-testid="button-select-all-suggestions"
-              >
-                {selectedSuggestions.size === suggestedEmails.length ? "Deselect All" : "Select All"}
-              </button>
-              <span className="text-xs text-muted-foreground">
-                {selectedSuggestions.size} of {suggestedEmails.length} selected
-              </span>
-            </div>
-          )}
-
-          <div className="flex-1 overflow-y-auto -mx-6 px-6 py-2 space-y-2 min-h-0">
-            {isLoadingSuggestions ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="text-sm text-muted-foreground">Scanning your inbox...</p>
-              </div>
-            ) : suggestedEmails.length > 0 ? (
-              suggestedEmails.map((email) => (
-                <div 
-                  key={email.id}
-                  onClick={() => toggleSuggestionSelection(email.id)}
-                  className={`p-3 sm:p-3 rounded-xl cursor-pointer transition-all border ${
-                    selectedSuggestions.has(email.id)
-                      ? "bg-primary/10 border-primary/40"
-                      : "bg-white/[0.03] border-white/[0.06] active:bg-white/[0.08]"
-                  }`}
-                  data-testid={`suggestion-email-${email.id}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors ${
-                      selectedSuggestions.has(email.id)
-                        ? "bg-primary border-primary text-primary-foreground"
-                        : "border-muted-foreground/40"
-                    }`}>
-                      {selectedSuggestions.has(email.id) && (
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{email.sender}</div>
-                      <div className="text-sm text-foreground/80 truncate">{email.subject}</div>
-                      <div className="text-xs text-muted-foreground truncate mt-1">{email.preview}</div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center mb-3">
-                  <Sparkles className="w-5 h-5 text-muted-foreground/40" />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  No matching emails found. New emails that match this folder's criteria will be suggested automatically.
-                </p>
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter className="gap-2 pt-2 border-t border-white/[0.06]">
-            <Button variant="outline" onClick={() => setIsSuggestionOpen(false)}>
-              {suggestedEmails.length > 0 ? "Skip" : "Close"}
-            </Button>
-            {suggestedEmails.length > 0 && (
-              <Button 
-                onClick={handleConfirmSuggestions}
-                disabled={selectedSuggestions.size === 0 || bulkAssignMutation.isPending}
-              >
-                {bulkAssignMutation.isPending ? "Adding..." : `Add ${selectedSuggestions.size} Email${selectedSuggestions.size !== 1 ? "s" : ""}`}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <AccountSwitcher
         open={showAccountSwitcher}

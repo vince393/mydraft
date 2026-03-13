@@ -2727,8 +2727,8 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
-  // AI Folder Sort - analyze emails and suggest which ones match a folder's AI description
-  app.post("/api/folders/:id/ai-suggest", requireAuth, async (req, res) => {
+  // AI Folder Auto-Sort - analyze emails and automatically assign matches to the folder
+  app.post("/api/folders/:id/ai-auto-sort", requireAuth, async (req, res) => {
     try {
       const folderId = parseInt(req.params.id);
       if (isNaN(folderId)) {
@@ -2738,14 +2738,12 @@ Return ONLY valid JSON, no other text.`;
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
 
-      // Check if user has Pro plan for AI features
       if (user?.plan === "free") {
         return res
           .status(403)
           .json({ error: "AI folder sorting requires a Pro or Business plan" });
       }
 
-      // Get the folder and its AI description
       const folders = await storage.getCustomFolders(userId);
       const folder = folders.find((f) => f.id === folderId);
 
@@ -2767,10 +2765,9 @@ Return ONLY valid JSON, no other text.`;
       const emails = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 50 });
 
       if (!emails.length) {
-        return res.json({ suggestions: [] });
+        return res.json({ sorted: 0, folderName: folder.name });
       }
 
-      // Use OpenAI to analyze which emails match the folder's AI description
       const emailSummaries = emails.slice(0, 50).map((e: any) => ({
         id: e.id,
         sender: e.from || "Unknown",
@@ -2786,16 +2783,16 @@ Return ONLY valid JSON, no other text.`;
             role: "system",
             content: `You are an expert email sorting assistant. Your job is to find ALL emails that could reasonably belong in a user's custom folder based on its name and description.
 
-Be INCLUSIVE and BROAD in your matching - it's better to suggest too many emails than too few. The user can always deselect ones they don't want.
+Be INCLUSIVE and BROAD in your matching - it's better to include a borderline email than miss one.
 
 Matching criteria (use ALL of these):
 - Subject line keywords related to the folder topic
-- Sender names/domains associated with the topic (e.g., food delivery services, restaurant newsletters, recipe sites)
+- Sender names/domains associated with the topic
 - Preview/snippet text mentioning relevant terms
-- Industry or category associations (e.g., a folder called "Food" should match: restaurant receipts, food delivery confirmations, recipe newsletters, grocery orders, cooking tips, meal kit subscriptions, food coupons, dining reservations, etc.)
-- Related and adjacent topics (e.g., "Food" also matches: UberEats, DoorDash, Grubhub, HelloFresh, grocery store emails, Yelp restaurant reviews, OpenTable reservations)
+- Industry or category associations (e.g., a folder called "Food" should match: restaurant receipts, food delivery confirmations, recipe newsletters, grocery orders, cooking tips, etc.)
+- Related and adjacent topics (e.g., "Food" also matches: UberEats, DoorDash, Grubhub, HelloFresh, grocery store emails, etc.)
 
-Think broadly about what the user INTENDED when they created this folder. A "Food" folder means anything food-related. A "Shopping" folder means any purchase/order/retail email. Cast a wide net.`,
+Think broadly about what the user INTENDED when they created this folder.`,
           },
           {
             role: "user",
@@ -2816,37 +2813,36 @@ If truly nothing matches, return: []`,
 
       const responseText = aiResponse.choices[0]?.message?.content || "[]";
 
-      // Parse the AI response to get matching email IDs
       let matchingIds: string[] = [];
       try {
         const cleanResponse = responseText
           .replace(/```json\n?|\n?```/g, "")
           .trim();
-        matchingIds = JSON.parse(cleanResponse);
-        if (!Array.isArray(matchingIds)) {
-          matchingIds = [];
+        const parsed = JSON.parse(cleanResponse);
+        if (Array.isArray(parsed)) {
+          matchingIds = parsed.map(String);
         }
       } catch {
         console.error("Failed to parse AI response:", responseText);
-        matchingIds = [];
       }
 
-      // Filter emails to only include matches
-      const suggestions = emails
-        .filter((e: any) => matchingIds.includes(e.id))
-        .map((e: any) => ({
-          id: e.id,
-          sender: e.from || "Unknown",
-          senderEmail: e.fromEmail || "",
-          subject: e.subject || "(No subject)",
-          preview: e.preview || "",
-          date: e.date instanceof Date ? e.date.toISOString() : e.date ? new Date(e.date).toISOString() : null,
-        }));
+      const validInboxIds = new Set(emails.map((e: any) => String(e.id)));
+      const validIds = [...new Set(matchingIds)].filter(id => validInboxIds.has(id));
 
-      res.json({ suggestions, folderName: folder.name });
+      let assignedCount = 0;
+      for (const messageId of validIds) {
+        try {
+          await storage.assignEmailToFolder(userId, messageId, folderId);
+          assignedCount++;
+        } catch (err) {
+          console.error(`Failed to assign email ${messageId} to folder ${folderId}:`, err);
+        }
+      }
+
+      res.json({ sorted: assignedCount, folderName: folder.name });
     } catch (error) {
-      console.error("Error getting AI folder suggestions:", error);
-      res.status(500).json({ error: "Failed to get folder suggestions" });
+      console.error("Error in AI auto-sort:", error);
+      res.status(500).json({ error: "Failed to auto-sort emails" });
     }
   });
 
