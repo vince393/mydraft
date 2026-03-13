@@ -41,6 +41,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -123,9 +131,41 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
 
   const emailId = email ? ((email as any).nylasId || email.id) : null;
 
-  const { data: userSettings } = useQuery<{ aiPreferences?: { readAloudVoice?: string } }>({
+  const { data: userSettings } = useQuery<{ aiPreferences?: { readAloudVoice?: string; [key: string]: any } }>({
     queryKey: ["/api/settings"],
   });
+
+  const currentVoice = userSettings?.aiPreferences?.readAloudVoice || "nova";
+
+  const changeVoiceMutation = useMutation({
+    mutationFn: async (voice: string) => {
+      const currentPrefs = userSettings?.aiPreferences || {};
+      const response = await apiRequest("PUT", "/api/settings/ai-preferences", {
+        aiPreferences: { ...currentPrefs, readAloudVoice: voice },
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({ title: "Voice updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update voice", variant: "destructive" });
+    },
+  });
+
+  const VOICES = [
+    { id: "nova", label: "Nova" },
+    { id: "alloy", label: "Alloy" },
+    { id: "echo", label: "Echo" },
+    { id: "fable", label: "Fable" },
+    { id: "onyx", label: "Onyx" },
+    { id: "shimmer", label: "Shimmer" },
+    { id: "ash", label: "Ash" },
+    { id: "ballad", label: "Ballad" },
+    { id: "coral", label: "Coral" },
+    { id: "sage", label: "Sage" },
+  ];
 
   const summaryMutation = useMutation({
     mutationFn: async ({ id, subject, body }: { id: string | number; subject: string; body: string }) => {
@@ -273,7 +313,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     }
 
     const fullText = subjectText ? `${subjectText}. ${bodyText}` : bodyText;
-    const voice = userSettings?.aiPreferences?.readAloudVoice || "nova";
+    const voice = currentVoice;
 
     setReadAloudState("loading");
     const abortController = new AbortController();
@@ -786,22 +826,51 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   </span>
                 )}
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs px-3"
-                onClick={handleReadAloud}
-                data-testid="button-read-aloud-top"
-              >
-                {readAloudState === "loading" ? (
-                  <Loader2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 animate-spin" />
-                ) : readAloudState === "playing" || readAloudState === "paused" ? (
-                  <Square className="w-3.5 h-3.5 sm:w-3 sm:h-3 fill-current" />
-                ) : (
-                  <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                )}
-                {readAloudState === "loading" ? "Loading..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
-              </Button>
+              <div className="flex items-center">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs px-3 rounded-r-none"
+                  onClick={handleReadAloud}
+                  data-testid="button-read-aloud-top"
+                >
+                  {readAloudState === "loading" ? (
+                    <Loader2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 animate-spin" />
+                  ) : readAloudState === "playing" || readAloudState === "paused" ? (
+                    <Square className="w-3.5 h-3.5 sm:w-3 sm:h-3 fill-current" />
+                  ) : (
+                    <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                  )}
+                  {readAloudState === "loading" ? "Loading..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-10 sm:h-8 px-1.5 rounded-l-none border-l border-border/30"
+                      data-testid="button-voice-picker"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Voice</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {VOICES.map((v) => (
+                      <DropdownMenuItem
+                        key={v.id}
+                        onClick={() => changeVoiceMutation.mutate(v.id)}
+                        className="text-xs gap-2"
+                        data-testid={`voice-pick-${v.id}`}
+                      >
+                        <span className={currentVoice === v.id ? "text-primary font-medium" : ""}>{v.label}</span>
+                        {currentVoice === v.id && <Circle className="w-2 h-2 fill-primary text-primary ml-auto" />}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
 
@@ -884,22 +953,51 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       </span>
                     )}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs rounded-full px-3"
-                    onClick={handleReadAloud}
-                    data-testid="button-read-aloud"
-                  >
-                    {readAloudState === "loading" ? (
-                      <Loader2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 animate-spin" />
-                    ) : readAloudState === "playing" || readAloudState === "paused" ? (
-                      <Square className="w-3.5 h-3.5 sm:w-3 sm:h-3 fill-current" />
-                    ) : (
-                      <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    )}
-                    {readAloudState === "loading" ? "Loading..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
-                  </Button>
+                  <div className="flex items-center">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs rounded-full rounded-r-none px-3"
+                      onClick={handleReadAloud}
+                      data-testid="button-read-aloud"
+                    >
+                      {readAloudState === "loading" ? (
+                        <Loader2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 animate-spin" />
+                      ) : readAloudState === "playing" || readAloudState === "paused" ? (
+                        <Square className="w-3.5 h-3.5 sm:w-3 sm:h-3 fill-current" />
+                      ) : (
+                        <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                      )}
+                      {readAloudState === "loading" ? "Loading..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-10 sm:h-8 px-1.5 rounded-full rounded-l-none border-l border-border/30"
+                          data-testid="button-voice-picker-bottom"
+                        >
+                          <ChevronDown className="w-3 h-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Voice</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {VOICES.map((v) => (
+                          <DropdownMenuItem
+                            key={v.id}
+                            onClick={() => changeVoiceMutation.mutate(v.id)}
+                            className="text-xs gap-2"
+                            data-testid={`voice-pick-bottom-${v.id}`}
+                          >
+                            <span className={currentVoice === v.id ? "text-primary font-medium" : ""}>{v.label}</span>
+                            {currentVoice === v.id && <Circle className="w-2 h-2 fill-primary text-primary ml-auto" />}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </>
               )}
             </div>

@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Menu } from "lucide-react";
+import { Settings, LogOut, User, Mail, Crown, Link, ArrowLeft, RefreshCw, Megaphone, Menu, FolderInput } from "lucide-react";
 import { SiGmail } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   const [showMultiEmailModal, setShowMultiEmailModal] = useState(false);
   const [multiEmailSelection, setMultiEmailSelection] = useState<EmailWithNylasId[]>([]);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [moveToFolderEmailId, setMoveToFolderEmailId] = useState<string | number | null>(null);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [hidingDetail, setHidingDetail] = useState(false);
@@ -176,10 +177,9 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   const effectiveFolder = isCategoryView ? "inbox" : activeFolder;
 
   // Validate custom folder still exists - redirect to inbox if deleted
-  interface FoldersResponse { folders: { id: number; title: string; }[]; }
+  interface FoldersResponse { folders: { id: number; name: string; icon?: string; }[]; }
   const { data: foldersData } = useQuery<FoldersResponse>({
     queryKey: ["/api/folders"],
-    enabled: isCustomFolder,
   });
 
   useEffect(() => {
@@ -647,12 +647,31 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     handleSelectEmail(email);
   };
 
+  const moveToFolderMutation = useMutation({
+    mutationFn: async ({ emailId, folderId }: { emailId: string | number; folderId: number }) => {
+      const response = await apiRequest("POST", `/api/folders/${folderId}/bulk-assign`, {
+        messageIds: [String(emailId)],
+      });
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      const folder = foldersData?.folders?.find(f => f.id === variables.folderId);
+      toast({
+        title: `Moved to ${folder?.name || "folder"}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails", "fresh"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
+      setMoveToFolderEmailId(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to move email", variant: "destructive" });
+    },
+  });
+
   const handleMoveToFolder = (emailId: string | number) => {
-    // Select the email so user can use move to folder in email detail
-    const email = emails.find(e => getEmailId(e) === emailId);
-    if (email) {
-      handleSelectEmail(email);
-    }
+    setMoveToFolderEmailId(emailId);
   };
 
   const handleToggleFlag = (emailId: string | number) => {
@@ -916,6 +935,47 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
         open={showAccountSwitcher}
         onOpenChange={setShowAccountSwitcher}
       />
+
+      {moveToFolderEmailId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setMoveToFolderEmailId(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative bg-card border border-border rounded-xl shadow-2xl w-[320px] max-h-[400px] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="move-to-folder-dialog"
+          >
+            <div className="p-4 border-b border-border/50">
+              <h3 className="text-sm font-semibold">Move to Folder</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Choose a folder for this email</p>
+            </div>
+            <div className="overflow-y-auto max-h-[300px] p-2">
+              {foldersData?.folders && foldersData.folders.length > 0 ? (
+                foldersData.folders.map((folder) => (
+                  <button
+                    key={folder.id}
+                    className="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
+                    onClick={() => {
+                      moveToFolderMutation.mutate({
+                        emailId: moveToFolderEmailId,
+                        folderId: folder.id,
+                      });
+                    }}
+                    disabled={moveToFolderMutation.isPending}
+                    data-testid={`folder-option-${folder.id}`}
+                  >
+                    <FolderInput className="w-4 h-4 text-muted-foreground" />
+                    <span>{folder.name}</span>
+                  </button>
+                ))
+              ) : (
+                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  No custom folders yet. Create one in the sidebar first.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
