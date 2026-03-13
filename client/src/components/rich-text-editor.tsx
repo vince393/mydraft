@@ -1,5 +1,5 @@
-import { useRef, useEffect, useCallback } from "react";
-import { Bold, Italic, Underline, List, ListOrdered, Link, RemoveFormatting, Undo, Redo } from "lucide-react";
+import { useRef, useEffect, useCallback, useState } from "react";
+import { Bold, Italic, Underline, List, ListOrdered, Link, RemoveFormatting, Undo, Redo, Type } from "lucide-react";
 
 interface RichTextEditorProps {
   value: string;
@@ -19,6 +19,7 @@ export function RichTextEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const isInternalChange = useRef(false);
   const lastValueRef = useRef(value);
+  const [toolbarOpen, setToolbarOpen] = useState(false);
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -140,36 +141,6 @@ export function RichTextEditor({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div
-        className="flex items-center gap-0.5 px-4 py-1.5 border-b border-white/[0.04] flex-shrink-0"
-        data-testid="rich-text-toolbar"
-      >
-        {buttons.map((btn, i) => {
-          if (btn.cmd === "separator") {
-            return <div key={i} className="w-px h-4 bg-white/[0.06] mx-1" />;
-          }
-          const Icon = btn.icon!;
-          return (
-            <button
-              key={btn.cmd}
-              type="button"
-              title={btn.title}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (btn.action) {
-                  btn.action();
-                } else {
-                  exec(btn.cmd);
-                }
-              }}
-              className="w-7 h-7 rounded flex items-center justify-center text-foreground/40 hover:text-foreground/70 hover:bg-white/[0.04] transition-colors cursor-pointer"
-              data-testid={`button-format-${btn.cmd}`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-            </button>
-          );
-        })}
-      </div>
       <div className="relative flex-1 min-h-0 overflow-y-auto">
         <div
           ref={editorRef}
@@ -189,6 +160,52 @@ export function RichTextEditor({
             aria-hidden
           >
             {placeholder}
+          </div>
+        )}
+      </div>
+      <div
+        className="flex items-center border-t border-white/[0.04] flex-shrink-0 px-2 py-1"
+        data-testid="rich-text-toolbar"
+      >
+        <button
+          type="button"
+          title={toolbarOpen ? "Hide formatting" : "Formatting options"}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setToolbarOpen(!toolbarOpen);
+          }}
+          className={`w-7 h-7 rounded flex items-center justify-center transition-colors cursor-pointer ${toolbarOpen ? "text-primary bg-primary/10" : "text-foreground/40 hover:text-foreground/70 hover:bg-white/[0.04]"}`}
+          data-testid="button-toggle-toolbar"
+        >
+          <Type className="w-3.5 h-3.5" />
+        </button>
+        {toolbarOpen && (
+          <div className="flex items-center gap-0.5 ml-1">
+            {buttons.map((btn, i) => {
+              if (btn.cmd === "separator") {
+                return <div key={i} className="w-px h-4 bg-white/[0.06] mx-1" />;
+              }
+              const Icon = btn.icon!;
+              return (
+                <button
+                  key={btn.cmd}
+                  type="button"
+                  title={btn.title}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (btn.action) {
+                      btn.action();
+                    } else {
+                      exec(btn.cmd);
+                    }
+                  }}
+                  className="w-7 h-7 rounded flex items-center justify-center text-foreground/40 hover:text-foreground/70 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                  data-testid={`button-format-${btn.cmd}`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
