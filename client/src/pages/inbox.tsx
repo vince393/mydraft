@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -67,6 +67,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   const [hidingDetail, setHidingDetail] = useState(false);
   const [optimisticStars, setOptimisticStars] = useState<Map<string | number, boolean>>(new Map());
   const [optimisticRemovals, setOptimisticRemovals] = useState<Set<string | number>>(new Set());
+  const recentlyRemovedRef = useRef<Map<string | number, EmailWithNylasId>>(new Map());
   const [isManualRefresh, setIsManualRefresh] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -195,12 +196,36 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   }, []);
 
   const removeEmailFromCache = useCallback((emailId: string | number) => {
+    const cached = queryClient.getQueryData<EmailWithNylasId[]>(["/api/emails", "cached"]);
+    const fresh = queryClient.getQueryData<EmailWithNylasId[]>(["/api/emails", "fresh"]);
+    const allEmails = fresh || cached || [];
+    const email = allEmails.find(e => (e.nylasId || e.id) === emailId);
+    if (email) {
+      recentlyRemovedRef.current.set(emailId, email);
+      if (recentlyRemovedRef.current.size > 20) {
+        const firstKey = recentlyRemovedRef.current.keys().next().value;
+        if (firstKey !== undefined) recentlyRemovedRef.current.delete(firstKey);
+      }
+    }
     const filterOut = (old: EmailWithNylasId[] | undefined) => {
       if (!old) return old;
       return old.filter(e => (e.nylasId || e.id) !== emailId);
     };
     queryClient.setQueryData<EmailWithNylasId[]>(["/api/emails", "cached"], filterOut);
     queryClient.setQueryData<EmailWithNylasId[]>(["/api/emails", "fresh"], filterOut);
+  }, []);
+
+  const addEmailToCache = useCallback((email: EmailWithNylasId) => {
+    const inserter = (old: EmailWithNylasId[] | undefined) => {
+      if (!old) return [email];
+      const id = email.nylasId || email.id;
+      if (old.some(e => (e.nylasId || e.id) === id)) return old;
+      const updated = [email, ...old];
+      updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return updated;
+    };
+    queryClient.setQueryData<EmailWithNylasId[]>(["/api/emails", "cached"], inserter);
+    queryClient.setQueryData<EmailWithNylasId[]>(["/api/emails", "fresh"], inserter);
   }, []);
 
   const updateEmailInCache = useCallback((emailId: string | number, updates: Partial<EmailWithNylasId>) => {
@@ -431,12 +456,6 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
 
   const restoreEmailMutation = useMutation({
     mutationFn: async ({ emailId, folder }: { emailId: string | number; folder: string }) => {
-      // Remove from optimistic removals immediately
-      setOptimisticRemovals(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(emailId);
-        return newSet;
-      });
       const response = await apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
       if (!response.ok) {
         const error = await response.json();
@@ -444,8 +463,20 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       }
       return { emailId, folder };
     },
+    onMutate: async ({ emailId, folder }) => {
+      setOptimisticRemovals(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(emailId);
+        return newSet;
+      });
+      const savedEmail = recentlyRemovedRef.current.get(emailId);
+      if (savedEmail) {
+        const restored = { ...savedEmail, folder };
+        addEmailToCache(restored);
+        recentlyRemovedRef.current.delete(emailId);
+      }
+    },
     onSuccess: () => {
-      invalidateEmailCache();
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       toast({
         title: "Email restored",
@@ -453,7 +484,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       });
     },
     onError: (error: Error, variables) => {
-      // Re-add to optimistic removals on error
+      removeEmailFromCache(variables.emailId);
       setOptimisticRemovals(prev => new Set(prev).add(variables.emailId));
       toast({
         title: "Failed to restore email",
