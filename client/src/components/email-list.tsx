@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect, type ReactNode } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare, ArrowDown } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare, ArrowDown, Plus, Shield, Inbox } from "lucide-react";
 import { useScreenSize } from "@/hooks/use-screen-size";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -101,22 +101,30 @@ function EmailListSkeleton() {
 function EmailListEmpty({ hasConnectedAccount, onConnectAccount }: { hasConnectedAccount: boolean; onConnectAccount?: () => void }) {
   if (!hasConnectedAccount) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <div className="w-16 h-16 rounded-full bg-muted/30 flex flex-wrap items-center justify-center mb-5">
-          <svg className="w-7 h-7 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-          </svg>
+      <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
+        <div className="relative mb-8">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/15 to-violet-500/15 border border-blue-500/10 flex items-center justify-center">
+            <Mail className="w-9 h-9 text-blue-400/60" />
+          </div>
+          <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-blue-500/20 border border-blue-500/15 flex items-center justify-center">
+            <Plus className="w-3.5 h-3.5 text-blue-400" />
+          </div>
         </div>
-        <h3 className="font-medium text-lg mb-1.5 tracking-tight">Connect your email</h3>
-        <p className="text-sm text-muted-foreground/70 mb-5">Add an account to start managing your inbox</p>
+        <h3 className="font-semibold text-lg mb-2 tracking-tight text-foreground/90">Welcome to MyDraft</h3>
+        <p className="text-sm text-muted-foreground/60 mb-2 max-w-[240px] leading-relaxed">Connect your Gmail or Outlook account to start managing your inbox with AI</p>
+        <div className="flex items-center gap-4 mb-6 text-xs text-muted-foreground/40">
+          <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Secure OAuth</span>
+          <span className="flex items-center gap-1"><Sparkles className="w-3 h-3" /> AI-powered</span>
+        </div>
         {onConnectAccount && (
           <Button 
             onClick={onConnectAccount}
-            className="gap-2"
+            className="gap-2 px-6"
+            size="lg"
             data-testid="button-connect-email-empty"
           >
             <Link className="w-4 h-4" />
-            Add Account
+            Connect Account
           </Button>
         )}
       </div>
@@ -124,14 +132,12 @@ function EmailListEmpty({ hasConnectedAccount, onConnectAccount }: { hasConnecte
   }
   
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-8">
-      <div className="w-16 h-16 rounded-full bg-muted/20 flex flex-wrap items-center justify-center mb-5">
-        <svg className="w-7 h-7 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
+    <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
+      <div className="w-16 h-16 rounded-2xl bg-muted/20 border border-border/10 flex items-center justify-center mb-5">
+        <Inbox className="w-7 h-7 text-muted-foreground/30" />
       </div>
-      <h3 className="font-medium text-lg mb-1.5 tracking-tight">No emails yet</h3>
-      <p className="text-sm text-muted-foreground/70">Your inbox is empty</p>
+      <h3 className="font-medium text-lg mb-1.5 tracking-tight">All caught up</h3>
+      <p className="text-sm text-muted-foreground/50">No emails in this folder</p>
     </div>
   );
 }

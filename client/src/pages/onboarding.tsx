@@ -296,7 +296,7 @@ export default function OnboardingPage() {
         <div className="absolute bottom-[20%] right-[15%] w-[400px] h-[400px] bg-violet-600/[0.03] rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-3 sm:px-4 py-6 sm:py-8">
         <div className="w-full max-w-lg">
           <div className="flex justify-center mb-8">
             <img src={logoPath} alt="MyDraft" className="h-6 w-auto opacity-50" />
@@ -606,19 +606,19 @@ function PlanSelectionStep({
           <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Here's the perfect plan for you</h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 rounded-2xl overflow-hidden border border-white/[0.08]">
-          <div className="p-6 sm:p-8 flex flex-col">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-white/[0.08]">
+          <div className="p-5 sm:p-8 flex flex-col">
             <Badge className="bg-blue-500 text-white text-xs mb-5 w-fit">
               <Star className="w-3 h-3 mr-1" />
               Recommended for you
             </Badge>
 
-            <h2 className="text-3xl font-bold mb-1">{plan.name}</h2>
-            <p className="text-sm text-muted-foreground/60 mb-5">{plan.description}</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-1">{plan.name}</h2>
+            <p className="text-sm text-muted-foreground/60 mb-4 sm:mb-5">{plan.description}</p>
 
             <div className="flex items-baseline gap-1 mb-1">
-              <span className="text-4xl font-bold">{displayPrice}</span>
-              <span className="text-muted-foreground/50">{displayPeriod}</span>
+              <span className="text-3xl sm:text-4xl font-bold">{displayPrice}</span>
+              <span className="text-muted-foreground/50 text-sm">{displayPeriod}</span>
             </div>
             {billingInterval === "annual" && plan.id !== "free" && (
               <p className="text-xs text-muted-foreground/50 mb-4">
@@ -685,13 +685,13 @@ function PlanSelectionStep({
             </div>
           </div>
 
-          <div className="p-6 sm:p-8 bg-gradient-to-br from-blue-500/[0.04] via-transparent to-violet-500/[0.04] flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-white/[0.06]">
-            <div className="space-y-6">
+          <div className="p-5 sm:p-8 bg-gradient-to-br from-blue-500/[0.04] via-transparent to-violet-500/[0.04] flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-white/[0.06]">
+            <div className="space-y-5 sm:space-y-6">
               <div>
                 <p className="text-xs text-muted-foreground/50 mb-1.5">Based on your email volume</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-bold text-emerald-400">{yearlyTimeSaved}+</span>
-                  <span className="text-lg text-muted-foreground/50">hours saved/year</span>
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="text-4xl sm:text-5xl font-bold text-emerald-400">{yearlyTimeSaved}+</span>
+                  <span className="text-base sm:text-lg text-muted-foreground/50">hours saved/year</span>
                 </div>
                 <p className="text-xs text-muted-foreground/40 mt-1">
                   That's like getting <span className="text-foreground/70 font-medium">{Math.round(yearlyTimeSaved / 8)} extra workdays</span> back
@@ -783,20 +783,20 @@ function PlanSelectionStep({
                   Recommended
                 </Badge>
               )}
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <div className="font-semibold text-sm">{plan.name}</div>
-                  <div className="text-xs text-muted-foreground/50 mt-0.5">{plan.description}</div>
-                  <div className="flex flex-wrap gap-x-2 mt-2">
+                  <div className="text-xs text-muted-foreground/50 mt-0.5 break-words">{plan.description}</div>
+                  <div className="flex flex-wrap gap-x-2 gap-y-1 mt-2">
                     {plan.features.slice(0, 2).map((f) => (
                       <span key={f} className="text-[10px] text-muted-foreground/40 flex items-center gap-1">
                         <Check className="w-2.5 h-2.5 text-emerald-400 flex-shrink-0" />
-                        {f}
+                        <span className="break-words">{f}</span>
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0 ml-4">
+                <div className="text-right flex-shrink-0">
                   <div className="text-lg font-bold">{displayPrice}</div>
                   <div className="text-[10px] text-muted-foreground/40">{displayPeriod}</div>
                   {billingInterval === "annual" && plan.id !== "free" && (

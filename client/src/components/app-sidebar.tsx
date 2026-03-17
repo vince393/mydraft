@@ -201,7 +201,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   });
 
   const userEmail = userData?.user?.email || "";
-  const sidebarUserName = userEmail.split("@")[0] || "User";
+  const rawUserName = ((userData?.user as any)?.displayName || userEmail.split("@")[0] || "User") as string;
+  const sidebarUserName = rawUserName.length > 20 ? rawUserName.slice(0, 20) : rawUserName;
   const sidebarUserInitials = sidebarUserName.slice(0, 2).toUpperCase();
   const sidebarUserPlan = userData?.user?.plan || "free";
 
@@ -785,8 +786,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                       {sidebarUserInitials}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col items-start min-w-0">
-                    <span className="text-sm font-medium truncate max-w-[120px]">{sidebarUserName}</span>
+                  <div className="flex flex-col items-start min-w-0 overflow-hidden">
+                    <span className="text-sm font-medium truncate w-full max-w-[100px]">{sidebarUserName}</span>
                     <span className="text-[10px] text-muted-foreground/60 capitalize">{sidebarUserPlan}</span>
                   </div>
                 </button>
@@ -841,7 +842,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {isMobile && <NotificationBell />}
+          {isMobile && <div className="flex-shrink-0"><NotificationBell /></div>}
         </div>
       </SidebarFooter>
     </>

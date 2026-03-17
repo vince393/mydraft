@@ -882,13 +882,31 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center max-w-[280px]">
-                <div className="w-16 h-16 rounded-2xl bg-muted/30 border border-border/20 flex items-center justify-center mx-auto mb-5">
-                  <Mail className="w-7 h-7 text-muted-foreground/25" />
+              {!userData?.user?.connectedEmail ? (
+                <div className="text-center max-w-[300px] px-4">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/10 to-violet-500/10 border border-blue-500/10 flex items-center justify-center mx-auto mb-6">
+                    <Mail className="w-9 h-9 text-blue-400/40" />
+                  </div>
+                  <p className="text-base font-semibold text-foreground/70 mb-2">Get started with MyDraft</p>
+                  <p className="text-sm text-muted-foreground/40 leading-relaxed mb-5">Connect your Gmail or Outlook account to start reading and replying to emails with AI assistance</p>
+                  <Button
+                    onClick={() => setLocation("/connect-email")}
+                    className="gap-2 px-6"
+                    data-testid="button-connect-email-detail"
+                  >
+                    <Link className="w-4 h-4" />
+                    Connect Account
+                  </Button>
                 </div>
-                <p className="text-sm font-medium text-muted-foreground/40 mb-1">No email selected</p>
-                <p className="text-xs text-muted-foreground/25 leading-relaxed">Choose an email from the list to read, reply, or draft a response</p>
-              </div>
+              ) : (
+                <div className="text-center max-w-[280px]">
+                  <div className="w-16 h-16 rounded-2xl bg-muted/30 border border-border/20 flex items-center justify-center mx-auto mb-5">
+                    <Mail className="w-7 h-7 text-muted-foreground/25" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground/40 mb-1">No email selected</p>
+                  <p className="text-xs text-muted-foreground/25 leading-relaxed">Choose an email from the list to read, reply, or draft a response</p>
+                </div>
+              )}
             </div>
           )}
         </div>

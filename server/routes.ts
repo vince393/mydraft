@@ -1136,8 +1136,17 @@ export async function registerRoutes(
         return res.status(404).json({ error: "User not found" });
       }
 
+      if (displayName !== undefined) {
+        if (typeof displayName !== "string") {
+          return res.status(400).json({ error: "Display name must be a string" });
+        }
+        if (displayName.length > 30) {
+          return res.status(400).json({ error: "Display name must be 30 characters or less" });
+        }
+      }
+
       const updatedUser = await storage.updateUser(userId, {
-        displayName: displayName !== undefined ? displayName : user.displayName,
+        displayName: displayName !== undefined ? String(displayName || "").slice(0, 30) : user.displayName,
         avatarUrl: avatarUrl !== undefined ? avatarUrl : user.avatarUrl,
       });
 
