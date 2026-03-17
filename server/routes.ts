@@ -8894,6 +8894,58 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  // Reactivate subscription (undo cancel-at-period-end)
+  app.post("/api/stripe/reactivate", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.stripeSubscriptionId) {
+        return res
+          .status(400)
+          .json({ error: "No subscription to reactivate. Please subscribe first." });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+
+      if (subscription.status !== 'active' && subscription.status !== 'trialing') {
+        return res
+          .status(400)
+          .json({ error: `Subscription is ${subscription.status} and cannot be reactivated. Please subscribe again.` });
+      }
+
+      if (!subscription.cancel_at_period_end) {
+        return res.json({ success: true, message: "Subscription is already active." });
+      }
+
+      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: false,
+      });
+
+      await storage.createActivityLog(
+        user.id,
+        user.email,
+        "subscription_reactivated",
+        `Subscription reactivated — cancellation undone`,
+      );
+
+      res.json({
+        success: true,
+        message: "Your subscription has been reactivated.",
+      });
+    } catch (error: any) {
+      console.error("Error reactivating subscription:", error);
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to reactivate subscription" });
+    }
+  });
+
   // Change plan (upgrade/downgrade between paid plans with proration)
   app.post("/api/stripe/change-plan", requireAuth, async (req, res) => {
     try {

@@ -1018,6 +1018,28 @@ function BillingTab({ settings }: { settings: Settings }) {
     },
   });
 
+  const reactivateMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/stripe/reactivate", {});
+      return response.json();
+    },
+    onSuccess: (data: { message?: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stripe/billing-info"] });
+      toast({
+        title: "Subscription reactivated",
+        description: data.message || "Your subscription is active again.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to reactivate",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -1063,10 +1085,20 @@ function BillingTab({ settings }: { settings: Settings }) {
 
           {billingInfo?.cancelAtPeriodEnd && billingInfo?.nextBillDate && (
             <div className="p-3 rounded-lg bg-amber-500/[0.05] border border-amber-500/15">
-              <p className="text-[12px] text-foreground/80">
+              <p className="text-[12px] text-foreground/80 mb-2">
                 Cancels on <span className="font-medium">{formatDate(billingInfo.nextBillDate)}</span>. 
                 You'll keep {currentPlan.name} features until then.
               </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => reactivateMutation.mutate()}
+                disabled={reactivateMutation.isPending}
+                data-testid="button-reactivate-subscription"
+              >
+                {reactivateMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                Keep my subscription
+              </Button>
             </div>
           )}
 

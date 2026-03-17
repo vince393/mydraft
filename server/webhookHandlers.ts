@@ -1,6 +1,24 @@
 import { getStripeSync, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
 
+const KNOWN_PRICE_AMOUNTS: Record<number, 'pro' | 'premium'> = {
+  1000: 'pro',     // Pro monthly: $10/mo
+  9900: 'pro',     // Pro annual: $99/yr
+  2900: 'premium', // Business monthly: $29/mo
+  29900: 'premium', // Business annual: $299/yr
+};
+
+function determinePlanFromAmount(amount: number): 'free' | 'pro' | 'premium' {
+  return KNOWN_PRICE_AMOUNTS[amount] || 'free';
+}
+
+function determinePlanFromMetadataOrAmount(metadata: any, amount: number): 'free' | 'pro' | 'premium' {
+  const planFromMetadata = metadata?.plan;
+  if (planFromMetadata === 'pro') return 'pro';
+  if (planFromMetadata === 'premium' || planFromMetadata === 'business') return 'premium';
+  return determinePlanFromAmount(amount);
+}
+
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
@@ -12,25 +30,21 @@ export class WebhookHandlers {
       );
     }
 
-    // Let stripe-replit-sync handle the webhook and sync to database
     const sync = await getStripeSync();
     await sync.processWebhook(payload, signature);
 
-    // Also handle custom business logic for subscription events
-    try {
-      const stripe = await getUncachableStripeClient();
-      const event = stripe.webhooks.constructEvent(
-        payload,
-        signature,
-        process.env.STRIPE_WEBHOOK_SECRET || ''
-      );
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+    if (webhookSecret) {
+      const stripe = await getUncachableStripeClient();
+      const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
       await WebhookHandlers.handleStripeEvent(event);
-    } catch (err) {
-      // If webhook secret not set, try to parse event directly for handling
-      // This is a fallback for development - managed webhooks handle signature verification
+    } else if (process.env.NODE_ENV === 'development') {
+      console.warn('[Webhook] No STRIPE_WEBHOOK_SECRET set — processing unverified event (dev only)');
       const event = JSON.parse(payload.toString());
       await WebhookHandlers.handleStripeEvent(event);
+    } else {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not configured. Cannot verify webhook signature.');
     }
   }
 
@@ -45,47 +59,41 @@ export class WebhookHandlers {
         const subscriptionId = subscription.id;
         const status = subscription.status;
         
-        // Find user by stripe customer ID
         const user = await storage.getUserByStripeCustomerId(customerId);
         if (!user) {
-          console.log(`No user found for customer ${customerId}`);
+          console.log(`[Webhook] No user found for customer ${customerId}`);
           return;
         }
 
-        // Get the price to determine the plan
         const priceId = subscription.items?.data?.[0]?.price?.id;
         let plan: 'free' | 'pro' | 'premium' = 'free';
         
         if (priceId) {
-          // Look up price metadata to determine plan
           const stripe = await getUncachableStripeClient();
           const price = await stripe.prices.retrieve(priceId);
-          const planFromMetadata = price.metadata?.plan;
-          
-          if (planFromMetadata === 'pro') {
-            plan = 'pro';
-          } else if (planFromMetadata === 'premium' || planFromMetadata === 'business') {
-            plan = 'premium';
-          } else {
-            // Determine by price amount (handles both monthly and annual)
-            // Pro: $24/mo (2400) or $199/yr (19900)
-            // Business: $49/mo (4900) or $399/yr (39900)
-            const amount = price.unit_amount || 0;
-            if (amount >= 39900 || (amount >= 4900 && amount < 19900)) {
-              plan = 'premium'; // Business: $49/mo or $399/yr
-            } else if (amount >= 19900 || amount >= 2400) {
-              plan = 'pro'; // Pro: $24/mo or $199/yr
-            }
-          }
+          plan = determinePlanFromMetadataOrAmount(price.metadata, price.unit_amount || 0);
         }
 
-        // Only update plan if subscription is active
         if (status === 'active' || status === 'trialing') {
           await storage.updateUser(user.id, {
             stripeSubscriptionId: subscriptionId,
             plan,
           });
-          console.log(`Updated user ${user.id} to plan ${plan}`);
+          console.log(`[Webhook] Updated user ${user.id} to plan ${plan} (status: ${status})`);
+        } else if (status === 'past_due' || status === 'unpaid') {
+          console.log(`[Webhook] Subscription ${subscriptionId} is ${status} for user ${user.id} — keeping current plan but flagging`);
+          await storage.createActivityLog(
+            user.id,
+            user.email,
+            "payment_issue",
+            `Subscription status changed to ${status}. Payment retry in progress.`,
+          );
+        } else if (status === 'canceled' || status === 'incomplete_expired') {
+          await storage.updateUser(user.id, {
+            stripeSubscriptionId: null,
+            plan: 'free',
+          });
+          console.log(`[Webhook] Downgraded user ${user.id} to free (subscription ${status})`);
         }
         break;
       }
@@ -97,12 +105,19 @@ export class WebhookHandlers {
         const user = await storage.getUserByStripeCustomerId(customerId);
         if (!user) return;
 
-        // Downgrade to free plan
         await storage.updateUser(user.id, {
           stripeSubscriptionId: null,
           plan: 'free',
         });
-        console.log(`Downgraded user ${user.id} to free plan`);
+
+        await storage.createActivityLog(
+          user.id,
+          user.email,
+          "subscription_ended",
+          `Subscription ${subscription.id} deleted. Plan downgraded to free.`,
+        );
+
+        console.log(`[Webhook] Downgraded user ${user.id} to free plan (subscription deleted)`);
         break;
       }
 
@@ -110,59 +125,47 @@ export class WebhookHandlers {
         const session = data.object;
         const userId = session.metadata?.userId;
         const subscriptionId = session.subscription;
+        const customerId = session.customer;
         
         if (userId && subscriptionId) {
-          await storage.updateUser(userId, {
-            stripeSubscriptionId: subscriptionId,
-          });
-          console.log(`Linked subscription ${subscriptionId} to user ${userId}`);
+          const updates: any = { stripeSubscriptionId: subscriptionId };
+          if (customerId) {
+            updates.stripeCustomerId = customerId;
+          }
+          await storage.updateUser(userId, updates);
+          console.log(`[Webhook] Linked subscription ${subscriptionId} to user ${userId}`);
         }
         break;
       }
 
       case 'invoice.paid': {
-        // Automatically track revenue when an invoice is paid
         const invoice = data.object;
         const customerId = invoice.customer;
-        const amountPaid = invoice.amount_paid || 0; // Already in cents
+        const amountPaid = invoice.amount_paid || 0;
         const invoiceId = invoice.id;
         
         if (amountPaid <= 0) break;
         
-        // Find user by stripe customer ID
         const user = await storage.getUserByStripeCustomerId(customerId);
 
-        // Mark referral as subscribed (real payment, not trial)
         if (user) {
           try {
             await storage.markReferralSubscribed(user.id);
           } catch (refErr) {
-            console.error("Error marking referral subscribed:", refErr);
+            console.error("[Webhook] Error marking referral subscribed:", refErr);
           }
         }
         
-        // Determine plan from subscription items
         let plan: 'free' | 'pro' | 'premium' = 'free';
         const lines = invoice.lines?.data || [];
         for (const line of lines) {
           const price = line.price;
           if (price) {
-            const planFromMetadata = price.metadata?.plan;
-            if (planFromMetadata === 'pro') {
-              plan = 'pro';
-            } else if (planFromMetadata === 'premium' || planFromMetadata === 'business') {
-              plan = 'premium';
-            } else if (price.unit_amount) {
-              if (price.unit_amount >= 4900) {
-                plan = 'premium';
-              } else if (price.unit_amount >= 2400) {
-                plan = 'pro';
-              }
-            }
+            plan = determinePlanFromMetadataOrAmount(price.metadata, price.unit_amount || 0);
+            if (plan !== 'free') break;
           }
         }
         
-        // Record revenue
         await storage.createRevenue({
           userId: user?.id,
           userEmail: user?.email || invoice.customer_email,
@@ -174,12 +177,30 @@ export class WebhookHandlers {
           description: `Invoice ${invoice.number || invoiceId}`,
         });
         
-        console.log(`Recorded revenue: $${(amountPaid / 100).toFixed(2)} from ${user?.email || 'unknown'} (${plan} plan)`);
+        console.log(`[Webhook] Recorded revenue: $${(amountPaid / 100).toFixed(2)} from ${user?.email || 'unknown'} (${plan} plan)`);
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = data.object;
+        const customerId = invoice.customer;
+        const attemptCount = invoice.attempt_count || 1;
+        
+        const user = customerId ? await storage.getUserByStripeCustomerId(customerId as string) : null;
+        if (!user) break;
+
+        await storage.createActivityLog(
+          user.id,
+          user.email,
+          "payment_failed",
+          `Payment failed (attempt ${attemptCount}). Stripe will retry automatically.`,
+        );
+
+        console.log(`[Webhook] Payment failed for user ${user.id} (attempt ${attemptCount})`);
         break;
       }
 
       case 'charge.refunded': {
-        // Track refunds as negative revenue
         const charge = data.object;
         const amountRefunded = charge.amount_refunded || 0;
         const customerId = charge.customer;
@@ -192,13 +213,13 @@ export class WebhookHandlers {
           userId: user?.id,
           userEmail: user?.email || charge.billing_details?.email,
           plan: user?.plan || 'free',
-          amount: -amountRefunded, // Negative for refunds
+          amount: -amountRefunded,
           type: 'refund',
           stripePaymentId: charge.id,
           description: `Refund for charge ${charge.id}`,
         });
         
-        console.log(`Recorded refund: $${(amountRefunded / 100).toFixed(2)}`);
+        console.log(`[Webhook] Recorded refund: $${(amountRefunded / 100).toFixed(2)}`);
         break;
       }
     }
