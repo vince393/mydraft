@@ -226,8 +226,9 @@ export interface IStorage {
 
   // Local email state methods (UI-only, not synced with Nylas mailbox)
   getLocalEmailState(userId: string, messageId: string): Promise<LocalEmailState | undefined>;
-  getAllLocalEmailStates(userId: string): Promise<Map<string, string>>; // Returns messageId -> folder map
+  getAllLocalEmailStates(userId: string): Promise<Map<string, { folder: string; isRead: boolean | null }>>; 
   setLocalEmailFolder(userId: string, messageId: string, folder: string): Promise<LocalEmailState>;
+  setLocalEmailReadStatus(userId: string, messageId: string, isRead: boolean): Promise<LocalEmailState>;
   getLocalEmailsByFolder(userId: string, folder: string): Promise<string[]>; // Returns messageIds
   getLocalTrashedEmails(userId: string): Promise<string[]>;
   getLocalArchivedEmails(userId: string): Promise<string[]>;
@@ -2225,11 +2226,31 @@ Business Development`,
     return state;
   }
 
-  async getAllLocalEmailStates(userId: string): Promise<Map<string, string>> {
-    const states = await db.select({ messageId: localEmailStates.messageId, localFolder: localEmailStates.localFolder })
+  async getAllLocalEmailStates(userId: string): Promise<Map<string, { folder: string; isRead: boolean | null }>> {
+    const states = await db.select({ 
+      messageId: localEmailStates.messageId, 
+      localFolder: localEmailStates.localFolder,
+      isRead: localEmailStates.isRead,
+    })
       .from(localEmailStates)
       .where(eq(localEmailStates.userId, userId));
-    return new Map(states.map(s => [s.messageId, s.localFolder]));
+    return new Map(states.map(s => [s.messageId, { folder: s.localFolder, isRead: s.isRead }]));
+  }
+
+  async setLocalEmailReadStatus(userId: string, messageId: string, isRead: boolean): Promise<LocalEmailState> {
+    const existing = await this.getLocalEmailState(userId, messageId);
+    if (existing) {
+      const [updated] = await db.update(localEmailStates)
+        .set({ isRead, updatedAt: new Date() })
+        .where(and(eq(localEmailStates.userId, userId), eq(localEmailStates.messageId, messageId)))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(localEmailStates)
+        .values({ userId, messageId, isRead })
+        .returning();
+      return created;
+    }
   }
 
   async setLocalEmailFolder(userId: string, messageId: string, folder: string): Promise<LocalEmailState> {

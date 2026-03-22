@@ -12,7 +12,6 @@ const SCOPES = [
   "offline_access",
   "Mail.Read",
   "Mail.Send",
-  "Mail.ReadWrite",
   "User.Read",
 ];
 

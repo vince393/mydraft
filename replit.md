@@ -61,7 +61,8 @@ Preferred communication style: Simple, everyday language.
 ### Email Provider Integration
 - **Providers**: Google Gmail API and Microsoft Graph API.
 - **Authentication**: OAuth 2.0 with automatic token refresh.
-- **Features**: Real email inbox access, send/receive, message actions (read, star, archive, trash, delete, attachments).
+- **Scopes**: Read-only + send (no modify). Gmail: `gmail.readonly`, `gmail.send`. Microsoft: `Mail.Read`, `Mail.Send`.
+- **Local-only actions**: Read/unread, star, archive, trash, delete are stored in `local_email_states` table only — never modify the user's real mailbox in their provider.
 - **Architecture**: Unified `IEmailProvider` interface with specific implementations for Google (`server/gmail.ts`) and Microsoft (`server/microsoft.ts`).
 
 ### AI Services

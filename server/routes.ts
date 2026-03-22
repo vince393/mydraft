@@ -2096,11 +2096,12 @@ Return ONLY valid JSON, no other text.`;
           const localStates = await storage.getAllLocalEmailStates(userId);
 
           const emails = cachedData.map((email) => {
-            const localFolder = localStates.get(email.nylasId);
+            const localState = localStates.get(email.nylasId);
             return {
               ...email,
               isStarred: starredSet.has(email.nylasId),
-              folder: localFolder || email.folder,
+              folder: localState?.folder || email.folder,
+              isRead: localState?.isRead !== null && localState?.isRead !== undefined ? localState.isRead : email.isRead,
             };
           });
           return res.json(emails);
@@ -2150,11 +2151,15 @@ Return ONLY valid JSON, no other text.`;
         }));
       }
 
-      // Apply local folder overrides for all states
+      // Apply local state overrides (folder and read status)
       allMessages = allMessages.map((msg) => {
-        const localFolder = localStates.get(msg.id);
-        if (localFolder) {
-          return { ...msg, folder: localFolder };
+        const localState = localStates.get(msg.id);
+        if (localState) {
+          return { 
+            ...msg, 
+            folder: localState.folder !== "inbox" ? localState.folder : msg.folder,
+            isRead: localState.isRead !== null && localState.isRead !== undefined ? localState.isRead : msg.isRead,
+          };
         }
         return msg;
       });
@@ -2216,6 +2221,8 @@ Return ONLY valid JSON, no other text.`;
       };
 
       if (providerResult) {
+        const userId = req.session.userId!;
+        const localStates = await storage.getAllLocalEmailStates(userId);
         const folders = ["inbox", "junk", "trash"] as const;
 
         await Promise.all(
@@ -2225,9 +2232,14 @@ Return ONLY valid JSON, no other text.`;
                 providerResult.accessToken,
                 { folder },
               );
-              counts[folder] = messages.filter(
-                (m: any) => !m.isRead,
-              ).length;
+              counts[folder] = messages.filter((m: any) => {
+                const localState = localStates.get(m.id);
+                if (localState) {
+                  if (localState.folder !== "inbox" && localState.folder !== folder) return false;
+                  if (localState.isRead !== null && localState.isRead !== undefined) return !localState.isRead;
+                }
+                return !m.isRead;
+              }).length;
             } catch (err) {
               console.log(`Could not fetch ${folder} for unread count`);
             }
@@ -2257,7 +2269,12 @@ Return ONLY valid JSON, no other text.`;
 
       const providerResult = await getProviderAndToken(req.session.userId!);
       if (providerResult && id.length > 10) {
+        const userId = req.session.userId!;
         const message = await providerResult.provider.getMessage(providerResult.accessToken, id);
+        const localState = await storage.getLocalEmailState(userId, id);
+        const starredIds = await storage.getStarredEmailIds(userId);
+        const isStarredLocally = new Set(starredIds).has(id);
+
         return res.json({
           id: id,
           nylasId: id,
@@ -2267,9 +2284,9 @@ Return ONLY valid JSON, no other text.`;
           preview: "",
           body: message.body,
           receivedAt: message.date,
-          isRead: message.isRead,
-          isStarred: message.isStarred,
-          folder: "inbox",
+          isRead: localState?.isRead !== null && localState?.isRead !== undefined ? localState.isRead : message.isRead,
+          isStarred: isStarredLocally || message.isStarred,
+          folder: localState?.localFolder || "inbox",
           threadId: message.threadId,
           avatarColor: "#3B82F6",
           to: message.to,
@@ -2293,10 +2310,10 @@ Return ONLY valid JSON, no other text.`;
   app.patch("/api/emails/:id/read", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
+      const isExternalId = id.length > 10 && !/^\d+$/.test(id);
 
-      const providerResult = await getProviderAndToken(req.session.userId!);
-      if (providerResult && id.length > 10) {
-        await providerResult.provider.markAsRead(providerResult.accessToken, id);
+      if (isExternalId) {
+        await storage.setLocalEmailReadStatus(req.session.userId!, id, true);
         return res.json({ success: true });
       }
 
@@ -2315,10 +2332,10 @@ Return ONLY valid JSON, no other text.`;
   app.patch("/api/emails/:id/unread", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
+      const isExternalId = id.length > 10 && !/^\d+$/.test(id);
 
-      const providerResult = await getProviderAndToken(req.session.userId!);
-      if (providerResult && id.length > 10) {
-        await providerResult.provider.markAsUnread(providerResult.accessToken, id);
+      if (isExternalId) {
+        await storage.setLocalEmailReadStatus(req.session.userId!, id, false);
         return res.json({ success: true });
       }
 
@@ -2432,10 +2449,10 @@ Return ONLY valid JSON, no other text.`;
   app.delete("/api/emails/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
+      const isExternalId = id.length > 10 && !/^\d+$/.test(id);
 
-      const providerResult = await getProviderAndToken(req.session.userId!);
-      if (providerResult && id.length > 10) {
-        await providerResult.provider.deleteMessage(providerResult.accessToken, id);
+      if (isExternalId) {
+        await storage.setLocalEmailFolder(req.session.userId!, id, "trash");
         return res.status(204).send();
       }
 
@@ -3233,21 +3250,14 @@ JSON response only:
                 break;
               case "star":
                 try {
-                  await providerResult.provider.toggleStar(
-                    providerResult.accessToken,
-                    suggestion.messageId,
-                    true,
-                  );
+                  await storage.toggleStarEmail(userId, suggestion.messageId);
                 } catch (starErr) {
                   console.log("Star failed, continuing:", starErr);
                 }
                 break;
               case "mark_read":
                 try {
-                  await providerResult.provider.markAsRead(
-                    providerResult.accessToken,
-                    suggestion.messageId,
-                  );
+                  await storage.setLocalEmailReadStatus(userId, suggestion.messageId, true);
                 } catch (readErr) {
                   console.log(
                     "Mark read failed, continuing:",
