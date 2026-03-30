@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -41,33 +41,42 @@ import { UpgradeModal } from "@/components/upgrade-modal";
 import { useScreenSize } from "@/hooks/use-screen-size";
 import { usePlan } from "@/hooks/use-plan";
 import Inbox from "@/pages/inbox";
-import NotFound from "@/pages/not-found";
-import LoginPage from "@/pages/login";
-import LandingPage from "@/pages/landing";
-import PublicPricingPage from "@/pages/public-pricing";
-import ProductPage from "@/pages/product";
-import SecurityPage from "@/pages/security";
-import HelpPage from "@/pages/help";
-import PricingPage from "@/pages/pricing";
-import OnboardingPage from "@/pages/onboarding";
-import ConnectEmailPage from "@/pages/connect-email";
-import SettingsPage from "@/pages/settings";
-import ProfilePage from "@/pages/profile";
-import OwnerPanel from "@/pages/owner-panel";
-import PrivacyPolicyPage from "@/pages/privacy-policy";
-import TermsOfServicePage from "@/pages/terms-of-service";
-import CookiePolicyPage from "@/pages/cookie-policy";
-import AcceptableUsePolicyPage from "@/pages/acceptable-use-policy";
-import DataProcessingAgreementPage from "@/pages/data-processing-agreement";
-import AIUsePolicyPage from "@/pages/ai-use-policy";
-import RefundPolicyPage from "@/pages/refund-policy";
-import TestimonialRewardPage from "@/pages/testimonial-reward";
-import CampaignsPage from "@/pages/campaigns";
-import CheckoutPage from "@/pages/checkout";
 import type { Email, User } from "@shared/schema";
 import { getCategoryCounts, type EmailCategory } from "@/lib/email-categories";
 import { Loader2 } from "lucide-react";
 import { useMemo, Component, type ReactNode, type ErrorInfo } from "react";
+
+const NotFound = lazy(() => import("@/pages/not-found"));
+const LoginPage = lazy(() => import("@/pages/login"));
+const LandingPage = lazy(() => import("@/pages/landing"));
+const PublicPricingPage = lazy(() => import("@/pages/public-pricing"));
+const ProductPage = lazy(() => import("@/pages/product"));
+const SecurityPage = lazy(() => import("@/pages/security"));
+const HelpPage = lazy(() => import("@/pages/help"));
+const PricingPage = lazy(() => import("@/pages/pricing"));
+const OnboardingPage = lazy(() => import("@/pages/onboarding"));
+const ConnectEmailPage = lazy(() => import("@/pages/connect-email"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const ProfilePage = lazy(() => import("@/pages/profile"));
+const OwnerPanel = lazy(() => import("@/pages/owner-panel"));
+const PrivacyPolicyPage = lazy(() => import("@/pages/privacy-policy"));
+const TermsOfServicePage = lazy(() => import("@/pages/terms-of-service"));
+const CookiePolicyPage = lazy(() => import("@/pages/cookie-policy"));
+const AcceptableUsePolicyPage = lazy(() => import("@/pages/acceptable-use-policy"));
+const DataProcessingAgreementPage = lazy(() => import("@/pages/data-processing-agreement"));
+const AIUsePolicyPage = lazy(() => import("@/pages/ai-use-policy"));
+const RefundPolicyPage = lazy(() => import("@/pages/refund-policy"));
+const TestimonialRewardPage = lazy(() => import("@/pages/testimonial-reward"));
+const CampaignsPage = lazy(() => import("@/pages/campaigns"));
+const CheckoutPage = lazy(() => import("@/pages/checkout"));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -330,6 +339,7 @@ function PublicRoute({ children, redirectIfAuthenticated = true }: { children: R
 function AppRoutes() {
   usePageTracking();
   return (
+    <Suspense fallback={<PageLoader />}>
     <Switch>
       <Route path="/login">
         <PublicRoute redirectIfAuthenticated={true}>
@@ -424,6 +434,7 @@ function AppRoutes() {
       </Route>
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 
