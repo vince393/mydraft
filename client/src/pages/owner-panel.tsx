@@ -233,6 +233,8 @@ interface AnalyticsData {
   revenue: number;
   expenses: number;
   profit: number;
+  newUsers: number;
+  totalUsers: number;
   conversionRate: number;
   overallConversion: number;
   range: string;
@@ -243,10 +245,11 @@ function AnalyticsTab() {
   const { data, isLoading } = useQuery<AnalyticsData>({
     queryKey: ["/api/owner/analytics", range],
     queryFn: async () => {
-      const res = await fetch(`/api/owner/analytics?range=${range}`);
+      const res = await fetch(`/api/owner/analytics?range=${range}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    staleTime: 60000,
   });
 
   const rangeOptions = [
@@ -337,7 +340,7 @@ function AnalyticsTab() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-5 pb-4 px-5">
             <div className="flex items-center gap-2 mb-1">
@@ -361,10 +364,21 @@ function AnalyticsTab() {
         <Card>
           <CardContent className="pt-5 pb-4 px-5">
             <div className="flex items-center gap-2 mb-1">
+              <Users className="w-3.5 h-3.5 text-violet-400" />
+              <span className="text-xs text-muted-foreground">New Users</span>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-new-users">{data?.newUsers?.toLocaleString() || 0}</p>
+            <p className="text-[10px] text-muted-foreground/50 mt-0.5">{data?.totalUsers?.toLocaleString() || 0} total</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4 px-5">
+            <div className="flex items-center gap-2 mb-1">
               <ArrowUpRight className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-xs text-muted-foreground">Period Conversion</span>
+              <span className="text-xs text-muted-foreground">Conversion</span>
             </div>
             <p className="text-xl font-bold" data-testid="text-period-conversion">{data?.conversionRate || 0}%</p>
+            <p className="text-[10px] text-muted-foreground/50 mt-0.5">{data?.overallConversion || 0}% overall</p>
           </CardContent>
         </Card>
       </div>

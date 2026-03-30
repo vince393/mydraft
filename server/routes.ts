@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql, desc, eq } from "drizzle-orm";
-import { ownerNotes, pageViews } from "@shared/schema";
+import { ownerNotes, pageViews, revenue, expenses } from "@shared/schema";
 import OpenAI from "openai";
 import { wrapOpenAIWithTracking } from "./ai-cost-tracker";
 
@@ -349,14 +349,20 @@ export async function registerRoutes(
       let region: string | null = null;
       let city: string | null = null;
 
-      if (ip && ip !== "127.0.0.1" && ip !== "::1") {
+      const isPrivateIp = !ip || ip === "127.0.0.1" || ip === "::1" || ip.startsWith("10.") || ip.startsWith("192.168.") || ip.startsWith("172.");
+      if (!isPrivateIp) {
         try {
-          const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=country,regionName,city`);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 2000);
+          const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`, { signal: controller.signal });
+          clearTimeout(timeout);
           if (geoRes.ok) {
-            const geo = await geoRes.json() as { country?: string; regionName?: string; city?: string };
-            country = geo.country || null;
-            region = geo.regionName || null;
-            city = geo.city || null;
+            const geo = await geoRes.json() as { status?: string; country?: string; regionName?: string; city?: string };
+            if (geo.status === "success") {
+              country = geo.country || null;
+              region = geo.regionName || null;
+              city = geo.city || null;
+            }
           }
         } catch {}
       }
@@ -383,14 +389,19 @@ export async function registerRoutes(
       const { range = "7d" } = req.query;
 
       let daysBack = 7;
-      if (range === "1d") daysBack = 1;
+      if (range === "1d") daysBack = 0;
       else if (range === "7d") daysBack = 7;
       else if (range === "30d") daysBack = 30;
       else if (range === "90d") daysBack = 90;
       else if (range === "365d") daysBack = 365;
 
       const since = new Date();
-      since.setDate(since.getDate() - daysBack);
+      if (daysBack === 0) {
+        since.setHours(0, 0, 0, 0);
+      } else {
+        since.setDate(since.getDate() - daysBack);
+        since.setHours(0, 0, 0, 0);
+      }
 
       const views = await db
         .select()
@@ -409,21 +420,29 @@ export async function registerRoutes(
         byDay[day].sessions.add(v.sessionId);
       }
 
-      const dailyData = Object.entries(byDay)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, data]) => ({
-          date,
-          views: data.views,
-          visitors: data.sessions.size,
-        }));
+      const allDays: string[] = [];
+      const cursor = new Date(since);
+      const today = new Date();
+      while (cursor <= today) {
+        allDays.push(cursor.toISOString().slice(0, 10));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      const dailyData = allDays.map((date) => ({
+        date,
+        views: byDay[date]?.views || 0,
+        visitors: byDay[date]?.sessions.size || 0,
+      }));
 
       const byCountry: Record<string, number> = {};
       const byRegion: Record<string, number> = {};
       for (const v of views) {
-        const c = v.country || "Unknown";
-        const r = v.region || "Unknown";
-        byCountry[c] = (byCountry[c] || 0) + 1;
-        byRegion[r] = (byRegion[r] || 0) + 1;
+        if (v.country && v.country !== "Unknown") {
+          byCountry[v.country] = (byCountry[v.country] || 0) + 1;
+        }
+        if (v.region && v.region !== "Unknown") {
+          byRegion[v.region] = (byRegion[v.region] || 0) + 1;
+        }
       }
 
       const topCountries = Object.entries(byCountry)
@@ -455,21 +474,27 @@ export async function registerRoutes(
         .slice(0, 10)
         .map(([source, count]) => ({ source, count }));
 
-      const allRevenue = await db
-        .select()
-        .from(
-          sql`revenue`
-        )
-        .where(sql`revenue_date >= ${since}`);
+      let totalRevenue = 0;
+      try {
+        const allRevenue = await db
+          .select()
+          .from(revenue)
+          .where(sql`${revenue.revenueDate} >= ${since}`);
+        totalRevenue = allRevenue.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      } catch (e) {
+        console.error("Revenue query error:", e);
+      }
 
-      const totalRevenue = (allRevenue as any[]).reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
-
-      const allExpenses = await db
-        .select()
-        .from(sql`expenses`)
-        .where(sql`created_at >= ${since}`);
-
-      const totalExpenses = (allExpenses as any[]).reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+      let totalExpenses = 0;
+      try {
+        const allExpenses = await db
+          .select()
+          .from(expenses)
+          .where(sql`${expenses.expenseDate} >= ${since}`);
+        totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      } catch (e) {
+        console.error("Expenses query error:", e);
+      }
 
       const allUsers = await storage.getAllUsers();
       const usersInRange = allUsers.filter((u) => new Date(u.createdAt) >= since);
@@ -490,6 +515,8 @@ export async function registerRoutes(
         revenue: totalRevenue,
         expenses: totalExpenses,
         profit: totalRevenue - totalExpenses,
+        newUsers: usersInRange.length,
+        totalUsers: allUsers.length,
         conversionRate: Math.round(conversionRate * 10) / 10,
         overallConversion: Math.round(overallConversion * 10) / 10,
         range,
