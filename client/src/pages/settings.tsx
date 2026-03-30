@@ -961,6 +961,7 @@ function BillingTab({ settings }: { settings: Settings }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   const planDetails: Record<string, { name: string; price: string; features: string[] }> = {
     free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "5 emails/day limit", "Standard support"] },
@@ -997,13 +998,14 @@ function BillingTab({ settings }: { settings: Settings }) {
 
   const cancelMutation = useMutation({
     mutationFn: async ({ immediately }: { immediately: boolean }) => {
-      const response = await apiRequest("POST", "/api/stripe/cancel", { immediately });
+      const response = await apiRequest("POST", "/api/stripe/cancel", { immediately, reason: cancelReason || undefined });
       return response.json();
     },
     onSuccess: (data: { message?: string; cancelAt?: string }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stripe/billing-info"] });
       setShowCancelConfirm(false);
+      setCancelReason("");
       toast({
         title: "Subscription canceled",
         description: data.message || "Your subscription has been canceled.",
@@ -1249,14 +1251,34 @@ function BillingTab({ settings }: { settings: Settings }) {
             <div className="p-4 rounded-lg border border-destructive/20 bg-destructive/[0.03] space-y-3">
               <h4 className="text-sm font-medium text-foreground">Are you sure you want to cancel?</h4>
               <p className="text-[12px] text-muted-foreground/60">
-                You'll lose access to all {currentPlan.name} features.
+                You'll lose access to all {currentPlan.name} features. We'd love to know why you're leaving.
               </p>
+              <div>
+                <Label className="text-xs text-muted-foreground/60 mb-1.5 block">Reason for canceling</Label>
+                <select
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full h-9 rounded-md border border-white/[0.08] bg-white/[0.03] px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                  data-testid="select-cancel-reason"
+                >
+                  <option value="">Select a reason...</option>
+                  <option value="too_expensive">Too expensive</option>
+                  <option value="not_enough_features">Not enough features</option>
+                  <option value="found_alternative">Found a better alternative</option>
+                  <option value="too_complicated">Too complicated to use</option>
+                  <option value="not_using_enough">Not using it enough</option>
+                  <option value="missing_integration">Missing an integration I need</option>
+                  <option value="poor_performance">Poor performance or too slow</option>
+                  <option value="temporary">Just need a break, may come back</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => cancelMutation.mutate({ immediately: false })}
-                  disabled={cancelMutation.isPending}
+                  disabled={cancelMutation.isPending || !cancelReason}
                   data-testid="button-cancel-at-period-end"
                 >
                   {cancelMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
@@ -1266,7 +1288,7 @@ function BillingTab({ settings }: { settings: Settings }) {
                   variant="destructive"
                   size="sm"
                   onClick={() => cancelMutation.mutate({ immediately: true })}
-                  disabled={cancelMutation.isPending}
+                  disabled={cancelMutation.isPending || !cancelReason}
                   data-testid="button-cancel-immediately"
                 >
                   {cancelMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
@@ -1275,7 +1297,7 @@ function BillingTab({ settings }: { settings: Settings }) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowCancelConfirm(false)}
+                  onClick={() => { setShowCancelConfirm(false); setCancelReason(""); }}
                   data-testid="button-cancel-nevermind"
                 >
                   Never mind

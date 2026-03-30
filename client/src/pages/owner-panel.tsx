@@ -229,6 +229,11 @@ export default function OwnerPanel() {
   const [notificationPlan, setNotificationPlan] = useState("free");
   const [notificationTitle, setNotificationTitle] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
+
+  const [broadcastTarget, setBroadcastTarget] = useState("all");
+  const [broadcastPlan, setBroadcastPlan] = useState("pro");
+  const [broadcastSubject, setBroadcastSubject] = useState("");
+  const [broadcastBody, setBroadcastBody] = useState("");
   
   // Finance state
   const [financePeriod, setFinancePeriod] = useState("month");
@@ -417,6 +422,31 @@ export default function OwnerPanel() {
     onError: () => {
       toast({ title: "Failed to send notifications", variant: "destructive" });
     },
+  });
+
+  const broadcastEmailMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/owner/email/broadcast", {
+        target: broadcastTarget,
+        targetPlan: broadcastPlan,
+        subject: broadcastSubject,
+        body: broadcastBody,
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: `Email sent to ${data.sent} users` + (data.failed ? ` (${data.failed} failed)` : "") });
+      setBroadcastSubject("");
+      setBroadcastBody("");
+    },
+    onError: () => {
+      toast({ title: "Failed to send broadcast email", variant: "destructive" });
+    },
+  });
+
+  const { data: emailStats, isLoading: emailStatsLoading } = useQuery({
+    queryKey: ["/api/owner/email/stats"],
+    enabled: activeTab === "notifications",
   });
 
   const toggleFeatureFlagMutation = useMutation({
@@ -1162,6 +1192,111 @@ export default function OwnerPanel() {
                     <Send className="w-4 h-4 mr-2" />
                   )}
                   Send Notification
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Email Broadcast</CardTitle>
+                <CardDescription>Send emails to users via Resend</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {emailStatsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : emailStats ? (
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="rounded-lg border border-white/[0.06] p-3">
+                      <p className="text-xs text-muted-foreground">Sent</p>
+                      <p className="text-xl font-bold">{(emailStats as any)?.stats?.sent ?? 0}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/[0.06] p-3">
+                      <p className="text-xs text-muted-foreground">Delivered</p>
+                      <p className="text-xl font-bold">{(emailStats as any)?.stats?.delivered ?? 0}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/[0.06] p-3">
+                      <p className="text-xs text-muted-foreground">Monthly limit</p>
+                      <p className="text-xl font-bold">{(emailStats as any)?.monthlyLimit ?? 3000}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/[0.06] p-3">
+                      <p className="text-xs text-muted-foreground">Opened</p>
+                      <p className="text-xl font-bold">{(emailStats as any)?.stats?.opened ?? 0}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/[0.06] p-3">
+                      <p className="text-xs text-muted-foreground">Clicked</p>
+                      <p className="text-xl font-bold">{(emailStats as any)?.stats?.clicked ?? 0}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/[0.06] p-3">
+                      <p className="text-xs text-muted-foreground">Bounced</p>
+                      <p className="text-xl font-bold text-red-400">{(emailStats as any)?.stats?.bounced ?? 0}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Audience</label>
+                  <Select value={broadcastTarget} onValueChange={setBroadcastTarget}>
+                    <SelectTrigger data-testid="select-broadcast-target">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Users</SelectItem>
+                      <SelectItem value="paid">Paid Users Only</SelectItem>
+                      <SelectItem value="plan">Specific Plan</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {broadcastTarget === "plan" && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Plan</label>
+                    <Select value={broadcastPlan} onValueChange={setBroadcastPlan}>
+                      <SelectTrigger data-testid="select-broadcast-plan">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free</SelectItem>
+                        <SelectItem value="pro">Pro</SelectItem>
+                        <SelectItem value="premium">Business</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Subject</label>
+                  <Input
+                    value={broadcastSubject}
+                    onChange={(e) => setBroadcastSubject(e.target.value)}
+                    placeholder="Email subject line"
+                    data-testid="input-broadcast-subject"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Body</label>
+                  <Textarea
+                    value={broadcastBody}
+                    onChange={(e) => setBroadcastBody(e.target.value)}
+                    placeholder="Email body (HTML supported)"
+                    rows={6}
+                    data-testid="input-broadcast-body"
+                  />
+                </div>
+
+                <Button
+                  onClick={() => broadcastEmailMutation.mutate()}
+                  disabled={!broadcastSubject || !broadcastBody || broadcastEmailMutation.isPending}
+                  data-testid="button-send-broadcast"
+                >
+                  {broadcastEmailMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Mail className="w-4 h-4 mr-2" />
+                  )}
+                  Send Broadcast Email
                 </Button>
               </CardContent>
             </Card>

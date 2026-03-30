@@ -496,7 +496,11 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
       </Button>
 
       <p className="text-[11px] text-center text-muted-foreground/40 leading-relaxed">
-        By subscribing, you agree to our terms. Your card will be charged ${priceInfo?.amount}{priceInfo?.period} after the trial period unless you cancel.
+        By subscribing, you agree to our{" "}
+        <a href="/terms" target="_blank" className="underline hover:text-muted-foreground/60 transition-colors">Terms of Service</a>,{" "}
+        <a href="/privacy" target="_blank" className="underline hover:text-muted-foreground/60 transition-colors">Privacy Policy</a>, and{" "}
+        <a href="/refund-policy" target="_blank" className="underline hover:text-muted-foreground/60 transition-colors">Refund Policy</a>.
+        Your card will be charged ${priceInfo?.amount}{priceInfo?.period} after the trial period unless you cancel.
       </p>
     </form>
   );

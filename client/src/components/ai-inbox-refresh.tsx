@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Sparkles, Loader2, Check, X, Archive, Trash2, Star, Mail, FolderInput, ShieldAlert, Ban } from "lucide-react";
+import { Sparkles, Wand2, Loader2, Check, X, Archive, Trash2, Star, Mail, FolderInput, ShieldAlert, Ban } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -133,12 +133,12 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
       ) : (
         <button
           onClick={handleOpen}
-          className={`${compact ? 'w-8 h-8' : 'w-9 h-9'} flex items-center justify-center rounded-full cursor-pointer transition-all hover:bg-white/[0.06] flex-shrink-0`}
-          style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+          className={`${compact ? 'w-8 h-8' : 'w-9 h-9'} flex items-center justify-center rounded-full cursor-pointer transition-all hover:bg-purple-500/20 flex-shrink-0`}
+          style={{ border: "1px solid rgba(139,92,246,0.3)", background: "rgba(139,92,246,0.08)" }}
           title="AI Cleanup"
           data-testid="button-ai-inbox-refresh"
         >
-          <Sparkles className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-foreground/40`} />
+          <Wand2 className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-purple-400`} />
         </button>
       )}
 

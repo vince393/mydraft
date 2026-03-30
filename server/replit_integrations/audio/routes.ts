@@ -155,7 +155,7 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         return res.json({ audio: cached.audio, audioFormat: "wav", cached: true });
       }
 
-      const cleanText = stripEmailNoise(text).slice(0, 4000);
+      const cleanText = stripEmailNoise(text).slice(0, 2000);
       const audio = await textToSpeech(cleanText, selectedVoice);
 
       if (audio) {

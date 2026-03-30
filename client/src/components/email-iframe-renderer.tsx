@@ -201,6 +201,22 @@ export function EmailIframeRenderer({
     overflow-wrap: break-word;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  body > * {
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+  table {
+    max-width: 100% !important;
+    table-layout: auto !important;
+  }
+  td, th {
+    word-break: break-word;
+  }
+  div[style*="width"] {
+    max-width: 100% !important;
   }
   a { color: ${linkColor}; }
   blockquote {

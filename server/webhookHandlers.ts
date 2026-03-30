@@ -1,5 +1,6 @@
 import { getStripeSync, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
+import { sendPlanPurchaseEmail, sendBillingReceiptEmail } from './email';
 
 const KNOWN_PRICE_AMOUNTS: Record<number, 'pro' | 'premium'> = {
   1000: 'pro',     // Pro monthly: $10/mo
@@ -80,6 +81,16 @@ export class WebhookHandlers {
             plan,
           });
           console.log(`[Webhook] Updated user ${user.id} to plan ${plan} (status: ${status})`);
+
+          if (type === 'customer.subscription.created' && plan !== 'free') {
+            try {
+              const planLabel = plan === 'premium' ? 'Business' : 'Pro';
+              const price = subscription.items?.data?.[0]?.price;
+              const amt = price?.unit_amount ? `$${(price.unit_amount / 100).toFixed(2)}` : '';
+              const interval = price?.recurring?.interval === 'year' ? 'annually' : 'monthly';
+              await sendPlanPurchaseEmail(user.email, planLabel, amt, interval);
+            } catch (emailErr) { console.error("[Webhook] Failed to send plan purchase email:", emailErr); }
+          }
         } else if (status === 'past_due' || status === 'unpaid') {
           console.log(`[Webhook] Subscription ${subscriptionId} is ${status} for user ${user.id} — keeping current plan but flagging`);
           await storage.createActivityLog(
@@ -178,6 +189,15 @@ export class WebhookHandlers {
         });
         
         console.log(`[Webhook] Recorded revenue: $${(amountPaid / 100).toFixed(2)} from ${user?.email || 'unknown'} (${plan} plan)`);
+
+        if (user && amountPaid > 0) {
+          try {
+            const planLabel = plan === 'premium' ? 'Business' : plan === 'pro' ? 'Pro' : 'Free';
+            const amtStr = `$${(amountPaid / 100).toFixed(2)}`;
+            const dateStr = new Date((invoice.created || Date.now() / 1000) * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            await sendBillingReceiptEmail(user.email, planLabel, amtStr, dateStr, invoice.number || invoiceId);
+          } catch (emailErr) { console.error("[Webhook] Failed to send receipt email:", emailErr); }
+        }
         break;
       }
 

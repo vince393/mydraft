@@ -1911,6 +1911,11 @@ Return ONLY valid JSON, no other text.`;
           "email_connected",
           `Connected ${provider} email: ${normalizedEmail}`,
         );
+
+        try {
+          const { sendWelcomeEmail } = await import("./email");
+          await sendWelcomeEmail(normalizedEmail, currentUser?.email?.split("@")[0] || "");
+        } catch (emailErr) { console.error("Failed to send welcome email:", emailErr); }
       }
 
       res.redirect("/inbox?connected=true");
@@ -2042,6 +2047,11 @@ Return ONLY valid JSON, no other text.`;
           "email_connected",
           `Connected ${provider} email: ${normalizedEmail}`,
         );
+
+        try {
+          const { sendWelcomeEmail } = await import("./email");
+          await sendWelcomeEmail(normalizedEmail, currentUser?.email?.split("@")[0] || "");
+        } catch (emailErr) { console.error("Failed to send welcome email:", emailErr); }
       }
 
       res.redirect("/inbox?connected=true");
@@ -7621,6 +7631,56 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  app.post("/api/owner/email/broadcast", requireOwner, async (req, res) => {
+    try {
+      const { target, targetPlan, subject, body } = req.body;
+
+      if (!subject || !body) {
+        return res.status(400).json({ error: "Subject and body are required" });
+      }
+
+      let users: any[] = [];
+      if (target === "all") {
+        users = await storage.getAllUsers();
+      } else if (target === "paid") {
+        const proUsers = await storage.getUsersByPlan("pro");
+        const premiumUsers = await storage.getUsersByPlan("premium");
+        users = [...proUsers, ...premiumUsers];
+      } else if (target === "plan" && targetPlan) {
+        users = await storage.getUsersByPlan(targetPlan);
+      } else {
+        return res.status(400).json({ error: "Invalid target" });
+      }
+
+      const { sendBroadcastEmail } = await import("./email");
+      let sent = 0;
+      let failed = 0;
+      for (const user of users) {
+        try {
+          const success = await sendBroadcastEmail(user.email, subject, body);
+          if (success) sent++;
+          else failed++;
+        } catch { failed++; }
+      }
+
+      res.json({ success: true, sent, failed, total: users.length });
+    } catch (error) {
+      console.error("Error sending broadcast:", error);
+      res.status(500).json({ error: "Failed to send broadcast" });
+    }
+  });
+
+  app.get("/api/owner/email/stats", requireOwner, async (req, res) => {
+    try {
+      const { getResendStats } = await import("./email");
+      const stats = await getResendStats();
+      res.json({ stats, monthlyLimit: 3000 });
+    } catch (error) {
+      console.error("Error fetching email stats:", error);
+      res.status(500).json({ error: "Failed to fetch email stats" });
+    }
+  });
+
   // Update user plan (owner only)
   app.patch("/api/owner/users/:userId/plan", requireOwner, async (req, res) => {
     try {
@@ -7752,6 +7812,77 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error submitting testimonial:", error);
       res.status(500).json({ error: "Failed to submit testimonial" });
+    }
+  });
+
+  app.post("/api/testimonial-reward", async (req, res) => {
+    try {
+      const { token, testimonial, rating } = req.body;
+
+      if (!token || !testimonial || typeof rating !== "number") {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "Rating must be between 1 and 5" });
+      }
+
+      if (testimonial.trim().length < 10) {
+        return res.status(400).json({ error: "Testimonial must be at least 10 characters" });
+      }
+
+      const { verifyTestimonialToken } = await import("./email");
+      const verified = verifyTestimonialToken(token);
+      if (!verified) {
+        return res.status(403).json({ error: "Invalid or expired link" });
+      }
+
+      const userId = verified.userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const existing = await storage.getUserTestimonial(userId);
+      if (existing) {
+        return res.status(400).json({ error: "You have already submitted a testimonial" });
+      }
+
+      await storage.createTestimonial({
+        userId,
+        userName: user.displayName || user.email.split("@")[0],
+        userEmail: user.email,
+        content: testimonial.trim(),
+        rating,
+        status: "pending",
+        isFounder: false,
+      });
+
+      let rewardApplied = false;
+      if (user.stripeSubscriptionId) {
+        try {
+          const { getUncachableStripeClient } = await import("./stripeClient");
+          const stripe = await getUncachableStripeClient();
+          const sub = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          if (sub.status === "active" || sub.status === "trialing") {
+            const currentEnd = sub.current_period_end;
+            const newEnd = currentEnd + 30 * 24 * 60 * 60;
+            await stripe.subscriptions.update(user.stripeSubscriptionId, {
+              trial_end: newEnd,
+              proration_behavior: "none",
+            });
+            rewardApplied = true;
+          }
+        } catch (stripeErr) {
+          console.error("[Testimonial] Failed to extend subscription:", stripeErr);
+          return res.status(500).json({ error: "Testimonial saved but we couldn't apply the free month. Please contact support." });
+        }
+      }
+
+      res.json({ success: true, rewardApplied });
+    } catch (error) {
+      console.error("Error processing testimonial reward:", error);
+      res.status(500).json({ error: "Failed to process testimonial" });
     }
   });
 
@@ -8836,14 +8967,13 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   // Cancel subscription (actually cancels on Stripe + downgrades locally)
   app.post("/api/stripe/cancel", requireAuth, async (req, res) => {
     try {
-      const { immediately } = req.body || {};
+      const { immediately, reason } = req.body || {};
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
       if (!user.stripeSubscriptionId || !user.stripeCustomerId) {
-        // No active subscription - just ensure plan is free
         await storage.updateUser(user.id, { plan: "free" });
         return res.json({ success: true, message: "Plan set to free" });
       }
@@ -8851,8 +8981,19 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
 
+      const reasonLabel = reason ? {
+        too_expensive: "Too expensive",
+        not_enough_features: "Not enough features",
+        found_alternative: "Found a better alternative",
+        too_complicated: "Too complicated to use",
+        not_using_enough: "Not using it enough",
+        missing_integration: "Missing an integration",
+        poor_performance: "Poor performance or too slow",
+        temporary: "Taking a break",
+        other: "Other",
+      }[reason as string] || reason : "No reason provided";
+
       if (immediately) {
-        // Cancel immediately - downgrade locally only after Stripe succeeds
         await stripe.subscriptions.cancel(user.stripeSubscriptionId);
         await storage.updateUser(user.id, {
           plan: "free",
@@ -8863,15 +9004,20 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           user.id,
           user.email,
           "subscription_canceled",
-          `Subscription canceled immediately`,
+          `Subscription canceled immediately. Reason: ${reasonLabel}`,
         );
+
+        try {
+          const { sendPlanCancelEmail } = await import("./email");
+          const planLabel = user.plan === "premium" ? "Business" : user.plan === "pro" ? "Pro" : "Free";
+          await sendPlanCancelEmail(user.email, planLabel);
+        } catch (emailErr) { console.error("Failed to send cancel email:", emailErr); }
 
         res.json({
           success: true,
           message: "Subscription canceled immediately",
         });
       } else {
-        // Cancel at end of billing period - keep current plan until period ends
         await stripe.subscriptions.update(user.stripeSubscriptionId, {
           cancel_at_period_end: true,
         });
@@ -8884,16 +9030,24 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           user.id,
           user.email,
           "subscription_cancel_scheduled",
-          `Subscription set to cancel at period end`,
+          `Subscription set to cancel at period end. Reason: ${reasonLabel}`,
         );
+
+        const cancelAtDate = sub.current_period_end
+          ? new Date(sub.current_period_end * 1000).toISOString()
+          : null;
+
+        try {
+          const { sendPlanCancelEmail } = await import("./email");
+          const planLabel = user.plan === "premium" ? "Business" : user.plan === "pro" ? "Pro" : "Free";
+          await sendPlanCancelEmail(user.email, planLabel, cancelAtDate || undefined);
+        } catch (emailErr) { console.error("Failed to send cancel email:", emailErr); }
 
         res.json({
           success: true,
           message:
             "Your subscription will remain active until the end of your billing period, then it will be canceled.",
-          cancelAt: sub.current_period_end
-            ? new Date(sub.current_period_end * 1000).toISOString()
-            : null,
+          cancelAt: cancelAtDate,
         });
       }
     } catch (error: any) {

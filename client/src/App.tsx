@@ -33,6 +33,7 @@ import AcceptableUsePolicyPage from "@/pages/acceptable-use-policy";
 import DataProcessingAgreementPage from "@/pages/data-processing-agreement";
 import AIUsePolicyPage from "@/pages/ai-use-policy";
 import RefundPolicyPage from "@/pages/refund-policy";
+import TestimonialRewardPage from "@/pages/testimonial-reward";
 import CampaignsPage from "@/pages/campaigns";
 import CheckoutPage from "@/pages/checkout";
 import type { Email, User } from "@shared/schema";
@@ -338,6 +339,9 @@ function AppRoutes() {
       </Route>
       <Route path="/refund-policy">
         <RefundPolicyPage />
+      </Route>
+      <Route path="/testimonial-reward">
+        <TestimonialRewardPage />
       </Route>
       <Route path="/select-plan">
         <ProtectedRoute>

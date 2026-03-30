@@ -178,6 +178,74 @@ async function processPendingSends() {
   }
 }
 
+let dailyCheckInterval: NodeJS.Timeout | null = null;
+const dailyChecksSent = new Set<string>();
+
+async function runDailyChecks() {
+  const today = new Date().toISOString().split("T")[0];
+  const checkKey = `daily-${today}`;
+  if (dailyChecksSent.has(checkKey)) return;
+  dailyChecksSent.add(checkKey);
+
+  try {
+    const { sendTrialEndingEmail, sendTestimonialRequestEmail } = await import("./email");
+    const allUsers = await storage.getAllUsers();
+
+    for (const user of allUsers) {
+      if (!user.stripeSubscriptionId || !user.stripeCustomerId) continue;
+
+      try {
+        const { getUncachableStripeClient } = await import("./stripeClient");
+        const stripe = await getUncachableStripeClient();
+        const sub = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+
+        if (sub.status === "trialing" && sub.trial_end) {
+          const trialEnd = new Date(sub.trial_end * 1000);
+          const now = new Date();
+          const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+          if (daysLeft === 3) {
+            const planLabel = user.plan === "premium" ? "Business" : "Pro";
+            const price = sub.items?.data?.[0]?.price;
+            const amt = price?.unit_amount ? `$${(price.unit_amount / 100).toFixed(2)}` : "";
+            await sendTrialEndingEmail(user.email, planLabel, daysLeft, amt);
+            console.log(`[EmailScheduler] Sent trial ending email to ${user.email} (${daysLeft} days left)`);
+          }
+        }
+      } catch (err) {
+        console.error(`[EmailScheduler] Error checking trial for user ${user.id}:`, err);
+      }
+
+      try {
+        const account = await storage.getEmailAccount(user.id);
+        if (account && account.createdAt) {
+          const connectedAt = new Date(account.createdAt);
+          const now = new Date();
+          const daysSinceConnect = Math.floor((now.getTime() - connectedAt.getTime()) / (1000 * 60 * 60 * 24));
+
+          if (daysSinceConnect === 7 && user.plan !== "free") {
+            const existing = await storage.getUserTestimonial(user.id);
+            if (!existing) {
+              const { generateTestimonialToken } = await import("./email");
+              const token = generateTestimonialToken(user.id);
+              const baseUrl = process.env.REPLIT_DOMAINS
+                ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+                : "https://mydraft.io";
+              const activateUrl = `${baseUrl}/testimonial-reward?token=${token}`;
+              await sendTestimonialRequestEmail(user.email, activateUrl);
+              console.log(`[EmailScheduler] Sent testimonial request to ${user.email}`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`[EmailScheduler] Error checking testimonial for user ${user.id}:`, err);
+      }
+    }
+  } catch (error) {
+    console.error("[EmailScheduler] Error in daily checks:", error);
+  }
+}
+
 export function startEmailScheduler() {
   if (schedulerInterval) {
     console.log("[EmailScheduler] Scheduler already running");
@@ -186,14 +254,20 @@ export function startEmailScheduler() {
   
   console.log("[EmailScheduler] Starting email scheduler (polling every 1 second)");
   schedulerInterval = setInterval(processPendingSends, 1000);
+  dailyCheckInterval = setInterval(runDailyChecks, 60 * 60 * 1000);
   
   processPendingSends();
+  setTimeout(runDailyChecks, 30000);
 }
 
 export function stopEmailScheduler() {
   if (schedulerInterval) {
     clearInterval(schedulerInterval);
     schedulerInterval = null;
-    console.log("[EmailScheduler] Scheduler stopped");
   }
+  if (dailyCheckInterval) {
+    clearInterval(dailyCheckInterval);
+    dailyCheckInterval = null;
+  }
+  console.log("[EmailScheduler] Scheduler stopped");
 }

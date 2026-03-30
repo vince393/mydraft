@@ -1,9 +1,44 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const friendlyMessages: Record<number, string> = {
+  400: "Something went wrong with your request. Please check your input and try again.",
+  401: "You need to sign in to continue.",
+  403: "You don't have permission to do that.",
+  404: "We couldn't find what you're looking for.",
+  408: "The request took too long. Please try again.",
+  429: "You're doing that too often. Please wait a moment and try again.",
+  500: "Something went wrong on our end. Please try again in a moment.",
+  502: "Our servers are temporarily unavailable. Please try again shortly.",
+  503: "The service is temporarily unavailable. Please try again shortly.",
+};
+
+function cleanErrorMessage(status: number, raw: string): string {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed.error && typeof parsed.error === "string") {
+      const msg = parsed.error;
+      if (/token|oauth|grant|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|stack|at\s+\w/i.test(msg)) {
+        return friendlyMessages[status] || friendlyMessages[500]!;
+      }
+      return msg;
+    }
+  } catch {}
+
+  if (/^[\d]{3}:?\s*$/.test(raw.trim()) || !raw.trim()) {
+    return friendlyMessages[status] || friendlyMessages[500]!;
+  }
+
+  if (/token|oauth|grant|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|stack|at\s+\w/i.test(raw)) {
+    return friendlyMessages[status] || friendlyMessages[500]!;
+  }
+
+  return raw.replace(/^\d{3}:\s*/, "").trim() || friendlyMessages[status] || friendlyMessages[500]!;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    throw new Error(cleanErrorMessage(res.status, text));
   }
 }
 

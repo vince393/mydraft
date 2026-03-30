@@ -1,0 +1,12 @@
+- error codes throughout the website dont look good and are hard to understand. make it good for users, not just owner or admins.
+- read aloud feature needs to start quicker, its pacing is perfect, but it takes a while after pressing the button for it to start speaking.
+- send email to people when they add an account, buy a payment plan, cancel payment plan, and send the billing to them in email every month as a reciept.
+- when canceling subscription, ask why they are canceling and have a dropdown with things such as "too expensive, not enough features, etc." and more including other.
+- in owners panel add a thing where I can send out an email to a select group of people like everyone, paid users, specific plans, etc.
+- the email bodies are getting stretched because of the size of the screen, fix that and make it look good and normal, especially the sticker email things.
+- in the owners panel on the same tab as the email sending, add a thing where I can see how many emails have been sent out using resend, along with monthly limit and expenses for emails. I should also be able to see the open rate and click rate and stuff.
+- send out emails to people after a week of connecting their email address with asking to give us a testimonial for a free month of their current plan. Make sure it actually works and put it into effect whenever they click the button link thingy that is on the email that redirects them to a page that asks them if they want to activate it to their plan. they should not be charged for that one month free, but they should still get charged as regular after that month is over.
+- send out an email 3 days before free trial ends so they know
+- on the checkout page add the TOS and privacy policy and stuff legally necessary on that page at the bottom.
+- the refreshing symbol looks weird at the top its too close to the search bar. Also make the ai refresh button more colorful it looks grey and change the icon because it looks the same as the ai chat icon.
+- the notification bell button isnt there, not sure why. add it back on all devices
