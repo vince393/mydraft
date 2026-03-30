@@ -127,6 +127,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   const readAloudAudioRef = useRef<HTMLAudioElement | null>(null);
   const readAloudUrlRef = useRef<string | null>(null);
   const readAloudAbortRef = useRef<AbortController | null>(null);
+  const readAloudStoppedRef = useRef(false);
   const { toast } = useToast();
 
   const emailId = email ? ((email as any).nylasId || email.id) : null;
@@ -268,6 +269,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   };
 
   const stopReadAloud = () => {
+    readAloudStoppedRef.current = true;
     if (readAloudAbortRef.current) {
       readAloudAbortRef.current.abort();
       readAloudAbortRef.current = null;
@@ -315,6 +317,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     const fullText = subjectText ? `${subjectText}. ${bodyText}` : bodyText;
     const voice = currentVoice;
 
+    readAloudStoppedRef.current = false;
     setReadAloudState("loading");
     const abortController = new AbortController();
     readAloudAbortRef.current = abortController;
@@ -344,6 +347,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
       };
 
       audio.onerror = () => {
+        if (readAloudStoppedRef.current) return;
         stopReadAloud();
         toast({ title: "Read Aloud failed", description: "Could not play the audio.", variant: "destructive" });
       };
