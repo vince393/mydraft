@@ -1314,7 +1314,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   Translated from {detectedLanguage?.name || "original language"}
                 </div>
                 {isHtmlContent(translatedContent.body) ? (
-                  <EmailIframeRenderer html={translatedContent.body} />
+                  <EmailIframeRenderer html={translatedContent.body} fillAvailable />
                 ) : (
                   <div className="email-content-plain">
                     {translatedContent.body.split("\n").map((paragraph, i) => (
@@ -1328,7 +1328,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
             ) : (
               <>
                 {isHtmlContent(email.body) ? (
-                  <EmailIframeRenderer html={email.body} />
+                  <EmailIframeRenderer html={email.body} fillAvailable />
                 ) : (
                   <div className="email-content-plain">
                     {email.body.split("\n").map((paragraph, i) => (
