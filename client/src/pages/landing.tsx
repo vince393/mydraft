@@ -54,6 +54,7 @@ export default function LandingPage() {
       <MarketingNav />
       <HeroSection getStartedHref={getStartedHref()} />
       <FeatureShowcase />
+      <ComparisonSection getStartedHref={getStartedHref()} />
       <HowItWorksSection getStartedHref={getStartedHref()} />
       <TestimonialsSection />
       <FAQSection />
@@ -924,6 +925,128 @@ function MockupSmartFolders() {
       </div>
     </div>
   );
+}
+
+function ComparisonSection({ getStartedHref }: { getStartedHref: string }) {
+  const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.1 });
+
+  const features = [
+    { name: "Starting price", superhuman: "$30/mo", hey: "$99/yr", mydraft: "Free" },
+    { name: "AI reply drafting", superhuman: true, hey: false, mydraft: true },
+    { name: "Thread summaries", superhuman: true, hey: false, mydraft: true },
+    { name: "50+ language translation", superhuman: false, hey: false, mydraft: true },
+    { name: "AI auto-sort folders", superhuman: false, hey: false, mydraft: true },
+    { name: "Undo send", superhuman: true, hey: true, mydraft: true },
+    { name: "Gmail + Outlook", superhuman: true, hey: false, mydraft: true },
+    { name: "Read aloud (AI voice)", superhuman: false, hey: false, mydraft: true },
+    { name: "Schedule send", superhuman: true, hey: false, mydraft: true },
+    { name: "Free plan available", superhuman: false, hey: false, mydraft: true },
+    { name: "CASA Tier 2 security", superhuman: false, hey: false, mydraft: true },
+  ];
+
+  return (
+    <section className="py-24 sm:py-32 px-5 sm:px-6 relative" ref={ref}>
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+
+      <div className="max-w-4xl mx-auto">
+        <div
+          className="text-center mb-14 transition-all duration-1000 ease-out"
+          style={{
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
+          }}
+        >
+          <span className="text-xs font-semibold tracking-widest uppercase mb-4 block bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+            Compare
+          </span>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
+            See how we stack up
+          </h2>
+        </div>
+
+        <div
+          className="transition-all duration-1000 ease-out delay-200"
+          style={{
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+          }}
+        >
+          <div className="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0">
+            <table className="w-full border-collapse min-w-[540px]" data-testid="comparison-table">
+              <thead>
+                <tr>
+                  <th className="text-left py-4 px-4 text-sm font-medium text-muted-foreground/50 w-[40%]" />
+                  <th className="py-4 px-3 text-center w-[20%]">
+                    <span className="text-sm font-medium text-muted-foreground/60">Superhuman</span>
+                  </th>
+                  <th className="py-4 px-3 text-center w-[20%]">
+                    <span className="text-sm font-medium text-muted-foreground/60">Hey</span>
+                  </th>
+                  <th className="py-4 px-3 text-center w-[20%] relative">
+                    <div className="absolute inset-x-0 -top-3 bottom-0 rounded-t-xl border border-b-0 border-blue-500/30 bg-blue-500/[0.04] pointer-events-none" />
+                    <span className="relative text-sm font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">MyDraft</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {features.map((f, i) => (
+                  <tr
+                    key={i}
+                    className="transition-all duration-500 ease-out"
+                    style={{
+                      opacity: isVisible ? 1 : 0,
+                      transform: isVisible ? 'translateY(0)' : 'translateY(12px)',
+                      transitionDelay: `${300 + i * 50}ms`,
+                    }}
+                  >
+                    <td className="py-3 px-4 text-sm text-foreground/70 border-t border-black/[0.04] dark:border-white/[0.04]">
+                      {f.name}
+                    </td>
+                    <td className="py-3 px-3 text-center border-t border-black/[0.04] dark:border-white/[0.04]">
+                      <ComparisonCell value={f.superhuman} />
+                    </td>
+                    <td className="py-3 px-3 text-center border-t border-black/[0.04] dark:border-white/[0.04]">
+                      <ComparisonCell value={f.hey} />
+                    </td>
+                    <td className="py-3 px-3 text-center border-t border-blue-500/10 relative">
+                      <div className="absolute inset-x-0 inset-y-0 border-x border-blue-500/30 bg-blue-500/[0.04] pointer-events-none" />
+                      <span className="relative"><ComparisonCell value={f.mydraft} highlight /></span>
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="border-t border-black/[0.04] dark:border-white/[0.04]" />
+                  <td className="border-t border-black/[0.04] dark:border-white/[0.04]" />
+                  <td className="border-t border-black/[0.04] dark:border-white/[0.04]" />
+                  <td className="pt-5 pb-4 relative">
+                    <div className="absolute inset-x-0 top-0 bottom-0 border-x border-b border-blue-500/30 bg-blue-500/[0.04] rounded-b-xl pointer-events-none" />
+                    <div className="relative flex justify-center">
+                      <Link href={getStartedHref}>
+                        <Button size="sm" className="rounded-md text-xs gap-1.5" data-testid="comparison-cta">
+                          Try free
+                          <ArrowRight className="w-3 h-3" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ComparisonCell({ value, highlight = false }: { value: boolean | string; highlight?: boolean }) {
+  if (typeof value === "string") {
+    return <span className={`text-sm font-medium ${highlight ? 'text-blue-400' : 'text-foreground/60'}`}>{value}</span>;
+  }
+  if (value) {
+    return <Check className={`w-4 h-4 mx-auto ${highlight ? 'text-blue-400' : 'text-foreground/40'}`} />;
+  }
+  return <X className="w-4 h-4 mx-auto text-foreground/15" />;
 }
 
 function HowItWorksSection({ getStartedHref }: { getStartedHref: string }) {
