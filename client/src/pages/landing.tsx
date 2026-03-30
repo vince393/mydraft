@@ -1011,19 +1011,11 @@ function ComparisonSection({ getStartedHref }: { getStartedHref: string }) {
           ))}
 
           <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr]" style={{ borderTop: "1px solid rgba(var(--overlay-rgb), 0.05)" }}>
-            <div className="px-5 py-4" />
-            <div className="px-3 py-4" />
-            <div className="px-3 py-4" />
-            <div className="px-3 py-4 relative">
+            <div className="px-5 py-3" />
+            <div className="px-3 py-3" />
+            <div className="px-3 py-3" />
+            <div className="px-3 py-3 relative">
               <div className="absolute inset-x-1 inset-y-0 rounded-b-2xl" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.2)", borderTop: "none" }} />
-              <div className="relative flex justify-center">
-                <Link href={getStartedHref}>
-                  <Button size="sm" className="rounded-full text-xs gap-1.5 px-5" data-testid="comparison-cta">
-                    Try free
-                    <ArrowRight className="w-3 h-3" />
-                  </Button>
-                </Link>
-              </div>
             </div>
           </div>
         </div>
