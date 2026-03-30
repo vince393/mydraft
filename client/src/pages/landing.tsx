@@ -930,35 +930,20 @@ function MockupSmartFolders() {
 function ComparisonSection({ getStartedHref }: { getStartedHref: string }) {
   const { ref, isVisible } = useScrollAnimation<HTMLDivElement>({ threshold: 0.1 });
 
-  const competitors = [
-    {
-      name: "Superhuman",
-      price: "$30/mo",
-      description: "Fast keyboard-driven email",
-      features: ["AI writing assist", "Split inbox", "Undo send", "Schedule send", "Gmail + Outlook"],
-      missing: ["No free plan", "No translation", "No AI auto-sort", "No read aloud"],
-    },
-    {
-      name: "Hey",
-      price: "$99/yr",
-      description: "Opinionated email rethink",
-      features: ["The Screener", "Undo send", "Focus & Flow"],
-      missing: ["No AI features", "No free plan", "New @hey.com address required", "No Gmail/Outlook"],
-    },
+  const rows: { label: string; superhuman: boolean | string; hey: boolean | string; mydraft: boolean | string }[] = [
+    { label: "Starting price", superhuman: "$30/mo", hey: "$99/yr", mydraft: "Free" },
+    { label: "AI-powered replies", superhuman: true, hey: false, mydraft: true },
+    { label: "50+ language support", superhuman: false, hey: false, mydraft: true },
+    { label: "Works with Gmail + Outlook", superhuman: true, hey: false, mydraft: true },
+    { label: "AI auto-sort folders", superhuman: false, hey: false, mydraft: true },
+    { label: "Free plan available", superhuman: false, hey: false, mydraft: true },
   ];
-
-  const mydraft = {
-    name: "MyDraft",
-    price: "Free to start",
-    description: "AI-powered inbox for everyone",
-    features: ["AI reply drafting", "50+ language translation", "AI auto-sort folders", "Undo send + schedule send", "Gmail + Outlook", "Read aloud (AI voice)", "Thread summaries", "Free plan included"],
-  };
 
   return (
     <section className="py-24 sm:py-32 px-5 sm:px-6 relative" ref={ref}>
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div
           className="text-center mb-14 transition-all duration-1000 ease-out"
           style={{
@@ -975,99 +960,109 @@ function ComparisonSection({ getStartedHref }: { getStartedHref: string }) {
         </div>
 
         <div
-          className="grid grid-cols-1 md:grid-cols-3 gap-5 transition-all duration-1000 ease-out delay-200"
+          className="rounded-2xl overflow-hidden transition-all duration-1000 ease-out delay-200"
           style={{
             opacity: isVisible ? 1 : 0,
             transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+            background: "rgba(var(--overlay-rgb), 0.02)",
+            border: "1px solid rgba(var(--overlay-rgb), 0.08)",
           }}
-          data-testid="comparison-cards"
+          data-testid="comparison-table"
         >
-          {competitors.map((comp, i) => (
+          <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr]">
+            <div className="px-5 py-4" />
+            <div className="px-3 py-4 text-center">
+              <p className="text-sm font-medium text-muted-foreground/60">Superhuman</p>
+            </div>
+            <div className="px-3 py-4 text-center">
+              <p className="text-sm font-medium text-muted-foreground/60">Hey</p>
+            </div>
+            <div className="px-3 py-4 text-center relative">
+              <div className="absolute inset-x-1 -top-0 bottom-0 rounded-t-2xl" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.2)", borderBottom: "none" }} />
+              <p className="relative text-sm font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">MyDraft</p>
+            </div>
+          </div>
+
+          {rows.map((row, i) => (
             <div
-              key={comp.name}
-              className="rounded-xl p-6 flex flex-col transition-all duration-500 ease-out"
+              key={row.label}
+              className="grid grid-cols-[1.4fr_1fr_1fr_1fr] transition-all duration-500 ease-out"
               style={{
-                background: "rgba(var(--overlay-rgb), 0.03)",
-                border: "1px solid rgba(var(--overlay-rgb), 0.08)",
                 opacity: isVisible ? 1 : 0,
-                transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
-                transitionDelay: `${300 + i * 100}ms`,
+                transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
+                transitionDelay: `${350 + i * 60}ms`,
+                borderTop: "1px solid rgba(var(--overlay-rgb), 0.05)",
               }}
-              data-testid={`comparison-card-${comp.name.toLowerCase()}`}
             >
-              <div className="mb-5">
-                <h3 className="text-lg font-semibold text-foreground/70 mb-1">{comp.name}</h3>
-                <p className="text-sm text-muted-foreground/40 mb-2">{comp.description}</p>
-                <span className="text-xs font-medium text-foreground/50 px-2.5 py-1 rounded-full" style={{ background: "rgba(var(--overlay-rgb), 0.05)", border: "1px solid rgba(var(--overlay-rgb), 0.08)" }}>
-                  {comp.price}
-                </span>
+              <div className="px-5 py-3.5 flex items-center">
+                <span className="text-sm text-foreground/60">{row.label}</span>
               </div>
-
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {comp.features.map((f) => (
-                  <span key={f} className="inline-flex items-center gap-1 text-[11px] text-foreground/50 px-2.5 py-1 rounded-full" style={{ background: "rgba(var(--overlay-rgb), 0.04)", border: "1px solid rgba(var(--overlay-rgb), 0.06)" }}>
-                    <Check className="w-3 h-3 text-foreground/30" />
-                    {f}
-                  </span>
-                ))}
+              <div className="px-3 py-3.5 flex items-center justify-center">
+                <ComparisonBubble value={row.superhuman} />
               </div>
-
-              <div className="flex flex-wrap gap-1.5 mt-auto">
-                {comp.missing.map((m) => (
-                  <span key={m} className="inline-flex items-center gap-1 text-[11px] text-foreground/25 px-2.5 py-1 rounded-full" style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}>
-                    <X className="w-3 h-3 text-foreground/15" />
-                    {m}
-                  </span>
-                ))}
+              <div className="px-3 py-3.5 flex items-center justify-center">
+                <ComparisonBubble value={row.hey} />
+              </div>
+              <div className="px-3 py-3.5 flex items-center justify-center relative">
+                <div className="absolute inset-x-1 inset-y-0" style={{ background: "rgba(59,130,246,0.05)", borderLeft: "1px solid rgba(59,130,246,0.2)", borderRight: "1px solid rgba(59,130,246,0.2)" }} />
+                <span className="relative"><ComparisonBubble value={row.mydraft} highlight /></span>
               </div>
             </div>
           ))}
 
-          <div
-            className="rounded-xl p-6 flex flex-col relative overflow-hidden transition-all duration-500 ease-out"
-            style={{
-              background: "rgba(59,130,246,0.04)",
-              border: "1px solid rgba(59,130,246,0.25)",
-              boxShadow: "0 0 40px rgba(59,130,246,0.08), inset 0 1px 0 rgba(59,130,246,0.1)",
-              opacity: isVisible ? 1 : 0,
-              transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.98)',
-              transitionDelay: '500ms',
-            }}
-            data-testid="comparison-card-mydraft"
-          >
-            <div className="absolute top-0 right-0 px-3 py-1 rounded-bl-lg text-[10px] font-bold uppercase tracking-wider" style={{ background: "rgba(59,130,246,0.15)", color: "rgba(147,197,253,0.9)" }}>
-              Best value
-            </div>
-
-            <div className="mb-5">
-              <h3 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent mb-1">{mydraft.name}</h3>
-              <p className="text-sm text-muted-foreground/50 mb-2">{mydraft.description}</p>
-              <span className="text-xs font-semibold text-blue-400 px-2.5 py-1 rounded-full" style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)" }}>
-                {mydraft.price}
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5 mb-5">
-              {mydraft.features.map((f) => (
-                <span key={f} className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full" style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.15)", color: "rgba(147,197,253,0.85)" }}>
-                  <Check className="w-3 h-3" />
-                  {f}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-auto">
-              <Link href={getStartedHref}>
-                <Button size="sm" className="w-full rounded-lg text-xs gap-1.5" data-testid="comparison-cta">
-                  Try free
-                  <ArrowRight className="w-3 h-3" />
-                </Button>
-              </Link>
+          <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr]" style={{ borderTop: "1px solid rgba(var(--overlay-rgb), 0.05)" }}>
+            <div className="px-5 py-4" />
+            <div className="px-3 py-4" />
+            <div className="px-3 py-4" />
+            <div className="px-3 py-4 relative">
+              <div className="absolute inset-x-1 inset-y-0 rounded-b-2xl" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.2)", borderTop: "none" }} />
+              <div className="relative flex justify-center">
+                <Link href={getStartedHref}>
+                  <Button size="sm" className="rounded-full text-xs gap-1.5 px-5" data-testid="comparison-cta">
+                    Try free
+                    <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function ComparisonBubble({ value, highlight = false }: { value: boolean | string; highlight?: boolean }) {
+  if (typeof value === "string") {
+    return (
+      <span
+        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${highlight ? 'text-blue-400' : 'text-foreground/60'}`}
+        style={{
+          background: highlight ? "rgba(59,130,246,0.12)" : "rgba(var(--overlay-rgb), 0.05)",
+          border: highlight ? "1px solid rgba(59,130,246,0.2)" : "1px solid rgba(var(--overlay-rgb), 0.08)",
+        }}
+      >
+        {value}
+      </span>
+    );
+  }
+  if (value) {
+    return (
+      <span
+        className="inline-flex items-center justify-center w-8 h-8 rounded-full"
+        style={{
+          background: highlight ? "rgba(59,130,246,0.12)" : "rgba(var(--overlay-rgb), 0.05)",
+          border: highlight ? "1px solid rgba(59,130,246,0.2)" : "1px solid rgba(var(--overlay-rgb), 0.08)",
+        }}
+      >
+        <Check className={`w-4 h-4 ${highlight ? 'text-blue-400' : 'text-foreground/40'}`} />
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full" style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}>
+      <X className="w-3.5 h-3.5 text-foreground/15" />
+    </span>
   );
 }
 
