@@ -2209,6 +2209,16 @@ Return ONLY valid JSON, no other text.`;
         console.error("Failed to cache emails:", err);
       });
 
+      // Auto-save contacts from senders (async, don't block response)
+      const sendersSeen = new Set<string>();
+      for (const msg of allMessages) {
+        const email = (msg.fromEmail || "").trim().toLowerCase();
+        if (!email || sendersSeen.has(email)) continue;
+        sendersSeen.add(email);
+        const name = msg.from || undefined;
+        storage.saveContact(userId, email, name).catch(() => {});
+      }
+
       return res.json(emails);
     } catch (error) {
       console.error("Error fetching emails:", error);

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
-import { User } from "lucide-react";
+import { User, Clock } from "lucide-react";
 
 interface Contact {
   id: number;
@@ -35,7 +35,7 @@ export function EmailAutocomplete({
     ? value.substring(0, value.lastIndexOf(",") + 1) + " "
     : "";
 
-  const { data: contacts = [] } = useQuery<Contact[]>({
+  const { data: searchResults = [] } = useQuery<Contact[]>({
     queryKey: ["/api/contacts/search", lastEmail],
     queryFn: async () => {
       const res = await fetch(`/api/contacts/search?q=${encodeURIComponent(lastEmail)}`);
@@ -44,6 +44,18 @@ export function EmailAutocomplete({
     },
     enabled: lastEmail.length > 0 && showSuggestions,
   });
+
+  const { data: recentContacts = [] } = useQuery<Contact[]>({
+    queryKey: ["/api/contacts/search", ""],
+    queryFn: async () => {
+      const res = await fetch("/api/contacts/search?q=");
+      if (!res.ok) throw new Error("Failed to fetch contacts");
+      return res.json();
+    },
+    enabled: showSuggestions && lastEmail.length === 0,
+  });
+
+  const contacts = lastEmail.length > 0 ? searchResults : recentContacts;
 
   const filteredContacts = contacts.filter(c => {
     const existing = value.toLowerCase().split(",").map(e => e.trim());
@@ -101,6 +113,8 @@ export function EmailAutocomplete({
     }
   };
 
+  const isShowingRecent = lastEmail.length === 0 && filteredContacts.length > 0;
+
   return (
     <div ref={containerRef} className="relative w-full">
       <Input
@@ -120,35 +134,55 @@ export function EmailAutocomplete({
       
       {showSuggestions && filteredContacts.length > 0 && (
         <div 
-          className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto"
+          className="absolute top-full left-0 right-0 mt-1 rounded-lg shadow-xl z-50 max-h-56 overflow-y-auto"
+          style={{
+            background: "rgba(22,22,28,0.98)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            backdropFilter: "blur(12px)",
+          }}
           data-testid="email-autocomplete-dropdown"
         >
-          {filteredContacts.map((contact, index) => (
-            <button
-              key={contact.id}
-              type="button"
-              onClick={() => selectContact(contact)}
-              onMouseEnter={() => setSelectedIndex(index)}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                index === selectedIndex 
-                  ? "bg-accent text-accent-foreground" 
-                  : "hover:bg-muted"
-              }`}
-              data-testid={`contact-suggestion-${contact.id}`}
-            >
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                {contact.name && (
-                  <div className="text-sm font-medium truncate">{contact.name}</div>
-                )}
-                <div className={`text-sm truncate ${contact.name ? "text-muted-foreground" : ""}`}>
-                  {contact.email}
+          {isShowingRecent && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <Clock className="w-3 h-3 text-foreground/25" />
+              <span className="text-[10px] text-foreground/25 uppercase tracking-wider font-medium">Recent</span>
+            </div>
+          )}
+          {filteredContacts.map((contact, index) => {
+            const initial = (contact.name?.[0] || contact.email[0] || "?").toUpperCase();
+            return (
+              <button
+                key={contact.id}
+                type="button"
+                onClick={() => selectContact(contact)}
+                onMouseEnter={() => setSelectedIndex(index)}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors cursor-pointer ${
+                  index === selectedIndex 
+                    ? "bg-blue-500/10" 
+                    : "hover:bg-white/[0.03]"
+                }`}
+                data-testid={`contact-suggestion-${contact.id}`}
+              >
+                <div 
+                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold"
+                  style={{
+                    background: index === selectedIndex ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.06)",
+                    color: index === selectedIndex ? "rgba(147,197,253,0.9)" : "rgba(255,255,255,0.4)",
+                  }}
+                >
+                  {contact.name ? initial : <User className="w-3.5 h-3.5" />}
                 </div>
-              </div>
-            </button>
-          ))}
+                <div className="flex-1 min-w-0">
+                  {contact.name && (
+                    <div className="text-[13px] font-medium text-foreground/80 truncate">{contact.name}</div>
+                  )}
+                  <div className={`text-[12px] truncate ${contact.name ? "text-foreground/35" : "text-foreground/60"}`}>
+                    {contact.email}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
