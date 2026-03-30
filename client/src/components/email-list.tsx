@@ -280,18 +280,21 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   const handleLongPressStart = useCallback((emailId: string | number) => {
     longPressTriggered.current = false;
     dragStarted.current = false;
+    const delay = isSelectionMode ? 350 : 850;
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
       dragStarted.current = true;
-      setIsSelectionMode(true);
+      if (!isSelectionMode) {
+        setIsSelectionMode(true);
+      }
       setIsDragging(true);
       setSelectedIds(prev => {
         const next = new Set(prev);
         next.add(emailId);
         return next;
       });
-    }, 1000);
-  }, []);
+    }, delay);
+  }, [isSelectionMode]);
 
   const handleLongPressEnd = useCallback(() => {
     if (longPressTimer.current) {
