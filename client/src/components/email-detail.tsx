@@ -240,15 +240,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
 
     temp.querySelectorAll("style, script, head, title, meta, link, noscript").forEach((el) => el.remove());
 
-    temp.querySelectorAll("img").forEach((img) => {
-      const alt = img.getAttribute("alt");
-      if (alt && alt.trim()) {
-        const textNode = document.createTextNode(` ${alt.trim()} `);
-        img.parentNode?.replaceChild(textNode, img);
-      } else {
-        img.remove();
-      }
-    });
+    temp.querySelectorAll("img, picture, svg, video, audio, canvas, figure > img, figure > picture").forEach((el) => el.remove());
 
     temp.querySelectorAll("br").forEach((br) => {
       br.replaceWith(document.createTextNode("\n"));
