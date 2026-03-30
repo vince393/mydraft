@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Sparkles, Wand2, Loader2, Check, X, Archive, Trash2, Star, Mail, FolderInput, ShieldAlert, Ban } from "lucide-react";
+import { Sparkles, Wand2, Loader2, Check, X, Archive, Trash2, Star, Mail, FolderInput, ShieldAlert, Ban, ChevronDown, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -31,6 +31,8 @@ const actionMeta: Record<string, { icon: any; label: string }> = {
 export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMenuItem = false }: { onRefreshComplete?: () => void; compact?: boolean; asMenuItem?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [deselected, setDeselected] = useState<Set<number>>(new Set());
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [showInstructions, setShowInstructions] = useState(false);
   const { toast } = useToast();
 
   const { data: suggestionsData, refetch: refetchSuggestions } = useQuery<{ suggestions: AiSuggestion[] }>({
@@ -45,7 +47,9 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
 
   const refreshMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/ai/inbox-refresh");
+      const res = await apiRequest("POST", "/api/ai/inbox-refresh", {
+        customInstructions: customInstructions.trim() || undefined,
+      });
       return res.json();
     },
     onSuccess: (data) => {
@@ -169,6 +173,40 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+              <div className="px-5 pt-2 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <button
+                  onClick={() => setShowInstructions(!showInstructions)}
+                  className="flex items-center gap-1.5 text-[11px] text-foreground/35 hover:text-foreground/55 cursor-pointer transition-colors w-full py-1"
+                  data-testid="button-toggle-custom-instructions"
+                >
+                  <Filter className="w-3 h-3" />
+                  <span>Custom filter rules</span>
+                  <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${showInstructions ? "rotate-180" : ""}`} />
+                </button>
+                {showInstructions && (
+                  <div className="mt-1.5 mb-2">
+                    <textarea
+                      value={customInstructions}
+                      onChange={(e) => setCustomInstructions(e.target.value)}
+                      placeholder="e.g. Remove all newsletters, archive anything from LinkedIn, delete old promotional emails..."
+                      className="w-full px-3 py-2 rounded-lg text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-foreground/20"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        color: "rgba(255,255,255,0.7)",
+                        minHeight: "52px",
+                        maxHeight: "100px",
+                      }}
+                      rows={2}
+                      data-testid="input-custom-instructions"
+                    />
+                    <p className="text-[10px] text-foreground/20 mt-1">
+                      Optional: Tell the AI what you want filtered out
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {refreshMutation.isPending ? (
                 <div className="flex flex-col items-center justify-center py-16 flex-1">
                   <Loader2 className="w-5 h-5 text-primary animate-spin mb-3" />

@@ -3095,6 +3095,8 @@ If truly nothing matches, return: []`,
     console.log("[AI Inbox Refresh] Starting analysis...");
     try {
       const userId = req.session.userId!;
+      const customInstructions = typeof req.body?.customInstructions === "string" ? req.body.customInstructions.trim().slice(0, 500) : "";
+      if (customInstructions) console.log("[AI Inbox Refresh] Custom instructions:", customInstructions);
       const providerResult = await getProviderAndToken(userId);
       console.log("[AI Inbox Refresh] Provider found:", !!providerResult);
 
@@ -3207,7 +3209,7 @@ If truly nothing matches, return: []`,
           }
         }
 
-        if (email.unread && !email.isAutomated && !email.isMarketing) continue;
+        if (!customInstructions && email.unread && !email.isAutomated && !email.isMarketing) continue;
 
         needsAi.push(email);
       }
@@ -3251,10 +3253,19 @@ PRIORITY: Suggest deleting/archiving emails from senders/domains the user has hi
       let aiSuggestions: any[] = [];
 
       if (emailSummaries.length > 0) {
+        const customSection = customInstructions ? `
+USER'S CUSTOM CLEANUP INSTRUCTIONS (HIGH PRIORITY):
+The user specifically wants the following filtered from their inbox. Apply these rules aggressively:
+"${customInstructions}"
+
+Interpret these instructions liberally — if the user says "remove newsletters", target ALL newsletter-like emails. If they mention specific senders or topics, filter those first.
+` : "";
+
         const systemPrompt = `You are a precise email inbox cleanup assistant. Only the ambiguous emails are sent to you — obvious cases are already handled.
 
 ${hasHistory ? "The user has action history — weight patterns heavily." : "No history yet — be conservative."}
 ${learnedStyle?.styleAnalysis ? `User style: ${learnedStyle.styleAnalysis}` : ""}
+${customSection}
 ${userHistorySection}
 ${folderSortingSection}
 
