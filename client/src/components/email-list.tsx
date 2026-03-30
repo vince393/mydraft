@@ -782,9 +782,9 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </div>
         )}
         {isSyncing && !isRefreshing && (
-          <div className="flex items-center justify-center gap-2 py-1 px-3" data-testid="syncing-banner">
-            <Loader2 className="w-3.5 h-3.5 text-muted-foreground/60 animate-spin" />
-            <span className="text-xs text-muted-foreground/60">Checking for new emails...</span>
+          <div className="flex items-center justify-center gap-2 py-2 mx-3 mt-1 rounded-lg" style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.1)" }} data-testid="syncing-banner">
+            <Loader2 className="w-3 h-3 text-blue-400/70 animate-spin" />
+            <span className="text-[11px] text-blue-300/60">Checking for new emails</span>
           </div>
         )}
         {categoryFilteredEmails.length === 0 ? (
