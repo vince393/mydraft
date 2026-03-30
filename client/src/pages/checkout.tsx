@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { loadStripe } from "@stripe/stripe-js";
@@ -8,10 +8,135 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { COUNTRIES, STATE_MAP } from "@/lib/countries";
-import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap, Ticket, X, CheckCircle2, ChevronsUpDown } from "lucide-react";
+import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap, Ticket, X, CheckCircle2 } from "lucide-react";
+
+function TypeaheadInput({ 
+  items, 
+  value, 
+  onSelect, 
+  placeholder, 
+  testId 
+}: { 
+  items: { code: string; name: string }[]; 
+  value: string; 
+  onSelect: (code: string) => void; 
+  placeholder: string; 
+  testId: string;
+}) {
+  const [query, setQuery] = useState(() => items.find(i => i.code === value)?.name || "");
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const listId = useRef(`${testId}-listbox`).current;
+
+  useEffect(() => {
+    const name = items.find(i => i.code === value)?.name || "";
+    setQuery(name);
+  }, [value, items]);
+
+  const filtered = query.length >= 1
+    ? items.filter(i => i.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+    : [];
+
+  const handleSelect = useCallback((code: string) => {
+    const name = items.find(i => i.code === code)?.name || "";
+    setQuery(name);
+    onSelect(code);
+    setOpen(false);
+    setActiveIndex(-1);
+    inputRef.current?.blur();
+  }, [items, onSelect]);
+
+  const handleBlur = useCallback(() => {
+    setTimeout(() => {
+      setOpen(false);
+      const name = items.find(i => i.code === value)?.name || "";
+      setQuery(name);
+    }, 200);
+  }, [value, items]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!open && query.length >= 1) { setOpen(true); return; }
+      if (filtered.length > 0) setActiveIndex(prev => Math.min(prev + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (filtered.length > 0) setActiveIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === "Enter" && activeIndex >= 0 && filtered[activeIndex]) {
+      e.preventDefault();
+      handleSelect(filtered[activeIndex].code);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+      const name = items.find(i => i.code === value)?.name || "";
+      setQuery(name);
+      inputRef.current?.blur();
+    }
+  };
+
+  useEffect(() => {
+    if (activeIndex >= 0 && listRef.current) {
+      const el = listRef.current.children[activeIndex] as HTMLElement;
+      el?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex]);
+
+  return (
+    <div className="relative">
+      <Input
+        ref={inputRef}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-activedescendant={activeIndex >= 0 && filtered[activeIndex] ? `${testId}-opt-${filtered[activeIndex].code}` : undefined}
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(e.target.value.length >= 1);
+          setActiveIndex(-1);
+          if (!e.target.value) onSelect("");
+        }}
+        onFocus={() => { if (query.length >= 1) setOpen(true); }}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        data-testid={testId}
+        autoComplete="off"
+      />
+      {open && query.length >= 1 && (
+        <div
+          ref={listRef}
+          id={listId}
+          role="listbox"
+          className="absolute z-50 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-border/40 bg-popover shadow-lg"
+        >
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground/60">No results found</div>
+          ) : filtered.map((item, i) => (
+            <button
+              key={item.code}
+              id={`${testId}-opt-${item.code}`}
+              type="button"
+              role="option"
+              aria-selected={value === item.code}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleSelect(item.code)}
+              data-testid={`${testId}-option-${item.code}`}
+              className={`flex items-center w-full px-3 py-2 text-sm text-left transition-colors cursor-pointer ${
+                i === activeIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted/50"
+              } ${value === item.code ? "font-medium" : ""}`}
+            >
+              {value === item.code && <Check className="w-3.5 h-3.5 mr-2 text-primary flex-shrink-0" />}
+              <span className={value !== item.code ? "ml-[22px]" : ""}>{item.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
 import type { User } from "@shared/schema";
 
@@ -58,9 +183,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("");
-  const [countryOpen, setCountryOpen] = useState(false);
   const [billingState, setBillingState] = useState("");
-  const [stateOpen, setStateOpen] = useState(false);
   const [cardNumberComplete, setCardNumberComplete] = useState(false);
   const [cardExpiryComplete, setCardExpiryComplete] = useState(false);
   const [cardCvcComplete, setCardCvcComplete] = useState(false);
@@ -356,91 +479,25 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
           </div>
           <div>
             <Label className="text-xs text-muted-foreground/60 mb-1.5 block">Country</Label>
-            <Popover open={countryOpen} onOpenChange={setCountryOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  role="combobox"
-                  aria-expanded={countryOpen}
-                  data-testid="input-country"
-                  className="flex h-10 w-full items-center justify-between rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.03] px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <span className={country ? "text-foreground" : "text-muted-foreground/40"}>
-                    {country ? COUNTRIES.find(c => c.code === country)?.name ?? country : "Select country"}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search country..." />
-                  <CommandList>
-                    <CommandEmpty>No country found.</CommandEmpty>
-                    <CommandGroup>
-                      {COUNTRIES.map((c) => (
-                        <CommandItem
-                          key={c.code}
-                          value={c.name}
-                          onSelect={() => {
-                            setCountry(c.code);
-                            setBillingState("");
-                            setCountryOpen(false);
-                          }}
-                          data-testid={`country-option-${c.code}`}
-                        >
-                          <Check className={`mr-2 h-4 w-4 ${country === c.code ? "opacity-100" : "opacity-0"}`} />
-                          {c.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <TypeaheadInput
+              items={COUNTRIES}
+              value={country}
+              onSelect={(code) => { setCountry(code); setBillingState(""); }}
+              placeholder="Type to search country..."
+              testId="input-country"
+            />
           </div>
           {country && STATE_MAP[country] && (
             <div>
               <Label className="text-xs text-muted-foreground/60 mb-1.5 block">State / Province</Label>
-              <Popover open={stateOpen} onOpenChange={setStateOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    role="combobox"
-                    aria-expanded={stateOpen}
-                    data-testid="input-state"
-                    className="flex h-10 w-full items-center justify-between rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.03] px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span className={billingState ? "text-foreground" : "text-muted-foreground/40"}>
-                      {billingState ? STATE_MAP[country]?.find(s => s.code === billingState)?.name ?? billingState : "Select state"}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search state..." />
-                    <CommandList>
-                      <CommandEmpty>No state found.</CommandEmpty>
-                      <CommandGroup>
-                        {STATE_MAP[country]?.map((s) => (
-                          <CommandItem
-                            key={s.code}
-                            value={s.name}
-                            onSelect={() => {
-                              setBillingState(s.code);
-                              setStateOpen(false);
-                            }}
-                            data-testid={`state-option-${s.code}`}
-                          >
-                            <Check className={`mr-2 h-4 w-4 ${billingState === s.code ? "opacity-100" : "opacity-0"}`} />
-                            {s.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <TypeaheadInput
+                key={country}
+                items={STATE_MAP[country] || []}
+                value={billingState}
+                onSelect={setBillingState}
+                placeholder="Type to search state..."
+                testId="input-state"
+              />
             </div>
           )}
         </div>
