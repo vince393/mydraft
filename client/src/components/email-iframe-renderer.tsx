@@ -87,7 +87,7 @@ function sanitizeForIframe(html: string): string {
   while (comments.nextNode()) commentsToRemove.push(comments.currentNode);
   commentsToRemove.forEach((c) => c.parentNode?.removeChild(c));
 
-  temp.querySelectorAll("table, td, th, div").forEach((el) => {
+  temp.querySelectorAll("div").forEach((el) => {
     el.removeAttribute("width");
   });
 
@@ -215,12 +215,6 @@ export function EmailIframeRenderer({
     box-sizing: border-box;
   }
   table {
-    max-width: 100% !important;
-    table-layout: auto !important;
-    width: auto !important;
-  }
-  table[width] {
-    width: 100% !important;
     max-width: 100% !important;
   }
   td, th {
