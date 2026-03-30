@@ -3014,9 +3014,13 @@ Return ONLY valid JSON, no other text.`;
 
       let matchingIds: string[] = [];
       const batchSize = 50;
+      const sortBatches: any[][] = [];
       for (let i = 0; i < emailSummaries.length; i += batchSize) {
-        const batch = emailSummaries.slice(i, i + batchSize);
-        try {
+        sortBatches.push(emailSummaries.slice(i, i + batchSize));
+      }
+
+      const sortResults = await Promise.allSettled(
+        sortBatches.map(async (batch, idx) => {
           const aiResponse = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
@@ -3055,11 +3059,15 @@ If truly nothing matches, return: []`,
           const responseText = aiResponse.choices[0]?.message?.content || "[]";
           const cleanResponse = responseText.replace(/```json\n?|\n?```/g, "").trim();
           const parsed = JSON.parse(cleanResponse);
-          if (Array.isArray(parsed)) {
-            matchingIds.push(...parsed.map(String));
-          }
-        } catch (batchErr) {
-          console.error(`Failed to parse AI response for batch ${Math.floor(i / batchSize) + 1}:`, batchErr);
+          return Array.isArray(parsed) ? parsed.map(String) : [];
+        })
+      );
+
+      for (const result of sortResults) {
+        if (result.status === "fulfilled") {
+          matchingIds.push(...result.value);
+        } else {
+          console.error("Folder sort batch failed:", result.reason);
         }
       }
 
@@ -3133,7 +3141,7 @@ If truly nothing matches, return: []`,
       }
 
       console.log("[AI Inbox Refresh] Fetching messages...");
-      const messages = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 500 });
+      const messages = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 200 });
       console.log(
         "[AI Inbox Refresh] Messages fetched:",
         messages?.length || 0,
@@ -3319,13 +3327,16 @@ ${foldersWithAiDesc.length > 0 ? "8. For move_to_folder, include folderId and fo
 JSON response only:
 {"suggestions":[{"messageId":"id","action":"spam|junk|archive|delete|star|mark_read${foldersWithAiDesc.length > 0 ? "|move_to_folder" : ""}","confidence":60-100,"reason":"brief reason"${foldersWithAiDesc.length > 0 ? ',"folderId":0,"folderName":""' : ""}}]}`;
 
-        const batchSize = 30;
+        const batchSize = 50;
+        const batches: any[][] = [];
         for (let i = 0; i < emailSummaries.length; i += batchSize) {
-          const batch = emailSummaries.slice(i, i + batchSize);
-          const stripped = batch.map(({ isAutomated, isMarketing, isTransactional, ...rest }: any) => rest);
-          const userPrompt = `Analyze these ${stripped.length} emails:\n${JSON.stringify(stripped)}`;
+          batches.push(emailSummaries.slice(i, i + batchSize));
+        }
 
-          try {
+        const batchResults = await Promise.allSettled(
+          batches.map(async (batch, idx) => {
+            const stripped = batch.map(({ isAutomated, isMarketing, isTransactional, ...rest }: any) => rest);
+            const userPrompt = `Analyze these ${stripped.length} emails:\n${JSON.stringify(stripped)}`;
             const completion = await openai.chat.completions.create({
               model: "gpt-4o-mini",
               messages: [
@@ -3335,13 +3346,18 @@ JSON response only:
               temperature: 0.1,
               max_tokens: 3000,
             });
-
             const responseText = completion.choices[0]?.message?.content || "{}";
-            console.log(`[AI Inbox Refresh] Batch ${Math.floor(i / batchSize) + 1} response length:`, responseText.length);
+            console.log(`[AI Inbox Refresh] Batch ${idx + 1} response length:`, responseText.length);
             const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
-            if (parsed.suggestions) aiSuggestions.push(...parsed.suggestions);
-          } catch (batchErr) {
-            console.error(`[AI Inbox Refresh] Batch ${Math.floor(i / batchSize) + 1} failed:`, batchErr);
+            return parsed.suggestions || [];
+          })
+        );
+
+        for (const result of batchResults) {
+          if (result.status === "fulfilled") {
+            aiSuggestions.push(...result.value);
+          } else {
+            console.error("[AI Inbox Refresh] Batch failed:", result.reason);
           }
         }
         console.log("[AI Inbox Refresh] AI suggestions total:", aiSuggestions.length);

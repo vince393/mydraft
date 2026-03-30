@@ -32,7 +32,7 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
   const [isOpen, setIsOpen] = useState(false);
   const [deselected, setDeselected] = useState<Set<number>>(new Set());
   const [customInstructions, setCustomInstructions] = useState("");
-  const [showInstructions, setShowInstructions] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true);
   const { toast } = useToast();
 
   const { data: suggestionsData, refetch: refetchSuggestions } = useQuery<{ suggestions: AiSuggestion[] }>({
@@ -114,9 +114,6 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
 
   const handleOpen = () => {
     setIsOpen(true);
-    if (items.length === 0) {
-      refreshMutation.mutate();
-    }
   };
 
   return (
@@ -213,17 +210,22 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                   <p className="text-xs text-foreground/40">Scanning your full inbox...</p>
                 </div>
               ) : items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-6 flex-1">
+                <div className="flex flex-col items-center justify-center py-10 px-6 flex-1">
                   <Sparkles className="w-5 h-5 text-foreground/20 mb-3" />
-                  <p className="text-sm text-foreground/50 mb-1">All clean</p>
-                  <p className="text-xs text-foreground/25 text-center mb-5">No suggestions right now.</p>
+                  <p className="text-sm text-foreground/50 mb-1">Ready to scan</p>
+                  <p className="text-xs text-foreground/25 text-center mb-5">Add filter rules above, then scan your inbox.</p>
                   <button
                     onClick={() => refreshMutation.mutate()}
-                    className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all hover:bg-black/[0.06] dark:hover:bg-white/[0.06]"
-                    style={{ border: "1px solid rgba(var(--overlay-rgb), 0.1)", color: "rgba(var(--overlay-rgb), 0.5)" }}
+                    className="px-5 py-2.5 rounded-lg text-xs font-medium cursor-pointer transition-all active:scale-[0.98] flex items-center gap-1.5"
+                    style={{
+                      background: "rgba(59,130,246,0.15)",
+                      border: "1px solid rgba(59,130,246,0.25)",
+                      color: "rgba(147,197,253,0.9)",
+                    }}
                     data-testid="button-start-ai-analysis"
                   >
-                    Scan again
+                    <Wand2 className="w-3.5 h-3.5" />
+                    Scan inbox
                   </button>
                 </div>
               ) : (
