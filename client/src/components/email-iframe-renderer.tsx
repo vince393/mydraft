@@ -140,16 +140,21 @@ export function EmailIframeRenderer({
   const [maxHeight, setMaxHeight] = useState(10000);
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const writeAttemptRef = useRef(0);
 
   useEffect(() => {
     if (!fillAvailable || !containerRef.current) return;
     const calcMax = () => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const available = window.innerHeight - rect.top - 24;
-      setMaxHeight(Math.max(available, 300));
+      const isMobile = window.innerWidth < 768;
+      const bottomPadding = isMobile ? 100 : 24;
+      const available = window.innerHeight - rect.top - bottomPadding;
+      setMaxHeight(Math.max(available, 400));
     };
     calcMax();
+    setTimeout(calcMax, 100);
+    setTimeout(calcMax, 500);
     window.addEventListener("resize", calcMax);
     return () => window.removeEventListener("resize", calcMax);
   }, [fillAvailable]);
@@ -224,6 +229,7 @@ export function EmailIframeRenderer({
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
     overflow-y: auto;
+    -webkit-text-size-adjust: 100%;
   }
   #email-content-wrap {
     max-width: 100%;
@@ -311,6 +317,21 @@ export function EmailIframeRenderer({
   body > center > table,
   body > div > center > table {
     margin: 0 auto;
+  }
+  @media (max-width: 480px) {
+    table[width], table[style*="width"] {
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+    td[width], td[style*="width"] {
+      width: auto !important;
+      min-width: 0 !important;
+    }
+    img[width] {
+      width: auto !important;
+      max-width: 100% !important;
+      height: auto !important;
+    }
   }` : `
   img:not([width]) {
     max-width: 100%;
@@ -508,109 +529,126 @@ ${headContent}
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) return;
-
-    const fullHtml = buildIframeContent(html, isDark);
-    doc.open();
-    doc.write(fullHtml);
-    doc.close();
-
-    const updateHeight = () => {
-      if (!doc.body) return;
-      const scrollH =
-        doc.documentElement?.scrollHeight || doc.body.scrollHeight;
-      const rawHeight = Math.max(scrollH + 8, 80);
-      setHeight(Math.min(rawHeight, maxHeight));
-    };
-
-    const updateScale = () => {
-      if (!doc.body || !containerRef.current) return;
-      const containerWidth = containerRef.current.clientWidth;
-      const contentWidth = Math.max(
-        doc.body.scrollWidth,
-        doc.documentElement?.scrollWidth || 0
-      );
-      if (contentWidth > containerWidth + 10) {
-        const newScale = containerWidth / contentWidth;
-        setScale(newScale);
-      } else {
-        setScale(1);
+    const writeContent = () => {
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) {
+        if (writeAttemptRef.current < 5) {
+          writeAttemptRef.current++;
+          setTimeout(writeContent, 100);
+        }
+        return;
       }
-    };
+      writeAttemptRef.current = 0;
 
-    const handleLoad = () => {
-      const images = doc.querySelectorAll("img");
-      const onImageLoad = () => {
-        updateHeight();
-        updateScale();
+      const fullHtml = buildIframeContent(html, isDark);
+      try {
+        doc.open();
+        doc.write(fullHtml);
+        doc.close();
+      } catch {
+        iframe.srcdoc = fullHtml;
+        return;
+      }
+
+      const updateHeight = () => {
+        if (!doc.body) return;
+        const scrollH =
+          doc.documentElement?.scrollHeight || doc.body.scrollHeight;
+        const rawHeight = Math.max(scrollH + 8, 80);
+        setHeight(rawHeight);
       };
 
-      images.forEach((img) => {
-        if (!img.complete) {
-          img.addEventListener("load", onImageLoad);
-          img.addEventListener("error", onImageLoad);
+      const updateScale = () => {
+        if (!doc.body || !containerRef.current) return;
+        const containerWidth = containerRef.current.clientWidth;
+        const contentWidth = Math.max(
+          doc.body.scrollWidth,
+          doc.documentElement?.scrollWidth || 0
+        );
+        if (contentWidth > containerWidth + 10) {
+          const newScale = Math.max(containerWidth / contentWidth, 0.5);
+          setScale(newScale);
+        } else {
+          setScale(1);
         }
-      });
+      };
 
-      updateHeight();
-      updateScale();
-      setTimeout(() => { updateHeight(); updateScale(); }, 200);
-      setTimeout(() => { updateHeight(); updateScale(); }, 800);
-      setTimeout(() => { updateHeight(); updateScale(); }, 2000);
-    };
-
-    if (resizeObserverRef.current) {
-      resizeObserverRef.current.disconnect();
-    }
-
-    const ro = new ResizeObserver(() => {
-      updateHeight();
-      updateScale();
-    });
-    resizeObserverRef.current = ro;
-
-    if (doc.body) {
-      ro.observe(doc.body);
-    }
-    if (containerRef.current) {
-      ro.observe(containerRef.current);
-    }
-
-    const links = doc.querySelectorAll("a");
-    links.forEach((link) => {
-      link.setAttribute("target", "_blank");
-      link.setAttribute("rel", "noopener noreferrer");
-    });
-
-    if (isDark && doc.body) {
-      const enforceDarkMode = () => {
-        const parseColor = (c: string) => {
-          if (!c || c === "transparent" || c === "rgba(0, 0, 0, 0)") return null;
-          const m = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-          return m ? [+m[1], +m[2], +m[3]] as const : null;
+      const handleLoad = () => {
+        const images = doc.querySelectorAll("img");
+        const onImageLoad = () => {
+          updateHeight();
+          updateScale();
         };
-        const isLightBg = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 > 180;
-        const isDarkText = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 < 80;
-        const els = doc.querySelectorAll("*");
-        els.forEach((el) => {
-          const s = doc.defaultView?.getComputedStyle(el);
-          if (!s) return;
-          const bg = parseColor(s.backgroundColor);
-          if (bg && isLightBg(bg[0], bg[1], bg[2])) {
-            (el as HTMLElement).style.setProperty("background-color", "#1a1a1e", "important");
-          }
-          const fg = parseColor(s.color);
-          if (fg && isDarkText(fg[0], fg[1], fg[2])) {
-            (el as HTMLElement).style.setProperty("color", "#e0e0e4", "important");
+
+        images.forEach((img) => {
+          if (!img.complete) {
+            img.addEventListener("load", onImageLoad);
+            img.addEventListener("error", onImageLoad);
           }
         });
-      };
-      setTimeout(enforceDarkMode, 50);
-      setTimeout(enforceDarkMode, 300);
-    }
 
-    handleLoad();
+        updateHeight();
+        updateScale();
+        setTimeout(() => { updateHeight(); updateScale(); }, 200);
+        setTimeout(() => { updateHeight(); updateScale(); }, 800);
+        setTimeout(() => { updateHeight(); updateScale(); }, 2000);
+        setTimeout(() => { updateHeight(); updateScale(); }, 4000);
+      };
+
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+      }
+
+      const ro = new ResizeObserver(() => {
+        updateHeight();
+        updateScale();
+      });
+      resizeObserverRef.current = ro;
+
+      if (doc.body) {
+        ro.observe(doc.body);
+      }
+      if (containerRef.current) {
+        ro.observe(containerRef.current);
+      }
+
+      const links = doc.querySelectorAll("a");
+      links.forEach((link) => {
+        link.setAttribute("target", "_blank");
+        link.setAttribute("rel", "noopener noreferrer");
+      });
+
+      if (isDark && doc.body) {
+        const enforceDarkMode = () => {
+          const parseColor = (c: string) => {
+            if (!c || c === "transparent" || c === "rgba(0, 0, 0, 0)") return null;
+            const m = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            return m ? [+m[1], +m[2], +m[3]] as const : null;
+          };
+          const isLightBg = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 > 180;
+          const isDarkText = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 < 80;
+          const els = doc.querySelectorAll("*");
+          els.forEach((el) => {
+            const s = doc.defaultView?.getComputedStyle(el);
+            if (!s) return;
+            const bg = parseColor(s.backgroundColor);
+            if (bg && isLightBg(bg[0], bg[1], bg[2])) {
+              (el as HTMLElement).style.setProperty("background-color", "#1a1a1e", "important");
+            }
+            const fg = parseColor(s.color);
+            if (fg && isDarkText(fg[0], fg[1], fg[2])) {
+              (el as HTMLElement).style.setProperty("color", "#e0e0e4", "important");
+            }
+          });
+        };
+        setTimeout(enforceDarkMode, 50);
+        setTimeout(enforceDarkMode, 300);
+      }
+
+      handleLoad();
+    };
+
+    writeContent();
 
     return () => {
       if (resizeObserverRef.current) {
@@ -619,16 +657,19 @@ ${headContent}
     };
   }, [html, isDark, buildIframeContent, maxHeight]);
 
-  const scaledHeight = scale < 1 ? height * scale : height;
+  const effectiveHeight = fillAvailable ? Math.min(height, maxHeight) : height;
+  const scaledHeight = scale < 1 ? effectiveHeight * scale : effectiveHeight;
+  const needsScroll = fillAvailable && height > maxHeight;
 
   return (
     <div
       ref={containerRef}
       className={`email-iframe-wrapper ${className}`}
       style={{
-        overflow: "hidden",
+        overflow: needsScroll ? "auto" : "hidden",
+        WebkitOverflowScrolling: "touch",
         maxHeight: fillAvailable ? `${maxHeight}px` : undefined,
-        ...(scale < 1 ? { height: `${scaledHeight}px` } : { height: `${height}px` }),
+        height: scale < 1 ? `${scaledHeight}px` : (needsScroll ? undefined : `${effectiveHeight}px`),
       }}
     >
       <iframe

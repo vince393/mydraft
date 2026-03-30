@@ -1142,7 +1142,9 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       <div className="pb-4 px-1 pl-12">
                         <p className="text-xs text-muted-foreground mb-3">{threadEmail.senderEmail}</p>
                         <div className="email-body-container">
-                          {isHtmlContent(emailContent) ? (
+                          {!emailContent ? (
+                            <p className="text-sm text-muted-foreground/50 italic">No content</p>
+                          ) : isHtmlContent(emailContent) ? (
                             <EmailIframeRenderer html={emailContent} />
                           ) : (
                             <div className="email-content-plain">
@@ -1327,11 +1329,13 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
               </>
             ) : (
               <>
-                {isHtmlContent(email.body) ? (
+                {!email.body ? (
+                  <p className="text-sm text-muted-foreground/50 italic">No content</p>
+                ) : isHtmlContent(email.body) ? (
                   <EmailIframeRenderer html={email.body} fillAvailable />
                 ) : (
                   <div className="email-content-plain">
-                    {email.body.split("\n").map((paragraph, i) => (
+                    {(email.body || "").split("\n").map((paragraph, i) => (
                       paragraph.trim() ? (
                         <p key={i}>{paragraph}</p>
                       ) : <br key={i} />
