@@ -137,7 +137,7 @@ export function EmailIframeRenderer({
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
-  const MAX_HEIGHT = 600;
+  const MAX_HEIGHT = 10000;
 
   const isDark = document.documentElement.classList.contains("dark");
 
@@ -590,7 +590,6 @@ ${headContent}
       className={`email-iframe-wrapper ${className}`}
       style={{
         overflow: "hidden",
-        maxHeight: `${MAX_HEIGHT}px`,
         ...(scale < 1 ? { height: `${scaledHeight}px` } : { height: `${height}px` }),
       }}
     >
