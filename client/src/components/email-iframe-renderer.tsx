@@ -239,9 +239,8 @@ export function EmailIframeRenderer({
   div[style*="width"], td[style*="width"], th[style*="width"] {
     max-width: 100% !important;
   }
-  img[style*="width"] {
-    max-width: 100% !important;
-    height: auto !important;
+  img {
+    max-width: 100%;
   }
   a { color: ${linkColor}; }
   blockquote {
@@ -280,7 +279,7 @@ export function EmailIframeRenderer({
   }`;
 
     const richStyles = isRich ? `
-  img {
+  img:not([width]) {
     max-width: 100%;
     height: auto;
   }
@@ -290,7 +289,7 @@ export function EmailIframeRenderer({
   body > div > center > table {
     margin: 0 auto;
   }` : `
-  img {
+  img:not([width]) {
     max-width: 100%;
     height: auto;
   }
