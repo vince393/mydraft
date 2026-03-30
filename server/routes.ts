@@ -2998,13 +2998,13 @@ Return ONLY valid JSON, no other text.`;
         return res.status(400).json({ error: "No email account connected" });
       }
 
-      const emails = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 50 });
+      const emails = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 200 });
 
       if (!emails.length) {
         return res.json({ sorted: 0, folderName: folder.name });
       }
 
-      const emailSummaries = emails.slice(0, 50).map((e: any) => ({
+      const emailSummaries = emails.slice(0, 100).map((e: any) => ({
         id: e.id,
         sender: e.from || "Unknown",
         senderEmail: e.fromEmail || "",
@@ -3012,12 +3012,17 @@ Return ONLY valid JSON, no other text.`;
         preview: e.preview || "",
       }));
 
-      const aiResponse = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert email sorting assistant. Your job is to find ALL emails that could reasonably belong in a user's custom folder based on its name and description.
+      let matchingIds: string[] = [];
+      const batchSize = 50;
+      for (let i = 0; i < emailSummaries.length; i += batchSize) {
+        const batch = emailSummaries.slice(i, i + batchSize);
+        try {
+          const aiResponse = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert email sorting assistant. Your job is to find ALL emails that could reasonably belong in a user's custom folder based on its name and description.
 
 Be INCLUSIVE and BROAD in your matching - it's better to include a borderline email than miss one.
 
@@ -3029,37 +3034,33 @@ Matching criteria (use ALL of these):
 - Related and adjacent topics (e.g., "Food" also matches: UberEats, DoorDash, Grubhub, HelloFresh, grocery store emails, etc.)
 
 Think broadly about what the user INTENDED when they created this folder.`,
-          },
-          {
-            role: "user",
-            content: `Folder Name: "${folder.name}"
+              },
+              {
+                role: "user",
+                content: `Folder Name: "${folder.name}"
 Folder Description: "${folder.aiDescription}"
 
 Analyze ALL of these emails and find every one that could belong in this folder:
-${JSON.stringify(emailSummaries, null, 2)}
+${JSON.stringify(batch, null, 2)}
 
 Return ONLY a JSON array of matching email IDs. Be generous - include anything that could reasonably fit.
 Example: ["id1", "id2", "id3"]
 If truly nothing matches, return: []`,
-          },
-        ],
-        temperature: 0.4,
-        max_tokens: 2000,
-      });
+              },
+            ],
+            temperature: 0.4,
+            max_tokens: 2000,
+          });
 
-      const responseText = aiResponse.choices[0]?.message?.content || "[]";
-
-      let matchingIds: string[] = [];
-      try {
-        const cleanResponse = responseText
-          .replace(/```json\n?|\n?```/g, "")
-          .trim();
-        const parsed = JSON.parse(cleanResponse);
-        if (Array.isArray(parsed)) {
-          matchingIds = parsed.map(String);
+          const responseText = aiResponse.choices[0]?.message?.content || "[]";
+          const cleanResponse = responseText.replace(/```json\n?|\n?```/g, "").trim();
+          const parsed = JSON.parse(cleanResponse);
+          if (Array.isArray(parsed)) {
+            matchingIds.push(...parsed.map(String));
+          }
+        } catch (batchErr) {
+          console.error(`Failed to parse AI response for batch ${Math.floor(i / batchSize) + 1}:`, batchErr);
         }
-      } catch {
-        console.error("Failed to parse AI response:", responseText);
       }
 
       const validInboxIds = new Set(emails.map((e: any) => String(e.id)));
@@ -3132,7 +3133,7 @@ If truly nothing matches, return: []`,
       }
 
       console.log("[AI Inbox Refresh] Fetching messages...");
-      const messages = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 200 });
+      const messages = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 500 });
       console.log(
         "[AI Inbox Refresh] Messages fetched:",
         messages?.length || 0,

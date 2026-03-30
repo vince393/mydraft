@@ -4,6 +4,9 @@ import { microsoftProvider } from "./microsoft";
 import type { IEmailProvider } from "./email-provider";
 
 let schedulerInterval: NodeJS.Timeout | null = null;
+let autoSortInterval: NodeJS.Timeout | null = null;
+const autoSortedEmails = new Map<string, Set<string>>();
+let autoSortRunning = false;
 
 async function captureWritingSample(userId: string, subject: string, body: string) {
   try {
@@ -246,6 +249,164 @@ async function runDailyChecks() {
   }
 }
 
+async function autoSortUserEmails(userId: string, folders: { id: number; name: string; aiDescription: string | null }[]) {
+  const foldersWithAi = folders.filter(f => f.aiDescription);
+  if (foldersWithAi.length === 0) return;
+
+  const account = await storage.getEmailAccount(userId);
+  if (!account) return;
+
+  const emailProvider: IEmailProvider = account.provider === "google" ? gmailProvider : microsoftProvider;
+
+  let accessToken = account.accessToken;
+  const isExpired = account.tokenExpiresAt && new Date(account.tokenExpiresAt).getTime() < Date.now() + 5 * 60 * 1000;
+  if (isExpired) {
+    try {
+      const refreshed = await emailProvider.refreshAccessToken(account.refreshToken);
+      await storage.updateEmailAccount(userId, {
+        accessToken: refreshed.accessToken,
+        tokenExpiresAt: refreshed.expiresAt,
+      });
+      accessToken = refreshed.accessToken;
+    } catch {
+      return;
+    }
+  }
+
+  let messages: any[];
+  try {
+    messages = await emailProvider.getMessages(accessToken, { folder: "inbox", limit: 100 });
+  } catch {
+    return;
+  }
+  if (!messages || messages.length === 0) return;
+
+  if (!autoSortedEmails.has(userId)) {
+    autoSortedEmails.set(userId, new Set());
+  }
+  const sorted = autoSortedEmails.get(userId)!;
+
+  const newEmails = messages.filter((m: any) => !sorted.has(String(m.id)));
+  if (newEmails.length === 0) return;
+
+  const folderList = foldersWithAi.map(f => `- Folder ID ${f.id}: "${f.name}" — ${f.aiDescription}`).join("\n");
+  const maxPerCycle = 100;
+  const batchSize = 50;
+  const toProcess = newEmails.slice(0, maxPerCycle);
+
+  try {
+    const { default: OpenAI } = await import("openai");
+    const { wrapOpenAIWithTracking } = await import("./ai-cost-tracker");
+    const openai = wrapOpenAIWithTracking(new OpenAI());
+
+    const validFolderIds = new Set(foldersWithAi.map(f => f.id));
+    let assignedCount = 0;
+
+    for (let i = 0; i < toProcess.length; i += batchSize) {
+      const batch = toProcess.slice(i, i + batchSize);
+      const emailSummaries = batch.map((e: any) => ({
+        id: String(e.id),
+        sender: e.from || "Unknown",
+        senderEmail: e.fromEmail || "",
+        subject: e.subject || "(No subject)",
+        preview: (e.preview || "").slice(0, 200),
+      }));
+
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: `You are an email auto-sorting assistant. Match emails to the user's custom folders based on folder names and descriptions. Be INCLUSIVE — if an email could reasonably fit in a folder, include it. Only skip emails that clearly don't match ANY folder.
+
+Available folders:
+${folderList}
+
+Return a JSON array of matches. Each match has "emailId" (string) and "folderId" (number).
+If an email doesn't match any folder, omit it. If no emails match, return [].
+Example: [{"emailId":"abc123","folderId":5},{"emailId":"def456","folderId":3}]
+Return ONLY the JSON array, nothing else.`,
+            },
+            {
+              role: "user",
+              content: `Sort these emails:\n${JSON.stringify(emailSummaries)}`,
+            },
+          ],
+          temperature: 0.2,
+          max_tokens: 2000,
+        });
+
+        const responseText = response.choices[0]?.message?.content || "[]";
+        const cleaned = responseText.replace(/```json\n?|\n?```/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed)) {
+          const validEmailIds = new Set(emailSummaries.map(e => e.id));
+          for (const match of parsed) {
+            if (!match.emailId || !match.folderId) continue;
+            if (!validFolderIds.has(match.folderId) || !validEmailIds.has(match.emailId)) continue;
+            try {
+              await storage.assignEmailToFolder(userId, match.emailId, match.folderId);
+              assignedCount++;
+            } catch {}
+          }
+        }
+
+        for (const e of batch) sorted.add(String(e.id));
+      } catch (batchErr) {
+        console.error(`[AutoSort] Batch ${Math.floor(i / batchSize) + 1} failed for user ${userId}, will retry next cycle`);
+      }
+    }
+
+    if (sorted.size > 1000) {
+      const entries = Array.from(sorted);
+      const toRemove = entries.slice(0, entries.length - 1000);
+      for (const id of toRemove) sorted.delete(id);
+    }
+
+    if (assignedCount > 0) {
+      console.log(`[AutoSort] Sorted ${assignedCount} email(s) for user ${userId}`);
+    }
+  } catch (error) {
+    console.error(`[AutoSort] AI error for user ${userId}:`, error);
+  }
+}
+
+async function runAutoSort() {
+  if (autoSortRunning) return;
+  autoSortRunning = true;
+
+  try {
+    const allUsers = await storage.getAllUsers();
+    const activeUserIds = new Set<string>();
+
+    for (const user of allUsers) {
+      if (user.plan === "free") continue;
+
+      try {
+        const folders = await storage.getCustomFolders(user.id);
+        const foldersWithAi = folders.filter(f => f.aiDescription);
+        if (foldersWithAi.length === 0) continue;
+
+        activeUserIds.add(user.id);
+        await autoSortUserEmails(user.id, foldersWithAi);
+      } catch (error) {
+        console.error(`[AutoSort] Error processing user ${user.id}:`, error);
+      }
+    }
+
+    for (const userId of autoSortedEmails.keys()) {
+      if (!activeUserIds.has(userId)) {
+        autoSortedEmails.delete(userId);
+      }
+    }
+  } catch (error) {
+    console.error("[AutoSort] Error in auto-sort cycle:", error);
+  } finally {
+    autoSortRunning = false;
+  }
+}
+
 export function startEmailScheduler() {
   if (schedulerInterval) {
     console.log("[EmailScheduler] Scheduler already running");
@@ -255,9 +416,11 @@ export function startEmailScheduler() {
   console.log("[EmailScheduler] Starting email scheduler (polling every 1 second)");
   schedulerInterval = setInterval(processPendingSends, 1000);
   dailyCheckInterval = setInterval(runDailyChecks, 60 * 60 * 1000);
+  autoSortInterval = setInterval(runAutoSort, 5 * 60 * 1000);
   
   processPendingSends();
   setTimeout(runDailyChecks, 30000);
+  setTimeout(runAutoSort, 60000);
 }
 
 export function stopEmailScheduler() {
@@ -268,6 +431,10 @@ export function stopEmailScheduler() {
   if (dailyCheckInterval) {
     clearInterval(dailyCheckInterval);
     dailyCheckInterval = null;
+  }
+  if (autoSortInterval) {
+    clearInterval(autoSortInterval);
+    autoSortInterval = null;
   }
   console.log("[EmailScheduler] Scheduler stopped");
 }
