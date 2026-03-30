@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql, desc, eq } from "drizzle-orm";
-import { ownerNotes } from "@shared/schema";
+import { ownerNotes, pageViews } from "@shared/schema";
 import OpenAI from "openai";
 import { wrapOpenAIWithTracking } from "./ai-cost-tracker";
 
@@ -336,6 +336,169 @@ export async function registerRoutes(
 ): Promise<Server> {
   registerAudioRoutes(app);
   registerImageRoutes(app);
+
+  app.post("/api/analytics/track", async (req, res) => {
+    try {
+      const { path, referrer, sessionId } = req.body;
+      if (!path || !sessionId) return res.status(400).json({ error: "Missing fields" });
+
+      const forwarded = req.headers["x-forwarded-for"];
+      const ip = typeof forwarded === "string" ? forwarded.split(",")[0].trim() : req.socket.remoteAddress || "";
+
+      let country: string | null = null;
+      let region: string | null = null;
+      let city: string | null = null;
+
+      if (ip && ip !== "127.0.0.1" && ip !== "::1") {
+        try {
+          const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=country,regionName,city`);
+          if (geoRes.ok) {
+            const geo = await geoRes.json() as { country?: string; regionName?: string; city?: string };
+            country = geo.country || null;
+            region = geo.regionName || null;
+            city = geo.city || null;
+          }
+        } catch {}
+      }
+
+      await db.insert(pageViews).values({
+        sessionId,
+        path,
+        referrer: referrer || null,
+        country,
+        region,
+        city,
+        userAgent: req.headers["user-agent"] || null,
+        userId: (req.session as any)?.userId || null,
+      });
+
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to track" });
+    }
+  });
+
+  app.get("/api/owner/analytics", requireOwner, async (req, res) => {
+    try {
+      const { range = "7d" } = req.query;
+
+      let daysBack = 7;
+      if (range === "1d") daysBack = 1;
+      else if (range === "7d") daysBack = 7;
+      else if (range === "30d") daysBack = 30;
+      else if (range === "90d") daysBack = 90;
+      else if (range === "365d") daysBack = 365;
+
+      const since = new Date();
+      since.setDate(since.getDate() - daysBack);
+
+      const views = await db
+        .select()
+        .from(pageViews)
+        .where(sql`${pageViews.viewedAt} >= ${since}`)
+        .orderBy(pageViews.viewedAt);
+
+      const totalViews = views.length;
+      const uniqueSessions = new Set(views.map((v) => v.sessionId)).size;
+
+      const byDay: Record<string, { views: number; sessions: Set<string> }> = {};
+      for (const v of views) {
+        const day = new Date(v.viewedAt).toISOString().slice(0, 10);
+        if (!byDay[day]) byDay[day] = { views: 0, sessions: new Set() };
+        byDay[day].views++;
+        byDay[day].sessions.add(v.sessionId);
+      }
+
+      const dailyData = Object.entries(byDay)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, data]) => ({
+          date,
+          views: data.views,
+          visitors: data.sessions.size,
+        }));
+
+      const byCountry: Record<string, number> = {};
+      const byRegion: Record<string, number> = {};
+      for (const v of views) {
+        const c = v.country || "Unknown";
+        const r = v.region || "Unknown";
+        byCountry[c] = (byCountry[c] || 0) + 1;
+        byRegion[r] = (byRegion[r] || 0) + 1;
+      }
+
+      const topCountries = Object.entries(byCountry)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20)
+        .map(([name, count]) => ({ name, count }));
+
+      const topRegions = Object.entries(byRegion)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20)
+        .map(([name, count]) => ({ name, count }));
+
+      const byPage: Record<string, number> = {};
+      for (const v of views) {
+        byPage[v.path] = (byPage[v.path] || 0) + 1;
+      }
+      const topPages = Object.entries(byPage)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([path, count]) => ({ path, count }));
+
+      const byReferrer: Record<string, number> = {};
+      for (const v of views) {
+        const ref = v.referrer || "Direct";
+        byReferrer[ref] = (byReferrer[ref] || 0) + 1;
+      }
+      const topReferrers = Object.entries(byReferrer)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([source, count]) => ({ source, count }));
+
+      const allRevenue = await db
+        .select()
+        .from(
+          sql`revenue`
+        )
+        .where(sql`revenue_date >= ${since}`);
+
+      const totalRevenue = (allRevenue as any[]).reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
+
+      const allExpenses = await db
+        .select()
+        .from(sql`expenses`)
+        .where(sql`created_at >= ${since}`);
+
+      const totalExpenses = (allExpenses as any[]).reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+
+      const allUsers = await storage.getAllUsers();
+      const usersInRange = allUsers.filter((u) => new Date(u.createdAt) >= since);
+      const paidUsers = usersInRange.filter((u) => u.plan === "pro" || u.plan === "premium");
+      const conversionRate = usersInRange.length > 0 ? (paidUsers.length / usersInRange.length) * 100 : 0;
+
+      const totalPaidUsers = allUsers.filter((u) => u.plan === "pro" || u.plan === "premium").length;
+      const overallConversion = allUsers.length > 0 ? (totalPaidUsers / allUsers.length) * 100 : 0;
+
+      res.json({
+        totalViews,
+        uniqueVisitors: uniqueSessions,
+        dailyData,
+        topCountries,
+        topRegions,
+        topPages,
+        topReferrers,
+        revenue: totalRevenue,
+        expenses: totalExpenses,
+        profit: totalRevenue - totalExpenses,
+        conversionRate: Math.round(conversionRate * 10) / 10,
+        overallConversion: Math.round(overallConversion * 10) / 10,
+        range,
+      });
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
 
   app.get("/.well-known/microsoft-identity-association.json", (_req, res) => {
     res.json({

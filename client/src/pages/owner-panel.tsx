@@ -50,6 +50,11 @@ import {
   Check,
   X,
   HeartPulse,
+  Globe,
+  Eye,
+  MousePointer,
+  MapPin,
+  ArrowUpRight,
 } from "lucide-react";
 
 interface OwnerStats {
@@ -216,6 +221,325 @@ const EXPENSE_CATEGORIES = [
   { value: "legal", label: "Legal & Compliance", color: "#64748B" },
   { value: "other", label: "Other", color: "#6B7280" },
 ];
+
+interface AnalyticsData {
+  totalViews: number;
+  uniqueVisitors: number;
+  dailyData: { date: string; views: number; visitors: number }[];
+  topCountries: { name: string; count: number }[];
+  topRegions: { name: string; count: number }[];
+  topPages: { path: string; count: number }[];
+  topReferrers: { source: string; count: number }[];
+  revenue: number;
+  expenses: number;
+  profit: number;
+  conversionRate: number;
+  overallConversion: number;
+  range: string;
+}
+
+function AnalyticsTab() {
+  const [range, setRange] = useState("7d");
+  const { data, isLoading } = useQuery<AnalyticsData>({
+    queryKey: ["/api/owner/analytics", range],
+    queryFn: async () => {
+      const res = await fetch(`/api/owner/analytics?range=${range}`);
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+
+  const rangeOptions = [
+    { value: "1d", label: "Today" },
+    { value: "7d", label: "7 Days" },
+    { value: "30d", label: "30 Days" },
+    { value: "90d", label: "90 Days" },
+    { value: "365d", label: "1 Year" },
+  ];
+
+  const maxViews = data?.dailyData ? Math.max(...data.dailyData.map((d) => d.views), 1) : 1;
+  const maxVisitors = data?.dailyData ? Math.max(...data.dailyData.map((d) => d.visitors), 1) : 1;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Analytics Overview</h2>
+        <div className="flex gap-1 p-1 rounded-lg bg-muted/50">
+          {rangeOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setRange(opt.value)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                range === opt.value
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+              data-testid={`analytics-range-${opt.value}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-5 pb-4 px-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Eye className="w-4 h-4 text-blue-400" />
+              </div>
+              <span className="text-xs text-muted-foreground">Page Views</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid="text-total-views">{data?.totalViews?.toLocaleString() || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4 px-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <MousePointer className="w-4 h-4 text-green-400" />
+              </div>
+              <span className="text-xs text-muted-foreground">Unique Visitors</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid="text-unique-visitors">{data?.uniqueVisitors?.toLocaleString() || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4 px-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <DollarSign className="w-4 h-4 text-emerald-400" />
+              </div>
+              <span className="text-xs text-muted-foreground">Revenue</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid="text-analytics-revenue">${((data?.revenue || 0) / 100).toFixed(2)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4 px-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-purple-400" />
+              </div>
+              <span className="text-xs text-muted-foreground">Conversion</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid="text-conversion-rate">{data?.overallConversion || 0}%</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-5 pb-4 px-5">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingDown className="w-3.5 h-3.5 text-red-400" />
+              <span className="text-xs text-muted-foreground">Costs</span>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-analytics-costs">${((data?.expenses || 0) / 100).toFixed(2)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4 px-5">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs text-muted-foreground">Profit</span>
+            </div>
+            <p className={`text-xl font-bold ${(data?.profit || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`} data-testid="text-analytics-profit">
+              {(data?.profit || 0) >= 0 ? "" : "-"}${(Math.abs(data?.profit || 0) / 100).toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4 px-5">
+            <div className="flex items-center gap-2 mb-1">
+              <ArrowUpRight className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-xs text-muted-foreground">Period Conversion</span>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-period-conversion">{data?.conversionRate || 0}%</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Visitors Over Time</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data?.dailyData && data.dailyData.length > 0 ? (
+            <div className="space-y-1">
+              <div className="flex items-end gap-[2px] h-40" data-testid="chart-visitors">
+                {data.dailyData.map((day, i) => {
+                  const viewHeight = (day.views / maxViews) * 100;
+                  const visitorHeight = (day.visitors / maxVisitors) * 100;
+                  const dateLabel = new Date(day.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  return (
+                    <div key={day.date} className="flex-1 flex flex-col items-center gap-[1px] group relative" title={`${dateLabel}: ${day.views} views, ${day.visitors} visitors`}>
+                      <div className="w-full flex gap-[1px] items-end h-full">
+                        <div
+                          className="flex-1 bg-blue-500/60 rounded-t-sm transition-all hover:bg-blue-500/80"
+                          style={{ height: `${Math.max(viewHeight, 2)}%` }}
+                        />
+                        <div
+                          className="flex-1 bg-green-500/50 rounded-t-sm transition-all hover:bg-green-500/70"
+                          style={{ height: `${Math.max(visitorHeight, 2)}%` }}
+                        />
+                      </div>
+                      {(i === 0 || i === data.dailyData.length - 1 || data.dailyData.length <= 14 || i % Math.ceil(data.dailyData.length / 10) === 0) && (
+                        <span className="text-[9px] text-muted-foreground/50 mt-1 whitespace-nowrap">{dateLabel}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-4 justify-end pt-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm bg-blue-500/60" />
+                  <span className="text-[10px] text-muted-foreground">Views</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm bg-green-500/50" />
+                  <span className="text-[10px] text-muted-foreground">Visitors</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground/40">
+              <BarChart3 className="w-8 h-8 mb-2" />
+              <p className="text-xs">No data yet for this period</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Globe className="w-4 h-4 text-blue-400" />
+              Top Countries
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data?.topCountries && data.topCountries.length > 0 ? (
+              <div className="space-y-2">
+                {data.topCountries.map((c) => {
+                  const pct = data.totalViews > 0 ? (c.count / data.totalViews) * 100 : 0;
+                  return (
+                    <div key={c.name} className="flex items-center gap-3" data-testid={`geo-country-${c.name}`}>
+                      <span className="text-xs text-foreground/80 w-28 truncate">{c.name}</span>
+                      <div className="flex-1 h-2 rounded-full bg-muted/50 overflow-hidden">
+                        <div className="h-full rounded-full bg-blue-500/50" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">{c.count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/40 py-4 text-center">No location data yet</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-green-400" />
+              Top Regions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data?.topRegions && data.topRegions.length > 0 ? (
+              <div className="space-y-2">
+                {data.topRegions.map((r) => {
+                  const pct = data.totalViews > 0 ? (r.count / data.totalViews) * 100 : 0;
+                  return (
+                    <div key={r.name} className="flex items-center gap-3" data-testid={`geo-region-${r.name}`}>
+                      <span className="text-xs text-foreground/80 w-28 truncate">{r.name}</span>
+                      <div className="flex-1 h-2 rounded-full bg-muted/50 overflow-hidden">
+                        <div className="h-full rounded-full bg-green-500/50" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">{r.count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/40 py-4 text-center">No location data yet</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Top Pages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data?.topPages && data.topPages.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Page</TableHead>
+                    <TableHead className="text-xs text-right">Views</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.topPages.map((p) => (
+                    <TableRow key={p.path}>
+                      <TableCell className="text-xs font-mono">{p.path}</TableCell>
+                      <TableCell className="text-xs text-right tabular-nums">{p.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-xs text-muted-foreground/40 py-4 text-center">No page data yet</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Traffic Sources</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data?.topReferrers && data.topReferrers.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Source</TableHead>
+                    <TableHead className="text-xs text-right">Visits</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.topReferrers.map((r) => (
+                    <TableRow key={r.source}>
+                      <TableCell className="text-xs truncate max-w-[200px]">{r.source}</TableCell>
+                      <TableCell className="text-xs text-right tabular-nums">{r.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-xs text-muted-foreground/40 py-4 text-center">No referrer data yet</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 export default function OwnerPanel() {
   const [, setLocation] = useLocation();
@@ -810,6 +1134,10 @@ export default function OwnerPanel() {
             <TabsTrigger value="notes" data-testid="tab-notes">
               <MessageSquare className="w-4 h-4 mr-2" />
               Notes
+            </TabsTrigger>
+            <TabsTrigger value="analytics" data-testid="tab-analytics">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
             </TabsTrigger>
             <TabsTrigger value="api-health" data-testid="tab-api-health">
               <HeartPulse className="w-4 h-4 mr-2" />
@@ -2451,6 +2779,10 @@ export default function OwnerPanel() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <AnalyticsTab />
           </TabsContent>
 
           <TabsContent value="api-health">

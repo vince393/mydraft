@@ -52,6 +52,12 @@ Preferred communication style: Simple, everyday language.
 - **User Flow**: Login/Register → Plan Selection → AI Preferences → Email Connection → Inbox.
 - **Security**: `requireAuth` middleware for protected routes.
 
+### Analytics & Owner Dashboard
+- **Visitor Tracking**: `page_views` table records session-based page visits with geo-location (country, region, city via ip-api.com).
+- **Frontend Tracking**: `usePageTracking()` hook in `App.tsx` tracks each page navigation with a session ID stored in `sessionStorage`.
+- **Owner Analytics Tab**: Shopify-style dashboard with time range selector (Today, 7d, 30d, 90d, 1yr), visitor chart, top countries/regions, top pages, traffic sources, revenue/costs/profit summary, and conversion rates.
+- **API**: `POST /api/analytics/track` (public), `GET /api/owner/analytics?range=` (owner-only).
+
 ### CASA Security Compliance (Approved by Google)
 - **Data Classification**: RESTRICTED, CONFIDENTIAL, INTERNAL, PUBLIC levels with defined protection requirements (encryption, auth, MFA, logging, retention).
 - **Security Features**: Rate limiting, httpOnly cookies, XSS prevention (SVG sanitization), audit logging, malware scanning, AES-256-GCM email content encryption at rest.

@@ -1060,6 +1060,21 @@ export type OwnerNote = typeof ownerNotes.$inferSelect;
 export type InsertOwnerNote = z.infer<typeof insertOwnerNoteSchema>;
 
 // Feature Flags - global app feature toggles controlled by owner
+export const pageViews = pgTable("page_views", {
+  id: serial("id").primaryKey(),
+  sessionId: text("session_id").notNull(),
+  path: text("path").notNull(),
+  referrer: text("referrer"),
+  country: text("country"),
+  region: text("region"),
+  city: text("city"),
+  userAgent: text("user_agent"),
+  userId: varchar("user_id"),
+  viewedAt: timestamp("viewed_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type PageView = typeof pageViews.$inferSelect;
+
 export const featureFlags = pgTable("feature_flags", {
   id: serial("id").primaryKey(),
   key: text("key").notNull().unique(),

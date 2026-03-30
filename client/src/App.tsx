@@ -1,8 +1,36 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { saveDeviceAccount } from "@/lib/device-accounts";
+
+function getOrCreateSessionId() {
+  let sid = sessionStorage.getItem("_sid");
+  if (!sid) {
+    sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem("_sid", sid);
+  }
+  return sid;
+}
+
+function usePageTracking() {
+  const [location] = useLocation();
+  const lastTracked = useRef("");
+  useEffect(() => {
+    if (location === lastTracked.current) return;
+    lastTracked.current = location;
+    const sessionId = getOrCreateSessionId();
+    fetch("/api/analytics/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: location,
+        referrer: document.referrer || null,
+        sessionId,
+      }),
+    }).catch(() => {});
+  }, [location]);
+}
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -300,6 +328,7 @@ function PublicRoute({ children, redirectIfAuthenticated = true }: { children: R
 }
 
 function AppRoutes() {
+  usePageTracking();
   return (
     <Switch>
       <Route path="/login">
