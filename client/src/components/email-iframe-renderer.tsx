@@ -194,7 +194,8 @@ export function EmailIframeRenderer({
     const sanitized = sanitizeForIframe(bodyContent);
     const emailType = detectEmailType(rawHtml);
 
-    const bgColor = dark ? "#1a1a1e" : "#ffffff";
+    const outerBg = dark ? "#111114" : "#f4f4f5";
+    const contentBg = dark ? "#1a1a1e" : "#ffffff";
     const textColor = dark ? "#e0e0e4" : "#1f1f1f";
     const linkColor = dark ? "#6fa8ff" : "#1a73e8";
     const quoteColor = dark ? "rgba(255,255,255,0.15)" : "#dadce0";
@@ -207,12 +208,12 @@ export function EmailIframeRenderer({
   html {
     margin: 0;
     padding: 0;
-    background: ${bgColor};
+    background: ${outerBg};
   }
   body {
     margin: 0;
-    padding: ${isRich ? '0' : '16px 20px'};
-    background: ${bgColor};
+    padding: 0;
+    background: ${outerBg};
     color: ${textColor};
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     font-size: 14px;
@@ -221,11 +222,18 @@ export function EmailIframeRenderer({
     overflow-wrap: break-word;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    max-width: 100%;
     overflow-x: hidden;
     overflow-y: auto;
   }
-  body > * {
+  #email-content-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: ${isRich ? '0' : '16px 20px'};
+    background: ${contentBg};
+    min-height: 100%;
+    box-sizing: border-box;
+  }
+  #email-content-wrap > * {
     max-width: 100% !important;
     box-sizing: border-box;
   }
@@ -299,8 +307,8 @@ export function EmailIframeRenderer({
 
     const darkBgOverrides = dark ? `
   body[bgcolor], body[style*="background"] {
-    background-color: ${bgColor} !important;
-    background: ${bgColor} !important;
+    background-color: ${outerBg} !important;
+    background: ${outerBg} !important;
   }
   ${isRich ? `
   div[style*="background-color: #ffffff"], div[style*="background-color:#ffffff"],
@@ -314,8 +322,8 @@ export function EmailIframeRenderer({
   td[style*="background-color: #fff"], td[style*="background-color:#fff"],
   td[style*="background-color: white"], td[style*="background-color:white"],
   tr[bgcolor="#ffffff"], tr[bgcolor="#fff"], tr[bgcolor="white"] {
-    background-color: ${bgColor} !important;
-    background: ${bgColor} !important;
+    background-color: ${contentBg} !important;
+    background: ${contentBg} !important;
   }
   ` : `
   div[style*="background-color: #f"], div[style*="background-color:#f"],
@@ -352,8 +360,8 @@ export function EmailIframeRenderer({
   tr[bgcolor^="#e"], tr[bgcolor^="#E"],
   tr[bgcolor^="#d"], tr[bgcolor^="#D"],
   tr[bgcolor^="#c"], tr[bgcolor^="#C"] {
-    background-color: ${bgColor} !important;
-    background: ${bgColor} !important;
+    background-color: ${contentBg} !important;
+    background: ${contentBg} !important;
   }
   `}
   body[text], 
@@ -477,7 +485,7 @@ ${lightTextOverrides}
 </style>
 ${headContent}
 </head>
-<body${bodyAttrs}>${sanitized}</body>
+<body${bodyAttrs}><div id="email-content-wrap">${sanitized}</div></body>
 </html>`;
   }, []);
 
