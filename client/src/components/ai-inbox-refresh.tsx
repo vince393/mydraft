@@ -127,7 +127,7 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
           className="gap-2"
           data-testid="button-ai-inbox-refresh"
         >
-          <Sparkles className="w-4 h-4 text-primary/70" />
+          <Wand2 className="w-4 h-4 text-purple-400" />
           AI Cleanup
         </DropdownMenuItem>
       ) : (
