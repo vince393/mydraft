@@ -2930,7 +2930,7 @@ If truly nothing matches, return: []`,
       }
 
       console.log("[AI Inbox Refresh] Fetching messages...");
-      const messages = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 50 });
+      const messages = await providerResult.provider.getMessages(providerResult.accessToken, { folder: "inbox", limit: 200 });
       console.log(
         "[AI Inbox Refresh] Messages fetched:",
         messages?.length || 0,
@@ -2974,30 +2974,74 @@ If truly nothing matches, return: []`,
       // Generate unique batch ID
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-      // Prepare email summaries for AI analysis with better signals
-      // Note: messages come from provider.getMessages() which returns EmailListItem objects
-      // with .from (display name), .fromEmail (email address), .preview (snippet), etc.
-      const emailSummaries = messages.slice(0, 50).map((msg: any) => {
-        const fromEmail = msg.fromEmail || "";
+      const enriched = messages.map((msg: any) => {
+        const fromEmail = (msg.fromEmail || "").toLowerCase();
         const fromName = msg.from || "";
         const domain = fromEmail.split("@")[1] || "";
-        const hasUnsubscribe = !!msg.preview
-          ?.toLowerCase()
-          ?.includes("unsubscribe");
+        const subjectLower = (msg.subject || "").toLowerCase();
+        const snippetLower = (msg.preview || "").toLowerCase();
+        const hasUnsubscribe = snippetLower.includes("unsubscribe") || subjectLower.includes("unsubscribe");
+        const localPart = fromEmail.split("@")[0] || "";
+        const isAutomated = /^(noreply|no-reply|donotreply|notifications?|mailer|bounce|info|marketing|promo|news|newsletter|updates?|alerts?|support|billing|receipts?)$/.test(localPart);
+        const isMarketing = hasUnsubscribe || /(%\s*off|limited.?time|deal\s*of|exclusive\s*offer|flash\s*sale|act\s*now|don't\s*miss|last\s*chance|free\s*shipping|clearance|coupon|discount)/i.test(subjectLower + " " + snippetLower);
+        const isTransactional = /(your\s*order|order\s*confirm|shipping\s*confirm|receipt\s*for|payment\s*received|invoice\s*#|tracking\s*number)/i.test(subjectLower);
         return {
           id: msg.id,
           subject: msg.subject || "(No subject)",
           from: fromEmail || fromName || "unknown",
-          fromName: fromName,
+          fromName,
           domain,
           snippet: msg.preview || "",
           date: msg.date,
-          starred: msg.isStarred,
+          starred: !!msg.isStarred,
           unread: !msg.isRead,
           recipientCount: 1,
           hasUnsubscribe,
+          isAutomated,
+          isMarketing,
+          isTransactional,
         };
       });
+
+      const deletedDomains = new Set(actionPatterns.deletedDomains.map((d: string) => d.toLowerCase()));
+      const deletedSenders = new Set(actionPatterns.deletedSenders.map((s: string) => s.toLowerCase()));
+      const archivedDomains = new Set(actionPatterns.archivedDomains.map((d: string) => d.toLowerCase()));
+
+      const ruleSuggestions: any[] = [];
+      const needsAi: any[] = [];
+
+      for (const email of enriched) {
+        if (email.starred) continue;
+
+        if (deletedSenders.has(email.from) || deletedDomains.has(email.domain)) {
+          ruleSuggestions.push({ messageId: email.id, action: "delete", confidence: 85, reason: "You've deleted emails from this sender before", _email: email });
+          continue;
+        }
+        if (archivedDomains.has(email.domain) && !email.unread) {
+          ruleSuggestions.push({ messageId: email.id, action: "archive", confidence: 80, reason: "You've archived emails from this domain before", _email: email });
+          continue;
+        }
+        if (email.isMarketing && !email.unread) {
+          ruleSuggestions.push({ messageId: email.id, action: "junk", confidence: 75, reason: "Read marketing/promotional email", _email: email });
+          continue;
+        }
+        if (email.isTransactional && !email.unread) {
+          const emailDate = email.date ? new Date(email.date) : null;
+          const daysSince = emailDate ? (Date.now() - emailDate.getTime()) / (1000 * 60 * 60 * 24) : 0;
+          if (daysSince > 7) {
+            ruleSuggestions.push({ messageId: email.id, action: "archive", confidence: 72, reason: "Old transactional email (order confirmation, receipt)", _email: email });
+            continue;
+          }
+        }
+
+        if (email.unread && !email.isAutomated && !email.isMarketing) continue;
+
+        needsAi.push(email);
+      }
+
+      console.log(`[AI Inbox Refresh] Pre-filter: ${ruleSuggestions.length} rule-based, ${needsAi.length} need AI (of ${enriched.length} total)`);
+
+      const emailSummaries = needsAi;
 
       // Build folder sorting section if user has custom folders with AI descriptions
       const folderSortingSection =
@@ -3031,96 +3075,80 @@ PRIORITY: Suggest deleting/archiving emails from senders/domains the user has hi
 `
         : "";
 
-      // Call AI to analyze emails
-      const systemPrompt = `You are a precise email inbox cleanup assistant. Analyze emails and categorize actionable ones.
+      let aiSuggestions: any[] = [];
 
-${hasHistory ? "The user has action history — weight these patterns heavily." : "No history yet — be very conservative, only flag obvious cases."}
+      if (emailSummaries.length > 0) {
+        const systemPrompt = `You are a precise email inbox cleanup assistant. Only the ambiguous emails are sent to you — obvious cases are already handled.
 
+${hasHistory ? "The user has action history — weight patterns heavily." : "No history yet — be conservative."}
 ${learnedStyle?.styleAnalysis ? `User style: ${learnedStyle.styleAnalysis}` : ""}
 ${userHistorySection}
 ${folderSortingSection}
 
-CLASSIFICATION SIGNALS (use these to decide):
-- "hasUnsubscribe: true" = mass/bulk email (newsletter, marketing, promotional)
-- "recipientCount" > 5 = blast email, likely promotional
-- Domain patterns: noreply@, notifications@, marketing@, promo@ = automated
-- Subject patterns: "your order", "receipt", "confirmation" = transactional
-- Subject patterns: "unsubscribe", "% off", "deal", "limited time" = marketing
-- Starred emails = NEVER suggest actions on these
-
-ACTIONS (ranked by severity):
-- "spam": Deceptive/phishing emails with false claims, unknown senders with suspicious content. NOT for newsletters or known companies.
-- "junk": Low-value bulk mail the user probably doesn't want: expired promotions, old marketing blasts, mass emails from unfamiliar companies. Use this instead of spam when email is annoying but not malicious.
-- "archive": Read emails no longer needed: old confirmations, processed receipts, addressed notifications
-- "delete": Expired/irrelevant content: old bounce-backs, week-old system errors, clearly outdated promotions
-- "star": Clearly urgent/important: meeting requests from important contacts, deadlines, critical alerts
-- "mark_read": Informational-only emails needing no response: read receipts, automated status updates
-${foldersWithAiDesc.length > 0 ? '- "move_to_folder": Email clearly matches a custom folder\'s description' : ""}
+ACTIONS:
+- "spam": Truly deceptive/phishing only. NOT newsletters or known companies.
+- "junk": Low-value bulk mail: expired promotions, mass emails from unfamiliar companies.
+- "archive": Read emails no longer needed: old confirmations, processed receipts, addressed notifications.
+- "delete": Expired/irrelevant: old bounce-backs, week-old system errors, clearly outdated promotions.
+- "star": Clearly urgent/important: meeting requests, deadlines, critical alerts.
+- "mark_read": Informational-only needing no response: read receipts, automated status updates.
+${foldersWithAiDesc.length > 0 ? '- "move_to_folder": Email matches a custom folder\'s description.' : ""}
 
 RULES:
 1. NEVER act on starred emails
 2. NEVER mark real person-to-person emails as spam or junk
-3. NEVER spam known companies (Google, Apple, Amazon, banks) — use "junk" if unwanted
-4. Prefer "junk" over "spam" — spam is ONLY for truly deceptive/malicious content
-5. Unread emails from real people = skip entirely
-6. When in doubt = skip. Return empty array if nothing is clearly actionable
-7. Maximum 8 suggestions, minimum confidence 60%
+3. NEVER spam known companies — use "junk" if unwanted
+4. Prefer "junk" over "spam"
+5. Unread emails from real people = skip
+6. When in doubt = skip. Return empty array if nothing actionable
+7. Minimum confidence 60%. Return ALL actionable emails, no cap.
 ${foldersWithAiDesc.length > 0 ? "8. For move_to_folder, include folderId and folderName" : ""}
 
 JSON response only:
-{"suggestions":[{"messageId":"id","action":"spam|junk|archive|delete|star|mark_read${foldersWithAiDesc.length > 0 ? "|move_to_folder" : ""}","confidence":60-100,"reason":"1-sentence reason"${foldersWithAiDesc.length > 0 ? ',"folderId":0,"folderName":""' : ""}}]}`;
+{"suggestions":[{"messageId":"id","action":"spam|junk|archive|delete|star|mark_read${foldersWithAiDesc.length > 0 ? "|move_to_folder" : ""}","confidence":60-100,"reason":"brief reason"${foldersWithAiDesc.length > 0 ? ',"folderId":0,"folderName":""' : ""}}]}`;
 
-      const userPrompt = `Analyze these ${emailSummaries.length} emails:\n${JSON.stringify(emailSummaries)}`;
+        const batchSize = 30;
+        for (let i = 0; i < emailSummaries.length; i += batchSize) {
+          const batch = emailSummaries.slice(i, i + batchSize);
+          const stripped = batch.map(({ isAutomated, isMarketing, isTransactional, ...rest }: any) => rest);
+          const userPrompt = `Analyze these ${stripped.length} emails:\n${JSON.stringify(stripped)}`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.1,
-        max_tokens: 2000,
-      });
+          try {
+            const completion = await openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+              ],
+              temperature: 0.1,
+              max_tokens: 3000,
+            });
 
-      const responseText = completion.choices[0]?.message?.content || "{}";
-      console.log(
-        "[AI Inbox Refresh] AI response length:",
-        responseText.length,
-      );
-      console.log(
-        "[AI Inbox Refresh] AI response preview:",
-        responseText.substring(0, 500),
-      );
-      let aiSuggestions: any[] = [];
-
-      try {
-        const parsed = JSON.parse(
-          responseText.replace(/```json\n?|\n?```/g, "").trim(),
-        );
-        aiSuggestions = parsed.suggestions || [];
-        console.log(
-          "[AI Inbox Refresh] Parsed suggestions count:",
-          aiSuggestions.length,
-        );
-      } catch (parseError) {
-        console.error(
-          "[AI Inbox Refresh] Failed to parse AI response:",
-          parseError,
-        );
-        console.log("[AI Inbox Refresh] Raw response:", responseText);
-        return res.json({
-          suggestions: [],
-          batchId: null,
-          message: "Failed to analyze emails",
-        });
+            const responseText = completion.choices[0]?.message?.content || "{}";
+            console.log(`[AI Inbox Refresh] Batch ${Math.floor(i / batchSize) + 1} response length:`, responseText.length);
+            const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
+            if (parsed.suggestions) aiSuggestions.push(...parsed.suggestions);
+          } catch (batchErr) {
+            console.error(`[AI Inbox Refresh] Batch ${Math.floor(i / batchSize) + 1} failed:`, batchErr);
+          }
+        }
+        console.log("[AI Inbox Refresh] AI suggestions total:", aiSuggestions.length);
       }
 
-      // Create suggestions in database
-      const createdSuggestions = [];
-      for (const suggestion of aiSuggestions) {
-        if (!suggestion.messageId || !suggestion.action) continue;
+      const allSuggestions = [
+        ...ruleSuggestions.map(s => ({ messageId: s.messageId, action: s.action, confidence: s.confidence, reason: s.reason, _email: s._email })),
+        ...aiSuggestions,
+      ];
+      console.log(`[AI Inbox Refresh] Combined: ${ruleSuggestions.length} rules + ${aiSuggestions.length} AI = ${allSuggestions.length} total`);
 
-        const emailInfo = emailSummaries.find(
+      const createdSuggestions = [];
+      const seenIds = new Set<string>();
+      for (const suggestion of allSuggestions) {
+        if (!suggestion.messageId || !suggestion.action) continue;
+        if (seenIds.has(suggestion.messageId)) continue;
+        seenIds.add(suggestion.messageId);
+
+        const emailInfo = suggestion._email || enriched.find(
           (e: any) => e.id === suggestion.messageId,
         );
         if (!emailInfo) continue;

@@ -172,7 +172,7 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
               {refreshMutation.isPending ? (
                 <div className="flex flex-col items-center justify-center py-16 flex-1">
                   <Loader2 className="w-5 h-5 text-primary animate-spin mb-3" />
-                  <p className="text-xs text-foreground/40">Scanning your inbox...</p>
+                  <p className="text-xs text-foreground/40">Scanning your full inbox...</p>
                 </div>
               ) : items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-6 flex-1">
