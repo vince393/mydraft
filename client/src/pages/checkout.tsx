@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap, Ticket, X, CheckCircle2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { COUNTRIES, STATE_MAP } from "@/lib/countries";
+import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap, Ticket, X, CheckCircle2, ChevronsUpDown } from "lucide-react";
 import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
 import type { User } from "@shared/schema";
 
@@ -55,6 +58,9 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("");
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [billingState, setBillingState] = useState("");
+  const [stateOpen, setStateOpen] = useState(false);
   const [cardNumberComplete, setCardNumberComplete] = useState(false);
   const [cardExpiryComplete, setCardExpiryComplete] = useState(false);
   const [cardCvcComplete, setCardCvcComplete] = useState(false);
@@ -161,6 +167,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
             address: {
               line1: address.trim() || undefined,
               city: city.trim() || undefined,
+              state: billingState.trim() || undefined,
               postal_code: postalCode.trim() || undefined,
               country: country.trim() || undefined,
             },
@@ -348,15 +355,94 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
             </div>
           </div>
           <div>
-            <Label htmlFor="country" className="text-xs text-muted-foreground/60 mb-1.5 block">Country</Label>
-            <Input
-              id="country"
-              placeholder="US"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              data-testid="input-country"
-            />
+            <Label className="text-xs text-muted-foreground/60 mb-1.5 block">Country</Label>
+            <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  role="combobox"
+                  aria-expanded={countryOpen}
+                  data-testid="input-country"
+                  className="flex h-10 w-full items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className={country ? "text-foreground" : "text-muted-foreground/40"}>
+                    {country ? COUNTRIES.find(c => c.code === country)?.name ?? country : "Select country"}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search country..." />
+                  <CommandList>
+                    <CommandEmpty>No country found.</CommandEmpty>
+                    <CommandGroup>
+                      {COUNTRIES.map((c) => (
+                        <CommandItem
+                          key={c.code}
+                          value={c.name}
+                          onSelect={() => {
+                            setCountry(c.code);
+                            setBillingState("");
+                            setCountryOpen(false);
+                          }}
+                          data-testid={`country-option-${c.code}`}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${country === c.code ? "opacity-100" : "opacity-0"}`} />
+                          {c.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
+          {country && STATE_MAP[country] && (
+            <div>
+              <Label className="text-xs text-muted-foreground/60 mb-1.5 block">State / Province</Label>
+              <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    role="combobox"
+                    aria-expanded={stateOpen}
+                    data-testid="input-state"
+                    className="flex h-10 w-full items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className={billingState ? "text-foreground" : "text-muted-foreground/40"}>
+                      {billingState ? STATE_MAP[country]?.find(s => s.code === billingState)?.name ?? billingState : "Select state"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search state..." />
+                    <CommandList>
+                      <CommandEmpty>No state found.</CommandEmpty>
+                      <CommandGroup>
+                        {STATE_MAP[country]?.map((s) => (
+                          <CommandItem
+                            key={s.code}
+                            value={s.name}
+                            onSelect={() => {
+                              setBillingState(s.code);
+                              setStateOpen(false);
+                            }}
+                            data-testid={`state-option-${s.code}`}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${billingState === s.code ? "opacity-100" : "opacity-0"}`} />
+                            {s.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
         </div>
       </div>
 
