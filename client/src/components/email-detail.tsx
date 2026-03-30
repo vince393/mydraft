@@ -320,7 +320,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     readAloudAbortRef.current = abortController;
 
     try {
-      const response = await fetch("/api/voice/tts", {
+      const response = await fetch("/api/voice/tts/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -332,19 +332,8 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
         throw new Error("TTS request failed");
       }
 
-      const data = await response.json();
-
-      if (!data.audio) {
-        throw new Error("No audio returned");
-      }
-
-      const audioData = atob(data.audio);
-      const audioArray = new Uint8Array(audioData.length);
-      for (let i = 0; i < audioData.length; i++) {
-        audioArray[i] = audioData.charCodeAt(i);
-      }
-      const audioBlob = new Blob([audioArray], { type: "audio/wav" });
-      const audioUrl = URL.createObjectURL(audioBlob);
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
       readAloudUrlRef.current = audioUrl;
 
       const audio = new Audio(audioUrl);

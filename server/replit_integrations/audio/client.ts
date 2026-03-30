@@ -53,24 +53,36 @@ export async function voiceChat(
 
 export async function textToSpeech(text: string, voice: string = "onyx"): Promise<string> {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-audio-mini",
-      modalities: ["text", "audio"],
-      audio: {
-        voice,
-        format: "wav",
-      },
-      messages: [
-        { role: "system", content: "Repeat the user's message exactly as spoken audio. Do not add anything else." },
-        { role: "user", content: text },
-      ],
-    } as any);
+    const mp3 = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: voice as any,
+      input: text,
+      response_format: "mp3",
+      speed: 1.0,
+    });
 
-    const choice = response.choices[0] as any;
-    return choice?.message?.audio?.data || "";
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    return buffer.toString("base64");
   } catch (error) {
     console.error("TTS error:", error);
     return "";
+  }
+}
+
+export async function textToSpeechStream(text: string, voice: string = "onyx"): Promise<NodeJS.ReadableStream | null> {
+  try {
+    const response = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: voice as any,
+      input: text,
+      response_format: "mp3",
+      speed: 1.0,
+    });
+
+    return response.body as unknown as NodeJS.ReadableStream;
+  } catch (error) {
+    console.error("TTS stream error:", error);
+    return null;
   }
 }
 

@@ -1,5 +1,5 @@
 import type { Express, Request, Response } from "express";
-import { speechToText, voiceChat, textToSpeech } from "./client";
+import { speechToText, voiceChat, textToSpeech, textToSpeechStream } from "./client";
 import { storage } from "../../storage";
 import { gmailProvider } from "../../gmail";
 import { microsoftProvider } from "../../microsoft";
@@ -170,10 +170,71 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         }
       }
       
-      res.json({ audio, audioFormat: "wav" });
+      res.json({ audio, audioFormat: "mp3" });
     } catch (error) {
       console.error("TTS error:", error);
       res.status(500).json({ error: "Failed to generate speech" });
+    }
+  });
+
+  app.post("/api/voice/tts/stream", async (req: Request, res: Response) => {
+    try {
+      if (!req.session?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { text, emailId, voice } = req.body;
+
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "Text required" });
+      }
+
+      const validVoices = ["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"];
+      const selectedVoice = voice && validVoices.includes(voice) ? voice : "nova";
+
+      const cacheKey = emailId
+        ? `${req.session.userId}-${emailId}-${selectedVoice}`
+        : `${req.session.userId}-${selectedVoice}-${text.slice(0, 100)}`;
+
+      const now = Date.now();
+      const cached = ttsCache.get(cacheKey);
+      if (cached && now - cached.timestamp < TTS_CACHE_TTL_MS) {
+        const buf = Buffer.from(cached.audio, "base64");
+        res.set({ "Content-Type": "audio/mpeg", "Content-Length": String(buf.length) });
+        return res.end(buf);
+      }
+
+      const cleanText = stripEmailNoise(text).slice(0, 2000);
+      const stream = await textToSpeechStream(cleanText, selectedVoice);
+
+      if (!stream) {
+        return res.status(500).json({ error: "Failed to generate speech" });
+      }
+
+      res.set({ "Content-Type": "audio/mpeg", "Transfer-Encoding": "chunked" });
+
+      const chunks: Buffer[] = [];
+      stream.on("data", (chunk: Buffer) => {
+        chunks.push(chunk);
+        res.write(chunk);
+      });
+      stream.on("end", () => {
+        res.end();
+        const full = Buffer.concat(chunks);
+        ttsCache.set(cacheKey, { audio: full.toString("base64"), timestamp: Date.now() });
+        if (ttsCache.size > TTS_CACHE_MAX_SIZE) {
+          const entries = Array.from(ttsCache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
+          entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE).forEach(([key]) => ttsCache.delete(key));
+        }
+      });
+      stream.on("error", (err: Error) => {
+        console.error("TTS stream error:", err);
+        if (!res.headersSent) res.status(500).json({ error: "Stream failed" });
+        else res.end();
+      });
+    } catch (error) {
+      console.error("TTS stream error:", error);
+      if (!res.headersSent) res.status(500).json({ error: "Failed to generate speech" });
     }
   });
 }
