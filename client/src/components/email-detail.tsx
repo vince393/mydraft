@@ -863,7 +863,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
           <div 
             className={`transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] rounded-2xl origin-top-left ${
               showSummary && (summaryData?.summary || isSummaryLoading) 
-                ? 'bg-gradient-to-br from-background/90 via-background/70 to-muted/50 border border-border/40 shadow-xl shadow-black/10 backdrop-blur-md scale-100 opacity-100' 
+                ? 'bg-gradient-to-br from-blue-500/[0.06] via-background/80 to-indigo-500/[0.04] border border-blue-500/15 shadow-xl shadow-blue-500/5 backdrop-blur-md scale-100 opacity-100' 
                 : 'scale-95 opacity-100'
             }`}
             style={{
@@ -878,15 +878,15 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                 /* Expanded state - glossy header */
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-foreground/10 to-foreground/5 border border-foreground/10 flex items-center justify-center shadow-inner">
-                      <FileText className="w-3.5 h-3.5 text-foreground/60" />
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500/20 to-indigo-500/15 border border-blue-500/20 flex items-center justify-center shadow-inner">
+                      <FileText className="w-3.5 h-3.5 text-blue-400" />
                     </div>
                     <span className="text-sm font-medium text-foreground/90">Summary</span>
                     {(isTyping || isSummaryLoading) && (
                       <span className="flex items-center gap-1 ml-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-pulse" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.2s' }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.4s' }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400/40 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400/40 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400/40 animate-pulse" style={{ animationDelay: '0.4s' }} />
                       </span>
                     )}
                   </div>
@@ -1042,14 +1042,14 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
               <div className="px-4 pb-4">
                 {isSummaryLoading ? (
                   <div className="flex items-center gap-3 text-muted-foreground text-sm py-3">
-                    <div className="w-5 h-5 rounded-full border-2 border-foreground/10 border-t-foreground/30 animate-spin" />
+                    <div className="w-5 h-5 rounded-full border-2 border-blue-500/15 border-t-blue-400/60 animate-spin" />
                     <span className="text-foreground/60">Analyzing email...</span>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-sm text-foreground/85 leading-relaxed" data-testid="summary-text">
                       {displayedSummary || summaryData?.summary}
-                      {isTyping && <span className="inline-block w-0.5 h-4 bg-foreground/50 ml-0.5 animate-pulse" />}
+                      {isTyping && <span className="inline-block w-0.5 h-4 bg-blue-400/60 ml-0.5 animate-pulse" />}
                     </p>
                     {!isTyping && summaryData?.keyPoints && summaryData.keyPoints.length > 0 && (
                       <div className="pt-2">
@@ -1061,7 +1061,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                               className="text-sm text-foreground/75 flex items-start gap-2 animate-in fade-in slide-in-from-left-2"
                               style={{ animationDelay: `${i * 80}ms`, animationDuration: '300ms' }}
                             >
-                              <div className="w-1.5 h-1.5 rounded-full bg-foreground/30 mt-2 flex-shrink-0" />
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-400/50 mt-2 flex-shrink-0" />
                               <span>{point}</span>
                             </li>
                           ))}
@@ -1078,7 +1078,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                               className="text-sm text-foreground/75 flex items-start gap-2 animate-in fade-in slide-in-from-left-2"
                               style={{ animationDelay: `${150 + i * 80}ms`, animationDuration: '300ms' }}
                             >
-                              <ArrowRight className="w-3 h-3 text-foreground/40 mt-1 flex-shrink-0" />
+                              <ArrowRight className="w-3 h-3 text-blue-400/50 mt-1 flex-shrink-0" />
                               <span>{item}</span>
                             </li>
                           ))}
