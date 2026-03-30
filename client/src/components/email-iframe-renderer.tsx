@@ -226,12 +226,27 @@ export function EmailIframeRenderer({
     overflow-y: auto;
   }
   #email-content-wrap {
-    max-width: 680px;
+    max-width: 100%;
     margin: 0 auto;
     padding: ${isRich ? '0' : '16px 20px'};
     background: ${contentBg};
     min-height: 100%;
     box-sizing: border-box;
+  }
+  @media (min-width: 768px) {
+    #email-content-wrap {
+      max-width: 680px;
+    }
+  }
+  @media (min-width: 1200px) {
+    #email-content-wrap {
+      max-width: 780px;
+    }
+  }
+  @media (min-width: 1600px) {
+    #email-content-wrap {
+      max-width: 860px;
+    }
   }
   #email-content-wrap > * {
     max-width: 100% !important;
