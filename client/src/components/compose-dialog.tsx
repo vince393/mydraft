@@ -952,9 +952,9 @@ export function ComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
+      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-black/10 dark:border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
         {/* Header */}
-        <DialogHeader className="flex-shrink-0 px-5 py-3.5 border-b border-white/[0.06]">
+        <DialogHeader className="flex-shrink-0 px-5 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06]">
           <DialogTitle className="flex items-center gap-2.5 text-sm font-medium">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center border border-primary/20" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.1))" }}>
               <div className="text-primary">{getModeIcon()}</div>
@@ -966,7 +966,7 @@ export function ComposeDialog({
         {/* Form Content */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Recipients Section */}
-          <div className="px-5 py-3 space-y-2.5 border-b border-white/[0.06]">
+          <div className="px-5 py-3 space-y-2.5 border-b border-black/[0.06] dark:border-white/[0.06]">
             {/* To Field */}
             <div className="flex items-center gap-2.5">
               <span className="text-[11px] text-foreground/30 font-medium w-6 text-right">To</span>
@@ -1014,7 +1014,7 @@ export function ComposeDialog({
             </div>
             
             {/* Subject Field */}
-            <div className="flex items-center gap-2.5 pt-1 border-t border-white/[0.04]">
+            <div className="flex items-center gap-2.5 pt-1 border-t border-black/[0.04] dark:border-white/[0.04]">
               <span className="text-[11px] text-foreground/30 font-medium w-6 text-right">Sub</span>
               <Input
                 value={subject}
@@ -1086,7 +1086,7 @@ export function ComposeDialog({
             
             {/* Attached Images Preview */}
             {attachedImages.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/[0.04]">
+              <div className="mt-3 pt-3 border-t border-black/[0.04] dark:border-white/[0.04]">
                 <div className="flex items-center gap-2 mb-2">
                   <FileImage className="w-3.5 h-3.5 text-foreground/30" />
                   <span className="text-[11px] text-foreground/30">AI Images ({attachedImages.length})</span>
@@ -1097,7 +1097,7 @@ export function ComposeDialog({
                       <img 
                         src={img.data} 
                         alt={img.name}
-                        className="w-14 h-14 object-cover rounded-lg border border-white/10"
+                        className="w-14 h-14 object-cover rounded-lg border border-black/10 dark:border-white/10"
                       />
                       <button
                         onClick={() => removeAttachedImage(idx)}
@@ -1115,7 +1115,7 @@ export function ComposeDialog({
             
             {/* Grammar & Style Suggestions */}
             {grammarSuggestions && grammarSuggestions.suggestions.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/[0.04]">
+              <div className="mt-3 pt-3 border-t border-black/[0.04] dark:border-white/[0.04]">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <SpellCheck className="w-3.5 h-3.5 text-amber-400" />
@@ -1140,7 +1140,7 @@ export function ComposeDialog({
                     <button
                       type="button"
                       onClick={dismissGrammarCheck}
-                      className="p-1 rounded-full hover:bg-white/5 text-foreground/30 hover:text-foreground/50 transition-colors cursor-pointer"
+                      className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-foreground/30 hover:text-foreground/50 transition-colors cursor-pointer"
                       data-testid="button-dismiss-grammar"
                     >
                       <X className="w-3 h-3" />
@@ -1161,8 +1161,8 @@ export function ComposeDialog({
                     return (
                       <div
                         key={i}
-                        className="flex items-start gap-2 p-2 rounded-lg border border-white/[0.04]"
-                        style={{ background: "rgba(255,255,255,0.02)" }}
+                        className="flex items-start gap-2 p-2 rounded-lg border border-black/[0.04] dark:border-white/[0.04]"
+                        style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
                         data-testid={`grammar-suggestion-${i}`}
                       >
                         <div className="flex-1 min-w-0">
@@ -1191,7 +1191,7 @@ export function ComposeDialog({
                           <button
                             type="button"
                             onClick={() => setDismissedSuggestions((prev) => new Set([...prev, i]))}
-                            className="p-1 rounded hover:bg-white/5 text-foreground/20 hover:text-foreground/40 transition-colors cursor-pointer"
+                            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-foreground/20 hover:text-foreground/40 transition-colors cursor-pointer"
                             title="Dismiss"
                             data-testid={`button-dismiss-suggestion-${i}`}
                           >
@@ -1207,9 +1207,9 @@ export function ComposeDialog({
             
             {/* AI Refine Bar - only show when there's content */}
             {hasUserContent() && (
-              <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-white/[0.04]">
+              <form onSubmit={handleRefineSubmit} className="mt-3 pt-3 border-t border-black/[0.04] dark:border-white/[0.04]">
                 <div className="flex items-center gap-2">
-                  <div className={`flex items-center gap-2 flex-1 rounded-full ${screen.isMobile ? 'px-3.5 py-2' : 'px-3 py-1.5'} border border-white/[0.06]`} style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div className={`flex items-center gap-2 flex-1 rounded-full ${screen.isMobile ? 'px-3.5 py-2' : 'px-3 py-1.5'} border border-black/[0.06] dark:border-white/[0.06]`} style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}>
                     <Sparkles className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} text-primary/60 flex-shrink-0`} />
                     <Input
                       value={refineInput}
@@ -1241,7 +1241,7 @@ export function ComposeDialog({
         
         {/* Attachments Preview */}
         {(fileAttachments.length > 0 || attachedImages.length > 0) && (
-          <div className="flex-shrink-0 px-5 py-2 border-t border-white/[0.04]">
+          <div className="flex-shrink-0 px-5 py-2 border-t border-black/[0.04] dark:border-white/[0.04]">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Paperclip className="w-3 h-3 text-foreground/25" />
               <span className="text-[10px] font-medium text-foreground/30">
@@ -1254,8 +1254,8 @@ export function ComposeDialog({
                 return (
                   <div
                     key={`file-${idx}`}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-white/[0.08] text-[11px] group"
-                    style={{ background: "rgba(255,255,255,0.03)" }}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-black/[0.08] dark:border-white/[0.08] text-[11px] group"
+                    style={{ background: "rgba(var(--overlay-rgb), 0.03)" }}
                     data-testid={`attachment-file-${idx}`}
                   >
                     {isImage ? (
@@ -1300,7 +1300,7 @@ export function ComposeDialog({
         )}
 
         {/* Footer Actions */}
-        <div className={`flex-shrink-0 ${screen.isMobile ? 'px-4 py-3 safe-area-bottom' : 'px-5 py-2.5'} border-t border-white/[0.04]`}>
+        <div className={`flex-shrink-0 ${screen.isMobile ? 'px-4 py-3 safe-area-bottom' : 'px-5 py-2.5'} border-t border-black/[0.04] dark:border-white/[0.04]`}>
           <div className="flex items-center justify-between gap-2">
             {/* Hidden file input */}
             <input
@@ -1319,7 +1319,7 @@ export function ComposeDialog({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={sendMutation.isPending}
-                className={`${screen.isMobile ? 'w-10 h-10' : 'w-8 h-8'} rounded-full flex items-center justify-center text-foreground/30 hover:text-foreground/50 hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30`}
+                className={`${screen.isMobile ? 'w-10 h-10' : 'w-8 h-8'} rounded-full flex items-center justify-center text-foreground/30 hover:text-foreground/50 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30`}
                 data-testid="button-attach-file"
                 title="Attach files"
               >
@@ -1560,8 +1560,8 @@ export function ComposeDialog({
                     <button
                       type="button"
                       disabled={sendMutation.isPending || !to.trim() || isGenerating}
-                      className={`${screen.isMobile ? 'h-10 px-3.5 text-[13px]' : 'h-8 px-3 text-xs'} rounded-full flex items-center gap-1.5 font-medium text-foreground/40 hover:text-foreground/60 border border-white/[0.08] hover:border-white/15 transition-all cursor-pointer disabled:opacity-30`}
-                      style={{ background: "rgba(255,255,255,0.03)" }}
+                      className={`${screen.isMobile ? 'h-10 px-3.5 text-[13px]' : 'h-8 px-3 text-xs'} rounded-full flex items-center gap-1.5 font-medium text-foreground/40 hover:text-foreground/60 border border-black/[0.08] dark:border-white/[0.08] hover:border-black/15 dark:hover:border-white/15 transition-all cursor-pointer disabled:opacity-30`}
+                      style={{ background: "rgba(var(--overlay-rgb), 0.03)" }}
                       data-testid="button-schedule-send"
                     >
                       <Clock className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />

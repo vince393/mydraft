@@ -83,7 +83,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 transform: mounted ? 'translateY(0)' : 'translateY(20px)'
               }}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/[0.03] border border-white/[0.08] text-muted-foreground text-sm mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-black/[0.03] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] text-muted-foreground text-sm mb-8">
                 <Globe className="w-3.5 h-3.5" />
                 Works with Gmail & Outlook
               </div>
@@ -130,7 +130,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-md border-white/[0.12]" data-testid="hero-signin">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-md border-black/[0.12] dark:border-white/[0.12]" data-testid="hero-signin">
                   Sign in
                 </Button>
               </Link>
@@ -155,19 +155,19 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
               transitionDelay: '400ms'
             }}
           >
-            <div className="relative rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-xl">
-              <div className="px-4 py-2.5 border-b border-white/[0.08] flex items-center justify-between">
+            <div className="relative rounded-lg border border-black/[0.10] dark:border-white/[0.10] bg-black/[0.02] dark:bg-white/[0.02] overflow-hidden shadow-xl">
+              <div className="px-4 py-2.5 border-b border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-white/[0.08]" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-white/[0.08]" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-white/[0.08]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-black/[0.08] dark:bg-white/[0.08]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-black/[0.08] dark:bg-white/[0.08]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-black/[0.08] dark:bg-white/[0.08]" />
                 </div>
                 <span className="text-[11px] text-muted-foreground/40 font-medium tracking-wide uppercase">MyDraft</span>
                 <div className="w-14" />
               </div>
               
               <div className="flex">
-                <div className="w-12 border-r border-white/[0.06] py-4 flex flex-col items-center gap-3">
+                <div className="w-12 border-r border-black/[0.06] dark:border-white/[0.06] py-4 flex flex-col items-center gap-3">
                   <div className="w-7 h-7 rounded-md bg-primary/15 flex items-center justify-center">
                     <Inbox className="w-3.5 h-3.5 text-primary" />
                   </div>
@@ -204,7 +204,7 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                     time="3h"
                   />
                   
-                  <div className="mt-3 ml-10 pt-2 border-t border-white/[0.04]">
+                  <div className="mt-3 ml-10 pt-2 border-t border-black/[0.04] dark:border-white/[0.04]">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground/50">
                       <Sparkles className="w-3 h-3 text-blue-400/70" />
                       <span>Suggested: "Thanks Sarah, morning works."</span>
@@ -235,7 +235,7 @@ function HeroEmailItem({ from, subject, time, unread = false, selected = false }
   return (
     <div className={`px-3 py-2.5 rounded-md transition-colors ${selected ? 'bg-primary/[0.08] border border-primary/20' : 'border border-transparent'}`}>
       <div className="flex items-center gap-3">
-        <div className={`w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-semibold ${selected ? 'bg-primary/20 text-primary' : 'bg-white/[0.05] text-muted-foreground/60'}`}>
+        <div className={`w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-semibold ${selected ? 'bg-primary/20 text-primary' : 'bg-black/[0.05] dark:bg-white/[0.05] text-muted-foreground/60'}`}>
           {from.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
@@ -378,10 +378,10 @@ function MockupAIReply() {
   }, [isVisible]);
 
   return (
-    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
-      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
+    <div ref={ref} className="rounded-lg border border-black/[0.10] dark:border-white/[0.10] bg-black/[0.02] dark:bg-white/[0.02] overflow-hidden shadow-lg">
+      <div className="px-5 py-3 border-b border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center text-[11px] font-semibold text-foreground/70">LM</div>
+          <div className="w-7 h-7 rounded-md bg-black/[0.06] dark:bg-white/[0.06] flex items-center justify-center text-[11px] font-semibold text-foreground/70">LM</div>
           <div>
             <p className="text-sm font-medium">Lisa Martinez</p>
             <p className="text-[11px] text-muted-foreground/50">Re: Meeting reschedule</p>
@@ -390,7 +390,7 @@ function MockupAIReply() {
         <span className="text-[11px] text-muted-foreground/30">2 min ago</span>
       </div>
       <div className="p-5">
-        <div className="p-4 rounded-md bg-white/[0.02] border border-white/[0.06] mb-5">
+        <div className="p-4 rounded-md bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] mb-5">
           <p className="text-sm text-foreground/60 leading-relaxed">
             Hi, can we reschedule our meeting to Thursday? I have a conflict on Wednesday afternoon. Same time works for me if that's okay with you.
           </p>
@@ -473,7 +473,7 @@ function MockupThreadSummary() {
   ];
 
   return (
-    <div ref={ref} className="rounded-2xl border border-white/[0.10] bg-gradient-to-br from-background/90 via-background/70 to-muted/50 overflow-hidden shadow-xl shadow-black/10 backdrop-blur-md">
+    <div ref={ref} className="rounded-2xl border border-black/[0.10] dark:border-white/[0.10] bg-gradient-to-br from-background/90 via-background/70 to-muted/50 overflow-hidden shadow-xl shadow-black/10 backdrop-blur-md">
       <div className="px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-foreground/10 to-foreground/5 border border-foreground/10 flex items-center justify-center shadow-inner">
@@ -563,10 +563,10 @@ function MockupTranslation() {
   }, [isVisible]);
 
   return (
-    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
-      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
+    <div ref={ref} className="rounded-lg border border-black/[0.10] dark:border-white/[0.10] bg-black/[0.02] dark:bg-white/[0.02] overflow-hidden shadow-lg">
+      <div className="px-5 py-3 border-b border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-md bg-black/[0.06] dark:bg-white/[0.06] flex items-center justify-center">
             <Languages className="w-3.5 h-3.5 text-foreground/60" />
           </div>
           <div>
@@ -577,7 +577,7 @@ function MockupTranslation() {
         <span className="text-[11px] text-muted-foreground/30">Auto-detected</span>
       </div>
       <div className="p-5 space-y-3">
-        <div className="p-4 rounded-md bg-white/[0.02] border border-white/[0.06]">
+        <div className="p-4 rounded-md bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06]">
           <span className="text-[10px] text-muted-foreground/40 mb-2 block uppercase tracking-wider">Original</span>
           <p className="text-sm text-foreground/50 leading-relaxed" style={{ fontFamily: 'sans-serif' }}>
             山田様、お忙しいところ恐れ入りますが、来週の会議の件についてご確認いただけますでしょうか。何卒よろしくお願いいたします。
@@ -592,7 +592,7 @@ function MockupTranslation() {
           }}
         >
           <div className="relative rounded-md p-[1px] bg-gradient-to-r from-emerald-500/25 via-transparent to-teal-500/25">
-            <div className="rounded-[5px] bg-white/[0.03] p-4">
+            <div className="rounded-[5px] bg-black/[0.03] dark:bg-white/[0.03] p-4">
               <span className="text-[10px] font-semibold mb-2 block uppercase tracking-wider bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Translated</span>
               <p className="text-sm text-foreground/80 leading-relaxed">
                 Mr. Yamada, I apologize for the intrusion on your busy schedule. Could you please confirm the details regarding next week's meeting? Thank you very much for your consideration.
@@ -643,17 +643,17 @@ function MockupUndoSend() {
   }, [isVisible]);
 
   return (
-    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
-      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
+    <div ref={ref} className="rounded-lg border border-black/[0.10] dark:border-white/[0.10] bg-black/[0.02] dark:bg-white/[0.02] overflow-hidden shadow-lg">
+      <div className="px-5 py-3 border-b border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-md bg-black/[0.06] dark:bg-white/[0.06] flex items-center justify-center">
             <Clock className="w-3.5 h-3.5 text-foreground/60" />
           </div>
           <p className="text-sm font-medium">Undo Send</p>
         </div>
       </div>
       <div className="p-5">
-        <div className="p-4 rounded-md bg-white/[0.02] border border-white/[0.06] mb-4">
+        <div className="p-4 rounded-md bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-muted-foreground/50">To: david.park@company.com</span>
             <span className="text-[10px] text-muted-foreground/30">Just now</span>
@@ -663,7 +663,7 @@ function MockupUndoSend() {
         </div>
 
         {phase === 'countdown' && (
-          <div className="p-4 rounded-md border border-white/[0.12] bg-white/[0.03] transition-all duration-300">
+          <div className="p-4 rounded-md border border-black/[0.12] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.03] transition-all duration-300">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="relative w-9 h-9">
@@ -678,7 +678,7 @@ function MockupUndoSend() {
                   <p className="text-[11px] text-muted-foreground/50">You can undo this</p>
                 </div>
               </div>
-              <Button size="sm" variant="outline" className="rounded-md border-white/[0.15] gap-1.5" data-testid="mockup-undo">
+              <Button size="sm" variant="outline" className="rounded-md border-black/[0.15] dark:border-white/[0.15] gap-1.5" data-testid="mockup-undo">
                 <Undo2 className="w-3.5 h-3.5" />
                 Undo
               </Button>
@@ -703,8 +703,8 @@ function MockupUndoSend() {
         )}
 
         {phase === 'sending' && (
-          <div className="p-4 rounded-md bg-white/[0.02] border border-white/[0.06] flex items-center gap-3">
-            <div className="w-4 h-4 border-2 border-white/[0.10] border-t-foreground/50 rounded-full animate-spin" />
+          <div className="p-4 rounded-md bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] flex items-center gap-3">
+            <div className="w-4 h-4 border-2 border-black/[0.10] dark:border-white/[0.10] border-t-foreground/50 rounded-full animate-spin" />
             <span className="text-sm text-muted-foreground/50">Preparing to send...</span>
           </div>
         )}
@@ -775,10 +775,10 @@ function MockupSmartFolders() {
   const showNewFolder = phase === 'sorting' || phase === 'done';
 
   return (
-    <div ref={ref} className="rounded-lg border border-white/[0.10] bg-white/[0.02] overflow-hidden shadow-lg">
-      <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
+    <div ref={ref} className="rounded-lg border border-black/[0.10] dark:border-white/[0.10] bg-black/[0.02] dark:bg-white/[0.02] overflow-hidden shadow-lg">
+      <div className="px-5 py-3 border-b border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-white/[0.06] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-md bg-black/[0.06] dark:bg-white/[0.06] flex items-center justify-center">
             <FolderKanban className="w-3.5 h-3.5 text-foreground/60" />
           </div>
           <div>
@@ -787,7 +787,7 @@ function MockupSmartFolders() {
           </div>
         </div>
         <div 
-          className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 px-2 py-1 rounded-md border border-white/[0.08] transition-all duration-300"
+          className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 px-2 py-1 rounded-md border border-black/[0.08] dark:border-white/[0.08] transition-all duration-300"
           style={{ opacity: phase === 'idle' ? 1 : 0.3 }}
         >
           <Plus className="w-3 h-3" />
@@ -796,7 +796,7 @@ function MockupSmartFolders() {
       </div>
 
       <div className="flex">
-        <div className="w-40 border-r border-white/[0.06] p-2.5 space-y-0.5">
+        <div className="w-40 border-r border-black/[0.06] dark:border-white/[0.06] p-2.5 space-y-0.5">
           {existingFolders.map((folder, i) => (
             <div key={i} className="flex items-center gap-2 px-2.5 py-2 rounded-md border border-transparent">
               <folder.icon className="w-3.5 h-3.5 text-muted-foreground/30" />
@@ -847,7 +847,7 @@ function MockupSmartFolders() {
 
                   <div className="mb-3">
                     <span className="text-[10px] text-muted-foreground/40 uppercase tracking-wider block mb-1.5">Folder name</span>
-                    <div className="px-3 py-2 rounded-md border border-white/[0.10] bg-white/[0.02] min-h-[32px] flex items-center">
+                    <div className="px-3 py-2 rounded-md border border-black/[0.10] dark:border-white/[0.10] bg-black/[0.02] dark:bg-white/[0.02] min-h-[32px] flex items-center">
                       <span className="text-sm text-foreground/80">
                         {phase === 'dialog' ? '' : folderName.slice(0, typedChars)}
                       </span>
@@ -889,7 +889,7 @@ function MockupSmartFolders() {
                   {phase === 'done' ? `${matchedEmails.length} emails sorted` : 'Sorting emails...'}
                 </span>
                 {phase === 'sorting' && (
-                  <div className="w-3 h-3 border-2 border-white/[0.10] border-t-rose-400/60 rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-black/[0.10] dark:border-white/[0.10] border-t-rose-400/60 rounded-full animate-spin" />
                 )}
                 {phase === 'done' && (
                   <Check className="w-3 h-3 text-green-400" />
@@ -898,13 +898,13 @@ function MockupSmartFolders() {
               {matchedEmails.map((email, i) => (
                 <div 
                   key={i}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-md border border-white/[0.06] bg-white/[0.02] transition-all duration-400 ease-out"
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-md border border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02] transition-all duration-400 ease-out"
                   style={{
                     opacity: sortedEmails > i ? 1 : 0,
                     transform: sortedEmails > i ? 'translateY(0)' : 'translateY(12px)',
                   }}
                 >
-                  <div className="w-6 h-6 rounded-md bg-white/[0.06] flex items-center justify-center text-[10px] font-semibold text-foreground/50">
+                  <div className="w-6 h-6 rounded-md bg-black/[0.06] dark:bg-white/[0.06] flex items-center justify-center text-[10px] font-semibold text-foreground/50">
                     {email.from}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -963,7 +963,7 @@ function HowItWorksSection({ getStartedHref }: { getStartedHref: string }) {
                 transitionDelay: `${300 + i * 150}ms`
               }}
             >
-              <div className="w-12 h-12 rounded-lg bg-white/[0.04] border border-white/[0.10] flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.10] dark:border-white/[0.10] flex items-center justify-center mx-auto mb-4">
                 <step.icon className="w-5 h-5 text-foreground/60" />
               </div>
               <div className="text-[11px] font-medium text-muted-foreground/40 uppercase tracking-widest mb-2">Step {step.number}</div>
@@ -1056,7 +1056,7 @@ function TestimonialsSection() {
             >
               {testimonials.map((t, i) => (
                 <div key={t.id || i} className="w-full flex-shrink-0 px-4">
-                  <Card className="bg-white/[0.02] border-white/[0.08] rounded-lg max-w-2xl mx-auto">
+                  <Card className="bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.08] dark:border-white/[0.08] rounded-lg max-w-2xl mx-auto">
                     <CardContent className="p-10 text-center">
                       <div className="flex justify-center gap-1 mb-8">
                         {[...Array(t.rating)].map((_, j) => (
@@ -1080,7 +1080,7 @@ function TestimonialsSection() {
                 onClick={prevSlide}
                 variant="outline"
                 size="icon"
-                className="border-white/[0.1]"
+                className="border-black/[0.1] dark:border-white/[0.1]"
                 data-testid="testimonial-prev"
               >
                 <ChevronDown className="w-5 h-5 rotate-90" />
@@ -1093,7 +1093,7 @@ function TestimonialsSection() {
                     variant="ghost"
                     size="sm"
                     className={`rounded-full min-h-0 min-w-0 p-1 ${
-                      i === currentIndex ? 'bg-primary' : 'bg-white/20'
+                      i === currentIndex ? 'bg-primary' : 'bg-black/20 dark:bg-white/20'
                     }`}
                     data-testid={`testimonial-dot-${i}`}
                   >
@@ -1105,7 +1105,7 @@ function TestimonialsSection() {
                 onClick={nextSlide}
                 variant="outline"
                 size="icon"
-                className="border-white/[0.1]"
+                className="border-black/[0.1] dark:border-white/[0.1]"
                 data-testid="testimonial-next"
               >
                 <ChevronDown className="w-5 h-5 -rotate-90" />
@@ -1175,7 +1175,7 @@ function FAQSection() {
                 transitionDelay: `${200 + i * 80}ms`
               }}
             >
-              <AccordionItem value={`faq-${i}`} className="border border-white/[0.08] rounded-lg overflow-hidden px-6" data-testid={`faq-toggle-${i}`}>
+              <AccordionItem value={`faq-${i}`} className="border border-black/[0.08] dark:border-white/[0.08] rounded-lg overflow-hidden px-6" data-testid={`faq-toggle-${i}`}>
                 <AccordionTrigger className="text-base font-medium hover:no-underline">
                   {faq.q}
                 </AccordionTrigger>
@@ -1233,7 +1233,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
             </Button>
           </Link>
           <Link href="/pricing">
-            <Button variant="outline" size="lg" className="rounded-md border-white/[0.12]" data-testid="cta-pricing">
+            <Button variant="outline" size="lg" className="rounded-md border-black/[0.12] dark:border-white/[0.12]" data-testid="cta-pricing">
               View pricing
             </Button>
           </Link>
@@ -1245,7 +1245,7 @@ function FinalCTASection({ getStartedHref }: { getStartedHref: string }) {
 
 function Footer() {
   return (
-    <footer className="py-16 px-5 sm:px-6 border-t border-white/[0.06]">
+    <footer className="py-16 px-5 sm:px-6 border-t border-black/[0.06] dark:border-white/[0.06]">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
           <div>
@@ -1279,7 +1279,7 @@ function Footer() {
             </ul>
           </div>
         </div>
-        <div className="pt-10 border-t border-white/[0.06] flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="pt-10 border-t border-black/[0.06] dark:border-white/[0.06] flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground/30">&copy; 2026 MyDraft</p>
           <a href="mailto:support@mydraft.io" className="text-sm text-muted-foreground/50 hover:text-foreground transition-colors" data-testid="footer-email">support@mydraft.io</a>
         </div>

@@ -18,7 +18,7 @@ type AuthStep = "credentials" | "verify-registration" | "verify-2fa";
 
 function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#07070c]">
+    <div className="dark min-h-screen flex items-center justify-center relative overflow-hidden bg-[#07070c]">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-30%] left-[20%] w-[600px] h-[600px] bg-blue-600/[0.04] rounded-full blur-[180px]" />
         <div className="absolute bottom-[-20%] right-[10%] w-[500px] h-[500px] bg-indigo-600/[0.03] rounded-full blur-[160px]" />
@@ -36,27 +36,27 @@ function AuthShell({ children }: { children: React.ReactNode }) {
         <div
           className="rounded-2xl p-7 sm:p-8"
           style={{
-            background: "linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.008) 100%)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "linear-gradient(160deg, rgba(var(--overlay-rgb), 0.04) 0%, rgba(var(--overlay-rgb), 0.008) 100%)",
+            border: "1px solid rgba(var(--overlay-rgb), 0.06)",
             backdropFilter: "blur(40px)",
             WebkitBackdropFilter: "blur(40px)",
-            boxShadow: "0 25px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
+            boxShadow: "0 25px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(var(--overlay-rgb), 0.04)",
           }}
         >
           {children}
         </div>
 
-        <div className="mt-8 flex items-center justify-center flex-wrap gap-x-5 gap-y-2 text-[11px] text-white/15">
+        <div className="mt-8 flex items-center justify-center flex-wrap gap-x-5 gap-y-2 text-[11px] text-black/15 dark:text-white/15">
           <div className="flex items-center gap-1.5">
             <Shield className="w-3 h-3" />
             <span>CASA Tier 2 Approved</span>
           </div>
-          <div className="w-px h-3 bg-white/[0.04]" />
+          <div className="w-px h-3 bg-black/[0.04] dark:bg-white/[0.04]" />
           <div className="flex items-center gap-1.5">
             <Lock className="w-3 h-3" />
             <span>AES-256 encryption</span>
           </div>
-          <div className="w-px h-3 bg-white/[0.04]" />
+          <div className="w-px h-3 bg-black/[0.04] dark:bg-white/[0.04]" />
           <div className="flex items-center gap-1.5">
             <Globe className="w-3 h-3" />
             <span>50+ languages</span>
@@ -351,8 +351,8 @@ export default function LoginPage() {
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Inbox className="w-5 h-5 text-primary" />
           </div>
-          <h2 className="text-lg font-semibold text-white/90 mb-1">Welcome back</h2>
-          <p className="text-sm text-white/40">
+          <h2 className="text-lg font-semibold text-black/90 dark:text-white/90 mb-1">Welcome back</h2>
+          <p className="text-sm text-black/40 dark:text-white/40">
             Signed in as {authData?.user?.email}
           </p>
         </div>
@@ -389,21 +389,21 @@ export default function LoginPage() {
           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Mail className="w-5 h-5 text-primary" />
           </div>
-          <h2 className="text-lg font-semibold text-white/90 mb-1">
+          <h2 className="text-lg font-semibold text-black/90 dark:text-white/90 mb-1">
             {authStep === "verify-registration" ? "Verify your email" : "Two-factor authentication"}
           </h2>
-          <p className="text-sm text-white/40">
+          <p className="text-sm text-black/40 dark:text-white/40">
             We sent a 6-digit code to{" "}
-            <span className="font-medium text-white/60">{pendingEmail}</span>
+            <span className="font-medium text-black/60 dark:text-white/60">{pendingEmail}</span>
           </p>
-          <p className="text-xs text-white/20 mt-2">
+          <p className="text-xs text-black/20 dark:text-white/20 mt-2">
             Check your spam folder if you don't see it.
           </p>
         </div>
 
         <form onSubmit={handleVerifyCode} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="code" className="text-xs font-medium text-white/40">Verification Code</Label>
+            <Label htmlFor="code" className="text-xs font-medium text-black/40 dark:text-white/40">Verification Code</Label>
             <Input
               id="code"
               type="text"
@@ -417,7 +417,7 @@ export default function LoginPage() {
                 setVerificationCode(value);
                 if (errors.code) setErrors({});
               }}
-              className="text-center text-2xl tracking-[0.5em] font-mono bg-white/[0.03] border-white/[0.08]"
+              className="text-center text-2xl tracking-[0.5em] font-mono bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.08] dark:border-white/[0.08]"
               autoFocus
               data-testid="input-verification-code"
             />
@@ -439,7 +439,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleBack}
-            className="text-sm text-white/30 hover:text-white/60 transition-colors inline-flex items-center gap-1"
+            className="text-sm text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60 transition-colors inline-flex items-center gap-1"
             data-testid="button-back-to-login"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -462,10 +462,10 @@ export default function LoginPage() {
   return (
     <AuthShell>
       <div className="text-center mb-7">
-        <h2 className="text-[22px] font-semibold text-white/90 mb-1.5 tracking-tight">
+        <h2 className="text-[22px] font-semibold text-black/90 dark:text-white/90 mb-1.5 tracking-tight">
           {switchEmail ? "Switch Account" : isRegister ? "Create your account" : "Welcome back"}
         </h2>
-        <p className="text-[13px] text-white/30">
+        <p className="text-[13px] text-black/30 dark:text-white/30">
           {switchEmail ? `Sign in as ${switchEmail}` : isRegister ? "Start managing your inbox with AI" : "Sign in to your inbox"}
         </p>
       </div>
@@ -475,9 +475,9 @@ export default function LoginPage() {
           type="button"
           className="w-full flex items-center justify-center gap-3 text-sm font-medium h-11 rounded-xl transition-all disabled:opacity-50"
           style={{
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            color: "rgba(255,255,255,0.7)",
+            background: "rgba(var(--overlay-rgb), 0.03)",
+            border: "1px solid rgba(var(--overlay-rgb), 0.07)",
+            color: "rgba(var(--overlay-rgb), 0.7)",
           }}
           onClick={() => handleOAuthLogin('google')}
           disabled={oauthConnecting !== null || isPending}
@@ -494,9 +494,9 @@ export default function LoginPage() {
           type="button"
           className="w-full flex items-center justify-center gap-3 text-sm font-medium h-11 rounded-xl transition-all disabled:opacity-50"
           style={{
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            color: "rgba(255,255,255,0.7)",
+            background: "rgba(var(--overlay-rgb), 0.03)",
+            border: "1px solid rgba(var(--overlay-rgb), 0.07)",
+            color: "rgba(var(--overlay-rgb), 0.7)",
           }}
           onClick={() => handleOAuthLogin('microsoft')}
           disabled={oauthConnecting !== null || isPending}
@@ -513,16 +513,16 @@ export default function LoginPage() {
 
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-white/[0.05]" />
+          <div className="w-full border-t border-black/[0.05] dark:border-white/[0.05]" />
         </div>
         <div className="relative flex justify-center">
-          <span className="px-3 text-[11px] text-white/15 uppercase tracking-wider bg-[#0d0d14]">or</span>
+          <span className="px-3 text-[11px] text-black/15 dark:text-white/15 uppercase tracking-wider bg-[#0d0d14]">or</span>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-xs font-medium text-white/35">Email address</Label>
+          <Label htmlFor="email" className="text-xs font-medium text-black/35 dark:text-white/35">Email address</Label>
           <Input
             id="email"
             type="email"
@@ -530,14 +530,14 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
-            className="bg-white/[0.03] border-white/[0.07] focus:border-white/[0.15] text-white placeholder:text-white/15 h-11"
+            className="bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.07] dark:border-white/[0.07] focus:border-black/[0.15] dark:focus:border-white/[0.15] text-white placeholder:text-black/15 dark:text-white/15 h-11"
             data-testid={isRegister ? "input-register-email" : "input-login-email"}
           />
           {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-xs font-medium text-white/35">Password</Label>
+          <Label htmlFor="password" className="text-xs font-medium text-black/35 dark:text-white/35">Password</Label>
           <div className="relative flex items-center">
             <Input
               id="password"
@@ -547,12 +547,12 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={isRegister ? "new-password" : "current-password"}
               autoFocus={!!switchEmail}
-              className="pr-10 bg-white/[0.03] border-white/[0.07] focus:border-white/[0.15] text-white placeholder:text-white/15 h-11"
+              className="pr-10 bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.07] dark:border-white/[0.07] focus:border-black/[0.15] dark:focus:border-white/[0.15] text-white placeholder:text-black/15 dark:text-white/15 h-11"
               data-testid={isRegister ? "input-register-password" : "input-login-password"}
             />
             <button
               type="button"
-              className="absolute right-3 text-white/15 hover:text-white/40 transition-colors"
+              className="absolute right-3 text-black/15 dark:text-white/15 hover:text-black/40 dark:hover:text-white/40 transition-colors"
               onClick={() => setShowPassword(!showPassword)}
               data-testid="button-toggle-password-visibility"
             >
@@ -564,7 +564,7 @@ export default function LoginPage() {
 
         {isRegister && (
           <div className="space-y-1.5">
-            <Label htmlFor="confirmPassword" className="text-xs font-medium text-white/35">Confirm password</Label>
+            <Label htmlFor="confirmPassword" className="text-xs font-medium text-black/35 dark:text-white/35">Confirm password</Label>
             <div className="relative flex items-center">
               <Input
                 id="confirmPassword"
@@ -573,12 +573,12 @@ export default function LoginPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
-                className="pr-10 bg-white/[0.03] border-white/[0.07] focus:border-white/[0.15] text-white placeholder:text-white/15 h-11"
+                className="pr-10 bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.07] dark:border-white/[0.07] focus:border-black/[0.15] dark:focus:border-white/[0.15] text-white placeholder:text-black/15 dark:text-white/15 h-11"
                 data-testid="input-register-confirm-password"
               />
               <button
                 type="button"
-                className="absolute right-3 text-white/15 hover:text-white/40 transition-colors"
+                className="absolute right-3 text-black/15 dark:text-white/15 hover:text-black/40 dark:hover:text-white/40 transition-colors"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 data-testid="button-toggle-confirm-password-visibility"
               >
@@ -601,7 +601,7 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-white/30">
+      <p className="mt-6 text-center text-sm text-black/30 dark:text-white/30">
         {isRegister ? "Already have an account? " : "Don't have an account? "}
         <button
           type="button"
@@ -613,13 +613,13 @@ export default function LoginPage() {
         </button>
       </p>
 
-      <p className="mt-5 text-[11px] text-center text-white/12 leading-relaxed">
+      <p className="mt-5 text-[11px] text-center text-black/12 dark:text-white/12 leading-relaxed">
         By {isRegister ? "creating an account" : "signing in"}, you agree to our{" "}
-        <Link href="/terms" className="underline hover:text-white/25 transition-colors">
+        <Link href="/terms" className="underline hover:text-black/25 dark:hover:text-white/25 transition-colors">
           Terms
         </Link>
         {" "}and{" "}
-        <Link href="/privacy" className="underline hover:text-white/25 transition-colors">
+        <Link href="/privacy" className="underline hover:text-black/25 dark:hover:text-white/25 transition-colors">
           Privacy Policy
         </Link>
       </p>

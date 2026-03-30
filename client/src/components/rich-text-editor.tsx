@@ -164,7 +164,7 @@ export function RichTextEditor({
         )}
       </div>
       <div
-        className="flex items-center border-t border-white/[0.04] flex-shrink-0 px-2 py-1"
+        className="flex items-center border-t border-black/[0.04] dark:border-white/[0.04] flex-shrink-0 px-2 py-1"
         data-testid="rich-text-toolbar"
       >
         <button
@@ -174,7 +174,7 @@ export function RichTextEditor({
             e.preventDefault();
             setToolbarOpen(!toolbarOpen);
           }}
-          className={`w-7 h-7 rounded flex items-center justify-center transition-colors cursor-pointer ${toolbarOpen ? "text-primary bg-primary/10" : "text-foreground/40 hover:text-foreground/70 hover:bg-white/[0.04]"}`}
+          className={`w-7 h-7 rounded flex items-center justify-center transition-colors cursor-pointer ${toolbarOpen ? "text-primary bg-primary/10" : "text-foreground/40 hover:text-foreground/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"}`}
           data-testid="button-toggle-toolbar"
         >
           <Type className="w-3.5 h-3.5" />
@@ -183,7 +183,7 @@ export function RichTextEditor({
           <div className="flex items-center gap-0.5 ml-1">
             {buttons.map((btn, i) => {
               if (btn.cmd === "separator") {
-                return <div key={i} className="w-px h-4 bg-white/[0.06] mx-1" />;
+                return <div key={i} className="w-px h-4 bg-black/[0.06] dark:bg-white/[0.06] mx-1" />;
               }
               const Icon = btn.icon!;
               return (
@@ -199,7 +199,7 @@ export function RichTextEditor({
                       exec(btn.cmd);
                     }
                   }}
-                  className="w-7 h-7 rounded flex items-center justify-center text-foreground/40 hover:text-foreground/70 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                  className="w-7 h-7 rounded flex items-center justify-center text-foreground/40 hover:text-foreground/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
                   data-testid={`button-format-${btn.cmd}`}
                 >
                   <Icon className="w-3.5 h-3.5" />

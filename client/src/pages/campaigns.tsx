@@ -319,7 +319,7 @@ export default function CampaignsPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setLocation("/inbox")}
-              className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all cursor-pointer"
+              className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all cursor-pointer"
               data-testid="button-back-inbox"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -352,7 +352,7 @@ export default function CampaignsPage() {
               <div
                 key={stat.label}
                 className={`rounded-xl border ${stat.borderColor} backdrop-blur-sm p-3.5`}
-                style={{ background: "rgba(255,255,255,0.02)" }}
+                style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
                 data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, '-')}`}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -373,8 +373,8 @@ export default function CampaignsPage() {
           <div className="space-y-6">
             {/* Empty state hero */}
             <div
-              className="flex flex-col items-center justify-center py-16 rounded-2xl border border-white/10 backdrop-blur-sm"
-              style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))" }}
+              className="flex flex-col items-center justify-center py-16 rounded-2xl border border-black/10 dark:border-white/10 backdrop-blur-sm"
+              style={{ background: "linear-gradient(145deg, rgba(var(--overlay-rgb), 0.04), rgba(var(--overlay-rgb), 0.01))" }}
             >
               <div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 border border-primary/15"
@@ -430,8 +430,8 @@ export default function CampaignsPage() {
                       setNewCampaign({ name: idea.title, subject: "", body: "" });
                       setShowCreateDialog(true);
                     }}
-                    className={`rounded-xl border ${idea.borderColor} backdrop-blur-sm p-4 text-left transition-all hover:border-white/15 cursor-pointer group`}
-                    style={{ background: "rgba(255,255,255,0.02)" }}
+                    className={`rounded-xl border ${idea.borderColor} backdrop-blur-sm p-4 text-left transition-all hover:border-black/15 dark:hover:border-white/15 cursor-pointer group`}
+                    style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
                     data-testid={`idea-${idea.title.toLowerCase().replace(/\s/g, '-')}`}
                   >
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br ${idea.color} mb-3`}>
@@ -446,8 +446,8 @@ export default function CampaignsPage() {
 
             {/* Tips */}
             <div
-              className="rounded-xl border border-white/8 backdrop-blur-sm p-4"
-              style={{ background: "rgba(255,255,255,0.02)" }}
+              className="rounded-xl border border-black/8 dark:border-white/8 backdrop-blur-sm p-4"
+              style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
             >
               <div className="flex items-center gap-2 mb-3">
                 <Lightbulb className="w-3.5 h-3.5 text-amber-400/60" />
@@ -473,8 +473,8 @@ export default function CampaignsPage() {
             {campaigns.map((campaign) => (
               <div
                 key={campaign.id}
-                className="group rounded-xl border border-white/[0.06] backdrop-blur-sm transition-all hover:border-white/10 p-4"
-                style={{ background: "rgba(255,255,255,0.02)" }}
+                className="group rounded-xl border border-black/[0.06] dark:border-white/[0.06] backdrop-blur-sm transition-all hover:border-black/10 dark:hover:border-white/10 p-4"
+                style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
                 data-testid={`campaign-card-${campaign.id}`}
               >
                 <div className="flex items-start justify-between gap-4">
@@ -482,7 +482,7 @@ export default function CampaignsPage() {
                     <div className="flex items-center gap-2.5 mb-1 flex-wrap">
                       <h3 className="text-sm font-medium truncate" data-testid={`campaign-name-${campaign.id}`}>{campaign.name}</h3>
                       {campaign.status === "draft" && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10 text-foreground/40" style={{ background: "rgba(255,255,255,0.03)" }} data-testid={`status-draft-${campaign.id}`}>Draft</span>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-black/10 dark:border-white/10 text-foreground/40" style={{ background: "rgba(var(--overlay-rgb), 0.03)" }} data-testid={`status-draft-${campaign.id}`}>Draft</span>
                       )}
                       {campaign.status === "sending" && (
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-blue-500/20 text-blue-400" style={{ background: "rgba(59,130,246,0.1)" }} data-testid={`status-sending-${campaign.id}`}>Sending</span>
@@ -502,7 +502,7 @@ export default function CampaignsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.04]">
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-black/[0.04] dark:border-white/[0.04]">
                   <div className="flex items-center gap-3 text-xs text-foreground/30">
                     {campaign.status === "completed" && (
                       <>
@@ -540,14 +540,14 @@ export default function CampaignsPage() {
                             setShowEditDialog(true);
                             setShowPreview(false);
                           }}
-                          className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer"
+                          className="w-7 h-7 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer"
                           data-testid={`button-edit-campaign-${campaign.id}`}
                         >
                           <Edit className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => handleOpenRecipients(campaign)}
-                          className="h-7 px-2.5 rounded-full text-[11px] font-medium bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer flex items-center gap-1"
+                          className="h-7 px-2.5 rounded-full text-[11px] font-medium bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer flex items-center gap-1"
                           data-testid={`button-manage-recipients-${campaign.id}`}
                         >
                           <Users className="w-3 h-3" />
@@ -556,7 +556,7 @@ export default function CampaignsPage() {
                         <button
                           onClick={() => sendTestMutation.mutate(campaign.id)}
                           disabled={sendTestMutation.isPending}
-                          className="h-7 px-2.5 rounded-full text-[11px] font-medium bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="h-7 px-2.5 rounded-full text-[11px] font-medium bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
                           data-testid={`button-test-campaign-${campaign.id}`}
                         >
                           {sendTestMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <FlaskConical className="w-3 h-3" />}
@@ -580,7 +580,7 @@ export default function CampaignsPage() {
                             setSelectedCampaign(campaign);
                             setShowDeleteDialog(true);
                           }}
-                          className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-foreground/50 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all cursor-pointer"
+                          className="w-7 h-7 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/50 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all cursor-pointer"
                           data-testid={`button-delete-campaign-${campaign.id}`}
                         >
                           <Trash2 className="w-3 h-3" />
@@ -591,7 +591,7 @@ export default function CampaignsPage() {
                       <button
                         onClick={() => sendTestMutation.mutate(campaign.id)}
                         disabled={sendTestMutation.isPending}
-                        className="h-7 px-2.5 rounded-full text-[11px] font-medium bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="h-7 px-2.5 rounded-full text-[11px] font-medium bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
                         data-testid={`button-test-campaign-${campaign.id}`}
                       >
                         {sendTestMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <FlaskConical className="w-3 h-3" />}
@@ -607,7 +607,7 @@ export default function CampaignsPage() {
 
         {/* Create Campaign Dialog */}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-xl'} border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : undefined }}>
+          <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-xl'} border-black/10 dark:border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : undefined }}>
             <DialogHeader>
               <DialogTitle className="text-base">New Campaign</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground/50">
@@ -671,7 +671,7 @@ export default function CampaignsPage() {
 
         {/* Edit Campaign Dialog */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up flex flex-col overflow-hidden' : 'max-w-2xl'} border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : undefined }}>
+          <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up flex flex-col overflow-hidden' : 'max-w-2xl'} border-black/10 dark:border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : undefined }}>
             <DialogHeader>
               <DialogTitle className="text-base">Edit Campaign</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground/50">
@@ -729,8 +729,8 @@ export default function CampaignsPage() {
 
                 {showPreview && (
                   <div
-                    className="rounded-xl border border-white/[0.06] backdrop-blur-sm p-4 space-y-3"
-                    style={{ background: "rgba(255,255,255,0.02)" }}
+                    className="rounded-xl border border-black/[0.06] dark:border-white/[0.06] backdrop-blur-sm p-4 space-y-3"
+                    style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
                     data-testid="preview-panel"
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -742,7 +742,7 @@ export default function CampaignsPage() {
                         <span className="text-[10px] text-foreground/30 uppercase tracking-wider">Subject</span>
                         <p className="text-sm text-foreground/80 mt-0.5" data-testid="preview-subject">{replaceVariables(selectedCampaign.subject)}</p>
                       </div>
-                      <div className="border-t border-white/[0.04] pt-2">
+                      <div className="border-t border-black/[0.04] dark:border-white/[0.04] pt-2">
                         <span className="text-[10px] text-foreground/30 uppercase tracking-wider">Body</span>
                         <p className="text-sm text-foreground/70 mt-0.5 whitespace-pre-wrap leading-relaxed" data-testid="preview-body">{replaceVariables(selectedCampaign.body)}</p>
                       </div>
@@ -757,7 +757,7 @@ export default function CampaignsPage() {
                   type="button"
                   onClick={() => selectedCampaign && sendTestMutation.mutate(selectedCampaign.id)}
                   disabled={sendTestMutation.isPending}
-                  className="h-8 px-3 rounded-full text-[11px] font-medium bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="h-8 px-3 rounded-full text-[11px] font-medium bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
                   data-testid="button-send-test-email"
                 >
                   {sendTestMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <FlaskConical className="w-3 h-3" />}
@@ -790,7 +790,7 @@ export default function CampaignsPage() {
 
         {/* Recipients Dialog */}
         <Dialog open={showRecipientsDialog} onOpenChange={setShowRecipientsDialog}>
-          <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-2xl max-h-[80vh]'} overflow-hidden flex flex-col border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : undefined }}>
+          <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-2xl max-h-[80vh]'} overflow-hidden flex flex-col border-black/10 dark:border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : undefined }}>
             <DialogHeader>
               <DialogTitle className="text-base">Manage Recipients</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground/50">
@@ -798,7 +798,7 @@ export default function CampaignsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-2 flex-1 overflow-auto">
-              <div className="rounded-xl border border-white/[0.06] backdrop-blur-sm p-4 space-y-4" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.06] backdrop-blur-sm p-4 space-y-4" style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground/70 mb-1.5 block">Add Manually</label>
                   <p className="text-[10px] text-muted-foreground/40 mb-2">One per line: email, name (name optional)</p>
@@ -821,7 +821,7 @@ export default function CampaignsPage() {
                   </Button>
                 </div>
 
-                <div className="border-t border-white/[0.04] pt-4">
+                <div className="border-t border-black/[0.04] dark:border-white/[0.04] pt-4">
                   <label className="text-xs font-medium text-muted-foreground/70 mb-1.5 block">Upload CSV</label>
                   <p className="text-[10px] text-muted-foreground/40 mb-2">CSV columns: email, name (optional)</p>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -864,11 +864,11 @@ export default function CampaignsPage() {
                       Clear All
                     </Button>
                   </div>
-                  <div className="rounded-xl border border-white/[0.06] backdrop-blur-sm overflow-hidden" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.06] backdrop-blur-sm overflow-hidden" style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}>
                     <div className="max-h-60 overflow-y-auto">
                       <table className="w-full text-xs" data-testid="recipients-table">
                         <thead>
-                          <tr className="border-b border-white/[0.06]">
+                          <tr className="border-b border-black/[0.06] dark:border-white/[0.06]">
                             <th className="text-left px-3 py-2 text-[10px] font-medium text-foreground/30 uppercase tracking-wider">Name</th>
                             <th className="text-left px-3 py-2 text-[10px] font-medium text-foreground/30 uppercase tracking-wider">Email</th>
                             <th className="text-right px-3 py-2 text-[10px] font-medium text-foreground/30 uppercase tracking-wider">Status</th>
@@ -878,14 +878,14 @@ export default function CampaignsPage() {
                           {selectedCampaign.recipients.map((recipient) => (
                             <tr
                               key={recipient.id}
-                              className="hover:bg-white/[0.02] transition-colors"
+                              className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
                               data-testid={`recipient-row-${recipient.id}`}
                             >
                               <td className="px-3 py-2 text-foreground/60">{recipient.name || <span className="text-foreground/20 italic">No name</span>}</td>
                               <td className="px-3 py-2 text-foreground/80 font-mono text-[11px]" data-testid={`recipient-email-${recipient.id}`}>{recipient.email}</td>
                               <td className="px-3 py-2 text-right">
                                 {recipient.status === "pending" && (
-                                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10 text-foreground/40 inline-block" style={{ background: "rgba(255,255,255,0.03)" }}>Pending</span>
+                                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-black/10 dark:border-white/10 text-foreground/40 inline-block" style={{ background: "rgba(var(--overlay-rgb), 0.03)" }}>Pending</span>
                                 )}
                                 {recipient.status === "sent" && (
                                   <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 inline-block" style={{ background: "rgba(16,185,129,0.1)" }}>Sent</span>

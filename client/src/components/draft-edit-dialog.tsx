@@ -121,8 +121,8 @@ export function DraftEditDialog({ draft, open, onOpenChange, onSent }: DraftEdit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
-        <DialogHeader className="px-5 py-4 border-b border-white/[0.06] flex-shrink-0">
+      <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-black/10 dark:border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
+        <DialogHeader className="px-5 py-4 border-b border-black/[0.06] dark:border-white/[0.06] flex-shrink-0">
           <DialogTitle className="text-base font-medium">Edit Draft</DialogTitle>
         </DialogHeader>
 
@@ -151,7 +151,7 @@ export function DraftEditDialog({ draft, open, onOpenChange, onSent }: DraftEdit
               data-testid="textarea-draft-content"
             />
 
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.03] rounded-lg border border-white/[0.08]">
+            <div className="flex items-center gap-2 px-3 py-2 bg-black/[0.03] dark:bg-white/[0.03] rounded-lg border border-black/[0.08] dark:border-white/[0.08]">
               <Wand2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
               <input
                 type="text"
@@ -182,7 +182,7 @@ export function DraftEditDialog({ draft, open, onOpenChange, onSent }: DraftEdit
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-white/[0.06] flex-shrink-0">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-black/[0.06] dark:border-white/[0.06] flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"

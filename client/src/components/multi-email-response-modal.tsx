@@ -348,16 +348,16 @@ export function MultiEmailResponseModal({
   if (!currentEmail) return null;
 
   const glassStyle = {
-    background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
-    boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 24px rgba(0,0,0,0.12)"
+    background: "linear-gradient(145deg, rgba(var(--overlay-rgb), 0.06), rgba(var(--overlay-rgb), 0.02))",
+    boxShadow: "inset 0 1px 0 0 rgba(var(--overlay-rgb), 0.1), 0 4px 24px rgba(0,0,0,0.12)"
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent hideCloseButton className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-3xl max-h-[90vh] rounded-2xl'} flex flex-col p-0 gap-0 border-white/15 dark:border-white/10 backdrop-blur-3xl bg-background/80 overflow-hidden`}>
+      <DialogContent hideCloseButton className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-3xl max-h-[90vh] rounded-2xl'} flex flex-col p-0 gap-0 border-black/15 dark:border-white/15 dark:border-white/10 backdrop-blur-3xl bg-background/80 overflow-hidden`}>
         
         {/* Header */}
-        <div className="px-5 py-4 border-b border-white/10">
+        <div className="px-5 py-4 border-b border-black/10 dark:border-white/10">
           <div className="flex items-center gap-3">
             <div 
               className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm border border-primary/20 flex-shrink-0"
@@ -371,7 +371,7 @@ export function MultiEmailResponseModal({
             </div>
             <button
               onClick={() => onOpenChange(false)}
-              className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
               data-testid="button-close-batch"
             >
               <X className="w-4 h-4" />
@@ -384,7 +384,7 @@ export function MultiEmailResponseModal({
               <button
                 onClick={handlePrevious}
                 disabled={currentIndex === 0}
-                className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
                 data-testid="button-previous-email"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -395,7 +395,7 @@ export function MultiEmailResponseModal({
               <button
                 onClick={handleNext}
                 disabled={currentIndex === emails.length - 1}
-                className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
                 data-testid="button-next-email"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -421,8 +421,8 @@ export function MultiEmailResponseModal({
               )}
               {readyCount > 0 && (
                 <span 
-                  className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10 text-foreground/50 backdrop-blur-sm"
-                  style={{ background: "rgba(255,255,255,0.05)" }}
+                  className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-black/10 dark:border-white/10 text-foreground/50 backdrop-blur-sm"
+                  style={{ background: "rgba(var(--overlay-rgb), 0.05)" }}
                 >
                   {readyCount} ready
                 </span>
@@ -438,8 +438,8 @@ export function MultiEmailResponseModal({
               {/* Original email toggle */}
               <button
                 onClick={() => setIsOriginalExpanded(!isOriginalExpanded)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-white/10 backdrop-blur-sm text-left transition-all hover:border-white/15"
-                style={{ background: "rgba(255,255,255,0.03)" }}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 backdrop-blur-sm text-left transition-all hover:border-black/15 dark:hover:border-white/15"
+                style={{ background: "rgba(var(--overlay-rgb), 0.03)" }}
                 data-testid="button-toggle-original"
               >
                 <div className="flex-1 min-w-0">
@@ -467,8 +467,8 @@ export function MultiEmailResponseModal({
 
               {isOriginalExpanded && (
                 <div 
-                  className="px-4 py-3 rounded-xl border border-white/8"
-                  style={{ background: "rgba(255,255,255,0.02)" }}
+                  className="px-4 py-3 rounded-xl border border-black/8 dark:border-white/8"
+                  style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
                 >
                   <div className="text-xs text-foreground/50 whitespace-pre-wrap leading-relaxed">
                     {currentEmail.body || currentEmail.preview}
@@ -483,7 +483,7 @@ export function MultiEmailResponseModal({
                   value={currentResponse?.subject || `Re: ${currentEmail.subject}`}
                   onChange={(e) => updateCurrentResponse('subject', e.target.value)}
                   disabled={currentResponse?.sent || currentResponse?.isLoading}
-                  className="bg-white/[0.03] border-white/10 rounded-xl text-sm focus:border-white/20 focus:bg-white/[0.05] transition-colors h-10"
+                  className="bg-black/[0.03] dark:bg-white/[0.03] border-black/10 dark:border-white/10 rounded-xl text-sm focus:border-black/20 dark:focus:border-white/20 focus:bg-black/[0.05] dark:focus:bg-white/[0.05] transition-colors h-10"
                   data-testid="input-response-subject"
                 />
               </div>
@@ -495,7 +495,7 @@ export function MultiEmailResponseModal({
                   <button
                     onClick={handleRegenerateCurrent}
                     disabled={currentResponse?.isLoading || currentResponse?.sent}
-                    className="h-6 px-2.5 rounded-full text-[10px] font-medium bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70 transition-all disabled:opacity-30 cursor-pointer flex items-center gap-1"
+                    className="h-6 px-2.5 rounded-full text-[10px] font-medium bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/70 transition-all disabled:opacity-30 cursor-pointer flex items-center gap-1"
                     data-testid="button-regenerate-current"
                   >
                     <RefreshCw className="w-2.5 h-2.5" />
@@ -505,8 +505,8 @@ export function MultiEmailResponseModal({
                 
                 {currentResponse?.isLoading ? (
                   <div 
-                    className="flex items-center justify-center h-40 rounded-xl border border-white/8"
-                    style={{ background: "rgba(255,255,255,0.02)" }}
+                    className="flex items-center justify-center h-40 rounded-xl border border-black/8 dark:border-white/8"
+                    style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
                   >
                     <div className="flex items-center gap-2.5 text-foreground/40">
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -522,7 +522,7 @@ export function MultiEmailResponseModal({
                     <p className="text-xs text-red-400/80">{currentResponse.error}</p>
                     <button
                       onClick={handleRegenerateCurrent}
-                      className="mt-3 h-7 px-3 rounded-full text-[11px] font-medium bg-white/5 border border-white/10 text-foreground/60 hover:bg-white/10 transition-all cursor-pointer"
+                      className="mt-3 h-7 px-3 rounded-full text-[11px] font-medium bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/60 hover:bg-black/10 dark:hover:bg-white/10 transition-all cursor-pointer"
                       data-testid="button-retry-generate"
                     >
                       Try Again
@@ -534,7 +534,7 @@ export function MultiEmailResponseModal({
                     onChange={(e) => updateCurrentResponse('content', e.target.value)}
                     disabled={currentResponse?.sent}
                     placeholder="AI-generated response will appear here..."
-                    className="min-h-[180px] bg-white/[0.03] border-white/10 rounded-xl resize-none text-sm focus:border-white/20 focus:bg-white/[0.05] transition-colors"
+                    className="min-h-[180px] bg-black/[0.03] dark:bg-white/[0.03] border-black/10 dark:border-white/10 rounded-xl resize-none text-sm focus:border-black/20 dark:focus:border-white/20 focus:bg-black/[0.05] dark:focus:bg-white/[0.05] transition-colors"
                     data-testid="textarea-response-content"
                   />
                 )}
@@ -542,8 +542,8 @@ export function MultiEmailResponseModal({
                 {/* Refine bar */}
                 {currentResponse?.content && !currentResponse?.isLoading && !currentResponse?.sent && (
                   <div 
-                    className="flex items-center gap-2 px-3 py-2 rounded-full border border-white/10 backdrop-blur-sm mt-2"
-                    style={{ background: "rgba(255,255,255,0.03)" }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-full border border-black/10 dark:border-white/10 backdrop-blur-sm mt-2"
+                    style={{ background: "rgba(var(--overlay-rgb), 0.03)" }}
                   >
                     <Wand2 className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
                     <Input
@@ -579,7 +579,7 @@ export function MultiEmailResponseModal({
           </ScrollArea>
 
           {/* Footer */}
-          <div className="border-t border-white/10 px-5 py-4 space-y-3">
+          <div className="border-t border-black/10 dark:border-white/10 px-5 py-4 space-y-3">
             {/* Tone selector */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-medium text-foreground/40 uppercase tracking-wider">Tone</span>
@@ -593,7 +593,7 @@ export function MultiEmailResponseModal({
                       h-7 px-3 rounded-full text-[11px] font-medium transition-all cursor-pointer
                       ${selectedTone === tone.value
                         ? "border border-primary/25 text-white"
-                        : "bg-white/5 border border-white/10 text-foreground/50 hover:bg-white/10 hover:text-foreground/70"
+                        : "bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/70"
                       }
                       ${loadingCount > 0 ? "opacity-40 cursor-not-allowed" : ""}
                     `}
@@ -613,7 +613,7 @@ export function MultiEmailResponseModal({
               <button
                 onClick={handleRegenerateAll}
                 disabled={loadingCount > 0}
-                className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2"
+                className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/12 dark:border-white/12 text-foreground/60 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/80 hover:border-black/20 dark:hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2"
                 data-testid="button-regenerate-all"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingCount > 0 ? "animate-spin" : ""}`} />
@@ -629,7 +629,7 @@ export function MultiEmailResponseModal({
                   !!currentResponse.error ||
                   sendEmailMutation.isPending
                 }
-                className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2"
+                className="h-9 px-4 rounded-full text-xs font-medium backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/12 dark:border-white/12 text-foreground/60 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/80 hover:border-black/20 dark:hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2"
                 data-testid="button-send-current"
               >
                 {sendEmailMutation.isPending ? (

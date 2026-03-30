@@ -109,13 +109,13 @@ function OptionCard({ selected, onClick, icon, label, desc, testId }: OptionCard
       className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
         selected
           ? "border-primary/40 bg-primary/[0.08]"
-          : "border-white/[0.06] bg-white/[0.02]"
+          : "border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02]"
       }`}
       data-testid={testId}
     >
       <div className="flex items-center gap-3">
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-          selected ? "bg-primary/15" : "bg-white/[0.04]"
+          selected ? "bg-primary/15" : "bg-black/[0.04] dark:bg-white/[0.04]"
         }`}>
           {icon}
         </div>
@@ -330,7 +330,7 @@ export default function OnboardingPage() {
               <div
                 key={i}
                 className={`h-1 rounded-full transition-all duration-500 ${
-                  i < currentStepIndex ? "w-8 bg-blue-500" : i === currentStepIndex ? "w-8 bg-blue-500" : "w-4 bg-white/[0.06]"
+                  i < currentStepIndex ? "w-8 bg-blue-500" : i === currentStepIndex ? "w-8 bg-blue-500" : "w-4 bg-black/[0.06] dark:bg-white/[0.06]"
                 }`}
               />
             ))}
@@ -486,7 +486,7 @@ export default function OnboardingPage() {
 
                 {step === "security" && (
                   <div className="space-y-4">
-                    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+                    <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02] p-5">
                       <div className="flex items-start gap-4">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                           <Shield className="w-5 h-5 text-primary" />
@@ -632,7 +632,7 @@ function PlanSelectionStep({
           <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Here's the perfect plan for you</h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-white/[0.08]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-black/[0.08] dark:border-white/[0.08]">
           <div className="p-5 sm:p-8 flex flex-col">
             <Badge className="bg-blue-500 text-white text-xs mb-5 w-fit">
               <Star className="w-3 h-3 mr-1" />
@@ -656,7 +656,7 @@ function PlanSelectionStep({
             )}
             {(billingInterval !== "annual" || plan.id === "free") && <div className="mb-4" />}
 
-            <div className="inline-flex items-center bg-white/[0.04] border border-white/[0.06] rounded-full p-1 mb-6 w-fit" data-testid="billing-toggle">
+            <div className="inline-flex items-center bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] rounded-full p-1 mb-6 w-fit" data-testid="billing-toggle">
               <button
                 className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
                   billingInterval === "monthly" ? "bg-blue-500 text-white" : "text-muted-foreground/60"
@@ -711,7 +711,7 @@ function PlanSelectionStep({
             </div>
           </div>
 
-          <div className="p-5 sm:p-8 bg-gradient-to-br from-blue-500/[0.04] via-transparent to-violet-500/[0.04] flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-white/[0.06]">
+          <div className="p-5 sm:p-8 bg-gradient-to-br from-blue-500/[0.04] via-transparent to-violet-500/[0.04] flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-black/[0.06] dark:border-white/[0.06]">
             <div className="space-y-5 sm:space-y-6">
               <div>
                 <p className="text-xs text-muted-foreground/50 mb-1.5">Based on your email volume</p>
@@ -724,7 +724,7 @@ function PlanSelectionStep({
                 </p>
               </div>
 
-              <div className="h-px bg-white/[0.06]" />
+              <div className="h-px bg-black/[0.06] dark:bg-white/[0.06]" />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -737,7 +737,7 @@ function PlanSelectionStep({
                 </div>
               </div>
 
-              <div className="h-px bg-white/[0.06]" />
+              <div className="h-px bg-black/[0.06] dark:bg-white/[0.06]" />
 
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
@@ -796,7 +796,7 @@ function PlanSelectionStep({
         <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Pick what works for you</h1>
       </div>
 
-      <div className="inline-flex items-center bg-white/[0.04] border border-white/[0.06] rounded-full p-1 mb-4 w-fit" data-testid="billing-toggle-all">
+      <div className="inline-flex items-center bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] rounded-full p-1 mb-4 w-fit" data-testid="billing-toggle-all">
         <button
           className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
             billingInterval === "monthly" ? "bg-blue-500 text-white" : "text-muted-foreground/60"
@@ -832,7 +832,7 @@ function PlanSelectionStep({
               className={`w-full p-4 rounded-xl border text-left transition-all relative ${
                 isRecommended
                   ? "border-blue-500/30 bg-blue-500/[0.06]"
-                  : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]"
+                  : "border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02] hover:border-black/[0.12] dark:hover:border-white/[0.12]"
               } ${isPlanLoading ? "opacity-50" : ""}`}
               data-testid={`button-plan-${plan.id}`}
             >

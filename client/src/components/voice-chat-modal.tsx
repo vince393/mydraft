@@ -431,7 +431,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
       case "speaking":
         return "text-blue-400";
       default:
-        return "text-white/40";
+        return "text-black/40 dark:text-white/40";
     }
   };
 
@@ -443,11 +443,11 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
       <DialogContent 
         className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'sm:max-w-md'} p-0 gap-0 overflow-hidden border-0`}
         style={{
-          background: "rgba(10, 10, 16, 0.95)",
+          background: "rgba(var(--background-rgb), 0.95)",
           backdropFilter: "blur(40px)",
           WebkitBackdropFilter: "blur(40px)",
           borderRadius: screen.isMobile ? "0" : "20px",
-          border: "1px solid rgba(255, 255, 255, 0.06)",
+          border: "1px solid rgba(var(--overlay-rgb), 0.06)",
           maxHeight: screen.isMobile ? "100%" : "90vh",
         }}
         data-testid="modal-voice-chat"
@@ -457,19 +457,19 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
           {/* Header */}
           <div 
             className="flex items-center justify-between px-5 py-3 shrink-0"
-            style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}
+            style={{ borderBottom: "1px solid rgba(var(--overlay-rgb), 0.06)" }}
           >
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <div>
                 <p className="text-sm font-medium text-white">Vince</p>
-                <p className="text-[11px] text-white/30">{formatDuration(callDuration)}</p>
+                <p className="text-[11px] text-black/30 dark:text-white/30">{formatDuration(callDuration)}</p>
               </div>
             </div>
             <Button
               size="icon"
               variant="ghost"
-              className="text-white/40 hover:text-white/70"
+              className="text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70"
               onClick={endCall}
               data-testid="button-close-voice"
             >
@@ -490,8 +490,8 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                 >
                   <Mic className="w-7 h-7 text-indigo-300/70" />
                 </div>
-                <p className="text-sm text-white/50 mb-1">Voice Call with Vince</p>
-                <p className="text-xs text-white/25 max-w-[200px]">
+                <p className="text-sm text-black/50 dark:text-white/50 mb-1">Voice Call with Vince</p>
+                <p className="text-xs text-black/25 dark:text-white/25 max-w-[200px]">
                   Just start talking. Vince will listen and respond naturally.
                 </p>
               </div>
@@ -501,7 +501,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
               <div className="space-y-4">
                 {conversationHistory.map((msg, i) => (
                   <div key={i} className={cn("flex flex-col gap-1", msg.role === "user" && "items-end")}>
-                    <p className="text-[10px] text-white/25 px-1">
+                    <p className="text-[10px] text-black/25 dark:text-white/25 px-1">
                       {msg.role === "user" ? "You" : "Vince"}
                     </p>
                     <div
@@ -510,13 +510,13 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                         msg.role === "user"
                           ? {
                               background: "linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(79, 70, 229, 0.45))",
-                              color: "rgba(255, 255, 255, 0.9)",
+                              color: "rgba(var(--overlay-rgb), 0.9)",
                               border: "1px solid rgba(129, 140, 248, 0.15)",
                             }
                           : {
-                              background: "rgba(255, 255, 255, 0.04)",
-                              color: "rgba(255, 255, 255, 0.75)",
-                              border: "1px solid rgba(255, 255, 255, 0.06)",
+                              background: "rgba(var(--overlay-rgb), 0.04)",
+                              color: "rgba(var(--overlay-rgb), 0.75)",
+                              border: "1px solid rgba(var(--overlay-rgb), 0.06)",
                             }
                       }
                       data-testid={`voice-message-${msg.role}-${i}`}
@@ -531,12 +531,12 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
             {/* Live transcript of what user is saying */}
             {transcript && (
               <div className={cn("flex flex-col items-end gap-1", conversationHistory.length > 0 && "mt-4")}>
-                <p className="text-[10px] text-white/25 px-1">You</p>
+                <p className="text-[10px] text-black/25 dark:text-white/25 px-1">You</p>
                 <div
                   className="text-[13px] leading-relaxed rounded-2xl px-4 py-2.5 max-w-[85%]"
                   style={{
                     background: "linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.35))",
-                    color: "rgba(255, 255, 255, 0.7)",
+                    color: "rgba(var(--overlay-rgb), 0.7)",
                     border: "1px solid rgba(129, 140, 248, 0.1)",
                   }}
                   data-testid="voice-transcript-live"
@@ -549,12 +549,12 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
             {/* Processing indicator */}
             {conversationState === "processing" && (
               <div className={cn("flex flex-col gap-1", conversationHistory.length > 0 && "mt-4")}>
-                <p className="text-[10px] text-white/25 px-1">Vince</p>
+                <p className="text-[10px] text-black/25 dark:text-white/25 px-1">Vince</p>
                 <div
                   className="rounded-2xl px-4 py-2.5 max-w-[85%]"
                   style={{
-                    background: "rgba(255, 255, 255, 0.04)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                    background: "rgba(var(--overlay-rgb), 0.04)",
+                    border: "1px solid rgba(var(--overlay-rgb), 0.06)",
                   }}
                 >
                   <div className="flex items-center gap-2">
@@ -572,7 +572,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
 
           {/* Status + Visualizer */}
           <div className="shrink-0 flex flex-col items-center py-4 px-5 gap-3"
-            style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}
+            style={{ borderTop: "1px solid rgba(var(--overlay-rgb), 0.06)" }}
           >
             {/* Audio visualizer ring */}
             <div className="relative w-20 h-20 flex items-center justify-center">
@@ -595,7 +595,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                     ? `2px solid rgba(34, 197, 94, ${0.3 + audioLevel * 0.5})`
                     : conversationState === "speaking"
                     ? "2px solid rgba(99, 102, 241, 0.3)"
-                    : "2px solid rgba(255, 255, 255, 0.08)",
+                    : "2px solid rgba(var(--overlay-rgb), 0.08)",
                 }}
               />
               <div 
@@ -609,12 +609,12 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                     ? "linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(79, 70, 229, 0.3))"
                     : conversationState === "processing"
                     ? "linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.2))"
-                    : "rgba(255, 255, 255, 0.05)",
+                    : "rgba(var(--overlay-rgb), 0.05)",
                   border: conversationState === "listening"
                     ? "1px solid rgba(34, 197, 94, 0.3)"
                     : conversationState === "speaking"
                     ? "1px solid rgba(99, 102, 241, 0.2)"
-                    : "1px solid rgba(255, 255, 255, 0.08)",
+                    : "1px solid rgba(var(--overlay-rgb), 0.08)",
                 }}
                 onClick={() => {
                   if (conversationState === "idle") startListening();
@@ -634,7 +634,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                 ) : conversationState === "speaking" ? (
                   <Volume2 className="w-5 h-5 text-indigo-300" />
                 ) : (
-                  <Mic className="w-5 h-5 text-white/40" />
+                  <Mic className="w-5 h-5 text-black/40 dark:text-white/40" />
                 )}
               </div>
             </div>
@@ -652,13 +652,13 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-opacity"
                 style={{
-                  background: isMuted ? "rgba(239, 68, 68, 0.15)" : "rgba(255, 255, 255, 0.05)",
-                  border: isMuted ? "1px solid rgba(239, 68, 68, 0.2)" : "1px solid rgba(255, 255, 255, 0.06)",
+                  background: isMuted ? "rgba(239, 68, 68, 0.15)" : "rgba(var(--overlay-rgb), 0.05)",
+                  border: isMuted ? "1px solid rgba(239, 68, 68, 0.2)" : "1px solid rgba(var(--overlay-rgb), 0.06)",
                 }}
                 onClick={toggleMute}
                 data-testid="button-toggle-mute"
               >
-                {isMuted ? <VolumeX className="w-4 h-4 text-red-400/70" /> : <Volume2 className="w-4 h-4 text-white/40" />}
+                {isMuted ? <VolumeX className="w-4 h-4 text-red-400/70" /> : <Volume2 className="w-4 h-4 text-black/40 dark:text-white/40" />}
               </div>
 
               <div
@@ -679,8 +679,8 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                   conversationState === "speaking" ? "cursor-pointer opacity-100" : "opacity-30 cursor-not-allowed"
                 )}
                 style={{
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.06)",
+                  background: "rgba(var(--overlay-rgb), 0.05)",
+                  border: "1px solid rgba(var(--overlay-rgb), 0.06)",
                 }}
                 onClick={() => {
                   if (conversationState === "speaking") {
@@ -691,7 +691,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                 }}
                 data-testid="button-skip-response"
               >
-                <SkipForward className="w-4 h-4 text-white/40" />
+                <SkipForward className="w-4 h-4 text-black/40 dark:text-white/40" />
               </div>
             </div>
           </div>

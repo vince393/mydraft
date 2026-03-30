@@ -232,9 +232,9 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
   };
 
   const fieldBoxStyle = (hasError?: boolean) => ({
-    background: "rgba(255,255,255,0.03)",
-    border: hasError ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.08)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+    background: "rgba(var(--overlay-rgb), 0.03)",
+    border: hasError ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(var(--overlay-rgb), 0.08)",
+    boxShadow: "inset 0 1px 0 rgba(var(--overlay-rgb), 0.04)",
   });
 
   return (
@@ -363,7 +363,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
                   role="combobox"
                   aria-expanded={countryOpen}
                   data-testid="input-country"
-                  className="flex h-10 w-full items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full items-center justify-between rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.03] px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className={country ? "text-foreground" : "text-muted-foreground/40"}>
                     {country ? COUNTRIES.find(c => c.code === country)?.name ?? country : "Select country"}
@@ -408,7 +408,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
                     role="combobox"
                     aria-expanded={stateOpen}
                     data-testid="input-state"
-                    className="flex h-10 w-full items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full items-center justify-between rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.03] px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span className={billingState ? "text-foreground" : "text-muted-foreground/40"}>
                       {billingState ? STATE_MAP[country]?.find(s => s.code === billingState)?.name ?? billingState : "Select state"}
@@ -449,8 +449,8 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
       <div 
         className="rounded-xl p-4"
         style={{
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(var(--overlay-rgb), 0.02)",
+          border: "1px solid rgba(var(--overlay-rgb), 0.06)",
         }}
       >
         <div className="flex items-center justify-between mb-2">
@@ -461,7 +461,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
           <span className="text-sm text-muted-foreground/60">Billing cycle</span>
           <span className="text-sm font-medium capitalize">{interval}</span>
         </div>
-        <div className="h-px my-3" style={{ background: "rgba(255,255,255,0.06)" }} />
+        <div className="h-px my-3" style={{ background: "rgba(var(--overlay-rgb), 0.06)" }} />
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Due today</span>
           <div className="text-right">
@@ -595,9 +595,9 @@ export default function CheckoutPage() {
               <div 
                 className="rounded-2xl p-6 sm:p-8 mb-6"
                 style={{
-                  background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.05)",
+                  background: "linear-gradient(135deg, rgba(var(--overlay-rgb), 0.04) 0%, rgba(var(--overlay-rgb), 0.01) 100%)",
+                  border: "1px solid rgba(var(--overlay-rgb), 0.08)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(var(--overlay-rgb), 0.05)",
                 }}
               >
                 {stripePromise ? (
@@ -647,9 +647,9 @@ export default function CheckoutPage() {
             <div 
               className="rounded-2xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                boxShadow: "0 12px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06)",
+                background: "linear-gradient(135deg, rgba(var(--overlay-rgb), 0.05) 0%, rgba(var(--overlay-rgb), 0.02) 100%)",
+                border: "1px solid rgba(var(--overlay-rgb), 0.10)",
+                boxShadow: "0 12px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(var(--overlay-rgb), 0.06)",
               }}
             >
               <div className="p-6 sm:p-8">
@@ -714,8 +714,8 @@ export default function CheckoutPage() {
             <div 
               className="mt-4 rounded-xl p-4 flex items-start gap-3"
               style={{
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.05)",
+                background: "rgba(var(--overlay-rgb), 0.02)",
+                border: "1px solid rgba(var(--overlay-rgb), 0.05)",
               }}
             >
               <Shield className="w-4 h-4 text-muted-foreground/30 mt-0.5 flex-shrink-0" />

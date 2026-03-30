@@ -1536,27 +1536,27 @@ export default function OwnerPanel() {
                   </div>
                 ) : emailStats ? (
                   <div className="grid grid-cols-3 gap-3 mb-4">
-                    <div className="rounded-lg border border-white/[0.06] p-3">
+                    <div className="rounded-lg border border-black/[0.06] dark:border-white/[0.06] p-3">
                       <p className="text-xs text-muted-foreground">Sent</p>
                       <p className="text-xl font-bold">{(emailStats as any)?.stats?.sent ?? 0}</p>
                     </div>
-                    <div className="rounded-lg border border-white/[0.06] p-3">
+                    <div className="rounded-lg border border-black/[0.06] dark:border-white/[0.06] p-3">
                       <p className="text-xs text-muted-foreground">Delivered</p>
                       <p className="text-xl font-bold">{(emailStats as any)?.stats?.delivered ?? 0}</p>
                     </div>
-                    <div className="rounded-lg border border-white/[0.06] p-3">
+                    <div className="rounded-lg border border-black/[0.06] dark:border-white/[0.06] p-3">
                       <p className="text-xs text-muted-foreground">Monthly limit</p>
                       <p className="text-xl font-bold">{(emailStats as any)?.monthlyLimit ?? 3000}</p>
                     </div>
-                    <div className="rounded-lg border border-white/[0.06] p-3">
+                    <div className="rounded-lg border border-black/[0.06] dark:border-white/[0.06] p-3">
                       <p className="text-xs text-muted-foreground">Opened</p>
                       <p className="text-xl font-bold">{(emailStats as any)?.stats?.opened ?? 0}</p>
                     </div>
-                    <div className="rounded-lg border border-white/[0.06] p-3">
+                    <div className="rounded-lg border border-black/[0.06] dark:border-white/[0.06] p-3">
                       <p className="text-xs text-muted-foreground">Clicked</p>
                       <p className="text-xl font-bold">{(emailStats as any)?.stats?.clicked ?? 0}</p>
                     </div>
-                    <div className="rounded-lg border border-white/[0.06] p-3">
+                    <div className="rounded-lg border border-black/[0.06] dark:border-white/[0.06] p-3">
                       <p className="text-xs text-muted-foreground">Bounced</p>
                       <p className="text-xl font-bold text-red-400">{(emailStats as any)?.stats?.bounced ?? 0}</p>
                     </div>
@@ -2129,7 +2129,7 @@ export default function OwnerPanel() {
                                 </div>
                               );
                             })}
-                            <div className="pt-3 border-t border-white/[0.06]">
+                            <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.06]">
                               <div className="grid grid-cols-3 gap-4 text-center">
                                 <div>
                                   <div className="text-lg font-bold">{aiCosts.totalCalls.toLocaleString()}</div>

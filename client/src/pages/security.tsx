@@ -286,7 +286,7 @@ export default function SecurityPage() {
             </Button>
           ) : (
             <div className="max-w-md mx-auto text-left">
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-6 space-y-4">
+              <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02] backdrop-blur-sm p-6 space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Your name</label>
                   <Input
@@ -406,7 +406,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 function Footer() {
   return (
-    <footer className="py-12 px-6 border-t border-white/[0.04]">
+    <footer className="py-12 px-6 border-t border-black/[0.04] dark:border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-6">
           <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy</Link>

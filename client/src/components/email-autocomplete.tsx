@@ -136,14 +136,14 @@ export function EmailAutocomplete({
         <div 
           className="absolute top-full left-0 right-0 mt-1 rounded-lg shadow-xl z-50 max-h-56 overflow-y-auto"
           style={{
-            background: "rgba(22,22,28,0.98)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(var(--background-rgb), 0.98)",
+            border: "1px solid rgba(var(--overlay-rgb), 0.08)",
             backdropFilter: "blur(12px)",
           }}
           data-testid="email-autocomplete-dropdown"
         >
           {isShowingRecent && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+            <div className="flex items-center gap-1.5 px-3 py-1.5" style={{ borderBottom: "1px solid rgba(var(--overlay-rgb), 0.04)" }}>
               <Clock className="w-3 h-3 text-foreground/25" />
               <span className="text-[10px] text-foreground/25 uppercase tracking-wider font-medium">Recent</span>
             </div>
@@ -159,15 +159,15 @@ export function EmailAutocomplete({
                 className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors cursor-pointer ${
                   index === selectedIndex 
                     ? "bg-blue-500/10" 
-                    : "hover:bg-white/[0.03]"
+                    : "hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
                 }`}
                 data-testid={`contact-suggestion-${contact.id}`}
               >
                 <div 
                   className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-semibold"
                   style={{
-                    background: index === selectedIndex ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.06)",
-                    color: index === selectedIndex ? "rgba(147,197,253,0.9)" : "rgba(255,255,255,0.4)",
+                    background: index === selectedIndex ? "rgba(59,130,246,0.2)" : "rgba(var(--overlay-rgb), 0.06)",
+                    color: index === selectedIndex ? "rgba(147,197,253,0.9)" : "rgba(var(--overlay-rgb), 0.4)",
                   }}
                 >
                   {contact.name ? initial : <User className="w-3.5 h-3.5" />}

@@ -123,7 +123,7 @@ export default function PublicPricingPage() {
       <section className="pb-24 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="flex justify-center mb-10">
-            <div className="inline-flex items-center bg-white/[0.04] rounded-full p-1 border border-white/[0.08]" data-testid="billing-toggle">
+            <div className="inline-flex items-center bg-black/[0.04] dark:bg-white/[0.04] rounded-full p-1 border border-black/[0.08] dark:border-white/[0.08]" data-testid="billing-toggle">
               <button
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
                   billingInterval === "monthly" 
@@ -229,7 +229,7 @@ export default function PublicPricingPage() {
 
       <PricingFAQ />
 
-      <section className="py-20 px-6 border-t border-white/[0.04] relative overflow-hidden">
+      <section className="py-20 px-6 border-t border-black/[0.04] dark:border-white/[0.04] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.05] via-transparent to-transparent pointer-events-none" />
         <div className="max-w-2xl mx-auto text-center relative">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-5">
@@ -287,7 +287,7 @@ function PricingCard({
         ? 'border-green-500/50 bg-green-500/5'
         : highlighted 
           ? 'border-primary/50 bg-gradient-to-b from-primary/[0.08] to-transparent shadow-2xl shadow-primary/10 scale-[1.02]' 
-          : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]'
+          : 'border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02] hover:border-black/[0.1] dark:hover:border-white/[0.1]'
     }`}>
       {isCurrentPlan ? (
         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
@@ -347,7 +347,7 @@ function PricingCard({
               ? 'cursor-not-allowed opacity-70'
               : highlighted 
                 ? 'shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30' 
-                : 'border-white/10 hover:bg-white/[0.03]'
+                : 'border-black/10 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
           }`}
           onClick={onSelect}
           disabled={isCurrentPlan || isLoading}
@@ -377,15 +377,15 @@ function FeatureComparison() {
   ];
 
   return (
-    <div className="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.01]">
-      <div className="p-6 border-b border-white/[0.06]">
+    <div className="border border-black/[0.06] dark:border-white/[0.06] rounded-2xl overflow-hidden bg-black/[0.01] dark:bg-white/[0.01]">
+      <div className="p-6 border-b border-black/[0.06] dark:border-white/[0.06]">
         <h3 className="text-xl font-semibold">Compare plans</h3>
         <p className="text-sm text-muted-foreground/60 mt-1">See what's included in each plan</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-white/[0.06]">
+            <tr className="border-b border-black/[0.06] dark:border-white/[0.06]">
               <th className="text-left p-5 font-medium text-muted-foreground/70">Features</th>
               <th className="text-center p-5 font-medium text-muted-foreground/70 w-28">Free</th>
               <th className="text-center p-5 font-medium text-primary w-28 bg-primary/[0.03]">Pro</th>
@@ -394,7 +394,7 @@ function FeatureComparison() {
           </thead>
           <tbody>
             {features.map((feature, i) => (
-              <tr key={i} className="border-b border-white/[0.04] last:border-0">
+              <tr key={i} className="border-b border-black/[0.04] dark:border-white/[0.04] last:border-0">
                 <td className="p-5 text-sm">{feature.name}</td>
                 <td className="p-5 text-center text-sm">
                   <FeatureValue value={feature.free} />
@@ -455,7 +455,7 @@ function PricingFAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="py-20 px-6 border-t border-white/[0.04]">
+    <section className="py-20 px-6 border-t border-black/[0.04] dark:border-white/[0.04]">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">Pricing FAQ</h2>
@@ -463,14 +463,14 @@ function PricingFAQ() {
         </div>
         <div className="space-y-3">
           {faqs.map((faq, i) => (
-            <div key={i} className="border border-white/[0.06] rounded-xl overflow-hidden bg-white/[0.01]">
+            <div key={i} className="border border-black/[0.06] dark:border-white/[0.06] rounded-xl overflow-hidden bg-black/[0.01] dark:bg-white/[0.01]">
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
                 data-testid={`pricing-faq-toggle-${i}`}
-                className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] transition-colors"
+                className="w-full flex items-center justify-between p-5 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
               >
                 <span className="font-medium pr-4">{faq.q}</span>
-                <div className={`p-1.5 rounded-lg bg-white/[0.04] transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`}>
+                <div className={`p-1.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`}>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </div>
               </button>
@@ -489,7 +489,7 @@ function PricingFAQ() {
 
 function Footer() {
   return (
-    <footer className="py-12 px-6 border-t border-white/[0.04]">
+    <footer className="py-12 px-6 border-t border-black/[0.04] dark:border-white/[0.04]">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-6">
           <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy</Link>

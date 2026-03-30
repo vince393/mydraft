@@ -59,7 +59,7 @@ export default function CookiePolicyPage() {
               <div className="overflow-x-auto">
                 <table className="w-full mt-4 border-collapse">
                   <thead>
-                    <tr className="border-b border-white/10">
+                    <tr className="border-b border-black/10 dark:border-white/10">
                       <th className="text-left py-2 pr-4 text-foreground">Cookie Name</th>
                       <th className="text-left py-2 pr-4 text-foreground">Purpose</th>
                       <th className="text-left py-2 pr-4 text-foreground">Type</th>
@@ -67,19 +67,19 @@ export default function CookiePolicyPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-white/5">
+                    <tr className="border-b border-black/5 dark:border-white/5">
                       <td className="py-2 pr-4">connect.sid</td>
                       <td className="py-2 pr-4">Session authentication and management</td>
                       <td className="py-2 pr-4">Essential</td>
                       <td className="py-2">7 days</td>
                     </tr>
-                    <tr className="border-b border-white/5">
+                    <tr className="border-b border-black/5 dark:border-white/5">
                       <td className="py-2 pr-4">theme</td>
                       <td className="py-2 pr-4">Stores dark/light mode preference</td>
                       <td className="py-2 pr-4">Functional</td>
                       <td className="py-2">1 year</td>
                     </tr>
-                    <tr className="border-b border-white/5">
+                    <tr className="border-b border-black/5 dark:border-white/5">
                       <td className="py-2 pr-4">csrf_token</td>
                       <td className="py-2 pr-4">Security protection against CSRF attacks</td>
                       <td className="py-2 pr-4">Essential</td>
@@ -152,7 +152,7 @@ export default function CookiePolicyPage() {
         </div>
       </div>
       
-      <footer className="py-12 px-6 border-t border-white/[0.04]">
+      <footer className="py-12 px-6 border-t border-black/[0.04] dark:border-white/[0.04]">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-6">
             <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy</Link>

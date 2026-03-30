@@ -321,11 +321,11 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
       <DialogContent 
         className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'sm:max-w-md md:max-w-lg max-h-[85vh]'} flex flex-col p-0 gap-0 border-0 shadow-2xl shadow-black/40`}
         style={{
-          background: "rgba(18, 18, 24, 0.82)",
+          background: "rgba(var(--background-rgb), 0.82)",
           backdropFilter: "blur(40px) saturate(1.6)",
           WebkitBackdropFilter: "blur(40px) saturate(1.6)",
           borderRadius: screen.isMobile ? "0" : "20px",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          border: "1px solid rgba(var(--overlay-rgb), 0.08)",
         }}
         data-testid="modal-assistant"
         hideCloseButton
@@ -334,7 +334,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
         <div 
           className="px-5 py-4 shrink-0"
           style={{
-            borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+            borderBottom: "1px solid rgba(var(--overlay-rgb), 0.06)",
           }}
         >
           <div className="flex items-center justify-between gap-3">
@@ -343,14 +343,14 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                 style={{
                   background: "linear-gradient(135deg, rgba(99, 102, 241, 0.7), rgba(139, 92, 246, 0.7))",
-                  boxShadow: "0 0 20px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+                  boxShadow: "0 0 20px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(var(--overlay-rgb), 0.15)",
                 }}
               >
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-white leading-tight">{currentVoiceName}</h2>
-                <p className="text-[11px] text-white/40 leading-tight">AI Assistant</p>
+                <h2 className="text-sm font-semibold text-foreground leading-tight">{currentVoiceName}</h2>
+                <p className="text-[11px] text-black/40 dark:text-white/40 leading-tight">AI Assistant</p>
               </div>
             </div>
             
@@ -358,7 +358,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8 text-white/50 hover:text-white/80"
+                className="h-8 w-8 text-black/50 dark:text-white/50 hover:text-black/80 dark:hover:text-white/80"
                 onClick={() => createSessionMutation.mutate()}
                 disabled={createSessionMutation.isPending}
                 data-testid="button-new-chat"
@@ -371,8 +371,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 size="icon"
                 variant="ghost"
                 className={cn(
-                  "h-8 w-8 text-white/50 hover:text-white/80",
-                  showHistory && "text-white/90"
+                  "h-8 w-8 text-black/50 dark:text-white/50 hover:text-black/80 dark:hover:text-white/80",
+                  showHistory && "text-black/90 dark:text-white/90"
                 )}
                 onClick={() => { setShowHistory(!showHistory); setShowSettings(false); }}
                 data-testid="button-history"
@@ -385,8 +385,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 size="icon"
                 variant="ghost"
                 className={cn(
-                  "h-8 w-8 text-white/50 hover:text-white/80",
-                  showSettings && "text-white/90"
+                  "h-8 w-8 text-black/50 dark:text-white/50 hover:text-black/80 dark:hover:text-white/80",
+                  showSettings && "text-black/90 dark:text-white/90"
                 )}
                 onClick={() => { setShowSettings(!showSettings); setShowHistory(false); }}
                 data-testid="button-settings"
@@ -398,7 +398,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8 text-white/50 hover:text-white/80"
+                className="h-8 w-8 text-black/50 dark:text-white/50 hover:text-black/80 dark:hover:text-white/80"
                 onClick={() => onOpenChange(false)}
                 data-testid="button-close-assistant"
               >
@@ -412,10 +412,10 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
         {showSettings && (
           <div 
             className="px-5 py-4 shrink-0 space-y-4"
-            style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}
+            style={{ borderBottom: "1px solid rgba(var(--overlay-rgb), 0.06)" }}
           >
             <div>
-              <p className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-3">Voice</p>
+              <p className="text-[11px] font-medium text-black/40 dark:text-white/40 uppercase tracking-wider mb-3">Voice</p>
               <div className="grid grid-cols-2 gap-2">
                 {ASSISTANT_VOICES.map((voice) => (
                   <button
@@ -425,32 +425,32 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                       "px-3 py-2 rounded-xl text-left transition-all duration-200",
                       selectedVoice === voice.id
                         ? "text-white"
-                        : "text-white/50 hover:text-white/70"
+                        : "text-black/50 dark:text-white/50 hover:text-black/70 dark:hover:text-white/70"
                     )}
                     style={{
                       background: selectedVoice === voice.id 
                         ? "rgba(99, 102, 241, 0.2)" 
-                        : "rgba(255, 255, 255, 0.03)",
+                        : "rgba(var(--overlay-rgb), 0.03)",
                       border: selectedVoice === voice.id 
                         ? "1px solid rgba(99, 102, 241, 0.3)" 
-                        : "1px solid rgba(255, 255, 255, 0.06)",
+                        : "1px solid rgba(var(--overlay-rgb), 0.06)",
                     }}
                     data-testid={`voice-option-${voice.id}`}
                   >
                     <span className="text-xs font-medium">{voice.name}</span>
-                    <span className="text-[10px] block text-white/30 mt-0.5">{voice.description}</span>
+                    <span className="text-[10px] block text-black/30 dark:text-white/30 mt-0.5">{voice.description}</span>
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <p className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-3">Permissions</p>
+              <p className="text-[11px] font-medium text-black/40 dark:text-white/40 uppercase tracking-wider mb-3">Permissions</p>
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Eye className="w-3.5 h-3.5 text-white/40" />
-                    <Label htmlFor="perm-read" className="text-xs text-white/60 cursor-pointer">Read emails</Label>
+                    <Eye className="w-3.5 h-3.5 text-black/40 dark:text-white/40" />
+                    <Label htmlFor="perm-read" className="text-xs text-black/60 dark:text-white/60 cursor-pointer">Read emails</Label>
                   </div>
                   <Switch
                     id="perm-read"
@@ -461,8 +461,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <PenLine className="w-3.5 h-3.5 text-white/40" />
-                    <Label htmlFor="perm-draft" className="text-xs text-white/60 cursor-pointer">Draft emails</Label>
+                    <PenLine className="w-3.5 h-3.5 text-black/40 dark:text-white/40" />
+                    <Label htmlFor="perm-draft" className="text-xs text-black/60 dark:text-white/60 cursor-pointer">Draft emails</Label>
                   </div>
                   <Switch
                     id="perm-draft"
@@ -473,8 +473,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <SendHorizonal className="w-3.5 h-3.5 text-white/40" />
-                    <Label htmlFor="perm-send" className="text-xs text-white/60 cursor-pointer">Send emails</Label>
+                    <SendHorizonal className="w-3.5 h-3.5 text-black/40 dark:text-white/40" />
+                    <Label htmlFor="perm-send" className="text-xs text-black/60 dark:text-white/60 cursor-pointer">Send emails</Label>
                   </div>
                   <Switch
                     id="perm-send"
@@ -492,16 +492,16 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
         {showHistory && sessions.length > 0 && (
           <div 
             className="px-5 py-3 shrink-0 max-h-[200px] overflow-y-auto scrollbar-thin"
-            style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}
+            style={{ borderBottom: "1px solid rgba(var(--overlay-rgb), 0.06)" }}
           >
-            <p className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2">History</p>
+            <p className="text-[11px] font-medium text-black/40 dark:text-white/40 uppercase tracking-wider mb-2">History</p>
             <div className="space-y-1">
               {sessions.slice(0, 10).map((session) => (
                 <div 
                   key={session.id}
                   className={cn(
                     "group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all duration-150",
-                    session.isActive ? "text-white" : "text-white/50 hover:text-white/70"
+                    session.isActive ? "text-white" : "text-black/50 dark:text-white/50 hover:text-black/70 dark:hover:text-white/70"
                   )}
                   style={{
                     background: session.isActive ? "rgba(99, 102, 241, 0.15)" : "transparent",
@@ -515,7 +515,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6 invisible group-hover:visible text-white/30 hover:text-white/60"
+                      className="h-6 w-6 invisible group-hover:visible text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteSessionMutation.mutate(session.id);
@@ -536,7 +536,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
           <div className="px-5 py-4 space-y-4 h-full">
             {isLoadingMessages ? (
               <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-5 h-5 animate-spin text-white/30" />
+                <Loader2 className="w-5 h-5 animate-spin text-black/30 dark:text-white/30" />
               </div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
@@ -549,10 +549,10 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 >
                   <Sparkles className="w-7 h-7 text-indigo-400/70" />
                 </div>
-                <p className="text-sm text-white/60 font-medium mb-1">
+                <p className="text-sm text-black/60 dark:text-white/60 font-medium mb-1">
                   Hi, I'm {currentVoiceName}
                 </p>
-                <p className="text-xs text-white/30 text-center max-w-[240px]">
+                <p className="text-xs text-black/30 dark:text-white/30 text-center max-w-[240px]">
                   Ask me about your emails, draft replies, or manage your inbox.
                 </p>
               </div>
@@ -571,9 +571,9 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                             border: "1px solid rgba(129, 140, 248, 0.2)",
                           }
                         : {
-                            background: "rgba(255, 255, 255, 0.04)",
-                            color: "rgba(255, 255, 255, 0.8)",
-                            border: "1px solid rgba(255, 255, 255, 0.06)",
+                            background: "rgba(var(--overlay-rgb), 0.04)",
+                            color: "rgba(var(--overlay-rgb), 0.8)",
+                            border: "1px solid rgba(var(--overlay-rgb), 0.06)",
                           }
                     }
                     data-testid={`message-${msg.role}-${msg.id}`}
@@ -585,7 +585,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                   {msg.role === "assistant" && (
                     <div className="flex items-center gap-0.5 px-1">
                       <button
-                        className="p-1 rounded-md text-white/20 hover:text-white/50 transition-colors"
+                        className="p-1 rounded-md text-black/20 dark:text-white/20 hover:text-black/50 dark:hover:text-white/50 transition-colors"
                         onClick={() => feedbackMutation.mutate({ messageId: msg.id, rating: "positive" })}
                         disabled={feedbackMutation.isPending}
                         data-testid={`button-feedback-up-${msg.id}`}
@@ -593,7 +593,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                         <ThumbsUp className="w-3 h-3" />
                       </button>
                       <button
-                        className="p-1 rounded-md text-white/20 hover:text-white/50 transition-colors"
+                        className="p-1 rounded-md text-black/20 dark:text-white/20 hover:text-black/50 dark:hover:text-white/50 transition-colors"
                         onClick={() => setFeedbackMessageId(feedbackMessageId === msg.id ? null : msg.id)}
                         disabled={feedbackMutation.isPending}
                         data-testid={`button-feedback-down-${msg.id}`}
@@ -610,10 +610,10 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                                 rating: "negative", 
                                 tags: [tag.id] 
                               })}
-                              className="text-[10px] px-2 py-0.5 rounded-full text-white/40 hover:text-white/70 transition-colors"
+                              className="text-[10px] px-2 py-0.5 rounded-full text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 transition-colors"
                               style={{
-                                background: "rgba(255, 255, 255, 0.05)",
-                                border: "1px solid rgba(255, 255, 255, 0.08)",
+                                background: "rgba(var(--overlay-rgb), 0.05)",
+                                border: "1px solid rgba(var(--overlay-rgb), 0.08)",
                               }}
                               data-testid={`feedback-tag-${tag.id}`}
                             >
@@ -651,8 +651,8 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 <div 
                   className="rounded-2xl px-4 py-3 max-w-[85%]"
                   style={{
-                    background: "rgba(255, 255, 255, 0.04)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                    background: "rgba(var(--overlay-rgb), 0.04)",
+                    border: "1px solid rgba(var(--overlay-rgb), 0.06)",
                   }}
                 >
                   <div className="flex items-center gap-2">
@@ -661,7 +661,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                       <span className="w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                       <span className="w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                     </div>
-                    <span className="text-[11px] text-white/30">{currentVoiceName} is thinking...</span>
+                    <span className="text-[11px] text-black/30 dark:text-white/30">{currentVoiceName} is thinking...</span>
                   </div>
                 </div>
               </div>
@@ -670,7 +670,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
             {/* Pending Actions */}
             {pendingActions.length > 0 && (
               <div className="space-y-3 pt-2">
-                <p className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Pending Actions</p>
+                <p className="text-[11px] font-medium text-black/30 dark:text-white/30 uppercase tracking-wider">Pending Actions</p>
                 {pendingActions.map((action) => {
                   const ActionIcon = ACTION_ICONS[action.actionType] || Mail;
                   const isEditing = editingAction?.id === action.id;
@@ -696,15 +696,15 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium text-white/80 capitalize">{action.actionType}</span>
+                            <span className="text-xs font-medium text-black/80 dark:text-white/80 capitalize">{action.actionType}</span>
                             {action.metadata?.to && (
-                              <span className="text-[10px] text-white/30 truncate">
+                              <span className="text-[10px] text-black/30 dark:text-white/30 truncate">
                                 to {action.metadata.to.join(", ")}
                               </span>
                             )}
                           </div>
                           {action.metadata?.subject && (
-                            <p className="text-[11px] text-white/40 mb-2">
+                            <p className="text-[11px] text-black/40 dark:text-white/40 mb-2">
                               Subject: {action.metadata.subject}
                             </p>
                           )}
@@ -712,12 +712,12 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                             <Textarea
                               value={editedBody}
                               onChange={(e) => setEditedBody(e.target.value)}
-                              className="text-xs min-h-[100px] mb-2 bg-black/20 border-white/10 text-white/80 rounded-lg"
+                              className="text-xs min-h-[100px] mb-2 bg-black/20 border-black/10 dark:border-white/10 text-black/80 dark:text-white/80 rounded-lg"
                               data-testid="textarea-edit-draft"
                             />
                           ) : (
                             action.metadata?.body && (
-                              <p className="text-[11px] text-white/50 line-clamp-3 mb-2 whitespace-pre-wrap">
+                              <p className="text-[11px] text-black/50 dark:text-white/50 line-clamp-3 mb-2 whitespace-pre-wrap">
                                 {action.metadata.body}
                               </p>
                             )
@@ -741,7 +741,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-7 text-xs text-white/50 rounded-lg"
+                                  className="h-7 text-xs text-black/50 dark:text-white/50 rounded-lg"
                                   onClick={() => {
                                     setEditingAction(null);
                                     setEditedBody("");
@@ -770,7 +770,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-7 text-xs gap-1 text-white/50 rounded-lg"
+                                  className="h-7 text-xs gap-1 text-black/50 dark:text-white/50 rounded-lg"
                                   onClick={() => {
                                     setEditingAction(action);
                                     setEditedBody(action.metadata?.body || "");
@@ -805,20 +805,20 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
         {/* Input Area */}
         <div 
           className="px-4 py-3 shrink-0"
-          style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}
+          style={{ borderTop: "1px solid rgba(var(--overlay-rgb), 0.06)" }}
         >
           <div 
             className="flex items-end gap-2 rounded-2xl px-3 py-2"
             style={{
-              background: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "rgba(var(--overlay-rgb), 0.04)",
+              border: "1px solid rgba(var(--overlay-rgb), 0.08)",
             }}
           >
             <Button
               size="icon"
               variant="ghost"
               className={cn(
-                "h-8 w-8 shrink-0 rounded-xl text-white/30 hover:text-white/60",
+                "h-8 w-8 shrink-0 rounded-xl text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60",
                 !hasPremium && "opacity-40"
               )}
               onClick={handleOpenVoiceChat}
@@ -837,7 +837,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
               }}
               onKeyDown={handleKeyDown}
               placeholder={`Message ${currentVoiceName}...`}
-              className="flex-1 bg-transparent text-[13px] text-white/80 placeholder:text-white/25 resize-none outline-none min-h-[32px] max-h-[120px] py-1.5 leading-relaxed"
+              className="flex-1 bg-transparent text-[13px] text-black/80 dark:text-white/80 placeholder:text-black/25 dark:placeholder:text-white/25 resize-none outline-none min-h-[32px] max-h-[120px] py-1.5 leading-relaxed"
               disabled={sendMessageMutation.isPending}
               rows={1}
               data-testid="input-assistant-message"
@@ -847,7 +847,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 "h-8 w-8 shrink-0 rounded-xl flex items-center justify-center transition-all duration-200",
                 message.trim() && !sendMessageMutation.isPending
                   ? "text-white"
-                  : "text-white/20"
+                  : "text-black/20 dark:text-white/20"
               )}
               style={{
                 background: message.trim() && !sendMessageMutation.isPending

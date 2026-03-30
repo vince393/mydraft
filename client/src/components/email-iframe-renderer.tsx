@@ -198,9 +198,9 @@ export function EmailIframeRenderer({
     const contentBg = dark ? "#1a1a1e" : "#ffffff";
     const textColor = dark ? "#e0e0e4" : "#1f1f1f";
     const linkColor = dark ? "#6fa8ff" : "#1a73e8";
-    const quoteColor = dark ? "rgba(255,255,255,0.15)" : "#dadce0";
+    const quoteColor = dark ? "rgba(255,255,255, 0.15)" : "#dadce0";
     const quoteFg = dark ? "#9aa0a6" : "#5f6368";
-    const hrColor = dark ? "rgba(255,255,255,0.08)" : "#dadce0";
+    const hrColor = dark ? "rgba(255,255,255, 0.08)" : "#dadce0";
 
     const isRich = emailType === "rich";
 
@@ -281,7 +281,7 @@ export function EmailIframeRenderer({
   pre, code {
     font-family: 'Roboto Mono', monospace;
     font-size: 13px;
-    background: ${dark ? 'rgba(255,255,255,0.05)' : '#f8f9fa'};
+    background: ${dark ? 'rgba(255,255,255, 0.05)' : '#f8f9fa'};
     border-radius: 4px;
     padding: 2px 4px;
     white-space: pre-wrap;

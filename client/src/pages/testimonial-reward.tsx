@@ -74,7 +74,7 @@ export default function TestimonialRewardPage() {
 
         <div
           className="rounded-xl p-6 space-y-5"
-          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ background: "rgba(var(--overlay-rgb), 0.02)", border: "1px solid rgba(var(--overlay-rgb), 0.06)" }}
         >
           <div>
             <label className="text-xs text-muted-foreground/60 mb-2 block">Rating</label>
@@ -100,7 +100,7 @@ export default function TestimonialRewardPage() {
               onChange={(e) => setTestimonial(e.target.value)}
               placeholder="What do you like most about MyDraft? How has it helped you?"
               rows={4}
-              className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none"
+              className="w-full rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.03] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none"
               data-testid="textarea-testimonial"
             />
           </div>

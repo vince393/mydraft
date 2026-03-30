@@ -153,19 +153,19 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
             className="relative w-full sm:max-w-[400px] sm:max-h-[min(520px,80vh)] flex flex-col sm:rounded-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "rgba(22,22,28,0.97)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(var(--background-rgb), 0.97)",
+              border: "1px solid rgba(var(--overlay-rgb), 0.08)",
               boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
             }}
           >
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid rgba(var(--overlay-rgb), 0.06)" }}>
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-4 h-4 text-primary" />
                 <h2 className="text-sm font-semibold text-foreground/90">AI Cleanup</h2>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/[0.06] transition-colors"
+                className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer hover:bg-black/[0.06] dark:hover:bg-white/[0.06] transition-colors"
                 data-testid="button-close-ai-refresh"
               >
                 <X className="w-3.5 h-3.5 text-foreground/40" />
@@ -173,7 +173,7 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-              <div className="px-5 pt-2 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <div className="px-5 pt-2 pb-1" style={{ borderBottom: "1px solid rgba(var(--overlay-rgb), 0.04)" }}>
                 <button
                   onClick={() => setShowInstructions(!showInstructions)}
                   className="flex items-center gap-1.5 text-[11px] text-foreground/35 hover:text-foreground/55 cursor-pointer transition-colors w-full py-1"
@@ -191,9 +191,9 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                       placeholder="e.g. Remove all newsletters, archive anything from LinkedIn, delete old promotional emails..."
                       className="w-full px-3 py-2 rounded-lg text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-foreground/20"
                       style={{
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        color: "rgba(255,255,255,0.7)",
+                        background: "rgba(var(--overlay-rgb), 0.03)",
+                        border: "1px solid rgba(var(--overlay-rgb), 0.08)",
+                        color: "rgba(var(--overlay-rgb), 0.7)",
                         minHeight: "52px",
                         maxHeight: "100px",
                       }}
@@ -219,8 +219,8 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                   <p className="text-xs text-foreground/25 text-center mb-5">No suggestions right now.</p>
                   <button
                     onClick={() => refreshMutation.mutate()}
-                    className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all hover:bg-white/[0.06]"
-                    style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}
+                    className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all hover:bg-black/[0.06] dark:hover:bg-white/[0.06]"
+                    style={{ border: "1px solid rgba(var(--overlay-rgb), 0.1)", color: "rgba(var(--overlay-rgb), 0.5)" }}
                     data-testid="button-start-ai-analysis"
                   >
                     Scan again
@@ -228,7 +228,7 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between px-5 py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div className="flex items-center justify-between px-5 py-2" style={{ borderBottom: "1px solid rgba(var(--overlay-rgb), 0.04)" }}>
                     <p className="text-[11px] text-foreground/30">
                       {selectedCount} of {items.length} selected
                     </p>
@@ -250,7 +250,7 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                     </div>
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto max-h-[50vh] sm:max-h-none" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.06) transparent" }}>
+                  <div className="flex-1 min-h-0 overflow-y-auto max-h-[50vh] sm:max-h-none" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(var(--overlay-rgb), 0.06) transparent" }}>
                     <div className="py-1">
                       {items.map((s) => {
                         const meta = actionMeta[s.actionType] || actionMeta.archive;
@@ -260,14 +260,14 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                           <button
                             key={s.id}
                             onClick={() => toggleItem(s.id)}
-                            className="w-full flex items-center gap-3 px-5 py-2.5 text-left cursor-pointer transition-colors hover:bg-white/[0.03]"
+                            className="w-full flex items-center gap-3 px-5 py-2.5 text-left cursor-pointer transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
                             data-testid={`suggestion-item-${s.id}`}
                           >
                             <div
                               className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
                               style={{
                                 background: isSelected ? "rgba(59,130,246,0.15)" : "transparent",
-                                border: isSelected ? "1.5px solid rgba(59,130,246,0.5)" : "1.5px solid rgba(255,255,255,0.12)",
+                                border: isSelected ? "1.5px solid rgba(59,130,246,0.5)" : "1.5px solid rgba(var(--overlay-rgb), 0.12)",
                               }}
                             >
                               {isSelected && <Check className="w-2.5 h-2.5 text-primary" />}
@@ -287,12 +287,12 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                     </div>
                   </div>
 
-                  <div className="px-5 py-3 flex items-center gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="px-5 py-3 flex items-center gap-2" style={{ borderTop: "1px solid rgba(var(--overlay-rgb), 0.06)" }}>
                     <button
                       onClick={() => refreshMutation.mutate()}
                       disabled={refreshMutation.isPending}
-                      className="px-3 py-2 rounded-lg text-xs text-foreground/30 hover:text-foreground/50 cursor-pointer transition-all hover:bg-white/[0.04]"
-                      style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+                      className="px-3 py-2 rounded-lg text-xs text-foreground/30 hover:text-foreground/50 cursor-pointer transition-all hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
+                      style={{ border: "1px solid rgba(var(--overlay-rgb), 0.06)" }}
                       data-testid="button-rescan-inbox"
                     >
                       Rescan
@@ -302,9 +302,9 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                       disabled={executeMutation.isPending || selectedCount === 0}
                       className="flex-1 py-2.5 rounded-lg text-xs font-medium cursor-pointer transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-30"
                       style={{
-                        background: selectedCount > 0 ? "rgba(59,130,246,0.15)" : "rgba(255,255,255,0.04)",
-                        border: selectedCount > 0 ? "1px solid rgba(59,130,246,0.25)" : "1px solid rgba(255,255,255,0.06)",
-                        color: selectedCount > 0 ? "rgba(147,197,253,0.9)" : "rgba(255,255,255,0.3)",
+                        background: selectedCount > 0 ? "rgba(59,130,246,0.15)" : "rgba(var(--overlay-rgb), 0.04)",
+                        border: selectedCount > 0 ? "1px solid rgba(59,130,246,0.25)" : "1px solid rgba(var(--overlay-rgb), 0.06)",
+                        color: selectedCount > 0 ? "rgba(147,197,253,0.9)" : "rgba(var(--overlay-rgb), 0.3)",
                       }}
                       data-testid="button-execute-suggestions"
                     >

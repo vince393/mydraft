@@ -1400,10 +1400,10 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
 
           {showDraft && (
             <div 
-              className="mb-8 p-3 sm:p-5 rounded-2xl border border-white/15 dark:border-white/10 backdrop-blur-2xl" 
+              className="mb-8 p-3 sm:p-5 rounded-2xl border border-black/15 dark:border-white/15 dark:border-white/10 backdrop-blur-2xl" 
               style={{
-                background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
-                boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 24px rgba(0,0,0,0.12)"
+                background: "linear-gradient(145deg, rgba(var(--overlay-rgb), 0.06), rgba(var(--overlay-rgb), 0.02))",
+                boxShadow: "inset 0 1px 0 0 rgba(var(--overlay-rgb), 0.1), 0 4px 24px rgba(0,0,0,0.12)"
               }}
               data-testid="ai-draft-container"
             >
@@ -1420,8 +1420,8 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   </span>
                   {generatedDraft.status === "scheduled" && generatedDraft.scheduledAt && (
                     <span 
-                      className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-white/10 backdrop-blur-sm text-foreground/60"
-                      style={{ background: "rgba(255,255,255,0.05)" }}
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-black/10 dark:border-white/10 backdrop-blur-sm text-foreground/60"
+                      style={{ background: "rgba(var(--overlay-rgb), 0.05)" }}
                     >
                       <Clock className="w-3 h-3 inline mr-1" />
                       {format(new Date(generatedDraft.scheduledAt), "MMM d 'at' h:mm a")}
@@ -1429,7 +1429,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   )}
                 </div>
                 <button 
-                  className="w-8 h-8 sm:w-7 sm:h-7 rounded-full flex items-center justify-center backdrop-blur-sm bg-white/5 border border-white/10 hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
+                  className="w-8 h-8 sm:w-7 sm:h-7 rounded-full flex items-center justify-center backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
                   onClick={handleCloseDraft} 
                   data-testid="button-close-draft"
                 >
@@ -1439,7 +1439,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
               <Textarea
                 value={draftContent}
                 onChange={(e) => setDraftContent(e.target.value)}
-                className="min-h-[100px] sm:min-h-[150px] bg-white/[0.03] border-white/10 rounded-xl resize-none text-[13px] sm:text-sm focus:border-white/20 focus:bg-white/[0.05] transition-colors"
+                className="min-h-[100px] sm:min-h-[150px] bg-black/[0.03] dark:bg-white/[0.03] border-black/10 dark:border-white/10 rounded-xl resize-none text-[13px] sm:text-sm focus:border-black/20 dark:focus:border-white/20 focus:bg-black/[0.05] dark:focus:bg-white/[0.05] transition-colors"
                 placeholder="AI generated reply will appear here..."
                 disabled={generatedDraft.status === "scheduled"}
                 data-testid="textarea-draft"
@@ -1460,8 +1460,8 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       {draftAttachments.map((att, i) => (
                         <div
                           key={i}
-                          className="flex items-center gap-1.5 h-7 pl-2.5 pr-1.5 rounded-full text-[11px] font-medium backdrop-blur-sm border border-white/10 text-foreground/60"
-                          style={{ background: "rgba(255,255,255,0.04)" }}
+                          className="flex items-center gap-1.5 h-7 pl-2.5 pr-1.5 rounded-full text-[11px] font-medium backdrop-blur-sm border border-black/10 dark:border-white/10 text-foreground/60"
+                          style={{ background: "rgba(var(--overlay-rgb), 0.04)" }}
                           data-testid={`draft-attachment-${i}`}
                         >
                           <Paperclip className="w-3 h-3 flex-shrink-0" />
@@ -1470,7 +1470,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                           <button
                             type="button"
                             onClick={() => removeDraftAttachment(i)}
-                            className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-white/10 text-foreground/40 hover:text-foreground/70 transition-colors cursor-pointer"
+                            className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 text-foreground/40 hover:text-foreground/70 transition-colors cursor-pointer"
                             data-testid={`button-remove-draft-attachment-${i}`}
                           >
                             <X className="w-2.5 h-2.5" />
@@ -1490,7 +1490,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                         key={action.testId}
                         onClick={() => handleRefine(action.instruction)}
                         disabled={isRefining}
-                        className="h-6 sm:h-7 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer"
+                        className="h-6 sm:h-7 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/12 dark:border-white/12 text-foreground/60 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/80 hover:border-black/20 dark:hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer"
                         data-testid={action.testId}
                       >
                         {action.label}
@@ -1498,7 +1498,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     ))}
                     <button
                       onClick={() => draftFileInputRef.current?.click()}
-                      className="h-6 sm:h-7 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all cursor-pointer flex items-center gap-1"
+                      className="h-6 sm:h-7 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/12 dark:border-white/12 text-foreground/60 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/80 hover:border-black/20 dark:hover:border-white/20 transition-all cursor-pointer flex items-center gap-1"
                       data-testid="button-draft-attach"
                     >
                       <Paperclip className="w-3 h-3" />
@@ -1508,7 +1508,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     <button
                       onClick={handleGenerateImage}
                       disabled={isRefining || isGeneratingImage}
-                      className="h-6 sm:h-7 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/60 hover:bg-white/10 hover:text-foreground/80 hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                      className="h-6 sm:h-7 px-2 sm:px-3 rounded-full text-[10px] sm:text-[11px] font-medium backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/12 dark:border-white/12 text-foreground/60 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/80 hover:border-black/20 dark:hover:border-white/20 transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1"
                       data-testid="button-generate-image"
                     >
                       {isGeneratingImage ? (
@@ -1521,8 +1521,8 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     </button>
                   </div>
                   <div 
-                    className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full border border-white/10 backdrop-blur-sm"
-                    style={{ background: "rgba(255,255,255,0.03)" }}
+                    className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full border border-black/10 dark:border-white/10 backdrop-blur-sm"
+                    style={{ background: "rgba(var(--overlay-rgb), 0.03)" }}
                     data-testid="refine-bar"
                   >
                     <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary/60 flex-shrink-0" />
@@ -1558,7 +1558,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
               <div className="flex items-center gap-2 mt-4 flex-wrap">
                 {generatedDraft.status === "scheduled" ? (
                   <button 
-                    className="h-8 sm:h-9 px-3 sm:px-4 rounded-full text-[11px] sm:text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/70 hover:bg-white/10 hover:text-foreground transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 disabled:opacity-40"
+                    className="h-8 sm:h-9 px-3 sm:px-4 rounded-full text-[11px] sm:text-xs font-medium backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/12 dark:border-white/12 text-foreground/70 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 disabled:opacity-40"
                     onClick={() => cancelScheduleMutation.mutate(generatedDraft.id)}
                     disabled={cancelScheduleMutation.isPending}
                     data-testid="button-cancel-schedule"
@@ -1585,7 +1585,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     <Popover open={showSchedulePicker} onOpenChange={setShowSchedulePicker}>
                       <PopoverTrigger asChild>
                         <button 
-                          className="h-8 sm:h-9 px-3 sm:px-4 rounded-full text-[11px] sm:text-xs font-medium backdrop-blur-sm bg-white/5 border border-white/12 text-foreground/70 hover:bg-white/10 hover:text-foreground hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2"
+                          className="h-8 sm:h-9 px-3 sm:px-4 rounded-full text-[11px] sm:text-xs font-medium backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/12 dark:border-white/12 text-foreground/70 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground hover:border-black/20 dark:hover:border-white/20 transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2"
                           data-testid="button-send-later"
                         >
                           <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />

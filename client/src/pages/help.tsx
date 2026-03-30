@@ -1089,7 +1089,7 @@ function AnimatedStep({ step, index, total }: { step: { title: string; descripti
           {index + 1}
         </div>
         {index < total - 1 && (
-          <div className="w-px flex-1 min-h-[20px] mt-1" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="w-px flex-1 min-h-[20px] mt-1" style={{ background: "rgba(var(--overlay-rgb), 0.06)" }} />
         )}
       </div>
       <div className="pb-5">
@@ -1125,7 +1125,7 @@ function ArticleView({ article, onBack }: { article: HelpArticle; onBack: () => 
           {article.question}
         </h1>
         <div className="flex items-center gap-3">
-          <img src={draftLogo} alt="MyDraft" className="w-6 h-6 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }} />
+          <img src={draftLogo} alt="MyDraft" className="w-6 h-6 rounded-full" style={{ background: "rgba(var(--overlay-rgb), 0.1)" }} />
           <span className="text-sm text-foreground/50">MyDraft</span>
           <span className="text-foreground/15">|</span>
           <span className="text-sm text-foreground/35 flex items-center gap-1">
@@ -1135,7 +1135,7 @@ function ArticleView({ article, onBack }: { article: HelpArticle; onBack: () => 
         </div>
       </div>
 
-      <div className="h-px w-full mb-8" style={{ background: "rgba(255,255,255,0.06)" }} />
+      <div className="h-px w-full mb-8" style={{ background: "rgba(var(--overlay-rgb), 0.06)" }} />
 
       <div className="space-y-5">
         <p className="text-base text-foreground/60 leading-relaxed font-medium">
@@ -1151,7 +1151,7 @@ function ArticleView({ article, onBack }: { article: HelpArticle; onBack: () => 
         {article.content.steps && article.content.steps.length > 0 && (
           <div
             className="rounded-xl p-5 mt-6"
-            style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ background: "rgba(var(--overlay-rgb), 0.02)", border: "1px solid rgba(var(--overlay-rgb), 0.06)" }}
           >
             <p className="text-xs font-semibold text-foreground/50 uppercase tracking-wider mb-4 flex items-center gap-2">
               <ChevronRight className="w-3.5 h-3.5" />
@@ -1179,10 +1179,10 @@ function ArticleView({ article, onBack }: { article: HelpArticle; onBack: () => 
         )}
       </div>
 
-      <div className="h-px w-full my-10" style={{ background: "rgba(255,255,255,0.06)" }} />
+      <div className="h-px w-full my-10" style={{ background: "rgba(var(--overlay-rgb), 0.06)" }} />
 
       <div className="flex items-center gap-3 mb-8">
-        <img src={draftLogo} alt="MyDraft" className="w-8 h-8 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <img src={draftLogo} alt="MyDraft" className="w-8 h-8 rounded-full" style={{ background: "rgba(var(--overlay-rgb), 0.1)" }} />
         <div>
           <p className="text-sm font-medium text-foreground/60">MyDraft</p>
           <p className="text-xs text-foreground/30">Help Center</p>
@@ -1214,19 +1214,19 @@ function ArticleCard({ article, onClick }: { article: HelpArticle; onClick: () =
       onClick={onClick}
       className="w-full text-left rounded-xl p-4 cursor-pointer transition-all duration-200 group"
       style={{
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "rgba(var(--overlay-rgb), 0.02)",
+        border: "1px solid rgba(var(--overlay-rgb), 0.06)",
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(12px)",
         transition: "opacity 0.4s, transform 0.4s, background 0.2s, border-color 0.2s",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-        e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+        e.currentTarget.style.background = "rgba(var(--overlay-rgb), 0.04)";
+        e.currentTarget.style.borderColor = "rgba(var(--overlay-rgb), 0.1)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = "rgba(255,255,255,0.02)";
-        e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
+        e.currentTarget.style.background = "rgba(var(--overlay-rgb), 0.02)";
+        e.currentTarget.style.borderColor = "rgba(var(--overlay-rgb), 0.06)";
       }}
       data-testid={`article-card-${article.id}`}
     >
@@ -1352,7 +1352,7 @@ export default function HelpPage() {
                   placeholder="Search articles..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 pr-4 h-12 text-base bg-card/50 border-white/10 focus:border-primary/50"
+                  className="pl-12 pr-4 h-12 text-base bg-card/50 border-black/10 dark:border-white/10 focus:border-primary/50"
                   data-testid="input-search-help"
                 />
                 {searchQuery && (
@@ -1417,8 +1417,8 @@ export default function HelpPage() {
               <div
                 className="rounded-2xl p-8 text-center"
                 style={{
-                  background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "linear-gradient(145deg, rgba(var(--overlay-rgb), 0.03) 0%, rgba(var(--overlay-rgb), 0.01) 100%)",
+                  border: "1px solid rgba(var(--overlay-rgb), 0.06)",
                 }}
               >
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -1457,7 +1457,7 @@ export default function HelpPage() {
                           value={contactName}
                           onChange={(e) => setContactName(e.target.value)}
                           placeholder="Your name"
-                          className="bg-background/50 border-white/10 h-10"
+                          className="bg-background/50 border-black/10 dark:border-white/10 h-10"
                           data-testid="input-contact-name"
                         />
                       </div>
@@ -1469,7 +1469,7 @@ export default function HelpPage() {
                           value={contactEmail}
                           onChange={(e) => setContactEmail(e.target.value)}
                           placeholder="your@email.com"
-                          className="bg-background/50 border-white/10 h-10"
+                          className="bg-background/50 border-black/10 dark:border-white/10 h-10"
                           data-testid="input-contact-email"
                         />
                       </div>
@@ -1482,7 +1482,7 @@ export default function HelpPage() {
                         onChange={(e) => setContactMessage(e.target.value)}
                         placeholder="How can we help you?"
                         rows={3}
-                        className="bg-background/50 border-white/10 resize-none"
+                        className="bg-background/50 border-black/10 dark:border-white/10 resize-none"
                         data-testid="input-contact-message"
                       />
                     </div>
@@ -1512,7 +1512,7 @@ export default function HelpPage() {
         </div>
       </main>
 
-      <footer className="border-t border-white/[0.06] py-10">
+      <footer className="border-t border-black/[0.06] dark:border-white/[0.06] py-10">
         <div className="max-w-4xl mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-6">
             <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy</Link>

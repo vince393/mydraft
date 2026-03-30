@@ -375,7 +375,7 @@ export function SwipeableEmailItem({
           <button
             onClick={openSheet}
             className="flex items-center justify-center flex-shrink-0 rounded-[10px]"
-            style={{ ...actionBtn("rgba(255,255,255,0.06)", BTN_SIZE), opacity: iconOpacity }}
+            style={{ ...actionBtn("rgba(var(--overlay-rgb), 0.06)", BTN_SIZE), opacity: iconOpacity }}
             data-testid={`swipe-more-${emailId}`}
           >
             <MoreHorizontal className="w-4 h-4 text-foreground/60" style={{ transform: `scale(${iconScale})` }} />
@@ -386,7 +386,7 @@ export function SwipeableEmailItem({
               <button
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center justify-center flex-shrink-0 rounded-[10px]"
-                style={{ ...actionBtn("rgba(255,255,255,0.06)", BTN_SIZE), opacity: iconOpacity }}
+                style={{ ...actionBtn("rgba(var(--overlay-rgb), 0.06)", BTN_SIZE), opacity: iconOpacity }}
                 data-testid={`swipe-more-${emailId}`}
               >
                 <MoreHorizontal className="w-4 h-4 text-foreground/60" style={{ transform: `scale(${iconScale})` }} />
@@ -468,14 +468,14 @@ export function SwipeableEmailItem({
             const dy = e.touches[0].clientY - sheetTouchStartY.current;
             if (dy > 60) closeSheet();
           }}
-          style={{ background: "rgba(26,26,32,0.98)", borderTop: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(var(--background-rgb), 0.98)", borderTop: "1px solid rgba(var(--overlay-rgb), 0.08)" }}
         >
           <div className="flex justify-center pt-3 pb-1">
-            <div className="w-9 h-1 rounded-full bg-white/15" />
+            <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/15" />
           </div>
           <div className="flex items-center justify-between px-5 pb-2">
             <p className="text-xs text-foreground/30 truncate max-w-[80%]">{subject}</p>
-            <button onClick={closeSheet} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/[0.06] cursor-pointer" data-testid="button-close-sheet">
+            <button onClick={closeSheet} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/[0.06] dark:hover:bg-white/[0.06] cursor-pointer" data-testid="button-close-sheet">
               <X className="w-3.5 h-3.5 text-foreground/40" />
             </button>
           </div>
@@ -486,7 +486,7 @@ export function SwipeableEmailItem({
                 <button
                   key={opt.testId}
                   onClick={opt.action}
-                  className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left cursor-pointer transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
+                  className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left cursor-pointer transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.04] active:bg-black/[0.06] dark:active:bg-white/[0.06]"
                   data-testid={opt.testId}
                 >
                   <Icon className={`w-[18px] h-[18px] ${opt.color || "text-foreground/50"}`} />

@@ -108,7 +108,7 @@ const TEAM_NAV_ITEM: NavItem = { id: "team", label: "Team", description: "Manage
 
 function SettingsPanel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-5 sm:p-6 ${className || ""}`}>
+    <div className={`rounded-xl border border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02] backdrop-blur-sm p-5 sm:p-6 ${className || ""}`}>
       {children}
     </div>
   );
@@ -117,7 +117,7 @@ function SettingsPanel({ children, className }: { children: React.ReactNode; cla
 function SectionHeader({ icon: Icon, title, description }: { icon: typeof User; title: string; description: string }) {
   return (
     <div className="flex items-start gap-3 mb-5">
-      <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0 mt-0.5">
+      <div className="w-9 h-9 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center flex-shrink-0 mt-0.5">
         <Icon className="w-4 h-4 text-muted-foreground/60" />
       </div>
       <div>
@@ -148,8 +148,8 @@ function SettingsNav({ active, onChange, showTeam }: { active: SettingsSection; 
                   data-testid={`tab-${item.id}`}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-150 ${
                     isActive
-                      ? "bg-white/[0.06] text-foreground"
-                      : "text-muted-foreground/50 hover:text-foreground/80 hover:bg-white/[0.03]"
+                      ? "bg-black/[0.06] dark:bg-white/[0.06] text-foreground"
+                      : "text-muted-foreground/50 hover:text-foreground/80 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
                   }`}
                 >
                   <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary/80" : ""}`} />
@@ -173,7 +173,7 @@ function MobileSettingsNav({ onChange, showTeam }: { onChange: (s: SettingsSecti
       {groups.map(group => (
         <div key={group}>
           <p className="text-[10px] font-semibold text-muted-foreground/30 uppercase tracking-widest mb-2 px-1">{group}</p>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] overflow-hidden divide-y divide-white/[0.04]">
+          <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.06] bg-black/[0.015] dark:bg-white/[0.015] overflow-hidden divide-y divide-white/[0.04]">
             {items.filter(i => i.group === group).map(item => {
               const Icon = item.icon;
               return (
@@ -181,9 +181,9 @@ function MobileSettingsNav({ onChange, showTeam }: { onChange: (s: SettingsSecti
                   key={item.id}
                   onClick={() => onChange(item.id)}
                   data-testid={`tab-${item.id}`}
-                  className="w-full flex items-center gap-3.5 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors active:bg-white/[0.05]"
+                  className="w-full flex items-center gap-3.5 px-4 py-3 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors active:bg-black/[0.05] dark:active:bg-white/[0.05]"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center flex-shrink-0">
                     <Icon className="w-4 h-4 text-muted-foreground/50" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -262,7 +262,7 @@ export default function SettingsPage() {
             <button
               onClick={() => activeSection ? setActiveSection(null) : setLocation("/inbox")}
               data-testid="button-back"
-              className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
+              className="w-9 h-9 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -292,7 +292,7 @@ export default function SettingsPage() {
           <button
             onClick={() => setLocation("/inbox")}
             data-testid="button-back"
-            className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
+            className="w-9 h-9 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -349,7 +349,7 @@ function AccountTab({ settings }: { settings: Settings }) {
         <SectionHeader icon={User} title="Account Information" description="Your account details" />
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground/60">Email</Label>
-          <Input value={settings.email} disabled className="bg-white/[0.03] border-white/[0.06]" data-testid="input-email" />
+          <Input value={settings.email} disabled className="bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.06] dark:border-white/[0.06]" data-testid="input-email" />
           <p className="text-[11px] text-muted-foreground/40">To edit your display name or avatar, visit your profile page.</p>
         </div>
       </SettingsPanel>
@@ -441,7 +441,7 @@ function TestimonialWidget() {
 
   if (existingTestimonial) {
     return (
-      <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+      <div className="rounded-lg border border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02] p-3">
         <div className="flex items-center gap-1.5 mb-1.5">
           {[...Array(existingTestimonial.rating)].map((_, i) => (
             <Star key={i} className="w-3 h-3 fill-yellow-500 text-yellow-500" />
@@ -457,7 +457,7 @@ function TestimonialWidget() {
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="w-full rounded-lg border border-dashed border-white/[0.08] bg-white/[0.01] p-3 text-left hover:bg-white/[0.03] transition-colors group"
+        className="w-full rounded-lg border border-dashed border-black/[0.08] dark:border-white/[0.08] bg-black/[0.01] dark:bg-white/[0.01] p-3 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors group"
         data-testid="button-open-testimonial"
       >
         <div className="flex items-center gap-2 mb-1">
@@ -470,7 +470,7 @@ function TestimonialWidget() {
   }
 
   return (
-    <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-3">
+    <div className="rounded-lg border border-black/[0.08] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.02] p-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-[12px] font-medium text-foreground/70">Your rating</span>
         <button onClick={() => setExpanded(false)} className="text-muted-foreground/30 hover:text-foreground/60 transition-colors">
@@ -775,7 +775,7 @@ function SecurityTab({ settings }: { settings: Settings }) {
 
       <SettingsPanel>
         <SectionHeader icon={Shield} title="Two-Factor Authentication" description="Require a verification code when signing in" />
-        <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+        <div className="flex items-center justify-between p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
           <div className="space-y-0.5">
             <p className="text-sm font-medium text-foreground/90">Email verification codes</p>
             <p className="text-[12px] text-muted-foreground/40">
@@ -796,7 +796,7 @@ function SecurityTab({ settings }: { settings: Settings }) {
       <SettingsPanel>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0 mt-0.5">
+            <div className="w-9 h-9 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center flex-shrink-0 mt-0.5">
               <Smartphone className="w-4 h-4 text-muted-foreground/60" />
             </div>
             <div>
@@ -840,12 +840,12 @@ function SecurityTab({ settings }: { settings: Settings }) {
               <div 
                 key={session.id} 
                 className={`flex items-center justify-between p-3 rounded-lg border ${
-                  session.isCurrent ? "border-primary/20 bg-primary/[0.03]" : "border-white/[0.04] bg-white/[0.01]"
+                  session.isCurrent ? "border-primary/20 bg-primary/[0.03]" : "border-black/[0.04] dark:border-white/[0.04] bg-black/[0.01] dark:bg-white/[0.01]"
                 }`}
                 data-testid={`session-item-${session.id}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center">
                     <Globe className="w-4 h-4 text-muted-foreground/50" />
                   </div>
                   <div className="space-y-0.5">
@@ -1105,7 +1105,7 @@ function BillingTab({ settings }: { settings: Settings }) {
           )}
 
           {settings.plan && settings.plan !== "free" && billingInfo?.nextBillDate && !billingInfo?.cancelAtPeriodEnd && (
-            <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
               <p className="text-[11px] text-muted-foreground/40">Next billing date</p>
               <p className="text-sm font-medium text-foreground mt-0.5">{formatDate(billingInfo.nextBillDate)}</p>
               {billingInfo.planAmount && billingInfo.planInterval && (
@@ -1136,9 +1136,9 @@ function BillingTab({ settings }: { settings: Settings }) {
               Loading...
             </div>
           ) : billingInfo?.paymentMethod ? (
-            <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-7 rounded bg-white/[0.04] flex items-center justify-center">
+                <div className="w-10 h-7 rounded bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center">
                   <CreditCard className="w-4 h-4 text-muted-foreground/50" />
                 </div>
                 <div>
@@ -1179,7 +1179,7 @@ function BillingTab({ settings }: { settings: Settings }) {
               {billingInfo.invoices.map((invoice) => (
                 <div 
                   key={invoice.id} 
-                  className="flex items-center justify-between p-3 rounded-lg bg-white/[0.01] border border-white/[0.04]"
+                  className="flex items-center justify-between p-3 rounded-lg bg-black/[0.01] dark:bg-white/[0.01] border border-black/[0.04] dark:border-white/[0.04]"
                 >
                   <div>
                     <p className="text-sm font-medium text-foreground/90">{invoice.number || 'Invoice'}</p>
@@ -1236,7 +1236,7 @@ function BillingTab({ settings }: { settings: Settings }) {
           </div>
 
           {settings.plan && settings.plan !== "free" && !showCancelConfirm && !billingInfo?.cancelAtPeriodEnd && (
-            <div className="pt-3 border-t border-white/[0.04]">
+            <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.04]">
               <button 
                 className="text-[12px] text-destructive/60 hover:text-destructive transition-colors"
                 onClick={() => setShowCancelConfirm(true)}
@@ -1258,7 +1258,7 @@ function BillingTab({ settings }: { settings: Settings }) {
                 <select
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
-                  className="w-full h-9 rounded-md border border-white/[0.08] bg-white/[0.03] px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                  className="w-full h-9 rounded-md border border-black/[0.08] dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.03] px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50"
                   data-testid="select-cancel-reason"
                 >
                   <option value="">Select a reason...</option>
@@ -1576,7 +1576,7 @@ function AIPreferencesTab({ settings }: { settings: Settings }) {
               className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
                 preferences.readAloudVoice === v.id
                   ? "bg-primary/10 border-primary/40"
-                  : "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]"
+                  : "bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.06] dark:border-white/[0.06] hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
               }`}
               data-testid={`voice-option-${v.id}`}
             >
@@ -1586,7 +1586,7 @@ function AIPreferencesTab({ settings }: { settings: Settings }) {
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); previewVoice(v.id); }}
-                className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/[0.06] transition-colors"
+                className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-black/[0.06] dark:hover:bg-white/[0.06] transition-colors"
                 data-testid={`button-preview-voice-${v.id}`}
               >
                 {previewingVoice === v.id ? (
@@ -1667,7 +1667,7 @@ function EmailSettingsTab({ settings }: { settings: Settings }) {
         <SectionHeader icon={Link2} title="Connected Account" description="Your linked email provider" />
         {settings.connectedEmail ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
               <div className="flex items-center gap-3">
                 {settings.connectedEmail.provider === "google" ? (
                   <SiGoogle className="w-4 h-4 text-foreground/70" />
@@ -1724,7 +1724,7 @@ function EmailSettingsTab({ settings }: { settings: Settings }) {
       <SettingsPanel>
         <SectionHeader icon={Mail} title="Email Signature" description="Added to your outgoing emails" />
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
             <Label htmlFor="signature-toggle" className="text-sm text-foreground/80">Enable signature</Label>
             <Switch id="signature-toggle" checked={signatureEnabled} onCheckedChange={setSignatureEnabled} data-testid="switch-signature-enabled" />
           </div>
@@ -2109,7 +2109,7 @@ function AppearanceTab() {
                 className={`relative flex flex-col items-center gap-2.5 p-4 rounded-xl border cursor-pointer transition-all ${
                   isSelected
                     ? "border-primary/30 bg-primary/[0.04]"
-                    : "border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.03]"
+                    : "border-black/[0.06] dark:border-white/[0.06] bg-black/[0.01] dark:bg-white/[0.01] hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
                 }`}
               >
                 <RadioGroupItem value={option.value} id={`theme-${option.value}`} className="sr-only" data-testid={`radio-theme-${option.value}`} />
@@ -2121,7 +2121,7 @@ function AppearanceTab() {
                   </div>
                 )}
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  isSelected ? "bg-primary/15 text-primary" : "bg-white/[0.04] text-muted-foreground/50"
+                  isSelected ? "bg-primary/15 text-primary" : "bg-black/[0.04] dark:bg-white/[0.04] text-muted-foreground/50"
                 }`}>
                   <Icon className="w-5 h-5" />
                 </div>
@@ -2137,8 +2137,8 @@ function AppearanceTab() {
 
       <SettingsPanel>
         <SectionHeader icon={Monitor} title="Preview" description="See how your inbox looks" />
-        <div className="rounded-lg border border-white/[0.04] bg-white/[0.01] overflow-hidden">
-          <div className="flex items-center gap-3 p-3 border-b border-white/[0.04]">
+        <div className="rounded-lg border border-black/[0.04] dark:border-white/[0.04] bg-black/[0.01] dark:bg-white/[0.01] overflow-hidden">
+          <div className="flex items-center gap-3 p-3 border-b border-black/[0.04] dark:border-white/[0.04]">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/60 to-purple-500/60" />
             <div className="flex-1">
               <div className="flex items-center justify-between">
@@ -2258,7 +2258,7 @@ function FeedbackTab({ settings }: { settings: Settings }) {
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium transition-all ${
                         feedbackType === type.id
                           ? "bg-primary/10 text-primary border border-primary/20"
-                          : "bg-white/[0.02] text-muted-foreground/60 border border-white/[0.06] hover:bg-white/[0.04]"
+                          : "bg-black/[0.02] dark:bg-white/[0.02] text-muted-foreground/60 border border-black/[0.06] dark:border-white/[0.06] hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
                       }`}
                       data-testid={`feedback-type-${type.id}`}
                     >
@@ -2294,7 +2294,7 @@ function FeedbackTab({ settings }: { settings: Settings }) {
               const typeInfo = FEEDBACK_TYPES.find(t => t.id === item.feedbackType);
               const Icon = typeInfo?.icon || MessageSquare;
               return (
-                <div key={item.id} className="p-3 rounded-lg border border-white/[0.04] bg-white/[0.01]">
+                <div key={item.id} className="p-3 rounded-lg border border-black/[0.04] dark:border-white/[0.04] bg-black/[0.01] dark:bg-white/[0.01]">
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div className="flex items-center gap-2">
                       <Icon className="w-3.5 h-3.5 text-muted-foreground/40" />
@@ -2410,7 +2410,7 @@ function ReferralTab() {
           <Input
             value={referralLink}
             readOnly
-            className="font-mono text-xs sm:text-sm bg-white/[0.03] border-white/[0.06]"
+            className="font-mono text-xs sm:text-sm bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.06] dark:border-white/[0.06]"
             data-testid="input-referral-link"
           />
           <Button
@@ -2478,7 +2478,7 @@ function ReferralTab() {
           <SectionHeader icon={Ticket} title="Your Promo Codes" description="Use these at checkout or apply in billing" />
           <div className="space-y-2">
             {unredeemedCodes.map((code) => (
-              <div key={code.code} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <div key={code.code} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
                 <div className="flex items-center gap-3 min-w-0">
                   <Ticket className="w-4 h-4 text-primary flex-shrink-0" />
                   <div className="min-w-0">

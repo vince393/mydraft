@@ -108,29 +108,29 @@ export default function DataProcessingAgreementPage() {
               <div className="overflow-x-auto">
                 <table className="w-full mt-4 border-collapse">
                   <thead>
-                    <tr className="border-b border-white/10">
+                    <tr className="border-b border-black/10 dark:border-white/10">
                       <th className="text-left py-2 pr-4 text-foreground">Sub-processor</th>
                       <th className="text-left py-2 pr-4 text-foreground">Purpose</th>
                       <th className="text-left py-2 text-foreground">Location</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-white/5">
+                    <tr className="border-b border-black/5 dark:border-white/5">
                       <td className="py-2 pr-4">OpenAI</td>
                       <td className="py-2 pr-4">AI processing for email drafting and assistance features</td>
                       <td className="py-2">United States</td>
                     </tr>
-                    <tr className="border-b border-white/5">
+                    <tr className="border-b border-black/5 dark:border-white/5">
                       <td className="py-2 pr-4">Stripe</td>
                       <td className="py-2 pr-4">Payment processing and subscription management</td>
                       <td className="py-2">United States</td>
                     </tr>
-                    <tr className="border-b border-white/5">
+                    <tr className="border-b border-black/5 dark:border-white/5">
                       <td className="py-2 pr-4">Google (Gmail API)</td>
                       <td className="py-2 pr-4">Email API connectivity and synchronization</td>
                       <td className="py-2">United States</td>
                     </tr>
-                    <tr className="border-b border-white/5">
+                    <tr className="border-b border-black/5 dark:border-white/5">
                       <td className="py-2 pr-4">Microsoft (Graph API)</td>
                       <td className="py-2 pr-4">Email API connectivity and synchronization</td>
                       <td className="py-2">United States</td>
@@ -208,7 +208,7 @@ export default function DataProcessingAgreementPage() {
         </div>
       </div>
       
-      <footer className="py-12 px-6 border-t border-white/[0.04]">
+      <footer className="py-12 px-6 border-t border-black/[0.04] dark:border-white/[0.04]">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-6">
             <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy</Link>

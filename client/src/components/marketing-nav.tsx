@@ -52,7 +52,7 @@ export function MarketingNav() {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06] bg-background/80 backdrop-blur-2xl" ref={menuRef}>
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-black/[0.06] dark:border-white/[0.06] bg-background/80 backdrop-blur-2xl" ref={menuRef}>
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2 group flex-shrink-0" data-testid="nav-logo">
           <img src={draftLogo} alt="MyDraft logo" className="h-8 w-8 md:h-10 md:w-10 object-contain" />
@@ -108,7 +108,7 @@ export function MarketingNav() {
       <div
         className={`md:hidden overflow-hidden transition-all duration-200 ease-out ${mobileMenuOpen ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'}`}
       >
-        <div className="px-3 py-2 space-y-0.5 border-t border-white/[0.06] bg-background/95 backdrop-blur-2xl">
+        <div className="px-3 py-2 space-y-0.5 border-t border-black/[0.06] dark:border-white/[0.06] bg-background/95 backdrop-blur-2xl">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
               <Button 
@@ -121,7 +121,7 @@ export function MarketingNav() {
               </Button>
             </Link>
           ))}
-          <div className="pt-2 mt-1 border-t border-white/[0.06]">
+          <div className="pt-2 mt-1 border-t border-black/[0.06] dark:border-white/[0.06]">
             <Link href="/login">
               <Button 
                 variant="ghost" 

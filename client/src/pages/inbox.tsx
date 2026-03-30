@@ -813,9 +813,9 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
                 onClick={toggleSidebar}
                 className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all"
                 style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.1)"
+                  background: "rgba(var(--overlay-rgb), 0.08)",
+                  border: "1px solid rgba(var(--overlay-rgb), 0.15)",
+                  boxShadow: "inset 0 1px 0 0 rgba(var(--overlay-rgb), 0.1), 0 4px 12px rgba(0,0,0,0.1)"
                 }}
                 data-testid="button-sidebar-toggle"
               >
