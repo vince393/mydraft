@@ -3,7 +3,6 @@ import { useRef, useEffect, useState, useCallback } from "react";
 interface EmailIframeRendererProps {
   html: string;
   className?: string;
-  fillAvailable?: boolean;
 }
 
 function sanitizeForIframe(html: string): string {
@@ -132,27 +131,12 @@ function detectEmailType(rawHtml: string): "rich" | "simple" {
 export function EmailIframeRenderer({
   html,
   className = "",
-  fillAvailable = false,
 }: EmailIframeRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(200);
   const [scale, setScale] = useState(1);
-  const [maxHeight, setMaxHeight] = useState(10000);
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
-
-  useEffect(() => {
-    if (!fillAvailable || !containerRef.current) return;
-    const calcMax = () => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const available = window.innerHeight - rect.top - 24;
-      setMaxHeight(Math.max(available, 300));
-    };
-    calcMax();
-    window.addEventListener("resize", calcMax);
-    return () => window.removeEventListener("resize", calcMax);
-  }, [fillAvailable]);
 
   const isDark = document.documentElement.classList.contains("dark");
 
@@ -498,8 +482,7 @@ ${headContent}
       if (!doc.body) return;
       const scrollH =
         doc.documentElement?.scrollHeight || doc.body.scrollHeight;
-      const rawHeight = Math.max(scrollH + 8, 80);
-      setHeight(Math.min(rawHeight, maxHeight));
+      setHeight(Math.max(scrollH + 8, 80));
     };
 
     const updateScale = () => {
@@ -595,7 +578,7 @@ ${headContent}
         resizeObserverRef.current.disconnect();
       }
     };
-  }, [html, isDark, buildIframeContent, maxHeight]);
+  }, [html, isDark, buildIframeContent]);
 
   const scaledHeight = scale < 1 ? height * scale : height;
 
@@ -604,8 +587,6 @@ ${headContent}
       ref={containerRef}
       className={`email-iframe-wrapper ${className}`}
       style={{
-        overflow: "hidden",
-        maxHeight: fillAvailable ? `${maxHeight}px` : undefined,
         ...(scale < 1 ? { height: `${scaledHeight}px` } : { height: `${height}px` }),
       }}
     >
