@@ -169,12 +169,33 @@ export default function OnboardingPage() {
   const currentStepIndex = steps.indexOf(step);
   const recommendedPlan = getRecommendedPlan(preferences);
 
+  useEffect(() => {
+    window.history.replaceState({ onboardingStep: step }, "");
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state?.onboardingStep) {
+        setStep(e.state.onboardingStep);
+      } else if (currentStepIndex > 0) {
+        e.preventDefault();
+        const prevStep = steps[currentStepIndex - 1];
+        setStep(prevStep);
+        window.history.pushState({ onboardingStep: prevStep }, "");
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [currentStepIndex, steps]);
+
   const goNext = useCallback(() => {
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
       setTransitioning(true);
       setTimeout(() => {
-        setStep(steps[nextIndex]);
+        const nextStep = steps[nextIndex];
+        setStep(nextStep);
+        window.history.pushState({ onboardingStep: nextStep }, "");
         setTransitioning(false);
       }, 300);
     }
@@ -203,7 +224,9 @@ export default function OnboardingPage() {
     if (prevIndex >= 0) {
       setTransitioning(true);
       setTimeout(() => {
-        setStep(steps[prevIndex]);
+        const prevStep = steps[prevIndex];
+        setStep(prevStep);
+        window.history.pushState({ onboardingStep: prevStep }, "");
         setTransitioning(false);
       }, 300);
     }
@@ -561,6 +584,7 @@ export default function OnboardingPage() {
               setShowAllPlans={setShowAllPlans}
               handlePlanSelect={handlePlanSelect}
               isPlanLoading={isPlanLoading}
+              onBack={goBack}
             />
           )}
         </div>
@@ -578,6 +602,7 @@ function PlanSelectionStep({
   setShowAllPlans,
   handlePlanSelect,
   isPlanLoading,
+  onBack,
 }: {
   preferences: AIPreferences;
   recommendedPlan: string;
@@ -587,6 +612,7 @@ function PlanSelectionStep({
   setShowAllPlans: (v: boolean) => void;
   handlePlanSelect: (planId: string) => void;
   isPlanLoading: boolean;
+  onBack: () => void;
 }) {
   if (!showAllPlans) {
     const plan = basePlans.find(p => p.id === recommendedPlan)!;
@@ -747,6 +773,18 @@ function PlanSelectionStep({
             </div>
           </div>
         </div>
+
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-sm text-muted-foreground/50 hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+            data-testid="button-plan-back"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </button>
+        </div>
       </div>
     );
   }
@@ -756,6 +794,27 @@ function PlanSelectionStep({
       <div className="text-center mb-6">
         <p className="text-xs text-blue-400/70 font-medium uppercase tracking-widest mb-2">Choose your plan</p>
         <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Pick what works for you</h1>
+      </div>
+
+      <div className="inline-flex items-center bg-white/[0.04] border border-white/[0.06] rounded-full p-1 mb-4 w-fit" data-testid="billing-toggle-all">
+        <button
+          className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+            billingInterval === "monthly" ? "bg-blue-500 text-white" : "text-muted-foreground/60"
+          }`}
+          onClick={() => setBillingInterval("monthly")}
+          data-testid="button-billing-monthly-all"
+        >
+          Monthly
+        </button>
+        <button
+          className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+            billingInterval === "annual" ? "bg-blue-500 text-white" : "text-muted-foreground/60"
+          }`}
+          onClick={() => setBillingInterval("annual")}
+          data-testid="button-billing-annual-all"
+        >
+          Annual
+        </button>
       </div>
 
       <div className="space-y-2.5">
@@ -828,6 +887,18 @@ function PlanSelectionStep({
       <p className="text-xs text-muted-foreground/30 text-center mt-4">
         Pro and Business plans include a 14-day free trial. Cancel anytime.
       </p>
+
+      <div className="mt-4 text-center">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm text-muted-foreground/50 hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+          data-testid="button-plan-back-all"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back
+        </button>
+      </div>
     </div>
   );
 }
