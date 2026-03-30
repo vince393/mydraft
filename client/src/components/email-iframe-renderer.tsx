@@ -87,6 +87,10 @@ function sanitizeForIframe(html: string): string {
   while (comments.nextNode()) commentsToRemove.push(comments.currentNode);
   commentsToRemove.forEach((c) => c.parentNode?.removeChild(c));
 
+  temp.querySelectorAll("table, td, th, div").forEach((el) => {
+    el.removeAttribute("width");
+  });
+
   let content = temp.innerHTML;
   content = content.replace(/<!--\[if[^\]]*\]>[\s\S]*?<!\[endif\]-->/gi, "");
   content = content.replace(/<o:p>[\s\S]*?<\/o:p>/gi, "");
@@ -133,6 +137,7 @@ export function EmailIframeRenderer({
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const MAX_HEIGHT = 600;
 
   const isDark = document.documentElement.classList.contains("dark");
 
@@ -203,6 +208,7 @@ export function EmailIframeRenderer({
     -moz-osx-font-smoothing: grayscale;
     max-width: 100%;
     overflow-x: hidden;
+    overflow-y: auto;
   }
   body > * {
     max-width: 100% !important;
@@ -211,12 +217,22 @@ export function EmailIframeRenderer({
   table {
     max-width: 100% !important;
     table-layout: auto !important;
+    width: auto !important;
+  }
+  table[width] {
+    width: 100% !important;
+    max-width: 100% !important;
   }
   td, th {
     word-break: break-word;
-  }
-  div[style*="width"] {
     max-width: 100% !important;
+  }
+  div[style*="width"], td[style*="width"], th[style*="width"] {
+    max-width: 100% !important;
+  }
+  img[style*="width"] {
+    max-width: 100% !important;
+    height: auto !important;
   }
   a { color: ${linkColor}; }
   blockquote {
@@ -473,8 +489,8 @@ ${headContent}
       if (!doc.body) return;
       const scrollH =
         doc.documentElement?.scrollHeight || doc.body.scrollHeight;
-      const newHeight = Math.max(scrollH + 8, 80);
-      setHeight(newHeight);
+      const rawHeight = Math.max(scrollH + 8, 80);
+      setHeight(Math.min(rawHeight, MAX_HEIGHT));
     };
 
     const updateScale = () => {
@@ -580,7 +596,8 @@ ${headContent}
       className={`email-iframe-wrapper ${className}`}
       style={{
         overflow: "hidden",
-        ...(scale < 1 ? { height: `${scaledHeight}px` } : {}),
+        maxHeight: `${MAX_HEIGHT}px`,
+        ...(scale < 1 ? { height: `${scaledHeight}px` } : { height: `${height}px` }),
       }}
     >
       <iframe
@@ -591,7 +608,6 @@ ${headContent}
           height: `${height}px`,
           border: "none",
           display: "block",
-          overflow: "hidden",
           background: isDark ? "#1a1a1e" : "#ffffff",
           ...(scale < 1
             ? {
