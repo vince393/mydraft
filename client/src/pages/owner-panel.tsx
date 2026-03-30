@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
@@ -1093,57 +1093,44 @@ export default function OwnerPanel() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 flex-wrap">
-            <TabsTrigger value="dashboard" data-testid="tab-dashboard">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="users" data-testid="tab-users">
-              <Users className="w-4 h-4 mr-2" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="feedback" data-testid="tab-feedback">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Feedback
-            </TabsTrigger>
-            <TabsTrigger value="notifications" data-testid="tab-notifications">
-              <Bell className="w-4 h-4 mr-2" />
-              Notifications
-            </TabsTrigger>
-            <TabsTrigger value="system" data-testid="tab-system">
-              <Server className="w-4 h-4 mr-2" />
-              System
-            </TabsTrigger>
-            <TabsTrigger value="features" data-testid="tab-features">
-              <ToggleLeft className="w-4 h-4 mr-2" />
-              Features
-            </TabsTrigger>
-            <TabsTrigger value="activity" data-testid="tab-activity">
-              <Activity className="w-4 h-4 mr-2" />
-              Activity
-            </TabsTrigger>
-            <TabsTrigger value="finances" data-testid="tab-finances">
-              <Wallet className="w-4 h-4 mr-2" />
-              Finances
-            </TabsTrigger>
-            <TabsTrigger value="testimonials" data-testid="tab-testimonials">
-              <Star className="w-4 h-4 mr-2" />
-              Testimonials
-            </TabsTrigger>
-            <TabsTrigger value="notes" data-testid="tab-notes">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Notes
-            </TabsTrigger>
-            <TabsTrigger value="analytics" data-testid="tab-analytics">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="api-health" data-testid="tab-api-health">
-              <HeartPulse className="w-4 h-4 mr-2" />
-              API Health
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex gap-6">
+          <nav className="w-48 flex-shrink-0 sticky top-6 self-start">
+            <div className="flex flex-col gap-0.5">
+              {[
+                { value: "dashboard", icon: TrendingUp, label: "Dashboard" },
+                { value: "users", icon: Users, label: "Users" },
+                { value: "feedback", icon: MessageSquare, label: "Feedback" },
+                { value: "notifications", icon: Bell, label: "Notifications" },
+                { value: "system", icon: Server, label: "System" },
+                { value: "features", icon: ToggleLeft, label: "Features" },
+                { value: "activity", icon: Activity, label: "Activity" },
+                { value: "finances", icon: Wallet, label: "Finances" },
+                { value: "testimonials", icon: Star, label: "Testimonials" },
+                { value: "notes", icon: MessageSquare, label: "Notes" },
+                { value: "analytics", icon: BarChart3, label: "Analytics" },
+                { value: "api-health", icon: HeartPulse, label: "API Health" },
+              ].map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    onClick={() => setActiveTab(item.value)}
+                    data-testid={`tab-${item.value}`}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer ${
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+          <div className="flex-1 min-w-0">
 
           <TabsContent value="dashboard">
             {statsLoading ? (
@@ -3010,6 +2997,7 @@ export default function OwnerPanel() {
               </Card>
             </div>
           </TabsContent>
+          </div>
         </Tabs>
       </div>
     </div>
