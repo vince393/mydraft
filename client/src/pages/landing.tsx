@@ -935,7 +935,7 @@ function ComparisonSection({ getStartedHref }: { getStartedHref: string }) {
     { label: "AI-powered replies", superhuman: true, hey: false, mydraft: true },
     { label: "50+ language support", superhuman: false, hey: false, mydraft: true },
     { label: "Works with Gmail + Outlook", superhuman: true, hey: false, mydraft: true },
-    { label: "AI auto-sort folders", superhuman: false, hey: false, mydraft: true },
+    { label: "AI auto-sort folders", superhuman: true, hey: false, mydraft: true },
     { label: "Free plan available", superhuman: false, hey: false, mydraft: true },
   ];
 
