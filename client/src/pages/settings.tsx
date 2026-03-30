@@ -262,9 +262,9 @@ export default function SettingsPage() {
             <button
               onClick={() => activeSection ? setActiveSection(null) : setLocation("/inbox")}
               data-testid="button-back"
-              className="w-9 h-9 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
+              className="w-11 h-11 rounded-xl bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
               <h1 className="text-lg font-semibold text-foreground">
@@ -292,9 +292,9 @@ export default function SettingsPage() {
           <button
             onClick={() => setLocation("/inbox")}
             data-testid="button-back"
-            className="w-9 h-9 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
+            className="w-11 h-11 sm:w-9 sm:h-9 rounded-xl sm:rounded-lg bg-black/[0.04] dark:bg-white/[0.04] flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
           <h1 className="text-xl font-semibold text-foreground">Settings</h1>
         </div>

@@ -552,16 +552,16 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className={`${screen.isMobile ? 'w-7 h-7' : 'w-6 h-6'} flex items-center justify-center rounded-full backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all`}
+                className={`${screen.isMobile ? 'w-9 h-9' : 'w-6 h-6'} flex items-center justify-center rounded-full backdrop-blur-sm bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all`}
                 data-testid="button-clear-search"
               >
-                <X className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
+                <X className={`${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-3.5 h-3.5'}`} />
               </button>
             )}
             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <PopoverTrigger asChild>
                 <button 
-                  className={`group ${screen.isMobile ? 'w-8 h-8' : 'w-7 h-7'} flex items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10 dark:hover:bg-black/8 dark:hover:bg-white/8 transition-all cursor-pointer`}
+                  className={`group ${screen.isMobile ? 'w-10 h-10' : 'w-7 h-7'} flex items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-all cursor-pointer`}
                   data-testid="button-filter"
                 >
                   <SlidersHorizontal className={`${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-4 h-4'} ${hasActiveFilters ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground/80'} transition-colors`} />

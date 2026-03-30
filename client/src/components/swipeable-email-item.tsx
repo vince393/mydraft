@@ -475,8 +475,8 @@ export function SwipeableEmailItem({
           </div>
           <div className="flex items-center justify-between px-5 pb-2">
             <p className="text-xs text-foreground/30 truncate max-w-[80%]">{subject}</p>
-            <button onClick={closeSheet} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/[0.06] dark:hover:bg-white/[0.06] cursor-pointer" data-testid="button-close-sheet">
-              <X className="w-3.5 h-3.5 text-foreground/40" />
+            <button onClick={closeSheet} className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-black/[0.06] dark:hover:bg-white/[0.06] cursor-pointer" data-testid="button-close-sheet">
+              <X className="w-5 h-5 text-foreground/40" />
             </button>
           </div>
           <div className="px-3 pb-6 pt-1">

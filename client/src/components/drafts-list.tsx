@@ -188,10 +188,10 @@ export function DraftsList({ onDraftSent }: DraftsListProps) {
                       e.stopPropagation();
                       setEditingDraft(draft);
                     }}
-                    className="h-8 w-8"
+                    className="h-10 w-10 sm:h-8 sm:w-8"
                     data-testid={`button-edit-draft-${draft.id}`}
                   >
-                    <Edit2 className="w-4 h-4" />
+                    <Edit2 className="w-[18px] h-[18px] sm:w-4 sm:h-4" />
                   </Button>
                   <Button
                     size="icon"
@@ -201,7 +201,7 @@ export function DraftsList({ onDraftSent }: DraftsListProps) {
                       handleSend(draft);
                     }}
                     disabled={sendingId === draft.id}
-                    className="h-8 w-8"
+                    className="h-10 w-10 sm:h-8 sm:w-8"
                     data-testid={`button-send-draft-${draft.id}`}
                   >
                     {sendingId === draft.id ? (
@@ -218,10 +218,10 @@ export function DraftsList({ onDraftSent }: DraftsListProps) {
                       deleteMutation.mutate(draft.id);
                     }}
                     disabled={deleteMutation.isPending}
-                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    className="h-10 w-10 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
                     data-testid={`button-delete-draft-${draft.id}`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-[18px] h-[18px] sm:w-4 sm:h-4" />
                   </Button>
                 </div>
               </div>

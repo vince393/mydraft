@@ -371,7 +371,7 @@ export function MultiEmailResponseModal({
             </div>
             <button
               onClick={() => onOpenChange(false)}
-              className="w-8 h-8 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/50 hover:text-foreground/80 transition-all cursor-pointer"
               data-testid="button-close-batch"
             >
               <X className="w-4 h-4" />
@@ -384,10 +384,10 @@ export function MultiEmailResponseModal({
               <button
                 onClick={handlePrevious}
                 disabled={currentIndex === 0}
-                className="w-7 h-7 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
                 data-testid="button-previous-email"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
               <span className="text-xs font-medium text-foreground/50 tabular-nums px-1">
                 {currentIndex + 1} / {emails.length}
@@ -395,10 +395,10 @@ export function MultiEmailResponseModal({
               <button
                 onClick={handleNext}
                 disabled={currentIndex === emails.length - 1}
-                className="w-7 h-7 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground/60 hover:text-foreground transition-all disabled:opacity-30 cursor-pointer"
                 data-testid="button-next-email"
               >
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
             <div className="flex-1" />

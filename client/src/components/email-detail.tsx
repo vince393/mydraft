@@ -992,7 +992,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 rounded-full"
+                  className="h-10 w-10 sm:h-8 sm:w-8 rounded-full"
                   onClick={togglePauseResume}
                   data-testid="button-read-aloud-pause"
                 >
@@ -1021,7 +1021,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 rounded-full"
+                  className="h-10 w-10 sm:h-8 sm:w-8 rounded-full"
                   onClick={stopReadAloud}
                   data-testid="button-read-aloud-stop"
                 >

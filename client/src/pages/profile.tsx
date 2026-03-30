@@ -253,11 +253,11 @@ export default function Profile() {
       <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
         <Button
           variant="ghost"
-          className="mb-4 sm:mb-6 gap-2 touch-target"
+          className="mb-4 sm:mb-6 gap-2 touch-target h-11 px-3 sm:h-9"
           onClick={() => setLocation("/inbox")}
           data-testid="button-back-inbox"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-5 h-5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Back to </span>Inbox
         </Button>
 

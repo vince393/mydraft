@@ -137,7 +137,7 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
       ) : (
         <button
           onClick={handleOpen}
-          className={`${compact ? 'w-8 h-8' : 'w-9 h-9'} flex items-center justify-center rounded-full cursor-pointer transition-all hover:bg-purple-500/20 flex-shrink-0`}
+          className={`${compact ? 'w-10 h-10' : 'w-10 h-10'} flex items-center justify-center rounded-full cursor-pointer transition-all hover:bg-purple-500/20 flex-shrink-0`}
           style={{ border: "1px solid rgba(139,92,246,0.3)", background: "rgba(139,92,246,0.08)" }}
           title="AI Cleanup"
           data-testid="button-ai-inbox-refresh"
@@ -165,10 +165,10 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer hover:bg-black/[0.06] dark:hover:bg-white/[0.06] transition-colors"
+                className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer hover:bg-black/[0.06] dark:hover:bg-white/[0.06] transition-colors"
                 data-testid="button-close-ai-refresh"
               >
-                <X className="w-3.5 h-3.5 text-foreground/40" />
+                <X className="w-4 h-4 text-foreground/40" />
               </button>
             </div>
 

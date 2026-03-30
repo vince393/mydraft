@@ -288,24 +288,24 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7"
+                  className="h-9 w-9 sm:h-7 sm:w-7"
                   onClick={() => updateSettingsMutation.mutate({ voiceOutputEnabled: !voiceOutputEnabled })}
                   data-testid="button-toggle-voice-output"
                 >
                   {voiceOutputEnabled ? (
-                    <Volume2 className="w-3.5 h-3.5" />
+                    <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   ) : (
-                    <VolumeX className="w-3.5 h-3.5 text-muted-foreground" />
+                    <VolumeX className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-muted-foreground" />
                   )}
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7"
+                  className="h-9 w-9 sm:h-7 sm:w-7"
                   onClick={() => setShowSettings(!showSettings)}
                   data-testid="button-assistant-settings"
                 >
-                  <Settings className="w-3.5 h-3.5" />
+                  <Settings className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                 </Button>
               </div>
               
