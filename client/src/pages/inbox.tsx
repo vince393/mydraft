@@ -464,17 +464,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return { emailId, folder };
     },
     onMutate: async ({ emailId, folder }) => {
-      setOptimisticRemovals(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(emailId);
-        return newSet;
-      });
-      const savedEmail = recentlyRemovedRef.current.get(emailId);
-      if (savedEmail) {
-        const restored = { ...savedEmail, folder };
-        addEmailToCache(restored);
-        recentlyRemovedRef.current.delete(emailId);
-      }
+      updateEmailInCache(emailId, { folder });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
@@ -484,8 +474,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       });
     },
     onError: (error: Error, variables) => {
-      removeEmailFromCache(variables.emailId);
-      setOptimisticRemovals(prev => new Set(prev).add(variables.emailId));
+      invalidateEmailCache();
       toast({
         title: "Failed to restore email",
         description: error.message,
@@ -508,7 +497,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       setSelectedEmailId(null);
       setShowDetail(false);
       setGeneratedDraft(null);
-      removeEmailFromCache(emailId);
+      updateEmailInCache(emailId, { folder });
       
       if (showUndo && (folder === "trash" || folder === "archived")) {
         const actionLabel = folder === "trash" ? "deleted" : "archived";
@@ -533,14 +522,18 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
         });
       }
       
-      return { emailId };
+      return { emailId, previousFolder: previousFolder || "inbox" };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/response-time", activeFolder] });
     },
-    onError: (error: Error, variables) => {
-      invalidateEmailCache();
+    onError: (error: Error, variables, context) => {
+      if (context?.previousFolder) {
+        updateEmailInCache(variables.emailId, { folder: context.previousFolder });
+      } else {
+        invalidateEmailCache();
+      }
       toast({
         title: "Failed to move email",
         description: error.message,
