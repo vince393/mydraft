@@ -100,16 +100,26 @@ export function SwipeableEmailItem({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const wasScrolling = useRef(false);
   const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swipeXRef = useRef(0);
+  const isExitingRef = useRef(false);
+  const hadTouchEvent = useRef(false);
+  const hasMoved = useRef(false);
 
   const revealThreshold = (containerWidth * REVEAL_PERCENT) / 100;
   const deleteThreshold = (containerWidth * DELETE_PERCENT) / 100;
   const maxSwipe = (containerWidth * MAX_SWIPE_PERCENT) / 100;
 
+  const updateSwipeX = useCallback((val: number) => {
+    swipeXRef.current = val;
+    setSwipeX(val);
+  }, []);
+
   const animateExit = useCallback((callback: () => void) => {
-    if (isExiting) return;
+    if (isExitingRef.current) return;
+    isExitingRef.current = true;
     const h = wrapperRef.current?.offsetHeight || 0;
     setExitHeight(h);
-    setSwipeX(-containerWidth);
+    updateSwipeX(-containerWidth);
     setIsExiting(true);
     setTimeout(() => {
       setExitHeight(0);
@@ -117,7 +127,7 @@ export function SwipeableEmailItem({
     setTimeout(() => {
       callback();
     }, 220);
-  }, [isExiting, containerWidth]);
+  }, [containerWidth, updateSwipeX]);
 
   useEffect(() => {
     const updateWidth = () => {
@@ -140,6 +150,7 @@ export function SwipeableEmailItem({
 
     const handleOutsideTap = (e: TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        swipeXRef.current = 0;
         setSwipeX(0);
         setIsRevealed(false);
       }
@@ -157,6 +168,8 @@ export function SwipeableEmailItem({
   }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    hadTouchEvent.current = true;
+    hasMoved.current = false;
     onLongPressStart();
     if (isSelectionMode) return;
     startX.current = e.touches[0].clientX;
@@ -178,6 +191,7 @@ export function SwipeableEmailItem({
 
     if (absDx > 6 || absDy > 6) {
       onLongPressEnd();
+      hasMoved.current = true;
     }
 
     if (isHorizontalSwipe.current === null) {
@@ -199,31 +213,51 @@ export function SwipeableEmailItem({
     let newX = currentX.current + deltaX;
     if (newX > 0) newX = 0;
     if (newX < -maxSwipe) newX = -maxSwipe;
-    setSwipeX(newX);
-  }, [isSwiping, isSelectionMode, onLongPressEnd, maxSwipe]);
+    updateSwipeX(newX);
+  }, [isSwiping, isSelectionMode, onLongPressEnd, maxSwipe, updateSwipeX]);
 
-  const handleTouchEnd = useCallback(() => {
-    onLongPressEnd();
-    if (isSelectionMode) return;
+  const finishSwipe = useCallback(() => {
     setIsSwiping(false);
+    const currentSwipeX = swipeXRef.current;
 
-    if (swipeX <= -deleteThreshold) {
+    if (isExitingRef.current) return;
+
+    if (hasMoved.current && currentSwipeX <= -deleteThreshold) {
       const action = isTrashFolder && onPermanentDelete ? onPermanentDelete : onDelete;
       animateExit(action);
       return;
     }
 
     const minSwipeDistance = 30;
-    if (swipeX <= -revealThreshold / 2 && Math.abs(swipeX) >= minSwipeDistance) {
-      setSwipeX(-revealThreshold);
+    if (hasMoved.current && currentSwipeX <= -revealThreshold / 2 && Math.abs(currentSwipeX) >= minSwipeDistance) {
+      updateSwipeX(-revealThreshold);
       setIsRevealed(true);
     } else {
-      setSwipeX(0);
+      updateSwipeX(0);
       setIsRevealed(false);
     }
-  }, [swipeX, onDelete, onPermanentDelete, isTrashFolder, isSelectionMode, onLongPressEnd, deleteThreshold, revealThreshold, animateExit]);
+  }, [onDelete, onPermanentDelete, isTrashFolder, deleteThreshold, revealThreshold, animateExit, updateSwipeX]);
+
+  const handleTouchEnd = useCallback(() => {
+    onLongPressEnd();
+    if (isSelectionMode) return;
+    finishSwipe();
+    setTimeout(() => { hadTouchEvent.current = false; }, 400);
+  }, [isSelectionMode, onLongPressEnd, finishSwipe]);
+
+  const handleTouchCancel = useCallback(() => {
+    hadTouchEvent.current = false;
+    hasMoved.current = false;
+    isHorizontalSwipe.current = null;
+    setIsSwiping(false);
+    onLongPressEnd();
+    updateSwipeX(0);
+    setIsRevealed(false);
+  }, [onLongPressEnd, updateSwipeX]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (hadTouchEvent.current) return;
+    hasMoved.current = false;
     onLongPressStart();
     if (isSelectionMode) return;
     startX.current = e.clientX;
@@ -235,12 +269,14 @@ export function SwipeableEmailItem({
   }, [isRevealed, isSelectionMode, onLongPressStart, revealThreshold]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (hadTouchEvent.current) return;
     if (isSelectionMode || !isSwiping) return;
     const deltaX = e.clientX - startX.current;
     const deltaY = e.clientY - startY.current;
 
     if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
       onLongPressEnd();
+      hasMoved.current = true;
     }
 
     if (isHorizontalSwipe.current === null) {
@@ -254,32 +290,37 @@ export function SwipeableEmailItem({
     let newX = currentX.current + deltaX;
     if (newX > 0) newX = 0;
     if (newX < -maxSwipe) newX = -maxSwipe;
-    setSwipeX(newX);
-  }, [isSwiping, isSelectionMode, onLongPressEnd, maxSwipe]);
+    updateSwipeX(newX);
+  }, [isSwiping, isSelectionMode, onLongPressEnd, maxSwipe, updateSwipeX]);
 
   const handleMouseUp = useCallback(() => {
+    if (hadTouchEvent.current) {
+      hadTouchEvent.current = false;
+      return;
+    }
     onLongPressEnd();
     if (isSelectionMode) return;
-    handleTouchEnd();
-  }, [handleTouchEnd, isSelectionMode, onLongPressEnd]);
+    finishSwipe();
+  }, [finishSwipe, isSelectionMode, onLongPressEnd]);
 
   const handleMouseLeave = useCallback(() => {
+    if (hadTouchEvent.current) return;
     onLongPressEnd();
     if (isSwiping && !isSelectionMode) {
-      handleTouchEnd();
+      finishSwipe();
     }
-  }, [isSwiping, handleTouchEnd, isSelectionMode, onLongPressEnd]);
+  }, [isSwiping, finishSwipe, isSelectionMode, onLongPressEnd]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     if (wasScrolling.current) return;
-    if (Math.abs(swipeX) > 5 && !isRevealed) return;
+    if (Math.abs(swipeXRef.current) > 5 && !isRevealed) return;
     if (isRevealed) {
-      setSwipeX(0);
+      updateSwipeX(0);
       setIsRevealed(false);
       return;
     }
     onSelect();
-  }, [swipeX, isRevealed, onSelect]);
+  }, [isRevealed, onSelect, updateSwipeX]);
 
   const handleActionClick = useCallback((action: () => void, animate = false) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -288,10 +329,10 @@ export function SwipeableEmailItem({
       animateExit(action);
     } else {
       action();
-      setSwipeX(0);
+      updateSwipeX(0);
       setIsRevealed(false);
     }
-  }, [animateExit]);
+  }, [animateExit, updateSwipeX]);
 
   const handleStarClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -327,9 +368,9 @@ export function SwipeableEmailItem({
 
   const closeSheet = useCallback(() => {
     setShowSheet(false);
-    setSwipeX(0);
+    updateSwipeX(0);
     setIsRevealed(false);
-  }, []);
+  }, [updateSwipeX]);
 
   const sheetAction = useCallback((action: () => void) => {
     closeSheet();
@@ -409,36 +450,36 @@ export function SwipeableEmailItem({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
               {onReply && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReply(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-${emailId}`}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReply(); updateSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-${emailId}`}>
                   <Reply className="w-4 h-4 mr-2" /> Reply
                 </DropdownMenuItem>
               )}
               {onReplyAll && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReplyAll(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-all-${emailId}`}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onReplyAll(); updateSwipeX(0); setIsRevealed(false); }} data-testid={`menu-reply-all-${emailId}`}>
                   <ReplyAll className="w-4 h-4 mr-2" /> Reply All
                 </DropdownMenuItem>
               )}
               {onForward && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onForward(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-forward-${emailId}`}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onForward(); updateSwipeX(0); setIsRevealed(false); }} data-testid={`menu-forward-${emailId}`}>
                   <Forward className="w-4 h-4 mr-2" /> Forward
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               {onMoveToFolder && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToFolder(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-move-${emailId}`}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMoveToFolder(); updateSwipeX(0); setIsRevealed(false); }} data-testid={`menu-move-${emailId}`}>
                   <FolderInput className="w-4 h-4 mr-2" /> Move to Folder
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-archive-${emailId}`}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive(); updateSwipeX(0); setIsRevealed(false); }} data-testid={`menu-archive-${emailId}`}>
                 <Archive className="w-4 h-4 mr-2" /> Archive
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStar(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-star-${emailId}`}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleStar(); updateSwipeX(0); setIsRevealed(false); }} data-testid={`menu-star-${emailId}`}>
                 <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-400 text-yellow-400" : ""}`} />
                 {isStarred ? "Unstar" : "Star"}
               </DropdownMenuItem>
               {isRead && onMarkUnread && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMarkUnread(); setSwipeX(0); setIsRevealed(false); }} data-testid={`menu-mark-unread-${emailId}`}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMarkUnread(); updateSwipeX(0); setIsRevealed(false); }} data-testid={`menu-mark-unread-${emailId}`}>
                   <MailOpen className="w-4 h-4 mr-2" /> Mark as Unread
                 </DropdownMenuItem>
               )}
@@ -566,6 +607,7 @@ export function SwipeableEmailItem({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         className={`
           group relative py-3 px-4 cursor-pointer bg-background
           transition-all select-none rounded-lg touch-pan-y
