@@ -933,11 +933,12 @@ export function ComposeDialog({
   };
 
   const getModeIcon = () => {
+    const iconSize = screen.isMobile ? "w-5 h-5" : "w-4 h-4";
     switch (mode) {
-      case "reply": return <Mail className="w-4 h-4" />;
-      case "replyAll": return <Users className="w-4 h-4" />;
-      case "forward": return <Forward className="w-4 h-4" />;
-      default: return <Mail className="w-4 h-4" />;
+      case "reply": return <Mail className={iconSize} />;
+      case "replyAll": return <Users className={iconSize} />;
+      case "forward": return <Forward className={iconSize} />;
+      default: return <Mail className={iconSize} />;
     }
   };
 
@@ -954,9 +955,9 @@ export function ComposeDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'max-w-[640px] max-h-[85vh] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-black/10 dark:border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
         {/* Header */}
-        <DialogHeader className="flex-shrink-0 px-5 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06]">
-          <DialogTitle className="flex items-center gap-2.5 text-sm font-medium">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center border border-primary/20" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.1))" }}>
+        <DialogHeader className={`flex-shrink-0 ${screen.isMobile ? 'px-5 py-4' : 'px-5 py-3.5'} border-b border-black/[0.06] dark:border-white/[0.06]`}>
+          <DialogTitle className={`flex items-center ${screen.isMobile ? 'gap-3 text-base' : 'gap-2.5 text-sm'} font-medium`}>
+            <div className={`${screen.isMobile ? 'w-9 h-9' : 'w-7 h-7'} rounded-lg flex items-center justify-center border border-primary/20`} style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.1))" }}>
               <div className="text-primary">{getModeIcon()}</div>
             </div>
             <span className="text-foreground/90">{getDialogTitle()}</span>
