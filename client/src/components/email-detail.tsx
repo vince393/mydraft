@@ -321,8 +321,8 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     if (!body) return "";
     if (!isHtmlContent(body)) return body.trim();
 
-    const temp = document.createElement("div");
-    temp.innerHTML = body;
+    const parsed = new DOMParser().parseFromString(body, "text/html");
+    const temp = parsed.body;
 
     temp.querySelectorAll("style, script, head, title, meta, link, noscript").forEach((el) => el.remove());
 
