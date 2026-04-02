@@ -44,4 +44,3 @@ integrations = ["javascript_openai_ai_integrations:2.0.0", "javascript_gemini_ai
 [userenv]
 
 [userenv.shared]
-NYLAS_CLIENT_ID = "827627fe-b19e-48c3-8b84-9e5471c2448b"
