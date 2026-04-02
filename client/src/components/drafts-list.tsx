@@ -1,18 +1,21 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Send, Trash2, Edit2, Loader2, FileText, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useScreenSize } from "@/hooks/use-screen-size";
 import type { Draft } from "@shared/schema";
 import { DraftEditDialog } from "./draft-edit-dialog";
 
 interface DraftsListProps {
   onDraftSent?: () => void;
+  mobileNavLeft?: ReactNode;
 }
 
-export function DraftsList({ onDraftSent }: DraftsListProps) {
+export function DraftsList({ onDraftSent, mobileNavLeft }: DraftsListProps) {
+  const screen = useScreenSize();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingDraft, setEditingDraft] = useState<Draft | null>(null);
@@ -83,20 +86,36 @@ export function DraftsList({ onDraftSent }: DraftsListProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-48">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      <div className="flex flex-col h-full">
+        {!screen.isDesktop && mobileNavLeft && (
+          <div className="flex items-center gap-2 h-14 px-3 border-b border-border/30">
+            {mobileNavLeft}
+            <span className="text-sm font-medium">Drafts</span>
+          </div>
+        )}
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
 
   if (drafts.length === 0 && !searchQuery) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-        <FileText className="w-12 h-12 text-muted-foreground/50 mb-3" />
-        <p className="text-muted-foreground">No drafts yet</p>
-        <p className="text-sm text-muted-foreground/70 mt-1">
-          Saved drafts will appear here
-        </p>
+      <div className="flex flex-col h-full">
+        {!screen.isDesktop && mobileNavLeft && (
+          <div className="flex items-center gap-2 h-14 px-3 border-b border-border/30">
+            {mobileNavLeft}
+            <span className="text-sm font-medium">Drafts</span>
+          </div>
+        )}
+        <div className="flex flex-col items-center justify-center h-64 text-center px-4">
+          <FileText className="w-12 h-12 text-muted-foreground/50 mb-3" />
+          <p className="text-muted-foreground">No drafts yet</p>
+          <p className="text-sm text-muted-foreground/70 mt-1">
+            Saved drafts will appear here
+          </p>
+        </div>
       </div>
     );
   }
@@ -104,6 +123,12 @@ export function DraftsList({ onDraftSent }: DraftsListProps) {
   return (
     <>
       <div className="flex flex-col h-full">
+        {!screen.isDesktop && mobileNavLeft && (
+          <div className="flex items-center gap-2 h-14 px-3 border-b border-border/30">
+            {mobileNavLeft}
+            <span className="text-sm font-medium">Drafts</span>
+          </div>
+        )}
         {/* Search bar */}
         <div className="p-4 border-b border-border/30">
           <div className="relative">

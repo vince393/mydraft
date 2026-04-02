@@ -756,7 +756,22 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       {/* Email List Panel - hidden when viewing email detail */}
       <div className={`email-list-panel overflow-x-hidden ${showDetail ? 'hide-for-detail' : ''}`}>
         {activeFolder.toLowerCase() === "drafts" ? (
-          <DraftsList />
+          <DraftsList
+            mobileNavLeft={
+              <button
+                onClick={toggleSidebar}
+                className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full backdrop-blur-md cursor-pointer transition-all"
+                style={{
+                  background: "rgba(var(--overlay-rgb), 0.08)",
+                  border: "1px solid rgba(var(--overlay-rgb), 0.15)",
+                  boxShadow: "inset 0 1px 0 0 rgba(var(--overlay-rgb), 0.1), 0 4px 12px rgba(0,0,0,0.1)"
+                }}
+                data-testid="button-sidebar-toggle-drafts"
+              >
+                <Menu className="w-6 h-6 text-foreground/80" />
+              </button>
+            }
+          />
         ) : (
           <EmailList
             emails={emails
