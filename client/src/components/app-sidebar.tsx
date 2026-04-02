@@ -57,6 +57,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 
 // Icon map for custom folder icons
@@ -166,6 +173,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const [folderActionMenuOpen, setFolderActionMenuOpen] = useState<string | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
+  const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
   
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -777,71 +785,166 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
       </SidebarContent>
       <SidebarFooter className="p-2">
         <div className={`flex items-center gap-2 px-1 py-1 ${!effectiveShowText && !isMobile ? "flex-col" : ""}`}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              {effectiveShowText ? (
-                <button className="flex items-center gap-2 flex-1 min-w-0 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors outline-none" data-testid="button-profile-sidebar">
-                  <Avatar className="w-8 h-8 ring-2 ring-border/30 flex-shrink-0">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
-                      {sidebarUserInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col items-start min-w-0 overflow-hidden">
-                    <span className="text-sm font-medium truncate w-full max-w-[100px]">{sidebarUserName}</span>
-                    <span className="text-[10px] text-muted-foreground/60 capitalize">{sidebarUserPlan}</span>
+          {isMobile ? (
+            <>
+              <button
+                className="flex items-center gap-2 flex-1 min-w-0 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors outline-none"
+                onClick={() => setShowMobileProfileMenu(true)}
+                data-testid="button-profile-sidebar"
+              >
+                <Avatar className="w-8 h-8 ring-2 ring-border/30 flex-shrink-0">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
+                    {sidebarUserInitials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col items-start min-w-0 overflow-hidden">
+                  <span className="text-sm font-medium truncate w-full max-w-[100px]">{sidebarUserName}</span>
+                  <span className="text-[10px] text-muted-foreground/60 capitalize">{sidebarUserPlan}</span>
+                </div>
+              </button>
+              <Sheet open={showMobileProfileMenu} onOpenChange={setShowMobileProfileMenu}>
+                <SheetContent side="bottom" className="p-0 rounded-t-2xl">
+                  <SheetHeader className="sr-only">
+                    <SheetTitle>Account Menu</SheetTitle>
+                    <SheetDescription>Account options</SheetDescription>
+                  </SheetHeader>
+                  <div className="px-5 pt-5 pb-3 border-b border-border/30 flex items-center gap-3">
+                    <Avatar className="w-10 h-10 ring-2 ring-border/30 flex-shrink-0">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-medium">
+                        {sidebarUserInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="text-base font-medium truncate">{sidebarUserName}</p>
+                      <p className="text-sm text-muted-foreground truncate">{userEmail}</p>
+                    </div>
                   </div>
-                </button>
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted/50 transition-colors outline-none" data-testid="button-profile-sidebar">
-                      <Avatar className="w-8 h-8 ring-2 ring-border/30">
-                        <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
-                          {sidebarUserInitials}
-                        </AvatarFallback>
-                      </Avatar>
+                  <div className="py-2 px-2">
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-base rounded-xl hover:bg-muted/50 active:bg-muted transition-colors"
+                      onClick={() => { setShowMobileProfileMenu(false); setOpenMobile(false); setLocation("/profile"); }}
+                      data-testid="mobile-menu-profile"
+                    >
+                      <User className="w-5 h-5" />
+                      Profile
                     </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{sidebarUserName}</TooltipContent>
-                </Tooltip>
-              )}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" className="w-56">
-              <div className="px-3 py-2 border-b border-border/30">
-                <p className="text-sm font-medium truncate">{sidebarUserName}</p>
-                <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
-              </div>
-              <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setLocation("/profile"); }}>
-                <User className="w-4 h-4" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setLocation("/settings"); }}>
-                <Settings className="w-4 h-4" />
-                Settings
-              </DropdownMenuItem>
-              {hasPremium && (
-                <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setLocation("/campaigns"); }} data-testid="menu-campaigns-sidebar">
-                  <Megaphone className="w-4 h-4" />
-                  Email Campaigns
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-base rounded-xl hover:bg-muted/50 active:bg-muted transition-colors"
+                      onClick={() => { setShowMobileProfileMenu(false); setOpenMobile(false); setLocation("/settings"); }}
+                      data-testid="mobile-menu-settings"
+                    >
+                      <Settings className="w-5 h-5" />
+                      Settings
+                    </button>
+                    {hasPremium && (
+                      <button
+                        className="w-full flex items-center gap-3 px-4 py-3.5 text-base rounded-xl hover:bg-muted/50 active:bg-muted transition-colors"
+                        onClick={() => { setShowMobileProfileMenu(false); setOpenMobile(false); setLocation("/campaigns"); }}
+                        data-testid="mobile-menu-campaigns"
+                      >
+                        <Megaphone className="w-5 h-5" />
+                        Email Campaigns
+                      </button>
+                    )}
+                    {!userData?.user?.connectedEmail && (
+                      <button
+                        className="w-full flex items-center gap-3 px-4 py-3.5 text-base rounded-xl hover:bg-muted/50 active:bg-muted transition-colors"
+                        onClick={() => { setShowMobileProfileMenu(false); setOpenMobile(false); setLocation("/connect-email"); }}
+                        data-testid="mobile-menu-connect-email"
+                      >
+                        <Link className="w-5 h-5" />
+                        Connect Email
+                      </button>
+                    )}
+                    <div className="my-1 mx-4 border-t border-border/30" />
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-base rounded-xl hover:bg-muted/50 active:bg-muted transition-colors"
+                      onClick={() => { setShowMobileProfileMenu(false); setOpenMobile(false); setShowAccountSwitcher(true); }}
+                      data-testid="mobile-menu-switch-account"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      Switch Account
+                    </button>
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-base rounded-xl hover:bg-muted/50 active:bg-muted text-destructive transition-colors"
+                      onClick={() => { setShowMobileProfileMenu(false); logoutMutation.mutate(); }}
+                      data-testid="mobile-menu-logout"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      Log out
+                    </button>
+                  </div>
+                  <div className="h-[env(safe-area-inset-bottom,0px)]" />
+                </SheetContent>
+              </Sheet>
+            </>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                {effectiveShowText ? (
+                  <button className="flex items-center gap-2 flex-1 min-w-0 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors outline-none" data-testid="button-profile-sidebar">
+                    <Avatar className="w-8 h-8 ring-2 ring-border/30 flex-shrink-0">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
+                        {sidebarUserInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col items-start min-w-0 overflow-hidden">
+                      <span className="text-sm font-medium truncate w-full max-w-[100px]">{sidebarUserName}</span>
+                      <span className="text-[10px] text-muted-foreground/60 capitalize">{sidebarUserPlan}</span>
+                    </div>
+                  </button>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted/50 transition-colors outline-none" data-testid="button-profile-sidebar">
+                        <Avatar className="w-8 h-8 ring-2 ring-border/30">
+                          <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-xs font-medium">
+                            {sidebarUserInitials}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">{sidebarUserName}</TooltipContent>
+                  </Tooltip>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <div className="px-3 py-2 border-b border-border/30">
+                  <p className="text-sm font-medium truncate">{sidebarUserName}</p>
+                  <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                </div>
+                <DropdownMenuItem className="gap-2" onClick={() => setLocation("/profile")}>
+                  <User className="w-4 h-4" />
+                  Profile
                 </DropdownMenuItem>
-              )}
-              {!userData?.user?.connectedEmail && (
-                <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setLocation("/connect-email"); }}>
-                  <Link className="w-4 h-4" />
-                  Connect Email
+                <DropdownMenuItem className="gap-2" onClick={() => setLocation("/settings")}>
+                  <Settings className="w-4 h-4" />
+                  Settings
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2" onClick={() => { if (isMobile) setOpenMobile(false); setShowAccountSwitcher(true); }} data-testid="menu-switch-account">
-                <RefreshCw className="w-4 h-4" />
-                Switch Account
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
-                <LogOut className="w-4 h-4" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {hasPremium && (
+                  <DropdownMenuItem className="gap-2" onClick={() => setLocation("/campaigns")} data-testid="menu-campaigns-sidebar">
+                    <Megaphone className="w-4 h-4" />
+                    Email Campaigns
+                  </DropdownMenuItem>
+                )}
+                {!userData?.user?.connectedEmail && (
+                  <DropdownMenuItem className="gap-2" onClick={() => setLocation("/connect-email")}>
+                    <Link className="w-4 h-4" />
+                    Connect Email
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="gap-2" onClick={() => setShowAccountSwitcher(true)} data-testid="menu-switch-account">
+                  <RefreshCw className="w-4 h-4" />
+                  Switch Account
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logoutMutation.mutate()}>
+                  <LogOut className="w-4 h-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <div className="flex-shrink-0"><NotificationBell /></div>
         </div>
       </SidebarFooter>
