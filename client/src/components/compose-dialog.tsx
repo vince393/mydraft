@@ -1241,37 +1241,37 @@ export function ComposeDialog({
         
         {/* Attachments Preview */}
         {(fileAttachments.length > 0 || attachedImages.length > 0) && (
-          <div className="flex-shrink-0 px-5 py-2 border-t border-black/[0.04] dark:border-white/[0.04]">
+          <div className={`flex-shrink-0 ${screen.isMobile ? 'px-4 py-2.5' : 'px-5 py-2'} border-t border-black/[0.04] dark:border-white/[0.04]`}>
             <div className="flex items-center gap-1.5 mb-1.5">
-              <Paperclip className="w-3 h-3 text-foreground/25" />
-              <span className="text-[10px] font-medium text-foreground/30">
+              <Paperclip className={`${screen.isMobile ? 'w-3.5 h-3.5' : 'w-3 h-3'} text-foreground/25`} />
+              <span className={`${screen.isMobile ? 'text-xs' : 'text-[10px]'} font-medium text-foreground/30`}>
                 {fileAttachments.length + attachedImages.length} file{fileAttachments.length + attachedImages.length !== 1 ? 's' : ''}
               </span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className={`flex flex-wrap ${screen.isMobile ? 'gap-2' : 'gap-1.5'}`}>
               {fileAttachments.map((file, idx) => {
                 const isImage = file.type.startsWith('image/');
                 return (
                   <div
                     key={`file-${idx}`}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-black/[0.08] dark:border-white/[0.08] text-[11px] group"
+                    className={`flex items-center ${screen.isMobile ? 'gap-2 px-3 py-2 text-xs' : 'gap-1.5 px-2 py-1 text-[11px]'} rounded-full border border-black/[0.08] dark:border-white/[0.08] group`}
                     style={{ background: "rgba(var(--overlay-rgb), 0.03)" }}
                     data-testid={`attachment-file-${idx}`}
                   >
                     {isImage ? (
-                      <Image className="w-3 h-3 text-blue-400/60" />
+                      <Image className={`${screen.isMobile ? 'w-4 h-4' : 'w-3 h-3'} text-blue-400/60`} />
                     ) : (
-                      <File className="w-3 h-3 text-foreground/30" />
+                      <File className={`${screen.isMobile ? 'w-4 h-4' : 'w-3 h-3'} text-foreground/30`} />
                     )}
                     <span className="max-w-[100px] truncate text-foreground/60">{file.name}</span>
                     <span className="text-foreground/20">{formatFileSize(file.size)}</span>
                     <button
                       type="button"
                       onClick={() => removeFileAttachment(idx)}
-                      className="p-0.5 rounded-full hover:bg-red-500/20 text-foreground/20 hover:text-red-400 transition-colors cursor-pointer"
+                      className={`${screen.isMobile ? 'p-1' : 'p-0.5'} rounded-full hover:bg-red-500/20 text-foreground/20 hover:text-red-400 transition-colors cursor-pointer`}
                       data-testid={`button-remove-file-${idx}`}
                     >
-                      <X className="w-2.5 h-2.5" />
+                      <X className={`${screen.isMobile ? 'w-3.5 h-3.5' : 'w-2.5 h-2.5'}`} />
                     </button>
                   </div>
                 );
@@ -1279,19 +1279,19 @@ export function ComposeDialog({
               {attachedImages.map((img, idx) => (
                 <div
                   key={`ai-img-${idx}`}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-primary/15 text-[11px]"
+                  className={`flex items-center ${screen.isMobile ? 'gap-2 px-3 py-2 text-xs' : 'gap-1.5 px-2 py-1 text-[11px]'} rounded-full border border-primary/15`}
                   style={{ background: "rgba(59,130,246,0.05)" }}
                   data-testid={`attachment-ai-image-${idx}`}
                 >
-                  <Sparkles className="w-3 h-3 text-primary/50" />
+                  <Sparkles className={`${screen.isMobile ? 'w-4 h-4' : 'w-3 h-3'} text-primary/50`} />
                   <span className="max-w-[100px] truncate text-foreground/60">{img.name}</span>
                   <button
                     type="button"
                     onClick={() => setAttachedImages(prev => prev.filter((_, i) => i !== idx))}
-                    className="p-0.5 rounded-full hover:bg-red-500/20 text-foreground/20 hover:text-red-400 transition-colors cursor-pointer"
+                    className={`${screen.isMobile ? 'p-1' : 'p-0.5'} rounded-full hover:bg-red-500/20 text-foreground/20 hover:text-red-400 transition-colors cursor-pointer`}
                     data-testid={`button-remove-ai-image-${idx}`}
                   >
-                    <X className="w-2.5 h-2.5" />
+                    <X className={`${screen.isMobile ? 'w-3.5 h-3.5' : 'w-2.5 h-2.5'}`} />
                   </button>
                 </div>
               ))}
@@ -1300,9 +1300,8 @@ export function ComposeDialog({
         )}
 
         {/* Footer Actions */}
-        <div className={`flex-shrink-0 ${screen.isMobile ? 'px-4 py-3 safe-area-bottom' : 'px-5 py-2.5'} border-t border-black/[0.04] dark:border-white/[0.04]`}>
+        <div className={`flex-shrink-0 ${screen.isMobile ? 'px-4 py-3.5 safe-area-bottom' : 'px-5 py-2.5'} border-t border-black/[0.04] dark:border-white/[0.04]`}>
           <div className="flex items-center justify-between gap-2">
-            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -1313,17 +1312,16 @@ export function ComposeDialog({
               data-testid="input-file-attachment"
             />
             
-            {/* Left - Attach + AI Menu */}
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center ${screen.isMobile ? 'gap-1.5' : 'gap-1'}`}>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={sendMutation.isPending}
-                className={`${screen.isMobile ? 'w-10 h-10' : 'w-8 h-8'} rounded-full flex items-center justify-center text-foreground/30 hover:text-foreground/50 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30`}
+                className={`${screen.isMobile ? 'w-11 h-11' : 'w-8 h-8'} rounded-full flex items-center justify-center text-foreground/40 hover:text-foreground/60 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30`}
                 data-testid="button-attach-file"
                 title="Attach files"
               >
-                <Paperclip className={`${screen.isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                <Paperclip className={`${screen.isMobile ? 'w-[22px] h-[22px]' : 'w-4 h-4'}`} />
               </button>
               
               <DropdownMenu>
@@ -1331,17 +1329,17 @@ export function ComposeDialog({
                   <button
                     type="button"
                     disabled={isGenerating || sendMutation.isPending}
-                    className={`${screen.isMobile ? 'h-10 px-3.5' : 'h-8 px-3'} rounded-full flex items-center gap-1.5 text-primary/70 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-30 text-xs font-medium`}
+                    className={`${screen.isMobile ? 'h-11 px-4 text-sm' : 'h-8 px-3 text-xs'} rounded-full flex items-center gap-1.5 text-primary/70 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-30 font-medium`}
                     data-testid="button-ai-menu"
                     title="AI features"
                   >
                     {isGenerating ? (
-                      <div className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} border-2 border-primary border-t-transparent rounded-full animate-spin`} />
+                      <div className={`${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-3.5 h-3.5'} border-2 border-primary border-t-transparent rounded-full animate-spin`} />
                     ) : (
-                      <Sparkles className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
+                      <Sparkles className={`${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-3.5 h-3.5'}`} />
                     )}
                     <span>{isGenerating ? "Writing..." : userPlan === "free" ? `AI (${aiRemaining}/5)` : "AI"}</span>
-                    <ChevronDown className="w-3 h-3 opacity-50" />
+                    <ChevronDown className={`${screen.isMobile ? 'w-3.5 h-3.5' : 'w-3 h-3'} opacity-50`} />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
@@ -1560,11 +1558,11 @@ export function ComposeDialog({
                     <button
                       type="button"
                       disabled={sendMutation.isPending || !to.trim() || isGenerating}
-                      className={`${screen.isMobile ? 'h-10 px-3.5 text-[13px]' : 'h-8 px-3 text-xs'} rounded-full flex items-center gap-1.5 font-medium text-foreground/40 hover:text-foreground/60 border border-black/[0.08] dark:border-white/[0.08] hover:border-black/15 dark:hover:border-white/15 transition-all cursor-pointer disabled:opacity-30`}
+                      className={`${screen.isMobile ? 'h-11 px-4 text-sm' : 'h-8 px-3 text-xs'} rounded-full flex items-center gap-1.5 font-medium text-foreground/40 hover:text-foreground/60 border border-black/[0.08] dark:border-white/[0.08] hover:border-black/15 dark:hover:border-white/15 transition-all cursor-pointer disabled:opacity-30`}
                       style={{ background: "rgba(var(--overlay-rgb), 0.03)" }}
                       data-testid="button-schedule-send"
                     >
-                      <Clock className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
+                      <Clock className={`${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-3.5 h-3.5'}`} />
                       Schedule
                     </button>
                   </PopoverTrigger>
@@ -1614,14 +1612,14 @@ export function ComposeDialog({
                 type="button"
                 onClick={() => sendMutation.mutate({})}
                 disabled={sendMutation.isPending || !to.trim() || isGenerating}
-                className={`${screen.isMobile ? 'h-10 px-5 text-[13px]' : 'h-8 px-4 text-xs'} rounded-full flex items-center gap-1.5 font-medium text-white border border-primary/30 transition-all cursor-pointer disabled:opacity-30`}
+                className={`${screen.isMobile ? 'h-11 px-5 text-sm' : 'h-8 px-4 text-xs'} rounded-full flex items-center gap-1.5 font-medium text-white border border-primary/30 transition-all cursor-pointer disabled:opacity-30`}
                 style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.4), rgba(147,51,234,0.3))" }}
                 data-testid="button-compose-send"
               >
                 {sendMutation.isPending ? (
-                  <div className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'} border-2 border-white border-t-transparent rounded-full animate-spin`} />
+                  <div className={`${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-3.5 h-3.5'} border-2 border-white border-t-transparent rounded-full animate-spin`} />
                 ) : (
-                  <Send className={`${screen.isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
+                  <Send className={`${screen.isMobile ? 'w-[18px] h-[18px]' : 'w-3.5 h-3.5'}`} />
                 )}
                 <span>Send</span>
               </button>
