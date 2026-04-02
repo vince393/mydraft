@@ -133,6 +133,21 @@ export function SwipeableEmailItem({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isRevealed) return;
+    const isMobile = window.innerWidth < 640;
+    if (!isMobile) return;
+
+    const handleOutsideTap = (e: TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setSwipeX(0);
+        setIsRevealed(false);
+      }
+    };
+    document.addEventListener("touchstart", handleOutsideTap, { passive: true });
+    return () => document.removeEventListener("touchstart", handleOutsideTap);
+  }, [isRevealed]);
+
   const handleWheel = useCallback(() => {
     wasScrolling.current = true;
     if (scrollTimer.current) clearTimeout(scrollTimer.current);
