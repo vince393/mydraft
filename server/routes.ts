@@ -3142,7 +3142,6 @@ If truly nothing matches, return: []`,
       const customInstructions = typeof req.body?.customInstructions === "string" ? req.body.customInstructions.trim().slice(0, 500) : "";
       if (customInstructions) console.log("[AI Inbox Refresh] Custom instructions:", customInstructions);
       const providerResult = await getProviderAndToken(userId);
-      console.log("[AI Inbox Refresh] Provider found:", !!providerResult);
 
       if (!providerResult) {
         return res.status(400).json({ error: "No email account connected" });
