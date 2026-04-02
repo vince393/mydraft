@@ -309,13 +309,25 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     const fullText = subjectText ? `${subjectText}. ${bodyText}` : bodyText;
     const voice = currentVoice;
 
+    const audio = new Audio();
+    audio.preload = "auto";
+    readAloudAudioRef.current = audio;
+
+    try {
+      await audio.play().catch(() => {});
+    } catch {}
+    audio.pause();
+    audio.currentTime = 0;
+
     readAloudStoppedRef.current = false;
     setReadAloudState("loading");
     const abortController = new AbortController();
     readAloudAbortRef.current = abortController;
 
     try {
-      const response = await fetch("/api/voice/tts/stream", {
+      let audioUrl: string;
+
+      const streamResponse = await fetch("/api/voice/tts/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -323,16 +335,36 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
         signal: abortController.signal,
       });
 
-      if (!response.ok) {
+      if (!streamResponse.ok) {
         throw new Error("TTS request failed");
       }
 
-      const blob = await response.blob();
-      const audioUrl = URL.createObjectURL(blob);
-      readAloudUrlRef.current = audioUrl;
+      const contentType = streamResponse.headers.get("content-type") || "";
 
-      const audio = new Audio(audioUrl);
-      readAloudAudioRef.current = audio;
+      if (contentType.includes("audio")) {
+        const blob = await streamResponse.blob();
+        audioUrl = URL.createObjectURL(blob);
+      } else {
+        const data = await streamResponse.json();
+        if (data.audio) {
+          const fmt = data.audioFormat === "wav" ? "audio/wav" : "audio/mpeg";
+          const binary = atob(data.audio);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const blob = new Blob([bytes], { type: fmt });
+          audioUrl = URL.createObjectURL(blob);
+        } else {
+          throw new Error("No audio data received");
+        }
+      }
+
+      if (readAloudStoppedRef.current) {
+        URL.revokeObjectURL(audioUrl);
+        return;
+      }
+
+      readAloudUrlRef.current = audioUrl;
+      audio.src = audioUrl;
 
       audio.onended = () => {
         stopReadAloud();
@@ -349,6 +381,41 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     } catch (err: any) {
       if (err?.name === "AbortError") return;
       console.error("Read aloud error:", err);
+
+      if (!readAloudStoppedRef.current) {
+        try {
+          const fallbackRes = await fetch("/api/voice/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ text: fullText, emailId, voice }),
+          });
+          if (fallbackRes.ok) {
+            const data = await fallbackRes.json();
+            if (data.audio) {
+              const fmt = data.audioFormat === "wav" ? "audio/wav" : "audio/mpeg";
+              const binary = atob(data.audio);
+              const bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+              const blob = new Blob([bytes], { type: fmt });
+              const fallbackUrl = URL.createObjectURL(blob);
+              readAloudUrlRef.current = fallbackUrl;
+              audio.src = fallbackUrl;
+              audio.onended = () => stopReadAloud();
+              audio.onerror = () => {
+                if (!readAloudStoppedRef.current) {
+                  stopReadAloud();
+                  toast({ title: "Read Aloud failed", description: "Could not play the audio.", variant: "destructive" });
+                }
+              };
+              await audio.play();
+              setReadAloudState("playing");
+              return;
+            }
+          }
+        } catch {}
+      }
+
       setReadAloudState("idle");
       toast({ title: "Read Aloud failed", description: "Could not generate speech. Please try again.", variant: "destructive" });
     }
