@@ -92,6 +92,92 @@ interface EmailDetailProps {
   onUpgradeNeeded?: () => void;
 }
 
+function AttachmentDownloadButton({ attachment, emailMessageId, isImage, isPdf, formatSize }: {
+  attachment: { id: string; filename: string; contentType: string; size: number };
+  emailMessageId: string;
+  isImage: boolean;
+  isPdf: boolean;
+  formatSize: (bytes: number) => string;
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const { toast } = useToast();
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (downloading) return;
+    setDownloading(true);
+
+    try {
+      const url = `/api/emails/${encodeURIComponent(emailMessageId)}/attachments/${encodeURIComponent(attachment.id)}`;
+      const response = await fetch(url, { credentials: "include" });
+
+      if (!response.ok) {
+        let errorMsg = "Download failed";
+        try {
+          const errData = await response.json();
+          errorMsg = errData.error || errorMsg;
+        } catch {}
+        throw new Error(errorMsg);
+      }
+
+      const contentType = response.headers.get("content-type") || attachment.contentType;
+      const blob = await response.blob();
+      const realBlob = new Blob([blob], { type: contentType });
+
+      if (realBlob.size === 0) {
+        throw new Error("Downloaded file is empty");
+      }
+
+      const blobUrl = URL.createObjectURL(realBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = attachment.filename;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    } catch (err: any) {
+      console.error("Attachment download error:", err);
+      toast({
+        title: "Download failed",
+        description: err?.message || "Could not download this attachment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleDownload}
+      disabled={downloading}
+      className="flex items-center gap-3 p-3 rounded-lg bg-background hover:bg-muted/50 transition-colors border border-border/30 text-left w-full"
+      data-testid={`attachment-${attachment.id}`}
+    >
+      <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+        {isImage ? (
+          <ImageIcon className="w-5 h-5 text-blue-500" />
+        ) : isPdf ? (
+          <FileText className="w-5 h-5 text-red-500" />
+        ) : (
+          <File className="w-5 h-5 text-muted-foreground" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{attachment.filename}</p>
+        <p className="text-xs text-muted-foreground">{formatSize(attachment.size)}</p>
+      </div>
+      {downloading ? (
+        <Loader2 className="w-4 h-4 text-muted-foreground flex-shrink-0 animate-spin" />
+      ) : (
+        <Download className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+      )}
+    </button>
+  );
+}
+
 function EmailDetailEmpty() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-8 -mt-16">
@@ -1426,8 +1512,6 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                 {(email as ExtendedEmail).attachments!.map((attachment) => {
                   const isImage = attachment.contentType.startsWith('image/');
                   const isPdf = attachment.contentType === 'application/pdf';
-                  const messageId = (email as any).nylasId || email.id;
-                  const downloadUrl = `/api/emails/${messageId}/attachments/${attachment.id}`;
                   
                   const formatSize = (bytes: number) => {
                     if (bytes < 1024) return `${bytes} B`;
@@ -1436,28 +1520,14 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   };
                   
                   return (
-                    <a
+                    <AttachmentDownloadButton
                       key={attachment.id}
-                      href={downloadUrl}
-                      download={attachment.filename}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-background hover:bg-muted/50 transition-colors border border-border/30"
-                      data-testid={`attachment-${attachment.id}`}
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-                        {isImage ? (
-                          <ImageIcon className="w-5 h-5 text-blue-500" />
-                        ) : isPdf ? (
-                          <FileText className="w-5 h-5 text-red-500" />
-                        ) : (
-                          <File className="w-5 h-5 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{attachment.filename}</p>
-                        <p className="text-xs text-muted-foreground">{formatSize(attachment.size)}</p>
-                      </div>
-                      <Download className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    </a>
+                      attachment={attachment}
+                      emailMessageId={String((email as any).nylasId || email.id)}
+                      isImage={isImage}
+                      isPdf={isPdf}
+                      formatSize={formatSize}
+                    />
                   );
                 })}
               </div>

@@ -2741,7 +2741,8 @@ Return ONLY valid JSON, no other text.`;
     fileLimiter,
     async (req, res) => {
       try {
-        const { messageId, attachmentId } = req.params;
+        const messageId = decodeURIComponent(req.params.messageId);
+        const attachmentId = decodeURIComponent(req.params.attachmentId);
         const providerResult = await getProviderAndToken(req.session.userId!);
 
         if (!providerResult) {
@@ -2753,6 +2754,10 @@ Return ONLY valid JSON, no other text.`;
           messageId,
           attachmentId,
         );
+
+        if (!attachment.data || (Buffer.isBuffer(attachment.data) && attachment.data.length === 0)) {
+          return res.status(404).json({ error: "Attachment content is empty" });
+        }
 
         // Scan attachment for malware before serving
         const scanResult = await scanFile(
@@ -2796,11 +2801,14 @@ Return ONLY valid JSON, no other text.`;
           })
           .catch((err) => console.warn("Failed to log security event:", err));
 
+        const safeFilename = attachment.filename.replace(/[^\w\s.\-()]/g, "_");
         res.setHeader("Content-Type", attachment.contentType);
+        res.setHeader("Content-Length", String(Buffer.isBuffer(fileData) ? fileData.length : Buffer.byteLength(fileData)));
         res.setHeader(
           "Content-Disposition",
-          `attachment; filename="${attachment.filename}"`,
+          `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodeURIComponent(attachment.filename)}`,
         );
+        res.setHeader("Cache-Control", "no-store");
         res.send(fileData);
       } catch (error) {
         console.error("Error downloading attachment:", error);
