@@ -31,6 +31,21 @@ function usePageTracking() {
     }).catch(() => {});
   }, [location]);
 }
+
+function useRadixCleanupOnRouteChange() {
+  const [location] = useLocation();
+  useEffect(() => {
+    document.body.style.pointerEvents = "";
+    document.body.style.removeProperty("pointer-events");
+    document.body.removeAttribute("data-scroll-locked");
+    const staleOverlays = document.querySelectorAll("[data-radix-portal]");
+    staleOverlays.forEach((el) => {
+      if (!el.querySelector("[data-state='open']")) {
+        el.remove();
+      }
+    });
+  }, [location]);
+}
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -338,6 +353,7 @@ function PublicRoute({ children, redirectIfAuthenticated = true }: { children: R
 
 function AppRoutes() {
   usePageTracking();
+  useRadixCleanupOnRouteChange();
   return (
     <Suspense fallback={<PageLoader />}>
     <Switch>
