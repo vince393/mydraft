@@ -558,10 +558,9 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   const getSnippet = (body: string) => {
     if (!body) return "";
     if (isHtmlContent(body)) {
-      const tmp = document.createElement("div");
-      tmp.innerHTML = body;
-      tmp.querySelectorAll("style, script, head").forEach(el => el.remove());
-      return (tmp.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120);
+      const doc = new DOMParser().parseFromString(body, "text/html");
+      doc.querySelectorAll("style, script, head").forEach(el => el.remove());
+      return (doc.body.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120);
     }
     return body.replace(/\s+/g, " ").trim().slice(0, 120);
   };
