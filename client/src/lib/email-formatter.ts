@@ -6,9 +6,9 @@
 export function formatEmailBody(html: string): string {
   if (!html) return '';
   
-  // Create a temporary div to parse HTML
-  const temp = document.createElement('div');
-  temp.innerHTML = html;
+  // Parse HTML into a detached document using DOMParser (safer than innerHTML on div)
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const temp = parsed.body;
   
   // Remove tracking pixels (1x1 images, hidden images)
   const images = temp.querySelectorAll('img');
@@ -128,8 +128,8 @@ export function formatEmailBody(html: string): string {
 export function stripHtmlToPlainText(html: string): string {
   if (!html) return '';
   
-  const temp = document.createElement('div');
-  temp.innerHTML = html;
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const temp = parsed.body;
   
   // Replace br and p with newlines
   temp.querySelectorAll('br').forEach(br => {
