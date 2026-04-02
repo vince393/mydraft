@@ -7,8 +7,8 @@ interface EmailIframeRendererProps {
 }
 
 function sanitizeForIframe(html: string): string {
-  const temp = document.createElement("div");
-  temp.innerHTML = html;
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  const temp = parsed.body;
 
   temp.querySelectorAll("img").forEach((img) => {
     const width = img.getAttribute("width");
