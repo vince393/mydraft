@@ -108,18 +108,10 @@ export function formatEmailBody(html: string): string {
   // Normalize whitespace between tags (but preserve pre/code)
   content = content.replace(/>\s{2,}</g, '> <');
   
-  // Parse again to apply final cleanup
-  temp.innerHTML = content;
-  
-  // Handle outlook-style comments that create weird spacing
-  const comments = document.createTreeWalker(temp, NodeFilter.SHOW_COMMENT, null);
-  const commentsToRemove: Node[] = [];
-  while (comments.nextNode()) {
-    commentsToRemove.push(comments.currentNode);
-  }
-  commentsToRemove.forEach(c => c.parentNode?.removeChild(c));
-  
-  return temp.innerHTML.trim() || html;
+  // Remove outlook-style comments that create weird spacing
+  content = content.replace(/<!--[\s\S]*?-->/g, '');
+
+  return content.trim() || html;
 }
 
 /**
