@@ -1091,39 +1091,42 @@ export default function OwnerPanel() {
     }
   };
 
+  const navItems = [
+    { value: "dashboard", icon: TrendingUp, label: "Dashboard" },
+    { value: "users", icon: Users, label: "Users" },
+    { value: "feedback", icon: MessageSquare, label: "Feedback" },
+    { value: "notifications", icon: Bell, label: "Notifications" },
+    { value: "system", icon: Server, label: "System" },
+    { value: "features", icon: ToggleLeft, label: "Features" },
+    { value: "activity", icon: Activity, label: "Activity" },
+    { value: "finances", icon: Wallet, label: "Finances" },
+    { value: "testimonials", icon: Star, label: "Testimonials" },
+    { value: "notes", icon: MessageSquare, label: "Notes" },
+    { value: "analytics", icon: BarChart3, label: "Analytics" },
+    { value: "api-health", icon: HeartPulse, label: "API Health" },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Crown className="w-6 h-6 text-yellow-500" />
-            <h1 className="text-xl font-semibold">Owner Panel</h1>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
+            <h1 className="text-base sm:text-xl font-semibold">Owner Panel</h1>
           </div>
-          <Button variant="outline" onClick={() => setLocation("/inbox")} data-testid="button-back-inbox">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Inbox
+          <Button variant="outline" size="sm" onClick={() => setLocation("/inbox")} data-testid="button-back-inbox">
+            <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Back to Inbox</span>
+            <span className="sm:hidden">Back</span>
           </Button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex gap-6">
-          <nav className="w-48 flex-shrink-0 sticky top-6 self-start">
-            <div className="flex flex-col gap-0.5">
-              {[
-                { value: "dashboard", icon: TrendingUp, label: "Dashboard" },
-                { value: "users", icon: Users, label: "Users" },
-                { value: "feedback", icon: MessageSquare, label: "Feedback" },
-                { value: "notifications", icon: Bell, label: "Notifications" },
-                { value: "system", icon: Server, label: "System" },
-                { value: "features", icon: ToggleLeft, label: "Features" },
-                { value: "activity", icon: Activity, label: "Activity" },
-                { value: "finances", icon: Wallet, label: "Finances" },
-                { value: "testimonials", icon: Star, label: "Testimonials" },
-                { value: "notes", icon: MessageSquare, label: "Notes" },
-                { value: "analytics", icon: BarChart3, label: "Analytics" },
-                { value: "api-health", icon: HeartPulse, label: "API Health" },
-              ].map((item) => {
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row gap-4 md:gap-6">
+          <nav className="md:w-48 flex-shrink-0 md:sticky md:top-6 md:self-start -mx-3 sm:-mx-4 md:mx-0 px-3 sm:px-4 md:px-0">
+            <div className="flex md:flex-col gap-1 md:gap-0.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+              {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.value;
                 return (
@@ -1131,13 +1134,13 @@ export default function OwnerPanel() {
                     key={item.value}
                     onClick={() => setActiveTab(item.value)}
                     data-testid={`tab-${item.value}`}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer ${
+                    className={`flex items-center gap-1.5 md:gap-2.5 px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors text-left cursor-pointer whitespace-nowrap flex-shrink-0 ${
                       isActive
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     }`}
                   >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <Icon className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                     {item.label}
                   </button>
                 );
@@ -1296,94 +1299,153 @@ export default function OwnerPanel() {
                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
-                  <ScrollArea className="h-[500px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Plan</TableHead>
-                          <TableHead>Change Plan</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Connected Email</TableHead>
-                          <TableHead>Joined</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredUsers.map((user) => (
-                          <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <Mail className="w-4 h-4 text-muted-foreground" />
-                                {user.email}
+                  <>
+                    <div className="hidden md:block">
+                      <ScrollArea className="h-[500px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Plan</TableHead>
+                              <TableHead>Change Plan</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Connected Email</TableHead>
+                              <TableHead>Joined</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredUsers.map((user) => (
+                              <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                                <TableCell className="font-medium">
+                                  <div className="flex items-center gap-2">
+                                    <Mail className="w-4 h-4 text-muted-foreground" />
+                                    {user.email}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={getPlanBadgeVariant(user.plan)}>
+                                    {user.plan === "premium" ? "Business" : user.plan.charAt(0).toUpperCase() + user.plan.slice(1)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={user.plan}
+                                    onValueChange={(value) =>
+                                      updateUserPlanMutation.mutate({ userId: user.id, plan: value })
+                                    }
+                                  >
+                                    <SelectTrigger className="w-[110px]" data-testid={`select-plan-${user.id}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="free">Free</SelectItem>
+                                      <SelectItem value="pro">Pro</SelectItem>
+                                      <SelectItem value="premium">Business</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell>
+                                  {user.onboardingCompleted ? (
+                                    <Badge variant="secondary">Active</Badge>
+                                  ) : (
+                                    <Badge variant="outline">Onboarding</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {user.connectedProvider ? (
+                                    <div className="flex items-center gap-1">
+                                      <Badge variant="outline">{user.connectedProvider}</Badge>
+                                      <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                        {user.connectedEmail}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground">Not connected</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1 text-muted-foreground">
+                                    <Calendar className="w-3 h-3" />
+                                    {format(new Date(user.createdAt), "MMM d, yyyy")}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => resetUserLimitsMutation.mutate(user.id)}
+                                      disabled={resetUserLimitsMutation.isPending}
+                                      title="Reset AI usage limits"
+                                      data-testid={`button-reset-limits-${user.id}`}
+                                    >
+                                      <RotateCcw className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </div>
+
+                    <div className="md:hidden space-y-3 max-h-[500px] overflow-y-auto">
+                      {filteredUsers.map((user) => (
+                        <div key={user.id} className="p-3 rounded-lg border bg-card space-y-2" data-testid={`row-user-${user.id}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{user.email}</p>
+                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                <Badge variant={getPlanBadgeVariant(user.plan)} className="text-[10px]">
+                                  {user.plan === "premium" ? "Business" : user.plan.charAt(0).toUpperCase() + user.plan.slice(1)}
+                                </Badge>
+                                {user.onboardingCompleted ? (
+                                  <Badge variant="secondary" className="text-[10px]">Active</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px]">Onboarding</Badge>
+                                )}
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={getPlanBadgeVariant(user.plan)}>
-                                {user.plan === "premium" ? "Business" : user.plan.charAt(0).toUpperCase() + user.plan.slice(1)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={user.plan}
-                                onValueChange={(value) =>
-                                  updateUserPlanMutation.mutate({ userId: user.id, plan: value })
-                                }
-                              >
-                                <SelectTrigger className="w-[110px]" data-testid={`select-plan-${user.id}`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="free">Free</SelectItem>
-                                  <SelectItem value="pro">Pro</SelectItem>
-                                  <SelectItem value="premium">Business</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              {user.onboardingCompleted ? (
-                                <Badge variant="secondary">Active</Badge>
-                              ) : (
-                                <Badge variant="outline">Onboarding</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {user.connectedProvider ? (
-                                <div className="flex items-center gap-1">
-                                  <Badge variant="outline">{user.connectedProvider}</Badge>
-                                  <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                                    {user.connectedEmail}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">Not connected</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Calendar className="w-3 h-3" />
-                                {format(new Date(user.createdAt), "MMM d, yyyy")}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => resetUserLimitsMutation.mutate(user.id)}
-                                  disabled={resetUserLimitsMutation.isPending}
-                                  title="Reset AI usage limits"
-                                  data-testid={`button-reset-limits-${user.id}`}
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
+                            </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="flex-shrink-0 h-8 w-8"
+                              onClick={() => resetUserLimitsMutation.mutate(user.id)}
+                              disabled={resetUserLimitsMutation.isPending}
+                              data-testid={`button-reset-limits-${user.id}`}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {user.connectedProvider ? `${user.connectedProvider}: ${user.connectedEmail}` : "Not connected"}
+                            </span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              {format(new Date(user.createdAt), "MMM d")}
+                            </span>
+                          </div>
+                          <Select
+                            value={user.plan}
+                            onValueChange={(value) =>
+                              updateUserPlanMutation.mutate({ userId: user.id, plan: value })
+                            }
+                          >
+                            <SelectTrigger className="h-8 text-xs" data-testid={`select-plan-${user.id}`}>
+                              <SelectValue placeholder="Change plan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="free">Free</SelectItem>
+                              <SelectItem value="pro">Pro</SelectItem>
+                              <SelectItem value="premium">Business</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -1407,46 +1469,80 @@ export default function OwnerPanel() {
                   </div>
                 ) : (
                   <ScrollArea className="h-[500px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>User</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Message</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {feedback.map((item) => (
-                          <TableRow key={item.id} data-testid={`row-feedback-${item.id}`}>
-                            <TableCell className="font-medium">{item.userEmail}</TableCell>
-                            <TableCell>{getFeedbackTypeBadge(item.feedbackType)}</TableCell>
-                            <TableCell className="max-w-[300px] truncate">{item.message}</TableCell>
-                            <TableCell>{getStatusBadge(item.status)}</TableCell>
-                            <TableCell>{format(new Date(item.createdAt), "MMM d, yyyy")}</TableCell>
-                            <TableCell>
-                              <Select
-                                value={item.status}
-                                onValueChange={(value) =>
-                                  updateFeedbackMutation.mutate({ id: item.id, status: value })
-                                }
-                              >
-                                <SelectTrigger className="w-[120px]" data-testid={`select-status-${item.id}`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="pending">Pending</SelectItem>
-                                  <SelectItem value="reviewed">Reviewed</SelectItem>
-                                  <SelectItem value="resolved">Resolved</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
+                    <div className="hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>User</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Message</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {feedback.map((item) => (
+                            <TableRow key={item.id} data-testid={`row-feedback-${item.id}`}>
+                              <TableCell className="font-medium">{item.userEmail}</TableCell>
+                              <TableCell>{getFeedbackTypeBadge(item.feedbackType)}</TableCell>
+                              <TableCell className="max-w-[300px] truncate">{item.message}</TableCell>
+                              <TableCell>{getStatusBadge(item.status)}</TableCell>
+                              <TableCell>{format(new Date(item.createdAt), "MMM d, yyyy")}</TableCell>
+                              <TableCell>
+                                <Select
+                                  value={item.status}
+                                  onValueChange={(value) =>
+                                    updateFeedbackMutation.mutate({ id: item.id, status: value })
+                                  }
+                                >
+                                  <SelectTrigger className="w-[120px]" data-testid={`select-status-${item.id}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="reviewed">Reviewed</SelectItem>
+                                    <SelectItem value="resolved">Resolved</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="md:hidden space-y-3">
+                      {feedback.map((item) => (
+                        <div key={item.id} className="p-3 rounded-lg border bg-card space-y-2" data-testid={`row-feedback-${item.id}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium truncate">{item.userEmail}</span>
+                            {getFeedbackTypeBadge(item.feedbackType)}
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-3">{item.message}</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(item.status)}
+                              <span className="text-[10px] text-muted-foreground">{format(new Date(item.createdAt), "MMM d")}</span>
+                            </div>
+                            <Select
+                              value={item.status}
+                              onValueChange={(value) =>
+                                updateFeedbackMutation.mutate({ id: item.id, status: value })
+                              }
+                            >
+                              <SelectTrigger className="w-[100px] h-8 text-xs" data-testid={`select-status-${item.id}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="reviewed">Reviewed</SelectItem>
+                                <SelectItem value="resolved">Resolved</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </ScrollArea>
                 )}
               </CardContent>
@@ -1897,32 +1993,46 @@ export default function OwnerPanel() {
                   </div>
                 ) : (
                   <ScrollArea className="h-[500px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>User</TableHead>
-                          <TableHead>Action</TableHead>
-                          <TableHead>Details</TableHead>
-                          <TableHead>Date</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {activityLogs.map((log) => (
-                          <TableRow key={log.id} data-testid={`row-activity-${log.id}`}>
-                            <TableCell className="font-medium">
-                              {log.userEmail || "System"}
-                            </TableCell>
-                            <TableCell>{getActionTypeBadge(log.actionType)}</TableCell>
-                            <TableCell className="max-w-[300px] truncate text-muted-foreground">
-                              {log.details || "-"}
-                            </TableCell>
-                            <TableCell>
-                              {format(new Date(log.createdAt), "MMM d, yyyy h:mm a")}
-                            </TableCell>
+                    <div className="hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>User</TableHead>
+                            <TableHead>Action</TableHead>
+                            <TableHead>Details</TableHead>
+                            <TableHead>Date</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {activityLogs.map((log) => (
+                            <TableRow key={log.id} data-testid={`row-activity-${log.id}`}>
+                              <TableCell className="font-medium">
+                                {log.userEmail || "System"}
+                              </TableCell>
+                              <TableCell>{getActionTypeBadge(log.actionType)}</TableCell>
+                              <TableCell className="max-w-[300px] truncate text-muted-foreground">
+                                {log.details || "-"}
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(log.createdAt), "MMM d, yyyy h:mm a")}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="md:hidden space-y-2">
+                      {activityLogs.map((log) => (
+                        <div key={log.id} className="p-3 rounded-lg border bg-card space-y-1" data-testid={`row-activity-${log.id}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium truncate">{log.userEmail || "System"}</span>
+                            {getActionTypeBadge(log.actionType)}
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{log.details || "-"}</p>
+                          <p className="text-[10px] text-muted-foreground">{format(new Date(log.createdAt), "MMM d, h:mm a")}</p>
+                        </div>
+                      ))}
+                    </div>
                   </ScrollArea>
                 )}
               </CardContent>
@@ -2286,17 +2396,20 @@ export default function OwnerPanel() {
                   {/* Add Expense Form */}
                   <Card>
                     <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle>Manual Expenses</CardTitle>
-                          <CardDescription>Track recurring costs like hosting, domains, and services</CardDescription>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <CardTitle className="text-base sm:text-lg">Manual Expenses</CardTitle>
+                          <CardDescription className="text-xs sm:text-sm">Track recurring costs like hosting, domains, and services</CardDescription>
                         </div>
                         <Button
+                          size="sm"
                           onClick={() => setShowAddExpenseForm(!showAddExpenseForm)}
                           data-testid="button-add-expense"
+                          className="flex-shrink-0"
                         >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Expense
+                          <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">Add Expense</span>
+                          <span className="sm:hidden">Add</span>
                         </Button>
                       </div>
                     </CardHeader>
@@ -2404,47 +2517,75 @@ export default function OwnerPanel() {
                         </div>
                       ) : (
                         <ScrollArea className="h-[300px]">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Service</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Billing</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead className="w-[50px]"></TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {expensesList.map((expense) => {
-                                const categoryInfo = EXPENSE_CATEGORIES.find(c => c.value === expense.category);
-                                return (
-                                  <TableRow key={expense.id} data-testid={`row-expense-${expense.id}`}>
-                                    <TableCell className="font-medium">{expense.serviceName}</TableCell>
-                                    <TableCell>
-                                      <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryInfo?.color }} />
+                          <div className="hidden md:block">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Service</TableHead>
+                                  <TableHead>Category</TableHead>
+                                  <TableHead>Amount</TableHead>
+                                  <TableHead>Billing</TableHead>
+                                  <TableHead>Date</TableHead>
+                                  <TableHead className="w-[50px]"></TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {expensesList.map((expense) => {
+                                  const categoryInfo = EXPENSE_CATEGORIES.find(c => c.value === expense.category);
+                                  return (
+                                    <TableRow key={expense.id} data-testid={`row-expense-${expense.id}`}>
+                                      <TableCell className="font-medium">{expense.serviceName}</TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryInfo?.color }} />
+                                          {categoryInfo?.label || expense.category}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="font-medium text-red-600">
+                                        {formatCurrency(expense.amount)}
+                                      </TableCell>
+                                      <TableCell className="text-muted-foreground">
+                                        {expense.billingPeriod || "-"}
+                                        {expense.isRecurring && <Badge variant="secondary" className="ml-2 text-xs">Recurring</Badge>}
+                                      </TableCell>
+                                      <TableCell>{format(new Date(expense.expenseDate), "MMM d, yyyy")}</TableCell>
+                                      <TableCell>
+                                        <Button size="icon" variant="ghost" onClick={() => deleteExpenseMutation.mutate(expense.id)} disabled={deleteExpenseMutation.isPending} data-testid={`button-delete-expense-${expense.id}`}>
+                                          <Trash2 className="w-4 h-4 text-destructive" />
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          <div className="md:hidden space-y-2">
+                            {expensesList.map((expense) => {
+                              const categoryInfo = EXPENSE_CATEGORIES.find(c => c.value === expense.category);
+                              return (
+                                <div key={expense.id} className="p-3 rounded-lg border bg-card flex items-center justify-between gap-2" data-testid={`row-expense-${expense.id}`}>
+                                  <div className="min-w-0 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium">{expense.serviceName}</span>
+                                      <span className="text-sm font-medium text-red-600">{formatCurrency(expense.amount)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <Badge variant="outline" className="text-[10px] flex items-center gap-1">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: categoryInfo?.color }} />
                                         {categoryInfo?.label || expense.category}
                                       </Badge>
-                                    </TableCell>
-                                    <TableCell className="font-medium text-red-600">
-                                      {formatCurrency(expense.amount)}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                      {expense.billingPeriod || "-"}
-                                      {expense.isRecurring && <Badge variant="secondary" className="ml-2 text-xs">Recurring</Badge>}
-                                    </TableCell>
-                                    <TableCell>{format(new Date(expense.expenseDate), "MMM d, yyyy")}</TableCell>
-                                    <TableCell>
-                                      <Button size="icon" variant="ghost" onClick={() => deleteExpenseMutation.mutate(expense.id)} disabled={deleteExpenseMutation.isPending} data-testid={`button-delete-expense-${expense.id}`}>
-                                        <Trash2 className="w-4 h-4 text-destructive" />
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
+                                      <span className="text-[10px] text-muted-foreground">{expense.billingPeriod || "-"}</span>
+                                      {expense.isRecurring && <Badge variant="secondary" className="text-[10px]">Recurring</Badge>}
+                                    </div>
+                                  </div>
+                                  <Button size="icon" variant="ghost" className="flex-shrink-0 h-8 w-8" onClick={() => deleteExpenseMutation.mutate(expense.id)} disabled={deleteExpenseMutation.isPending} data-testid={`button-delete-expense-${expense.id}`}>
+                                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </ScrollArea>
                       )}
                     </CardContent>
@@ -2468,34 +2609,55 @@ export default function OwnerPanel() {
                         </div>
                       ) : (
                         <ScrollArea className="h-[300px]">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>User</TableHead>
-                                <TableHead>Plan</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Date</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {revenueList.map((rev) => (
-                                <TableRow key={rev.id} data-testid={`row-revenue-${rev.id}`}>
-                                  <TableCell className="font-medium">{rev.userEmail || "Unknown"}</TableCell>
-                                  <TableCell>
-                                    <Badge variant={rev.plan === "premium" ? "default" : "secondary"}>
-                                      {rev.plan === "premium" ? "Business" : rev.plan === "pro" ? "Pro" : "Free"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className={`font-medium ${Number(rev.amount) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                    {formatCurrency(rev.amount)}
-                                  </TableCell>
-                                  <TableCell className="text-muted-foreground capitalize">{rev.type}</TableCell>
-                                  <TableCell>{format(new Date(rev.revenueDate), "MMM d, yyyy")}</TableCell>
+                          <div className="hidden md:block">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>User</TableHead>
+                                  <TableHead>Plan</TableHead>
+                                  <TableHead>Amount</TableHead>
+                                  <TableHead>Type</TableHead>
+                                  <TableHead>Date</TableHead>
                                 </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                              </TableHeader>
+                              <TableBody>
+                                {revenueList.map((rev) => (
+                                  <TableRow key={rev.id} data-testid={`row-revenue-${rev.id}`}>
+                                    <TableCell className="font-medium">{rev.userEmail || "Unknown"}</TableCell>
+                                    <TableCell>
+                                      <Badge variant={rev.plan === "premium" ? "default" : "secondary"}>
+                                        {rev.plan === "premium" ? "Business" : rev.plan === "pro" ? "Pro" : "Free"}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className={`font-medium ${Number(rev.amount) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                      {formatCurrency(rev.amount)}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground capitalize">{rev.type}</TableCell>
+                                    <TableCell>{format(new Date(rev.revenueDate), "MMM d, yyyy")}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          <div className="md:hidden space-y-2">
+                            {revenueList.map((rev) => (
+                              <div key={rev.id} className="p-3 rounded-lg border bg-card" data-testid={`row-revenue-${rev.id}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-medium truncate">{rev.userEmail || "Unknown"}</span>
+                                  <span className={`text-sm font-medium flex-shrink-0 ${Number(rev.amount) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                    {formatCurrency(rev.amount)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant={rev.plan === "premium" ? "default" : "secondary"} className="text-[10px]">
+                                    {rev.plan === "premium" ? "Business" : rev.plan === "pro" ? "Pro" : "Free"}
+                                  </Badge>
+                                  <span className="text-[10px] text-muted-foreground capitalize">{rev.type}</span>
+                                  <span className="text-[10px] text-muted-foreground">{format(new Date(rev.revenueDate), "MMM d")}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </ScrollArea>
                       )}
                     </CardContent>
@@ -2530,37 +2692,40 @@ export default function OwnerPanel() {
                           className="p-4 border rounded-lg space-y-3"
                           data-testid={`testimonial-${testimonial.id}`}
                         >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium" data-testid={`text-email-${testimonial.id}`}>{testimonial.userEmail}</span>
-                                {testimonial.isFounder && (
-                                  <Badge variant="secondary">Founder</Badge>
-                                )}
-                                <Badge 
-                                  variant={
-                                    testimonial.status === "approved" ? "default" :
-                                    testimonial.status === "denied" ? "destructive" : "outline"
-                                  }
-                                  data-testid={`status-${testimonial.id}`}
-                                >
-                                  {testimonial.status}
-                                </Badge>
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <span className="font-medium text-sm truncate" data-testid={`text-email-${testimonial.id}`}>{testimonial.userEmail}</span>
+                                  {testimonial.isFounder && (
+                                    <Badge variant="secondary" className="text-[10px]">Founder</Badge>
+                                  )}
+                                  <Badge 
+                                    variant={
+                                      testimonial.status === "approved" ? "default" :
+                                      testimonial.status === "denied" ? "destructive" : "outline"
+                                    }
+                                    className="text-[10px]"
+                                    data-testid={`status-${testimonial.id}`}
+                                  >
+                                    {testimonial.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex gap-0.5 mb-2" data-testid={`rating-stars-${testimonial.id}`}>
+                                  {[...Array(testimonial.rating)].map((_, i) => (
+                                    <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-yellow-500 text-yellow-500" />
+                                  ))}
+                                  {[...Array(5 - testimonial.rating)].map((_, i) => (
+                                    <Star key={`empty-${i}`} className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                                  ))}
+                                </div>
+                                <p className="text-sm text-muted-foreground">"{testimonial.content}"</p>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Submitted {format(new Date(testimonial.createdAt), "MMM d, yyyy")}
+                                </p>
                               </div>
-                              <div className="flex gap-0.5 mb-2" data-testid={`rating-stars-${testimonial.id}`}>
-                                {[...Array(testimonial.rating)].map((_, i) => (
-                                  <Star key={i} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                                ))}
-                                {[...Array(5 - testimonial.rating)].map((_, i) => (
-                                  <Star key={`empty-${i}`} className="w-4 h-4 text-muted-foreground" />
-                                ))}
-                              </div>
-                              <p className="text-muted-foreground">"{testimonial.content}"</p>
-                              <p className="text-xs text-muted-foreground mt-2">
-                                Submitted {format(new Date(testimonial.createdAt), "MMM d, yyyy")}
-                              </p>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 flex-wrap">
                               {testimonial.status !== "approved" && (
                                 <Button
                                   size="sm"
@@ -2608,17 +2773,20 @@ export default function OwnerPanel() {
           <TabsContent value="notes">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Owner Notes</CardTitle>
-                    <CardDescription>Personal notes and reminders</CardDescription>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <CardTitle className="text-base sm:text-lg">Owner Notes</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Personal notes and reminders</CardDescription>
                   </div>
                   <Button
+                    size="sm"
                     onClick={() => setShowAddNoteForm(!showAddNoteForm)}
                     data-testid="button-add-note"
+                    className="flex-shrink-0"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Note
+                    <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Add Note</span>
+                    <span className="sm:hidden">Add</span>
                   </Button>
                 </div>
               </CardHeader>
@@ -2949,34 +3117,72 @@ export default function OwnerPanel() {
                     </div>
                   ) : (
                     <ScrollArea className="h-[500px]">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Timestamp</TableHead>
-                            <TableHead>Provider</TableHead>
-                            <TableHead>Endpoint</TableHead>
-                            <TableHead>Status Code</TableHead>
-                            <TableHead>Severity</TableHead>
-                            <TableHead>Error Message</TableHead>
-                            <TableHead>Resolved</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {apiHealthLogs.map((log) => (
-                            <TableRow key={log.id} data-testid={`row-log-${log.id}`}>
-                              <TableCell className="text-xs whitespace-nowrap">
-                                {format(new Date(log.createdAt), "MMM d, h:mm a")}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{log.provider}</Badge>
-                              </TableCell>
-                              <TableCell className="text-sm">{log.endpoint}</TableCell>
-                              <TableCell>
-                                <span className="font-mono text-sm">{log.statusCode}</span>
-                              </TableCell>
-                              <TableCell>
+                      <div className="hidden md:block">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Timestamp</TableHead>
+                              <TableHead>Provider</TableHead>
+                              <TableHead>Endpoint</TableHead>
+                              <TableHead>Status Code</TableHead>
+                              <TableHead>Severity</TableHead>
+                              <TableHead>Error Message</TableHead>
+                              <TableHead>Resolved</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {apiHealthLogs.map((log) => (
+                              <TableRow key={log.id} data-testid={`row-log-${log.id}`}>
+                                <TableCell className="text-xs whitespace-nowrap">
+                                  {format(new Date(log.createdAt), "MMM d, h:mm a")}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{log.provider}</Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">{log.endpoint}</TableCell>
+                                <TableCell>
+                                  <span className="font-mono text-sm">{log.statusCode}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    className={
+                                      log.severity === "critical"
+                                        ? "bg-purple-500 text-white"
+                                        : log.severity === "error"
+                                          ? "bg-red-500 text-white"
+                                          : log.severity === "warning"
+                                            ? "bg-yellow-500 text-white"
+                                            : "bg-blue-500 text-white"
+                                    }
+                                  >
+                                    {log.severity}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="max-w-[200px] truncate text-sm">
+                                  {log.errorMessage}
+                                </TableCell>
+                                <TableCell>
+                                  {log.resolved ? (
+                                    <Badge variant="secondary" className="bg-green-500 text-white">
+                                      Resolved
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline">Open</Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="md:hidden space-y-2">
+                        {apiHealthLogs.map((log) => (
+                          <div key={log.id} className="p-3 rounded-lg border bg-card space-y-1.5" data-testid={`row-log-${log.id}`}>
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5">
+                                <Badge variant="outline" className="text-[10px]">{log.provider}</Badge>
                                 <Badge
-                                  className={
+                                  className={`text-[10px] ${
                                     log.severity === "critical"
                                       ? "bg-purple-500 text-white"
                                       : log.severity === "error"
@@ -2984,27 +3190,24 @@ export default function OwnerPanel() {
                                         : log.severity === "warning"
                                           ? "bg-yellow-500 text-white"
                                           : "bg-blue-500 text-white"
-                                  }
+                                  }`}
                                 >
                                   {log.severity}
                                 </Badge>
-                              </TableCell>
-                              <TableCell className="max-w-[200px] truncate text-sm">
-                                {log.errorMessage}
-                              </TableCell>
-                              <TableCell>
-                                {log.resolved ? (
-                                  <Badge variant="secondary" className="bg-green-500 text-white">
-                                    Resolved
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline">Open</Badge>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                                <span className="font-mono text-xs">{log.statusCode}</span>
+                              </div>
+                              {log.resolved ? (
+                                <Badge variant="secondary" className="bg-green-500 text-white text-[10px]">Resolved</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px]">Open</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs font-medium">{log.endpoint}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{log.errorMessage}</p>
+                            <p className="text-[10px] text-muted-foreground">{format(new Date(log.createdAt), "MMM d, h:mm a")}</p>
+                          </div>
+                        ))}
+                      </div>
                     </ScrollArea>
                   )}
                 </CardContent>

@@ -609,3 +609,11 @@ body {
   animation: mobileSlideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
