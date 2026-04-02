@@ -558,9 +558,8 @@ export function ComposeDialog({
   const [previousBody, setPreviousBody] = useState("");
 
   const stripHtmlTags = (html: string) => {
-    const tmp = document.createElement("div");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    return doc.body.textContent || "";
   };
 
   const getUserContent = () => {
