@@ -3652,50 +3652,59 @@ JSON response only:
         return res.json(dbParsed);
       }
 
-      const cleanBody = stripEmailNoise(body).substring(0, 4000);
+      const cleanBody = stripEmailNoise(body).substring(0, 8000);
 
       const completion = await openai.chat.completions.create({
         model: getAiModel(userPlan),
         messages: [
           {
             role: "system",
-            content: `You are an email summarization assistant. Analyze the email and provide:
-1. A brief 1-2 sentence summary of what the email is about
-2. Up to 3 key points from the email
-3. Any action items or things that require a response
+            content: `You are an email summarization assistant. Read the ENTIRE email thoroughly from beginning to end, then provide a comprehensive analysis.
 
 Respond with valid JSON only:
 {
-  "summary": "Brief summary of the email",
-  "keyPoints": ["Key point 1", "Key point 2"],
+  "summary": "A clear 2-4 sentence summary covering the full scope of the email — not just the opening, but the main points throughout",
+  "keyPoints": ["Key point 1", "Key point 2", "Key point 3"],
   "actionItems": ["Action item if any"]
 }
 
 Rules:
-- Be concise and clear
-- Focus on the most important information
+- Read and consider ALL content in the email, not just the first paragraph
+- The summary MUST reflect the complete email — cover the main topic, supporting details, and conclusion/request
+- Include up to 5 key points that capture the most important information from different parts of the email
+- Action items should include anything that needs a response, decision, or follow-up
 - If there are no action items, return an empty array
-- If there are no notable key points, return fewer or none`,
+- If there are no notable key points, return fewer or none
+- Be concise but thorough — do not skip over content in the middle or end of the email`,
           },
           {
             role: "user",
-            content: `Subject: ${subject || "(No subject)"}\n\nBody:\n${cleanBody}`,
+            content: `Subject: ${subject || "(No subject)"}\n\nEmail body:\n${cleanBody}`,
           },
         ],
         temperature: 0.3,
-        max_tokens: 500,
+        max_tokens: 800,
       });
 
       const responseText = completion.choices[0]?.message?.content || "{}";
       let parsed = { summary: "", keyPoints: [] as string[], actionItems: [] as string[] };
 
       try {
-        parsed = JSON.parse(
-          responseText.replace(/```json\n?|\n?```/g, "").trim(),
-        );
+        let jsonStr = responseText.replace(/```json\n?|\n?```/g, "").trim();
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        const raw = JSON.parse(jsonStr);
+        parsed = {
+          summary: raw.summary || "",
+          keyPoints: Array.isArray(raw.keyPoints) ? raw.keyPoints.filter((p: unknown) => typeof p === "string" && p.trim()) : [],
+          actionItems: Array.isArray(raw.actionItems) ? raw.actionItems.filter((a: unknown) => typeof a === "string" && a.trim()) : [],
+        };
+        if (!parsed.summary) {
+          parsed.summary = "Unable to summarize this email.";
+        }
       } catch {
         parsed = {
-          summary: "Unable to summarize this email.",
+          summary: responseText.length > 20 ? responseText.slice(0, 300) : "Unable to summarize this email.",
           keyPoints: [],
           actionItems: [],
         };

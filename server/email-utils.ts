@@ -2,12 +2,20 @@ export function stripHtml(html: string): string {
   let text = html;
   text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
   text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
+  text = text.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, "");
   text = text.replace(/<!--[\s\S]*?-->/g, "");
   text = text.replace(/<br\s*\/?>/gi, "\n");
   text = text.replace(/<\/p>/gi, "\n\n");
   text = text.replace(/<\/div>/gi, "\n");
   text = text.replace(/<\/li>/gi, "\n");
+  text = text.replace(/<\/h[1-6]>/gi, "\n\n");
   text = text.replace(/<\/tr>/gi, "\n");
+  text = text.replace(/<\/td>/gi, " | ");
+  text = text.replace(/<\/th>/gi, " | ");
+  text = text.replace(/<hr[^>]*\/?>/gi, "\n---\n");
+  text = text.replace(/<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, "$2 ($1)");
+  text = text.replace(/<img[^>]*alt=["']([^"']+)["'][^>]*\/?>/gi, "[$1]");
+  text = text.replace(/<img[^>]*\/?>/gi, "");
   text = text.replace(/<[^>]+>/g, "");
   text = text.replace(/&nbsp;/gi, " ");
   text = text.replace(/&amp;/gi, "&");
@@ -15,8 +23,25 @@ export function stripHtml(html: string): string {
   text = text.replace(/&gt;/gi, ">");
   text = text.replace(/&quot;/gi, '"');
   text = text.replace(/&#39;/gi, "'");
+  text = text.replace(/&rsquo;/gi, "'");
+  text = text.replace(/&lsquo;/gi, "'");
+  text = text.replace(/&rdquo;/gi, '"');
+  text = text.replace(/&ldquo;/gi, '"');
+  text = text.replace(/&mdash;/gi, "—");
+  text = text.replace(/&ndash;/gi, "–");
+  text = text.replace(/&hellip;/gi, "...");
+  text = text.replace(/&#(\d+);/gi, (_, code) => {
+    const num = parseInt(code, 10);
+    return num > 0 && num < 65536 ? String.fromCharCode(num) : "";
+  });
+  text = text.replace(/&#x([0-9a-f]+);/gi, (_, code) => {
+    const num = parseInt(code, 16);
+    return num > 0 && num < 65536 ? String.fromCharCode(num) : "";
+  });
+  text = text.replace(/\| *\| */g, "| ");
   text = text.replace(/\n{3,}/g, "\n\n");
   text = text.replace(/[ \t]+/g, " ");
+  text = text.replace(/^ +| +$/gm, "");
   return text.trim();
 }
 
