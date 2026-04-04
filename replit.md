@@ -49,6 +49,7 @@ Preferred communication style: Simple, everyday language.
 ### Authentication & User Flow
 - **Authentication**: Session-based auth with `express-session`, scrypt hashing for passwords.
 - **OAuth**: Secure state tokens for Google/Microsoft.
+- **Password Reset**: Token-based flow via `password_reset_tokens` table. User enters email on `/forgot-password`, server sends reset link (1hr expiry) via Resend if account exists (always returns same response for security). Reset page at `/reset-password?token=...` validates token and allows new password. Routes: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `GET /api/auth/validate-reset-token`.
 - **User Flow**: Login/Register → Plan Selection → AI Preferences → Email Connection → Inbox.
 - **Security**: `requireAuth` middleware for protected routes.
 

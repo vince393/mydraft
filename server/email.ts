@@ -378,6 +378,81 @@ export async function getResendStats(): Promise<{ sent: number; delivered: numbe
   } catch (error) { console.error('Error fetching Resend stats:', error); return null; }
 }
 
+export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean> {
+  const content = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding-bottom:24px;">
+          <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15)); display:inline-block; line-height:48px; text-align:center;">
+            <span style="font-size:20px; color:#3b82f6;">&#128274;</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding-bottom:8px;">
+          <p style="margin:0; font-size:18px; font-weight:600; color:#f0f0f5; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            Reset your password
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding-bottom:28px;">
+          <p style="margin:0; font-size:14px; color:#71717a; line-height:1.6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            We received a request to reset the password for your MyDraft account. Click the button below to choose a new password.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding-bottom:28px;">
+          <a href="${resetUrl}" style="display:inline-block; padding:12px 32px; background:linear-gradient(135deg, #3b82f6, #6366f1); color:#ffffff; text-decoration:none; border-radius:10px; font-size:14px; font-weight:600; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            Reset Password
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto; background-color:#0a0a0f; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0;">
+            <tr>
+              <td style="padding:10px 16px;">
+                <p style="margin:0; font-size:12px; color:#52525b; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+                  This link expires in <span style="color:#71717a;">1 hour</span>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding-top:20px;">
+          <p style="margin:0; font-size:12px; color:#3f3f46; line-height:1.5; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+          </p>
+        </td>
+      </tr>
+    </table>`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [to],
+      subject: 'Reset your MyDraft password',
+      html: emailWrapper(content),
+      text: `Reset your MyDraft password. Click this link to reset your password: ${resetUrl}. This link expires in 1 hour. If you didn't request this, you can safely ignore this email.`,
+    });
+
+    if (error) {
+      console.error('Failed to send password reset email:', error);
+      return false;
+    }
+
+    console.log(`Password reset email sent to ${to}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    return false;
+  }
+}
+
 export async function sendVerificationEmail(to: string, code: string, type: 'signup' | 'login' | 'action'): Promise<boolean> {
   let subject: string;
   let bodyText: string;

@@ -17,7 +17,7 @@ import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
-import { sendVerificationEmail } from "./email";
+import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
 import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
 import { stripEmailNoise, stripHtml } from "./email-utils";
@@ -993,6 +993,85 @@ export async function registerRoutes(
       }
       res.json({ success: true });
     });
+  });
+
+  app.post("/api/auth/forgot-password", passwordResetLimiter, async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await storage.getUserByEmail(normalizedEmail);
+
+      if (!user) {
+        return res.json({ message: "If an account with that email exists, we've sent a password reset link." });
+      }
+
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+      await storage.createPasswordResetToken(user.id, token, expiresAt);
+
+      const baseUrl = process.env.APP_BASE_URL
+        || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}` : `https://${req.headers.host || "localhost:5000"}`);
+      const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+
+      await sendPasswordResetEmail(normalizedEmail, resetUrl);
+
+      return res.json({ message: "If an account with that email exists, we've sent a password reset link." });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      return res.json({ message: "If an account with that email exists, we've sent a password reset link." });
+    }
+  });
+
+  app.post("/api/auth/reset-password", passwordResetLimiter, async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ error: "Invalid reset link" });
+      }
+      if (!password || typeof password !== "string" || password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      const resetToken = await storage.getPasswordResetToken(token);
+
+      if (!resetToken || resetToken.used || new Date() > resetToken.expiresAt) {
+        return res.status(400).json({ error: "This reset link is invalid or has expired. Please request a new one." });
+      }
+
+      const hashedPassword = await hashPassword(password);
+      await storage.updateUser(resetToken.userId, { password: hashedPassword });
+      await storage.markPasswordResetTokenUsed(token);
+      await storage.invalidatePasswordResetTokens(resetToken.userId);
+      await storage.deleteAllUserSessions(resetToken.userId).catch(() => {});
+
+      return res.json({ message: "Password has been reset successfully. You can now sign in." });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      return res.status(500).json({ error: "Something went wrong. Please try again." });
+    }
+  });
+
+  app.get("/api/auth/validate-reset-token", async (req, res) => {
+    try {
+      const token = req.query.token as string;
+      if (!token) {
+        return res.status(400).json({ valid: false });
+      }
+
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken || resetToken.used || new Date() > resetToken.expiresAt) {
+        return res.json({ valid: false });
+      }
+
+      return res.json({ valid: true });
+    } catch (error) {
+      return res.json({ valid: false });
+    }
   });
 
   // Linked accounts API (account switching)

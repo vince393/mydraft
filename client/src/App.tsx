@@ -63,6 +63,8 @@ import { useMemo, Component, type ReactNode, type ErrorInfo } from "react";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 const LoginPage = lazy(() => import("@/pages/login"));
+const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
 const LandingPage = lazy(() => import("@/pages/landing"));
 const PublicPricingPage = lazy(() => import("@/pages/public-pricing"));
 const ProductPage = lazy(() => import("@/pages/product"));
@@ -361,6 +363,14 @@ function AppRoutes() {
         <PublicRoute redirectIfAuthenticated={true}>
           <LoginPage />
         </PublicRoute>
+      </Route>
+      <Route path="/forgot-password">
+        <PublicRoute redirectIfAuthenticated={true}>
+          <ForgotPasswordPage />
+        </PublicRoute>
+      </Route>
+      <Route path="/reset-password">
+        <ResetPasswordPage />
       </Route>
       <Route path="/pricing">
         <PublicPricingPage />
