@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "pZx9Q2Sl0PMm0hPh-T8eV"
+uri = "file://.local/mobile-app-prompt.md"
+type = "text"
+title = "MyDraft Mobile App Prompt"
