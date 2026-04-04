@@ -12,3 +12,9 @@ id = "g_wo-TWP_2ecX-yOrgAv9"
 uri = "file://.local/plans-stripe-prompt.md"
 type = "text"
 title = "MyDraft Plans & Stripe Prompt"
+
+[[outputs]]
+id = "drkCZrzoofD-x1qM4jG9X"
+uri = "file://.local/api-connection-prompt.md"
+type = "text"
+title = "MyDraft API Connection Prompt (for Mobile App)"
