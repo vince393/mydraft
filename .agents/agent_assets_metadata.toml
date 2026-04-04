@@ -6,3 +6,9 @@ id = "pZx9Q2Sl0PMm0hPh-T8eV"
 uri = "file://.local/mobile-app-prompt.md"
 type = "text"
 title = "MyDraft Mobile App Prompt"
+
+[[outputs]]
+id = "g_wo-TWP_2ecX-yOrgAv9"
+uri = "file://.local/plans-stripe-prompt.md"
+type = "text"
+title = "MyDraft Plans & Stripe Prompt"
