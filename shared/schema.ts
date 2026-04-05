@@ -183,6 +183,10 @@ export const emailAccounts = pgTable("email_accounts", {
   accessToken: text("access_token").notNull(),
   refreshToken: text("refresh_token").notNull(),
   tokenExpiresAt: timestamp("token_expires_at"),
+  imapHost: text("imap_host"),
+  imapPort: integer("imap_port"),
+  smtpHost: text("smtp_host"),
+  smtpPort: integer("smtp_port"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });

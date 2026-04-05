@@ -2207,29 +2207,29 @@ Return ONLY valid JSON, no other text.`;
 
       const encryptedConfig = encryptImapConfig(config);
 
+      const accountData = {
+        provider: "imap" as const,
+        email,
+        accessToken: encryptedConfig,
+        refreshToken: "imap",
+        tokenExpiresAt: null,
+        imapHost: finalImapHost,
+        imapPort: finalImapPort,
+        smtpHost: finalSmtpHost,
+        smtpPort: finalSmtpPort,
+      };
+
       if (existingAccount) {
-        await storage.updateEmailAccount(userId, {
-          provider: "imap",
-          email,
-          accessToken: encryptedConfig,
-          refreshToken: "imap",
-          tokenExpiresAt: null,
-        });
+        await storage.updateEmailAccount(userId, accountData);
       } else {
-        await storage.createEmailAccount({
-          userId,
-          provider: "imap",
-          email,
-          accessToken: encryptedConfig,
-          refreshToken: "imap",
-          tokenExpiresAt: null,
-        });
+        await storage.createEmailAccount({ userId, ...accountData });
       }
 
       res.json({ connected: true, email, provider: "imap" });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("IMAP connect error:", error);
-      res.status(500).json({ error: error.message || "Failed to connect IMAP account" });
+      const errMsg = error instanceof Error ? error.message : "Failed to connect IMAP account";
+      res.status(500).json({ error: errMsg });
     }
   });
 

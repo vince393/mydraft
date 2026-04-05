@@ -66,7 +66,7 @@ export default function ConnectEmailPage() {
 
   const connectImapMutation = useMutation({
     mutationFn: async () => {
-      const body: any = { email: imapEmail, password: imapPassword };
+      const body: Record<string, string | number> = { email: imapEmail, password: imapPassword };
       if (showAdvanced || !detectedProvider) {
         if (imapHost) body.imapHost = imapHost;
         if (imapPort) body.imapPort = parseInt(imapPort, 10);
@@ -79,7 +79,7 @@ export default function ConnectEmailPage() {
     onSuccess: () => {
       setLocation("/inbox");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       setImapError(error.message || "Failed to connect. Check your credentials and try again.");
     },
   });

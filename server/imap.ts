@@ -68,17 +68,18 @@ const FOLDER_MAP: Record<string, string[]> = {
 };
 
 function encodeImapId(mailboxPath: string, uid: number): string {
-  return `${mailboxPath}:${uid}`;
+  const encodedPath = Buffer.from(mailboxPath).toString("base64url");
+  return `imap-${encodedPath}-${uid}`;
 }
 
 function decodeImapId(compositeId: string): { mailboxPath: string; uid: string } {
-  const lastColon = compositeId.lastIndexOf(":");
-  if (lastColon === -1) {
+  const match = compositeId.match(/^imap-(.+)-(\d+)$/);
+  if (!match) {
     return { mailboxPath: "INBOX", uid: compositeId };
   }
   return {
-    mailboxPath: compositeId.substring(0, lastColon),
-    uid: compositeId.substring(lastColon + 1),
+    mailboxPath: Buffer.from(match[1], "base64url").toString("utf-8"),
+    uid: match[2],
   };
 }
 
