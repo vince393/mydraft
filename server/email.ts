@@ -453,6 +453,68 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   }
 }
 
+export async function sendTrialEndedEmail(to: string, loginUrl: string): Promise<boolean> {
+  const content = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding-bottom:24px;">
+          <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15)); display:inline-block; line-height:48px; text-align:center;">
+            <span style="font-size:20px; color:#3b82f6;">&#9203;</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding-bottom:8px;">
+          <p style="margin:0; font-size:18px; font-weight:600; color:#f0f0f5; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            Your free trial has ended
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding-bottom:28px;">
+          <p style="margin:0; font-size:14px; color:#71717a; line-height:1.6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            Your 14-day MyDraft trial has ended. To continue using MyDraft, log in and choose a plan — you can continue with a free plan or upgrade to Pro or Business for full access.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding-bottom:28px;">
+          <a href="${loginUrl}" style="display:inline-block; padding:12px 32px; background:linear-gradient(135deg, #3b82f6, #6366f1); color:#ffffff; text-decoration:none; border-radius:10px; font-size:14px; font-weight:600; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            Choose a Plan
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td align="center">
+          <p style="margin:0; font-size:12px; color:#3f3f46; line-height:1.5; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            If you have any questions, reply to this email and we'll be happy to help.
+          </p>
+        </td>
+      </tr>
+    </table>`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [to],
+      subject: 'Your MyDraft free trial has ended',
+      html: emailWrapper(content),
+      text: `Your 14-day MyDraft trial has ended. To continue using MyDraft, visit ${loginUrl} and choose a plan. You can continue with a free plan or upgrade for full access.`,
+    });
+
+    if (error) {
+      console.error('Failed to send trial ended email:', error);
+      return false;
+    }
+
+    console.log(`Trial ended email sent to ${to}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending trial ended email:', error);
+    return false;
+  }
+}
+
 export async function sendVerificationEmail(to: string, code: string, type: 'signup' | 'login' | 'action'): Promise<boolean> {
   let subject: string;
   let bodyText: string;

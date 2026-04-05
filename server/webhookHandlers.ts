@@ -79,6 +79,7 @@ export class WebhookHandlers {
           await storage.updateUser(user.id, {
             stripeSubscriptionId: subscriptionId,
             plan,
+            trialEndsAt: null,
           });
           console.log(`[Webhook] Updated user ${user.id} to plan ${plan} (status: ${status})`);
 

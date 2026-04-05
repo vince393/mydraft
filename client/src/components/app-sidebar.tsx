@@ -189,6 +189,8 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     connectedEmail: string | null;
     connectedProvider: string | null;
     plan: string | null;
+    trialActive?: boolean;
+    trialDaysRemaining?: number;
   } | null }>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
@@ -213,6 +215,11 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const sidebarUserName = rawUserName.length > 20 ? rawUserName.slice(0, 20) : rawUserName;
   const sidebarUserInitials = sidebarUserName.slice(0, 2).toUpperCase();
   const sidebarUserPlan = userData?.user?.plan || "free";
+  const trialActive = userData?.user?.trialActive || false;
+  const trialDaysRemaining = userData?.user?.trialDaysRemaining || 0;
+  const planDisplayText = trialActive
+    ? `${sidebarUserPlan} · ${trialDaysRemaining}d left`
+    : sidebarUserPlan;
 
   // Fetch custom folders from API
   const { data: customFoldersData } = useQuery<{ folders: CustomFolder[] }>({
@@ -799,7 +806,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                 </Avatar>
                 <div className="flex flex-col items-start min-w-0 overflow-hidden">
                   <span className="text-sm font-medium truncate w-full max-w-[100px]">{sidebarUserName}</span>
-                  <span className="text-[10px] text-muted-foreground/60 capitalize">{sidebarUserPlan}</span>
+                  <span className="text-[10px] text-muted-foreground/60 capitalize">{planDisplayText}</span>
                 </div>
               </button>
               <Sheet open={showMobileProfileMenu} onOpenChange={setShowMobileProfileMenu}>
@@ -890,7 +897,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     </Avatar>
                     <div className="flex flex-col items-start min-w-0 overflow-hidden">
                       <span className="text-sm font-medium truncate w-full max-w-[100px]">{sidebarUserName}</span>
-                      <span className="text-[10px] text-muted-foreground/60 capitalize">{sidebarUserPlan}</span>
+                      <span className="text-[10px] text-muted-foreground/60 capitalize">{planDisplayText}</span>
                     </div>
                   </button>
                 ) : (

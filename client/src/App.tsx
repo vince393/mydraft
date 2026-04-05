@@ -86,6 +86,7 @@ const RefundPolicyPage = lazy(() => import("@/pages/refund-policy"));
 const TestimonialRewardPage = lazy(() => import("@/pages/testimonial-reward"));
 const CampaignsPage = lazy(() => import("@/pages/campaigns"));
 const CheckoutPage = lazy(() => import("@/pages/checkout"));
+const TrialExpiredPage = lazy(() => import("@/pages/trial-expired"));
 
 function PageLoader() {
   return (
@@ -317,8 +318,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Redirect to="/select-plan" />;
   }
 
-  // Step 3: Email connection is now optional - users can skip and connect later
-  // The "Connect Account" button in the inbox header will remind them
+  // Step 3: Trial expired — force plan selection before accessing app
+  if (user.trialExpired && location !== "/trial-expired" && location !== "/select-plan" && !location.startsWith("/checkout")) {
+    return <Redirect to="/trial-expired" />;
+  }
+
+  // Step 4: Email connection is now optional - users can skip and connect later
 
   return <>{children}</>;
 }
@@ -416,6 +421,11 @@ function AppRoutes() {
       <Route path="/onboarding">
         <ProtectedRoute>
           <OnboardingPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/trial-expired">
+        <ProtectedRoute>
+          <TrialExpiredPage />
         </ProtectedRoute>
       </Route>
       <Route path="/checkout">

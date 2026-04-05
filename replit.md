@@ -50,7 +50,8 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Session-based auth with `express-session`, scrypt hashing for passwords.
 - **OAuth**: Secure state tokens for Google/Microsoft.
 - **Password Reset**: Token-based flow via `password_reset_tokens` table. User enters email on `/forgot-password`, server sends reset link (1hr expiry) via Resend if account exists (always returns same response for security). Reset page at `/reset-password?token=...` validates token and allows new password. Routes: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `GET /api/auth/validate-reset-token`.
-- **User Flow**: Login/Register → Plan Selection → AI Preferences → Email Connection → Inbox.
+- **Free Trial**: 14-day no-credit-card trial for Pro/Business plans. DB fields: `trial_ends_at`, `has_used_trial` on users table. Trial starts during onboarding when user picks Pro/Business. One trial per account lifetime (prevents re-trial even after cancellation). When trial expires: app gates access via `/trial-expired` page, user must choose Free (no card), Pro, or Business (Stripe checkout, no Stripe trial). Trial expiry email sent automatically via hourly check. Sidebar shows "Pro · Xd left" during active trial.
+- **User Flow**: Login/Register → AI Preferences → Plan Selection (Free or Trial) → Email Connection → Inbox. If trial expires: → `/trial-expired` gate → must choose plan.
 - **Security**: `requireAuth` middleware for protected routes.
 
 ### Analytics & Owner Dashboard

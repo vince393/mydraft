@@ -60,7 +60,7 @@ const basePlans = [
       "Team or shared inboxes",
       "API access & integrations",
       "Priority support",
-      "14-day free trial",
+      "14-day free trial — no credit card",
     ],
   },
   {
@@ -78,7 +78,7 @@ const basePlans = [
       "Custom AI training",
       "Team collaboration",
       "Dedicated account manager",
-      "14-day free trial",
+      "14-day free trial — no credit card",
     ],
   },
 ];
@@ -254,9 +254,14 @@ export default function OnboardingPage() {
     },
   });
 
-  const selectFreePlanMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/user/plan", { plan: "free" });
+  const selectPlanMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      const internalPlan = planId === "business" ? "premium" : planId;
+      const body: any = { plan: internalPlan };
+      if (internalPlan === "pro" || internalPlan === "premium") {
+        body.startTrial = true;
+      }
+      const response = await apiRequest("POST", "/api/user/plan", body);
       return response.json();
     },
     onSuccess: () => completeOnboardingMutation.mutate(),
@@ -265,30 +270,12 @@ export default function OnboardingPage() {
     },
   });
 
-  const prepareCheckoutMutation = useMutation({
-    mutationFn: async ({ plan, interval }: { plan: string; interval: "annual" | "monthly" }) => {
-      await apiRequest("POST", "/api/user/onboarding", { aiPreferences: preferences });
-      if (preferences.enableTwoFactor) {
-        try { await apiRequest("POST", "/api/settings/2fa/toggle", { enable: true }); } catch (err) { console.error("Failed to enable 2FA:", err); }
-      }
-      return { plan, interval };
-    },
-    onSuccess: ({ plan, interval }) => setLocation(`/checkout?plan=${plan}&interval=${interval}`),
-    onError: (error: Error) => {
-      toast({ title: "Failed to save preferences", description: error.message, variant: "destructive" });
-    },
-  });
-
   const handlePlanSelect = (planId: string) => {
     setPreferences({ ...preferences, selectedPlan: planId });
-    if (planId === "free") {
-      selectFreePlanMutation.mutate();
-    } else {
-      prepareCheckoutMutation.mutate({ plan: planId, interval: billingInterval });
-    }
+    selectPlanMutation.mutate(planId);
   };
 
-  const isPlanLoading = selectFreePlanMutation.isPending || prepareCheckoutMutation.isPending || completeOnboardingMutation.isPending;
+  const isPlanLoading = selectPlanMutation.isPending || completeOnboardingMutation.isPending;
 
   const toggleFeature = (feature: string) => {
     setPreferences((prev) => ({
@@ -764,8 +751,8 @@ function PlanSelectionStep({
                       <Rocket className="w-3.5 h-3.5 text-violet-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">14 days free, cancel anytime</p>
-                      <p className="text-xs text-muted-foreground/50">No commitment required</p>
+                      <p className="text-sm font-medium">14 days free, no credit card needed</p>
+                      <p className="text-xs text-muted-foreground/50">No commitment, cancel anytime</p>
                     </div>
                   </div>
                 )}

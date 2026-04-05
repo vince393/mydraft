@@ -17,7 +17,7 @@ import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
-import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
+import { sendVerificationEmail, sendPasswordResetEmail, sendTrialEndedEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
 import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
 import { stripEmailNoise, stripHtml } from "./email-utils";
@@ -156,6 +156,13 @@ async function requireOwner(req: Request, res: Response, next: NextFunction) {
 }
 
 // Plan-based gating middleware
+function getEffectivePlan(user: any): string {
+  if (user.trialEndsAt && new Date(user.trialEndsAt) <= new Date() && !user.stripeSubscriptionId) {
+    return "free";
+  }
+  return user.plan || "free";
+}
+
 async function requirePlan(minPlan: "pro" | "premium") {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.session.userId) {
@@ -167,19 +174,21 @@ async function requirePlan(minPlan: "pro" | "premium") {
       return res.status(401).json({ error: "User not found" });
     }
 
+    const effectivePlan = getEffectivePlan(user);
+
     const planHierarchy: Record<string, number> = {
       free: 0,
       pro: 1,
       premium: 2,
     };
-    const userPlanLevel = planHierarchy[user.plan || "free"] || 0;
+    const userPlanLevel = planHierarchy[effectivePlan] || 0;
     const requiredLevel = planHierarchy[minPlan];
 
     if (userPlanLevel < requiredLevel) {
       return res.status(403).json({
         error: "Plan upgrade required",
         requiredPlan: minPlan,
-        currentPlan: user.plan || "free",
+        currentPlan: effectivePlan,
       });
     }
 
@@ -187,10 +196,10 @@ async function requirePlan(minPlan: "pro" | "premium") {
   };
 }
 
-// Helper to get user plan
 async function getUserPlan(userId: string): Promise<string> {
   const user = await storage.getUser(userId);
-  return user?.plan || "free";
+  if (!user) return "free";
+  return getEffectivePlan(user);
 }
 
 // Check if user has at least the specified plan
@@ -1375,13 +1384,26 @@ export async function registerRoutes(
 
     const emailAccount = await storage.getEmailAccount(user.id);
 
+    const now = new Date();
+    const trialEndsAt = user.trialEndsAt ? new Date(user.trialEndsAt) : null;
+    const trialActive = trialEndsAt !== null && trialEndsAt > now && !user.stripeSubscriptionId;
+    const trialExpired = trialEndsAt !== null && trialEndsAt <= now && !user.stripeSubscriptionId;
+    const trialDaysRemaining = trialActive
+      ? Math.max(0, Math.ceil((trialEndsAt!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
+
+    let effectivePlan = user.plan;
+    if (trialExpired && !user.stripeSubscriptionId) {
+      effectivePlan = "free";
+    }
+
     res.json({
       user: {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
         avatarUrl: user.avatarUrl,
-        plan: user.plan,
+        plan: effectivePlan,
         onboardingCompleted: user.onboardingCompleted,
         aiPreferences: user.aiPreferences,
         emailConnected: !!emailAccount,
@@ -1390,6 +1412,11 @@ export async function registerRoutes(
         createdAt: user.createdAt,
         emailSignature: user.emailSignature,
         signatureEnabled: user.signatureEnabled,
+        trialActive,
+        trialExpired,
+        trialDaysRemaining,
+        trialEndsAt: user.trialEndsAt,
+        hasUsedTrial: user.hasUsedTrial,
       },
     });
   });
@@ -1436,53 +1463,71 @@ export async function registerRoutes(
   // Actual paid plan activation happens through Stripe webhooks after payment
   app.post("/api/user/plan", requireAuth, async (req, res) => {
     try {
-      const { plan } = req.body;
+      const { plan, startTrial } = req.body;
       if (!plan || !["free", "pro", "premium"].includes(plan)) {
         return res.status(400).json({ error: "Invalid plan" });
       }
 
       const currentUser = await storage.getUser(req.session.userId!);
-      const oldPlan = currentUser?.plan || "free";
+      if (!currentUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const oldPlan = currentUser.plan || "free";
 
-      // SECURITY: Only allow direct plan changes to "free" (downgrade/cancel)
-      // Upgrades to pro/premium must go through Stripe checkout and webhooks
-      if (plan !== "free" && plan !== oldPlan) {
+      if (startTrial && (plan === "pro" || plan === "premium")) {
+        if (currentUser.hasUsedTrial) {
+          return res.status(403).json({
+            error: "You've already used your free trial. Please subscribe to continue with a paid plan.",
+            alreadyUsedTrial: true,
+          });
+        }
+
+        const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        const user = await storage.updateUser(req.session.userId!, {
+          plan: plan as any,
+          trialEndsAt,
+          hasUsedTrial: true,
+        });
+
+        await storage.createActivityLog(
+          user!.id,
+          user!.email,
+          "trial_started",
+          `Started 14-day free trial of ${plan === "premium" ? "Business" : "Pro"} plan`,
+        );
+
+        return res.json({
+          user: { id: user!.id, email: user!.email, plan: user!.plan },
+          trialEndsAt: trialEndsAt.toISOString(),
+        });
+      }
+
+      if (plan !== "free" && plan !== oldPlan && !startTrial) {
         return res.status(403).json({
-          error:
-            "Plan upgrades require payment. Please use the checkout process.",
+          error: "Plan upgrades require payment. Please use the checkout process.",
           requiresPayment: true,
           requestedPlan: plan,
         });
       }
 
-      // Only process if downgrading to free
       if (plan === "free" && oldPlan !== "free") {
-        // Cancel the Stripe subscription if one exists
         if (currentUser?.stripeSubscriptionId) {
           try {
-            const { getUncachableStripeClient } = await import(
-              "./stripeClient"
-            );
+            const { getUncachableStripeClient } = await import("./stripeClient");
             const stripe = await getUncachableStripeClient();
             await stripe.subscriptions.cancel(currentUser.stripeSubscriptionId);
           } catch (stripeErr: any) {
-            console.error(
-              "Error canceling Stripe subscription during plan downgrade:",
-              stripeErr,
-            );
-            // If Stripe cancel fails, don't downgrade - keep subscription consistent
-            return res
-              .status(500)
-              .json({
-                error:
-                  "Failed to cancel your subscription. Please try again or contact support.",
-              });
+            console.error("Error canceling Stripe subscription during plan downgrade:", stripeErr);
+            return res.status(500).json({
+              error: "Failed to cancel your subscription. Please try again or contact support.",
+            });
           }
         }
 
         const user = await storage.updateUser(req.session.userId!, {
           plan: "free",
           stripeSubscriptionId: null,
+          trialEndsAt: null,
         });
 
         await storage.createActivityLog(
@@ -1497,12 +1542,21 @@ export async function registerRoutes(
         });
       }
 
-      // No change needed
+      if (plan === "free") {
+        const user = await storage.updateUser(req.session.userId!, {
+          plan: "free",
+          trialEndsAt: null,
+        });
+        return res.json({
+          user: { id: user!.id, email: user!.email, plan: user!.plan },
+        });
+      }
+
       res.json({
         user: {
-          id: currentUser!.id,
-          email: currentUser!.email,
-          plan: currentUser!.plan,
+          id: currentUser.id,
+          email: currentUser.email,
+          plan: currentUser.plan,
         },
       });
     } catch (error) {
@@ -1535,6 +1589,44 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to save onboarding" });
     }
   });
+
+  const checkTrialExpiries = async () => {
+    try {
+      const result = await db.execute(sql`
+        SELECT id, email, trial_ends_at, plan FROM users 
+        WHERE trial_ends_at IS NOT NULL 
+        AND trial_ends_at <= NOW() 
+        AND stripe_subscription_id IS NULL
+        AND id NOT IN (
+          SELECT user_id FROM activity_logs WHERE action_type = 'trial_expired_email_sent'
+        )
+      `);
+      const expiredUsers = result.rows || [];
+      for (const user of expiredUsers) {
+        try {
+          const baseUrl = process.env.APP_BASE_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+          const sent = await sendTrialEndedEmail(user.email as string, `${baseUrl}/trial-expired`);
+          if (sent) {
+            await storage.createActivityLog(
+              user.id as string,
+              user.email as string,
+              "trial_expired_email_sent",
+              "Trial ended email sent automatically",
+            );
+            console.log(`Trial expired email sent to ${user.email}`);
+          } else {
+            console.error(`Failed to send trial expired email to ${user.email} — will retry next cycle`);
+          }
+        } catch (emailErr) {
+          console.error(`Failed to send trial expired email to ${user.email}:`, emailErr);
+        }
+      }
+    } catch (err) {
+      console.error("Error checking trial expiries:", err);
+    }
+  };
+  setInterval(checkTrialExpiries, 60 * 60 * 1000);
+  setTimeout(checkTrialExpiries, 10000);
 
   app.get("/api/settings", requireAuth, async (req, res) => {
     try {
@@ -9001,11 +9093,9 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           });
         }
 
-        // NEW SUBSCRIPTION: Create with 14-day trial
         const subscription = await stripe.subscriptions.create({
           customer: user.stripeCustomerId,
           items: [{ price: price.id }],
-          trial_period_days: 14,
           default_payment_method: paymentMethodId,
           metadata: { userId: user.id, plan: internalPlan },
         });
@@ -9014,6 +9104,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           stripeSubscriptionId: subscription.id,
           plan: internalPlan as any,
           onboardingCompleted: true,
+          trialEndsAt: null,
         });
 
         res.json({
@@ -9122,8 +9213,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         });
       }
 
-      // Create checkout session with trial: 14 days for yearly, 7 days for monthly
-      const trialDays = interval === "annual" ? 14 : 7;
       const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
 
       console.log(
@@ -9143,7 +9232,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         mode: "subscription",
         billing_address_collection: "required",
         subscription_data: {
-          trial_period_days: trialDays,
           metadata: {
             userId: String(user.id),
             plan: plan === "business" ? "premium" : plan,

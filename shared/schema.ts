@@ -79,6 +79,8 @@ export const users = pgTable("users", {
   referralCode: varchar("referral_code", { length: 12 }).unique(),
   referredByUserId: varchar("referred_by_user_id"),
   proCreditsUntil: timestamp("pro_credits_until"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  hasUsedTrial: boolean("has_used_trial").default(false).notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
