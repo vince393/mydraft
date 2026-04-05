@@ -178,7 +178,7 @@ export type InsertNylasGrant = z.infer<typeof insertNylasGrantSchema>;
 export const emailAccounts = pgTable("email_accounts", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull(),
-  provider: text("provider").$type<"google" | "microsoft">().notNull(),
+  provider: text("provider").$type<"google" | "microsoft" | "imap">().notNull(),
   email: text("email").notNull(),
   accessToken: text("access_token").notNull(),
   refreshToken: text("refresh_token").notNull(),

@@ -1671,12 +1671,14 @@ function EmailSettingsTab({ settings }: { settings: Settings }) {
               <div className="flex items-center gap-3">
                 {settings.connectedEmail.provider === "google" ? (
                   <SiGoogle className="w-4 h-4 text-foreground/70" />
-                ) : (
+                ) : settings.connectedEmail.provider === "microsoft" ? (
                   <Building2 className="w-4 h-4 text-foreground/70" />
+                ) : (
+                  <Mail className="w-4 h-4 text-foreground/70" />
                 )}
                 <div>
                   <p className="text-sm font-medium text-foreground/90">{settings.connectedEmail.email}</p>
-                  <p className="text-[11px] text-muted-foreground/40 capitalize">{settings.connectedEmail.provider}</p>
+                  <p className="text-[11px] text-muted-foreground/40 capitalize">{settings.connectedEmail.provider === "imap" ? "IMAP" : settings.connectedEmail.provider}</p>
                 </div>
               </div>
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center gap-1">

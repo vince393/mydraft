@@ -44,11 +44,12 @@ Preferred communication style: Simple, everyday language.
 - **Drafts**: AI-generated replies.
 - **NylasGrants**: OAuth tokens (legacy).
 - **Conversations/Messages**: Chat history.
-- **Email Accounts**: Stores provider, tokens, expiry for connected email accounts.
+- **Email Accounts**: Stores provider (google, microsoft, imap), tokens/credentials, expiry for connected email accounts. IMAP credentials are encrypted at rest using AES-256-GCM.
 
 ### Authentication & User Flow
 - **Authentication**: Session-based auth with `express-session`, scrypt hashing for passwords.
-- **OAuth**: Secure state tokens for Google/Microsoft.
+- **OAuth**: Secure state tokens for Google/Microsoft. IMAP/SMTP uses direct credentials (app passwords).
+- **Email Providers**: Gmail (Google OAuth), Outlook (Microsoft OAuth), and generic IMAP/SMTP (Yahoo, iCloud, AOL, Zoho, Fastmail, custom domains, etc.). IMAP provider auto-detects well-known servers from email domain. Custom server settings available via advanced form. SSRF protection blocks private/internal IPs. Implementation: `server/imap.ts` (ImapFlow + Nodemailer), `server/gmail.ts`, `server/microsoft.ts`. All implement `IEmailProvider` interface from `server/email-provider.ts`.
 - **Password Reset**: Token-based flow via `password_reset_tokens` table. User enters email on `/forgot-password`, server sends reset link (1hr expiry) via Resend if account exists (always returns same response for security). Reset page at `/reset-password?token=...` validates token and allows new password. Routes: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `GET /api/auth/validate-reset-token`.
 - **Free Trial**: 14-day no-credit-card trial for Pro/Business plans. DB fields: `trial_ends_at`, `has_used_trial` on users table. Trial starts during onboarding when user picks Pro/Business. One trial per account lifetime (prevents re-trial even after cancellation). When trial expires: app gates access via `/trial-expired` page, user must choose Free (no card), Pro, or Business (Stripe checkout, no Stripe trial). Trial expiry email sent automatically via hourly check. Sidebar shows "Pro · Xd left" during active trial.
 - **User Flow**: Login/Register → AI Preferences → Plan Selection (Free or Trial) → Email Connection → Inbox. If trial expires: → `/trial-expired` gate → must choose plan.

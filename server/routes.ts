@@ -9,6 +9,7 @@ import { wrapOpenAIWithTracking } from "./ai-cost-tracker";
 
 import { gmailProvider } from "./gmail";
 import { microsoftProvider } from "./microsoft";
+import { imapProvider, testImapConnection, testSmtpConnection, detectProvider, WELL_KNOWN_PROVIDERS, encryptImapConfig, validateHost } from "./imap";
 import type { IEmailProvider, EmailListItem, EmailDetail, GetMessagesOptions } from "./email-provider";
 import { getRecentHealthLogs, getUnresolvedIssues, resolveIssue, resolveAllIssues, getHealthSummary } from "./api-health";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -218,9 +219,19 @@ function getEmailRedirectUri(req: any, provider: string): string {
   return `${protocol}://${host}/api/auth/${provider}/callback`;
 }
 
+function isExternalEmailId(id: string, account: any): boolean {
+  if (!account) return false;
+  if (account.provider === "imap") return true;
+  return id.length > 10 && !/^\d+$/.test(id);
+}
+
 async function getProviderAndToken(userId: string): Promise<{ provider: IEmailProvider; accessToken: string; account: any } | null> {
   const account = await storage.getEmailAccount(userId);
   if (!account) return null;
+
+  if (account.provider === "imap") {
+    return { provider: imapProvider, accessToken: account.accessToken, account };
+  }
 
   const isExpired = account.tokenExpiresAt && new Date(account.tokenExpiresAt).getTime() < Date.now() + 5 * 60 * 1000;
 
@@ -2121,6 +2132,107 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  app.get("/api/email/detect-provider", requireAuth, async (req, res) => {
+    try {
+      const email = req.query.email as string;
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ error: "Invalid email address" });
+      }
+      const detected = detectProvider(email);
+      if (detected) {
+        res.json({ detected: true, ...detected });
+      } else {
+        res.json({ detected: false });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to detect provider" });
+    }
+  });
+
+  app.post("/api/email/connect-imap", requireAuth, async (req, res) => {
+    try {
+      const { email, password, imapHost, imapPort, smtpHost, smtpPort } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      let finalImapHost = imapHost;
+      let finalImapPort = imapPort || 993;
+      let finalSmtpHost = smtpHost;
+      let finalSmtpPort = smtpPort || 465;
+
+      if (!finalImapHost || !finalSmtpHost) {
+        const detected = detectProvider(email);
+        if (detected) {
+          finalImapHost = finalImapHost || detected.imapHost;
+          finalImapPort = imapPort || detected.imapPort;
+          finalSmtpHost = finalSmtpHost || detected.smtpHost;
+          finalSmtpPort = smtpPort || detected.smtpPort;
+        } else {
+          return res.status(400).json({ error: "Could not auto-detect server settings. Please provide IMAP and SMTP server details manually." });
+        }
+      }
+
+      const imapHostValid = await validateHost(finalImapHost);
+      if (!imapHostValid.valid) {
+        return res.status(400).json({ error: `Invalid IMAP host: ${imapHostValid.error}` });
+      }
+      const smtpHostValid = await validateHost(finalSmtpHost);
+      if (!smtpHostValid.valid) {
+        return res.status(400).json({ error: `Invalid SMTP host: ${smtpHostValid.error}` });
+      }
+
+      const config = {
+        imapHost: finalImapHost,
+        imapPort: finalImapPort,
+        smtpHost: finalSmtpHost,
+        smtpPort: finalSmtpPort,
+        email,
+        password,
+      };
+
+      const imapTest = await testImapConnection(config);
+      if (!imapTest.success) {
+        return res.status(400).json({ error: `IMAP connection failed: ${imapTest.error}` });
+      }
+
+      const smtpTest = await testSmtpConnection(config);
+      if (!smtpTest.success) {
+        return res.status(400).json({ error: `SMTP connection failed: ${smtpTest.error}` });
+      }
+
+      const userId = req.session.userId!;
+      const existingAccount = await storage.getEmailAccount(userId);
+
+      const encryptedConfig = encryptImapConfig(config);
+
+      if (existingAccount) {
+        await storage.updateEmailAccount(userId, {
+          provider: "imap" as any,
+          email,
+          accessToken: encryptedConfig,
+          refreshToken: "imap",
+          tokenExpiresAt: null,
+        });
+      } else {
+        await storage.createEmailAccount({
+          userId,
+          provider: "imap",
+          email,
+          accessToken: encryptedConfig,
+          refreshToken: "imap",
+          tokenExpiresAt: null,
+        });
+      }
+
+      res.json({ connected: true, email, provider: "imap" });
+    } catch (error: any) {
+      console.error("IMAP connect error:", error);
+      res.status(500).json({ error: error.message || "Failed to connect IMAP account" });
+    }
+  });
+
   app.get("/api/auth/oauth/login", async (req, res) => {
     try {
       const provider = req.query.provider as string;
@@ -2649,7 +2761,7 @@ Return ONLY valid JSON, no other text.`;
       const id = req.params.id;
 
       const providerResult = await getProviderAndToken(req.session.userId!);
-      if (providerResult && id.length > 10) {
+      if (providerResult && isExternalEmailId(id, providerResult.account)) {
         const userId = req.session.userId!;
         const message = await providerResult.provider.getMessage(providerResult.accessToken, id);
         const localState = await storage.getLocalEmailState(userId, id);
@@ -2691,9 +2803,10 @@ Return ONLY valid JSON, no other text.`;
   app.patch("/api/emails/:id/read", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
-      const isExternalId = id.length > 10 && !/^\d+$/.test(id);
+      const account = await storage.getEmailAccount(req.session.userId!);
+      const isExternal = isExternalEmailId(id, account);
 
-      if (isExternalId) {
+      if (isExternal) {
         await storage.setLocalEmailReadStatus(req.session.userId!, id, true);
         return res.json({ success: true });
       }
@@ -2713,9 +2826,10 @@ Return ONLY valid JSON, no other text.`;
   app.patch("/api/emails/:id/unread", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
-      const isExternalId = id.length > 10 && !/^\d+$/.test(id);
+      const account = await storage.getEmailAccount(req.session.userId!);
+      const isExternal = isExternalEmailId(id, account);
 
-      if (isExternalId) {
+      if (isExternal) {
         await storage.setLocalEmailReadStatus(req.session.userId!, id, false);
         return res.json({ success: true });
       }
@@ -2747,12 +2861,12 @@ Return ONLY valid JSON, no other text.`;
         return res.status(400).json({ error: "Invalid folder" });
       }
 
-      const isExternalId = id.length > 10 && !/^\d+$/.test(id);
+      const account = await storage.getEmailAccount(userId);
+      const isExternal = isExternalEmailId(id, account);
 
-      if (isExternalId) {
+      if (isExternal) {
         await storage.setLocalEmailFolder(userId, id, folder);
 
-        // Return immediately for faster UX - record action asynchronously
         res.json({ success: true, folder });
 
         // Record action for AI learning in background (only for trash/archive)
@@ -2830,9 +2944,10 @@ Return ONLY valid JSON, no other text.`;
   app.delete("/api/emails/:id", requireAuth, async (req, res) => {
     try {
       const id = req.params.id;
-      const isExternalId = id.length > 10 && !/^\d+$/.test(id);
+      const account = await storage.getEmailAccount(req.session.userId!);
+      const isExternal = isExternalEmailId(id, account);
 
-      if (isExternalId) {
+      if (isExternal) {
         await storage.setLocalEmailFolder(req.session.userId!, id, "trash");
         return res.status(204).send();
       }
