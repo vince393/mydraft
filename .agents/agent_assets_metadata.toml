@@ -18,3 +18,9 @@ id = "drkCZrzoofD-x1qM4jG9X"
 uri = "file://.local/api-connection-prompt.md"
 type = "text"
 title = "MyDraft API Connection Prompt (for Mobile App)"
+
+[[outputs]]
+id = "6gj1EVpbccccPH2mABpr-"
+uri = "file://.local/swipe-email-prompt.md"
+type = "text"
+title = "Swipe Email Item — Full Implementation Prompt"
