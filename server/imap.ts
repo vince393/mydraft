@@ -67,7 +67,22 @@ const FOLDER_MAP: Record<string, string[]> = {
   archived: ["Archive", "All Mail", "[Gmail]/All Mail"],
 };
 
-function parseAddress(addr: any): { name: string; email: string } {
+function encodeImapId(mailboxPath: string, uid: number): string {
+  return `${mailboxPath}:${uid}`;
+}
+
+function decodeImapId(compositeId: string): { mailboxPath: string; uid: string } {
+  const lastColon = compositeId.lastIndexOf(":");
+  if (lastColon === -1) {
+    return { mailboxPath: "INBOX", uid: compositeId };
+  }
+  return {
+    mailboxPath: compositeId.substring(0, lastColon),
+    uid: compositeId.substring(lastColon + 1),
+  };
+}
+
+function parseAddress(addr: Array<{name?: string; address?: string}> | {name?: string; address?: string} | string | null | undefined): { name: string; email: string } {
   if (!addr) return { name: "Unknown", email: "" };
   if (Array.isArray(addr)) {
     const first = addr[0];
@@ -85,17 +100,13 @@ function parseAddress(addr: any): { name: string; email: string } {
   return { name: "Unknown", email: "" };
 }
 
-function addressListToEmails(addrList: any): string[] {
+function addressListToEmails(addrList: Array<{address?: string}> | null | undefined): string[] {
   if (!addrList) return [];
-  if (!Array.isArray(addrList)) addrList = [addrList];
+  const list = Array.isArray(addrList) ? addrList : [addrList];
   const result: string[] = [];
-  for (const group of addrList) {
+  for (const group of list) {
     if (group.address) {
       result.push(group.address);
-    } else if (Array.isArray(group)) {
-      for (const a of group) {
-        if (a.address) result.push(a.address);
-      }
     }
   }
   return result;
@@ -225,7 +236,7 @@ export const imapProvider: IEmailProvider = {
           const flags = msg.flags || new Set();
 
           messages.push({
-            id: String(msg.uid),
+            id: encodeImapId(mailboxPath, msg.uid),
             subject: msg.envelope?.subject || "(No Subject)",
             from: from.name || from.email,
             fromEmail: from.email,
@@ -249,8 +260,9 @@ export const imapProvider: IEmailProvider = {
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/list", 500, error.message, "error");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/list", 500, errMsg, "error");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -260,51 +272,37 @@ export const imapProvider: IEmailProvider = {
   async getMessage(accessToken: string, messageId: string): Promise<EmailDetail> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);
+    const { mailboxPath, uid } = decodeImapId(messageId);
 
     try {
-      const lock = await client.getMailboxLock("INBOX");
+      const lock = await client.getMailboxLock(mailboxPath);
       try {
-        let msgData: any = null;
+        let msgData: {
+          uid: number;
+          envelope?: {
+            from?: Array<{name?: string; address?: string}>;
+            to?: Array<{address?: string}>;
+            cc?: Array<{address?: string}>;
+            subject?: string;
+            date?: Date;
+            messageId?: string;
+          };
+          flags?: Set<string>;
+          source?: Buffer;
+        } | null = null;
 
-        const uid = parseInt(messageId, 10);
-        for await (const msg of client.fetch(String(uid), {
+        for await (const msg of client.fetch(uid, {
           envelope: true,
           flags: true,
           bodyStructure: true,
           source: true,
           uid: true,
         }, { uid: true })) {
-          msgData = msg;
+          msgData = msg as typeof msgData;
         }
 
         if (!msgData) {
-          const mailboxes = await client.list();
-          for (const mb of mailboxes) {
-            if (mb.path === "INBOX") continue;
-            try {
-              const otherLock = await client.getMailboxLock(mb.path);
-              try {
-                for await (const msg of client.fetch(String(uid), {
-                  envelope: true,
-                  flags: true,
-                  bodyStructure: true,
-                  source: true,
-                  uid: true,
-                }, { uid: true })) {
-                  msgData = msg;
-                }
-              } finally {
-                otherLock.release();
-              }
-              if (msgData) break;
-            } catch {
-              continue;
-            }
-          }
-        }
-
-        if (!msgData) {
-          throw new Error(`Message ${messageId} not found`);
+          throw new Error(`Message ${messageId} not found in ${mailboxPath}`);
         }
 
         const from = parseAddress(msgData.envelope?.from);
@@ -342,7 +340,7 @@ export const imapProvider: IEmailProvider = {
         await logApiHealth("imap", "messages/get", 200);
 
         return {
-          id: String(msgData.uid),
+          id: messageId,
           subject: msgData.envelope?.subject || "(No Subject)",
           from: from.name || from.email,
           fromEmail: from.email,
@@ -358,8 +356,9 @@ export const imapProvider: IEmailProvider = {
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/get", error.code || 500, error.message, "error");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/get", 500, errMsg, "error");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -382,7 +381,7 @@ export const imapProvider: IEmailProvider = {
     try {
       const formattedBody = formatEmailBody(params.body);
 
-      const mailOptions: any = {
+      const mailOptions: nodemailer.SendMailOptions = {
         from: config.email,
         to: params.to.join(", "),
         subject: params.subject,
@@ -406,8 +405,9 @@ export const imapProvider: IEmailProvider = {
 
       await transport.sendMail(mailOptions);
       await logApiHealth("imap", "messages/send", 200);
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/send", 500, error.message, "error");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/send", 500, errMsg, "error");
       throw error;
     } finally {
       transport.close();
@@ -417,15 +417,17 @@ export const imapProvider: IEmailProvider = {
   async markAsRead(accessToken: string, messageId: string): Promise<void> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);
+    const { mailboxPath, uid } = decodeImapId(messageId);
     try {
-      const lock = await client.getMailboxLock("INBOX");
+      const lock = await client.getMailboxLock(mailboxPath);
       try {
-        await client.messageFlagsAdd(messageId, ["\\Seen"], { uid: true });
+        await client.messageFlagsAdd(uid, ["\\Seen"], { uid: true });
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/flags", 500, error.message, "warning");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/flags", 500, errMsg, "warning");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -435,15 +437,17 @@ export const imapProvider: IEmailProvider = {
   async markAsUnread(accessToken: string, messageId: string): Promise<void> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);
+    const { mailboxPath, uid } = decodeImapId(messageId);
     try {
-      const lock = await client.getMailboxLock("INBOX");
+      const lock = await client.getMailboxLock(mailboxPath);
       try {
-        await client.messageFlagsRemove(messageId, ["\\Seen"], { uid: true });
+        await client.messageFlagsRemove(uid, ["\\Seen"], { uid: true });
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/flags", 500, error.message, "warning");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/flags", 500, errMsg, "warning");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -453,16 +457,18 @@ export const imapProvider: IEmailProvider = {
   async trashMessage(accessToken: string, messageId: string): Promise<void> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);
+    const { mailboxPath, uid } = decodeImapId(messageId);
     try {
-      const lock = await client.getMailboxLock("INBOX");
+      const lock = await client.getMailboxLock(mailboxPath);
       try {
         const trashPath = await findMailbox(client, FOLDER_MAP.trash);
-        await client.messageMove(messageId, trashPath, { uid: true });
+        await client.messageMove(uid, trashPath, { uid: true });
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/trash", 500, error.message, "error");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/trash", 500, errMsg, "error");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -472,16 +478,18 @@ export const imapProvider: IEmailProvider = {
   async archiveMessage(accessToken: string, messageId: string): Promise<void> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);
+    const { mailboxPath, uid } = decodeImapId(messageId);
     try {
-      const lock = await client.getMailboxLock("INBOX");
+      const lock = await client.getMailboxLock(mailboxPath);
       try {
         const archivePath = await findMailbox(client, FOLDER_MAP.archived);
-        await client.messageMove(messageId, archivePath, { uid: true });
+        await client.messageMove(uid, archivePath, { uid: true });
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/archive", 500, error.message, "error");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/archive", 500, errMsg, "error");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -491,16 +499,17 @@ export const imapProvider: IEmailProvider = {
   async moveToInbox(accessToken: string, messageId: string): Promise<void> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);
+    const { mailboxPath, uid } = decodeImapId(messageId);
     try {
-      const trashPath = await findMailbox(client, FOLDER_MAP.trash);
-      const lock = await client.getMailboxLock(trashPath);
+      const lock = await client.getMailboxLock(mailboxPath);
       try {
-        await client.messageMove(messageId, "INBOX", { uid: true });
+        await client.messageMove(uid, "INBOX", { uid: true });
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/move", 500, error.message, "error");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/move", 500, errMsg, "error");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -510,16 +519,18 @@ export const imapProvider: IEmailProvider = {
   async deleteMessage(accessToken: string, messageId: string): Promise<void> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);
+    const { mailboxPath, uid } = decodeImapId(messageId);
     try {
-      const lock = await client.getMailboxLock("INBOX");
+      const lock = await client.getMailboxLock(mailboxPath);
       try {
-        await client.messageFlagsAdd(messageId, ["\\Deleted"], { uid: true });
-        await client.messageDelete(messageId, { uid: true });
+        await client.messageFlagsAdd(uid, ["\\Deleted"], { uid: true });
+        await client.messageDelete(uid, { uid: true });
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/delete", 500, error.message, "error");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/delete", 500, errMsg, "error");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -529,19 +540,21 @@ export const imapProvider: IEmailProvider = {
   async toggleStar(accessToken: string, messageId: string, starred: boolean): Promise<void> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);
+    const { mailboxPath, uid } = decodeImapId(messageId);
     try {
-      const lock = await client.getMailboxLock("INBOX");
+      const lock = await client.getMailboxLock(mailboxPath);
       try {
         if (starred) {
-          await client.messageFlagsAdd(messageId, ["\\Flagged"], { uid: true });
+          await client.messageFlagsAdd(uid, ["\\Flagged"], { uid: true });
         } else {
-          await client.messageFlagsRemove(messageId, ["\\Flagged"], { uid: true });
+          await client.messageFlagsRemove(uid, ["\\Flagged"], { uid: true });
         }
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "messages/flags", 500, error.message, "warning");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/flags", 500, errMsg, "warning");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -555,14 +568,14 @@ export const imapProvider: IEmailProvider = {
   }> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);
+    const { mailboxPath, uid } = decodeImapId(messageId);
 
     try {
-      const lock = await client.getMailboxLock("INBOX");
+      const lock = await client.getMailboxLock(mailboxPath);
       try {
         let source: Buffer | null = null;
-        const uid = parseInt(messageId, 10);
-        for await (const msg of client.fetch(String(uid), { source: true, uid: true }, { uid: true })) {
-          source = msg.source as any;
+        for await (const msg of client.fetch(uid, { source: true, uid: true }, { uid: true })) {
+          source = msg.source as Buffer;
         }
 
         if (!source) throw new Error("Message not found");
@@ -587,8 +600,9 @@ export const imapProvider: IEmailProvider = {
       } finally {
         lock.release();
       }
-    } catch (error: any) {
-      await logApiHealth("imap", "attachments/get", 500, error.message, "error");
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "attachments/get", 500, errMsg, "error");
       throw error;
     } finally {
       await client.logout().catch(() => {});
@@ -601,8 +615,9 @@ export async function testImapConnection(config: ImapSmtpConfig): Promise<{ succ
     const client = await createImapConnection(config);
     await client.logout();
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message || "Failed to connect to IMAP server" };
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "Failed to connect to IMAP server";
+    return { success: false, error: errMsg };
   }
 }
 
@@ -612,7 +627,8 @@ export async function testSmtpConnection(config: ImapSmtpConfig): Promise<{ succ
     await transport.verify();
     transport.close();
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message || "Failed to connect to SMTP server" };
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "Failed to connect to SMTP server";
+    return { success: false, error: errMsg };
   }
 }

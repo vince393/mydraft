@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql, desc, eq } from "drizzle-orm";
-import { ownerNotes, pageViews, revenue, expenses } from "@shared/schema";
+import { ownerNotes, pageViews, revenue, expenses, type EmailAccount } from "@shared/schema";
 import OpenAI from "openai";
 import { wrapOpenAIWithTracking } from "./ai-cost-tracker";
 
@@ -219,13 +219,13 @@ function getEmailRedirectUri(req: any, provider: string): string {
   return `${protocol}://${host}/api/auth/${provider}/callback`;
 }
 
-function isExternalEmailId(id: string, account: any): boolean {
+function isExternalEmailId(id: string, account: EmailAccount | undefined): boolean {
   if (!account) return false;
   if (account.provider === "imap") return true;
   return id.length > 10 && !/^\d+$/.test(id);
 }
 
-async function getProviderAndToken(userId: string): Promise<{ provider: IEmailProvider; accessToken: string; account: any } | null> {
+async function getProviderAndToken(userId: string): Promise<{ provider: IEmailProvider; accessToken: string; account: EmailAccount } | null> {
   const account = await storage.getEmailAccount(userId);
   if (!account) return null;
 
@@ -2209,7 +2209,7 @@ Return ONLY valid JSON, no other text.`;
 
       if (existingAccount) {
         await storage.updateEmailAccount(userId, {
-          provider: "imap" as any,
+          provider: "imap",
           email,
           accessToken: encryptedConfig,
           refreshToken: "imap",
