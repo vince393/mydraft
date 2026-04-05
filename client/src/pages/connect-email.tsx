@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Loader2, ArrowRight, CheckCircle, Building2, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
-import { SiGoogle, SiYahoo } from "react-icons/si";
+import { SiGoogle } from "react-icons/si";
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 
