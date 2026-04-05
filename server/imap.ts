@@ -10,7 +10,6 @@ import type {
 } from "./email-provider";
 import {
   getAvatarColor,
-  stripHtml,
   sanitizeEmailHtml,
   formatEmailBody,
 } from "./email-provider";
@@ -41,8 +40,6 @@ export const WELL_KNOWN_PROVIDERS: Record<
   "zoho.com": { imapHost: "imap.zoho.com", imapPort: 993, smtpHost: "smtp.zoho.com", smtpPort: 465, name: "Zoho Mail" },
   "zohomail.com": { imapHost: "imap.zoho.com", imapPort: 993, smtpHost: "smtp.zoho.com", smtpPort: 465, name: "Zoho Mail" },
   "fastmail.com": { imapHost: "imap.fastmail.com", imapPort: 993, smtpHost: "smtp.fastmail.com", smtpPort: 465, name: "Fastmail" },
-  "protonmail.com": { imapHost: "127.0.0.1", imapPort: 1143, smtpHost: "127.0.0.1", smtpPort: 1025, name: "ProtonMail (Bridge)" },
-  "proton.me": { imapHost: "127.0.0.1", imapPort: 1143, smtpHost: "127.0.0.1", smtpPort: 1025, name: "ProtonMail (Bridge)" },
   "gmx.com": { imapHost: "imap.gmx.com", imapPort: 993, smtpHost: "mail.gmx.com", smtpPort: 465, name: "GMX Mail" },
   "gmx.net": { imapHost: "imap.gmx.net", imapPort: 993, smtpHost: "mail.gmx.net", smtpPort: 465, name: "GMX Mail" },
   "mail.com": { imapHost: "imap.mail.com", imapPort: 993, smtpHost: "smtp.mail.com", smtpPort: 465, name: "Mail.com" },

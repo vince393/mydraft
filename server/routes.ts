@@ -9,7 +9,7 @@ import { wrapOpenAIWithTracking } from "./ai-cost-tracker";
 
 import { gmailProvider } from "./gmail";
 import { microsoftProvider } from "./microsoft";
-import { imapProvider, testImapConnection, testSmtpConnection, detectProvider, WELL_KNOWN_PROVIDERS, encryptImapConfig, validateHost } from "./imap";
+import { imapProvider, testImapConnection, testSmtpConnection, detectProvider, encryptImapConfig, validateHost } from "./imap";
 import type { IEmailProvider, EmailListItem, EmailDetail, GetMessagesOptions } from "./email-provider";
 import { getRecentHealthLogs, getUnresolvedIssues, resolveIssue, resolveAllIssues, getHealthSummary } from "./api-health";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
