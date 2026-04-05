@@ -319,7 +319,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   // Step 3: Trial expired — force plan selection before accessing app
-  if (user.trialExpired && location !== "/trial-expired" && location !== "/select-plan" && !location.startsWith("/checkout")) {
+  if (user.trialExpired && location !== "/trial-expired" && location !== "/select-plan" && !location.startsWith("/checkout") && location !== "/connect-email") {
     return <Redirect to="/trial-expired" />;
   }
 
