@@ -12,7 +12,7 @@ import { microsoftProvider } from "./microsoft";
 import { imapProvider, testImapConnection, testSmtpConnection, detectProvider, encryptImapConfig, validateHost } from "./imap";
 import type { IEmailProvider, EmailListItem, EmailDetail, GetMessagesOptions } from "./email-provider";
 import { getRecentHealthLogs, getUnresolvedIssues, resolveIssue, resolveAllIssues, getHealthSummary } from "./api-health";
-import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
 import { z } from "zod";
@@ -137,12 +137,12 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
     const payload = verifyAccessToken(token);
     if (payload) {
       req.jwtUserId = payload.userId;
-      if (!req.session.userId) {
-        req.session.userId = payload.userId;
-      }
+      req.session.userId = payload.userId;
       return next();
     }
-    return res.status(401).json({ error: "Invalid or expired token" });
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
   }
 
   if (!req.session.userId) {
@@ -1078,7 +1078,6 @@ export async function registerRoutes(
         const verificationCode = await storage.createVerificationCode(normalizedEmail, "login");
         await sendVerificationEmail(normalizedEmail, verificationCode.code, "login");
 
-        const tempTokenId = generateTokenId();
         pending2FALogins.set(`mobile_${normalizedEmail}`, {
           userId: user.id,
           expiresAt: Date.now() + 10 * 60 * 1000,
@@ -1427,6 +1426,7 @@ export async function registerRoutes(
       await storage.markPasswordResetTokenUsed(token);
       await storage.invalidatePasswordResetTokens(resetToken.userId);
       await storage.deleteAllUserSessions(resetToken.userId).catch(() => {});
+      await storage.revokeAllUserRefreshTokens(resetToken.userId).catch(() => {});
 
       return res.json({ message: "Password has been reset successfully. You can now sign in." });
     } catch (error) {
@@ -2606,6 +2606,15 @@ Return ONLY valid JSON, no other text.`;
       const referralCode = req.query.ref as string | undefined;
       const platform = req.query.platform as string | undefined;
       const mobileRedirectUri = req.query.redirect_uri as string | undefined;
+
+      if (platform === "mobile" && mobileRedirectUri) {
+        const allowedSchemes = process.env.MOBILE_DEEP_LINK_SCHEMES?.split(",").map(s => s.trim()).filter(Boolean) || ["mydraft://"];
+        const isAllowedScheme = allowedSchemes.some(scheme => mobileRedirectUri.startsWith(scheme));
+        if (!isAllowedScheme) {
+          return res.status(400).json({ error: "Invalid redirect URI scheme" });
+        }
+      }
+
       pendingOAuthLoginStates.set(stateToken, {
         provider,
         expiresAt,

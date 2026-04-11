@@ -47,13 +47,15 @@ Preferred communication style: Simple, everyday language.
 - **Email Accounts**: Stores provider (google, microsoft, imap), tokens/credentials, expiry for connected email accounts. IMAP credentials are encrypted at rest using AES-256-GCM.
 
 ### Authentication & User Flow
-- **Authentication**: Session-based auth with `express-session`, scrypt hashing for passwords.
+- **Authentication**: Dual auth system — session-based auth with `express-session` for web, JWT Bearer token auth for mobile app. Both share the same user accounts, plans, and data. `requireAuth` middleware checks for `Authorization: Bearer <token>` header first, then falls back to session cookie.
+- **Mobile JWT Auth**: `server/jwt.ts` utility handles token signing/verification. Access tokens expire in 15 minutes, refresh tokens in 30 days. Refresh tokens stored in `refresh_tokens` DB table (hashed with SHA-256) for revocation support. Endpoints: `POST /api/auth/mobile/login`, `/register`, `/verify-registration`, `/verify-2fa`, `/refresh`, `/logout`. `GET /api/mobile/info` returns API version and endpoint list. OAuth login supports `platform=mobile&redirect_uri=...` query params to return JWT tokens via deep link redirect instead of setting session cookies. Env var: `JWT_SECRET`.
+- **CORS**: Configured in `server/index.ts` via `cors` package. Allows requests from `.replit.app`, `.replit.dev`, localhost, and any origins listed in `MOBILE_APP_ORIGINS` env var (comma-separated).
 - **OAuth**: Secure state tokens for Google/Microsoft. IMAP/SMTP uses direct credentials (app passwords).
 - **Email Providers**: Gmail (Google OAuth), Outlook (Microsoft OAuth), and generic IMAP/SMTP (Yahoo, iCloud, AOL, Zoho, Fastmail, custom domains, etc.). IMAP provider auto-detects well-known servers from email domain. Custom server settings available via advanced form. SSRF protection blocks private/internal IPs. Implementation: `server/imap.ts` (ImapFlow + Nodemailer), `server/gmail.ts`, `server/microsoft.ts`. All implement `IEmailProvider` interface from `server/email-provider.ts`.
 - **Password Reset**: Token-based flow via `password_reset_tokens` table. User enters email on `/forgot-password`, server sends reset link (1hr expiry) via Resend if account exists (always returns same response for security). Reset page at `/reset-password?token=...` validates token and allows new password. Routes: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `GET /api/auth/validate-reset-token`.
 - **Free Trial**: 14-day no-credit-card trial for Pro/Business plans. DB fields: `trial_ends_at`, `has_used_trial` on users table. Trial starts during onboarding when user picks Pro/Business. One trial per account lifetime (prevents re-trial even after cancellation). When trial expires: app gates access via `/trial-expired` page, user must choose Free (no card), Pro, or Business (Stripe checkout, no Stripe trial). Trial expiry email sent automatically via hourly check. Sidebar shows "Pro · Xd left" during active trial.
 - **User Flow**: Login/Register → AI Preferences → Plan Selection (Free or Trial) → Email Connection → Inbox. If trial expires: → `/trial-expired` gate → must choose plan.
-- **Security**: `requireAuth` middleware for protected routes.
+- **Security**: `requireAuth` middleware for protected routes (supports both session and JWT auth).
 
 ### Analytics & Owner Dashboard
 - **Visitor Tracking**: `page_views` table records session-based page visits with geo-location (country, region, city via ip-api.com).
@@ -85,6 +87,8 @@ Preferred communication style: Simple, everyday language.
 - `@tanstack/react-query`: Server state management.
 - `drizzle-orm` / `drizzle-zod`: ORM and schema validation.
 - `express` / `express-session`: HTTP server and session management.
+- `jsonwebtoken`: JWT signing and verification for mobile API auth.
+- `cors`: Cross-origin request handling for mobile app.
 - `openai`: OpenAI API client.
 - `wouter`: Client-side routing.
 - Radix UI primitives: Accessible UI components.

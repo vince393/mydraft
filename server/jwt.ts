@@ -1,7 +1,10 @@
 import jwt from "jsonwebtoken";
 import { randomBytes, createHash } from "crypto";
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "fallback-jwt-secret";
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET or SESSION_SECRET environment variable is required");
+}
 
 const ACCESS_TOKEN_EXPIRY = "15m";
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;

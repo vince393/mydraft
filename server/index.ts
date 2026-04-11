@@ -94,14 +94,14 @@ app.use(cors({
     const allowedPatterns = [
       /\.replit\.app$/,
       /\.replit\.dev$/,
-      /localhost/,
-      /127\.0\.0\.1/,
+      /^https?:\/\/localhost(:\d+)?$/,
+      /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
     ];
-    const mobileOrigins = process.env.MOBILE_APP_ORIGINS?.split(",").map(o => o.trim()) || [];
+    const mobileOrigins = process.env.MOBILE_APP_ORIGINS?.split(",").map(o => o.trim()).filter(Boolean) || [];
     if (allowedPatterns.some(p => p.test(origin)) || mobileOrigins.includes(origin)) {
       return callback(null, true);
     }
-    callback(null, true);
+    callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -174,7 +174,9 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      const sensitiveAuthPaths = ["/api/auth/mobile/", "/api/auth/verify-2fa", "/api/auth/verify-registration"];
+      const isSensitive = sensitiveAuthPaths.some(p => path.startsWith(p));
+      if (capturedJsonResponse && !isSensitive) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
