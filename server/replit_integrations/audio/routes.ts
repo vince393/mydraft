@@ -165,8 +165,12 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         return res.json({ audio: cached.audio, audioFormat: "wav", cached: true });
       }
 
-      const cleanText = stripEmailNoise(text).slice(0, 2000);
-      const audio = await textToSpeech(cleanText, selectedVoice);
+      let cleanText = stripEmailNoise(text).slice(0, 2000);
+      if (!cleanText.trim()) {
+        cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 2000);
+      }
+      console.log(`[TTS] Request: voice=${selectedVoice}, textLength=${text.length}, cleanLength=${cleanText.length}`);
+      const audio = await textToSpeech(cleanText || text.slice(0, 2000), selectedVoice);
 
       if (audio) {
         ttsCache.set(cacheKey, { audio, timestamp: now });
@@ -196,8 +200,11 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       const { text, emailId, voice } = req.body;
 
       if (!text || typeof text !== "string") {
+        console.log("[TTS Stream] No text provided");
         return res.status(400).json({ error: "Text required" });
       }
+
+      console.log(`[TTS Stream] Request: voice=${voice}, emailId=${emailId}, textLength=${text.length}`);
 
       const validVoices = ["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"];
       const selectedVoice = voice && validVoices.includes(voice) ? voice : "nova";
@@ -209,12 +216,21 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       const now = Date.now();
       const cached = ttsCache.get(cacheKey);
       if (cached && now - cached.timestamp < TTS_CACHE_TTL_MS) {
+        console.log("[TTS Stream] Serving from cache");
         const buf = Buffer.from(cached.audio, "base64");
         res.set({ "Content-Type": "audio/wav", "Content-Length": String(buf.length) });
         return res.end(buf);
       }
 
-      const cleanText = stripEmailNoise(text).slice(0, 2000);
+      let cleanText = stripEmailNoise(text).slice(0, 2000);
+      if (!cleanText.trim()) {
+        cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 2000);
+      }
+      if (!cleanText.trim()) {
+        console.log("[TTS Stream] No readable text after cleaning");
+        return res.status(400).json({ error: "No readable text found" });
+      }
+      console.log(`[TTS Stream] Clean text length: ${cleanText.length}`);
       const audioBuffer = await textToSpeechStream(cleanText, selectedVoice);
 
       if (!audioBuffer) {

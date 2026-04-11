@@ -381,38 +381,83 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     }
     if (!email) return;
 
-    let bodyText = extractReadableText(email.body || "");
+    let bodyText = "";
+    try {
+      bodyText = extractReadableText(email.body || "");
+    } catch {
+      bodyText = "";
+    }
+
     if (!bodyText && email.preview) {
       bodyText = email.preview.trim();
     }
+
+    if (!bodyText) {
+      try {
+        bodyText = stripHtmlToPlainText(email.body || "").trim();
+      } catch {
+        bodyText = "";
+      }
+    }
+
     const subjectText = email.subject?.trim() || "";
+    const senderText = email.sender ? `From ${email.sender}.` : "";
 
     if (!bodyText && !subjectText) {
       toast({ title: "Nothing to read", description: "This email has no readable text content.", variant: "destructive" });
       return;
     }
 
-    const fullText = subjectText ? `${subjectText}. ${bodyText}` : bodyText;
+    const parts = [senderText, subjectText, bodyText].filter(Boolean);
+    const fullText = parts.join(". ");
     const voice = currentVoice;
-
-    const audio = new Audio();
-    audio.preload = "auto";
-    readAloudAudioRef.current = audio;
-
-    try {
-      await audio.play().catch(() => {});
-    } catch {}
-    audio.pause();
-    audio.currentTime = 0;
 
     readAloudStoppedRef.current = false;
     setReadAloudState("loading");
     const abortController = new AbortController();
     readAloudAbortRef.current = abortController;
 
-    try {
-      let audioUrl: string;
+    const playAudioBlob = async (blob: Blob): Promise<void> => {
+      const audioUrl = URL.createObjectURL(blob);
+      readAloudUrlRef.current = audioUrl;
 
+      const audio = new Audio();
+      audio.preload = "auto";
+      readAloudAudioRef.current = audio;
+
+      audio.onended = () => stopReadAloud();
+      audio.onerror = () => {
+        if (readAloudStoppedRef.current) return;
+        stopReadAloud();
+        toast({ title: "Read Aloud failed", description: "Could not play the audio.", variant: "destructive" });
+      };
+
+      audio.src = audioUrl;
+
+      await new Promise<void>((resolve, reject) => {
+        audio.oncanplaythrough = () => resolve();
+        audio.onerror = () => reject(new Error("Audio decode failed"));
+        setTimeout(() => resolve(), 3000);
+      });
+
+      if (readAloudStoppedRef.current) {
+        URL.revokeObjectURL(audioUrl);
+        return;
+      }
+
+      await audio.play();
+      setReadAloudState("playing");
+    };
+
+    const base64ToBlob = (b64: string, format: string): Blob => {
+      const mimeType = format === "wav" ? "audio/wav" : "audio/mpeg";
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: mimeType });
+    };
+
+    try {
       const streamResponse = await fetch("/api/voice/tts/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -422,88 +467,48 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
       });
 
       if (!streamResponse.ok) {
-        throw new Error("TTS request failed");
+        throw new Error(`TTS stream returned ${streamResponse.status}`);
       }
 
       const contentType = streamResponse.headers.get("content-type") || "";
 
       if (contentType.includes("audio")) {
         const blob = await streamResponse.blob();
-        audioUrl = URL.createObjectURL(blob);
+        if (blob.size < 100) throw new Error("Audio too small");
+        await playAudioBlob(blob);
       } else {
         const data = await streamResponse.json();
-        if (data.audio) {
-          const fmt = data.audioFormat === "wav" ? "audio/wav" : "audio/mpeg";
-          const binary = atob(data.audio);
-          const bytes = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          const blob = new Blob([bytes], { type: fmt });
-          audioUrl = URL.createObjectURL(blob);
+        if (data.audio && data.audio.length > 100) {
+          const blob = base64ToBlob(data.audio, data.audioFormat || "wav");
+          await playAudioBlob(blob);
         } else {
-          throw new Error("No audio data received");
+          throw new Error("No audio data in stream response");
         }
       }
-
-      if (readAloudStoppedRef.current) {
-        URL.revokeObjectURL(audioUrl);
-        return;
-      }
-
-      readAloudUrlRef.current = audioUrl;
-      audio.src = audioUrl;
-
-      audio.onended = () => {
-        stopReadAloud();
-      };
-
-      audio.onerror = () => {
-        if (readAloudStoppedRef.current) return;
-        stopReadAloud();
-        toast({ title: "Read Aloud failed", description: "Could not play the audio.", variant: "destructive" });
-      };
-
-      await audio.play();
-      setReadAloudState("playing");
     } catch (err: any) {
-      if (err?.name === "AbortError") return;
-      console.error("Read aloud error:", err);
+      if (err?.name === "AbortError" || readAloudStoppedRef.current) return;
+
+      try {
+        const fallbackRes = await fetch("/api/voice/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ text: fullText, emailId, voice }),
+        });
+        if (fallbackRes.ok) {
+          const data = await fallbackRes.json();
+          if (data.audio && data.audio.length > 100) {
+            const blob = base64ToBlob(data.audio, data.audioFormat || "wav");
+            await playAudioBlob(blob);
+            return;
+          }
+        }
+      } catch {}
 
       if (!readAloudStoppedRef.current) {
-        try {
-          const fallbackRes = await fetch("/api/voice/tts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ text: fullText, emailId, voice }),
-          });
-          if (fallbackRes.ok) {
-            const data = await fallbackRes.json();
-            if (data.audio) {
-              const fmt = data.audioFormat === "wav" ? "audio/wav" : "audio/mpeg";
-              const binary = atob(data.audio);
-              const bytes = new Uint8Array(binary.length);
-              for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-              const blob = new Blob([bytes], { type: fmt });
-              const fallbackUrl = URL.createObjectURL(blob);
-              readAloudUrlRef.current = fallbackUrl;
-              audio.src = fallbackUrl;
-              audio.onended = () => stopReadAloud();
-              audio.onerror = () => {
-                if (!readAloudStoppedRef.current) {
-                  stopReadAloud();
-                  toast({ title: "Read Aloud failed", description: "Could not play the audio.", variant: "destructive" });
-                }
-              };
-              await audio.play();
-              setReadAloudState("playing");
-              return;
-            }
-          }
-        } catch {}
+        setReadAloudState("idle");
+        toast({ title: "Read Aloud failed", description: "Could not generate speech. Please try again.", variant: "destructive" });
       }
-
-      setReadAloudState("idle");
-      toast({ title: "Read Aloud failed", description: "Could not generate speech. Please try again.", variant: "destructive" });
     }
   };
 
