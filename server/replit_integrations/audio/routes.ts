@@ -3,39 +3,49 @@ import { speechToText, voiceChat, textToSpeech, textToSpeechStream } from "./cli
 import { storage } from "../../storage";
 import { gmailProvider } from "../../gmail";
 import { microsoftProvider } from "../../microsoft";
+import { imapProvider } from "../../imap";
 import { stripEmailNoise } from "../../email-utils";
+import type { IEmailProvider, EmailListItem } from "../../email-provider";
 
 const ttsCache: Map<string, { audio: string; timestamp: number }> = new Map();
 const TTS_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 const TTS_CACHE_MAX_SIZE = 30;
+
+function getProviderForAccount(account: { provider: string }): IEmailProvider {
+  if (account.provider === "google") return gmailProvider;
+  if (account.provider === "imap") return imapProvider;
+  return microsoftProvider;
+}
 
 async function getEmailContext(userId: string): Promise<string> {
   try {
     const account = await storage.getEmailAccount(userId);
     if (!account) return "";
 
-    const isExpired = account.tokenExpiresAt && new Date(account.tokenExpiresAt).getTime() < Date.now() + 5 * 60 * 1000;
     let accessToken = account.accessToken;
 
-    if (isExpired) {
-      const provider = account.provider === "google" ? gmailProvider : microsoftProvider;
-      try {
-        const refreshed = await provider.refreshAccessToken(account.refreshToken);
-        await storage.updateEmailAccount(userId, {
-          accessToken: refreshed.accessToken,
-          tokenExpiresAt: refreshed.expiresAt,
-        });
-        accessToken = refreshed.accessToken;
-      } catch {
-        return "Unable to fetch emails — token expired.";
+    if (account.provider !== "imap") {
+      const isExpired = account.tokenExpiresAt && new Date(account.tokenExpiresAt).getTime() < Date.now() + 5 * 60 * 1000;
+      if (isExpired) {
+        const provider = getProviderForAccount(account);
+        try {
+          const refreshed = await provider.refreshAccessToken(account.refreshToken);
+          await storage.updateEmailAccount(userId, {
+            accessToken: refreshed.accessToken,
+            tokenExpiresAt: refreshed.expiresAt,
+          });
+          accessToken = refreshed.accessToken;
+        } catch {
+          return "Unable to fetch emails — token expired.";
+        }
       }
     }
 
-    const provider = account.provider === "google" ? gmailProvider : microsoftProvider;
+    const provider = getProviderForAccount(account);
     const messages = await provider.getMessages(accessToken);
     const recent = messages.slice(0, 10);
     return recent
-      .map((m: any, i: number) => {
+      .map((m: EmailListItem, i: number) => {
         const from = m.from || m.fromEmail || "unknown";
         const subject = m.subject || "(no subject)";
         const unread = !m.isRead ? "[UNREAD]" : "";
@@ -205,33 +215,20 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       }
 
       const cleanText = stripEmailNoise(text).slice(0, 2000);
-      const stream = await textToSpeechStream(cleanText, selectedVoice);
+      const audioBuffer = await textToSpeechStream(cleanText, selectedVoice);
 
-      if (!stream) {
+      if (!audioBuffer) {
         return res.status(500).json({ error: "Failed to generate speech" });
       }
 
-      res.set({ "Content-Type": "audio/mpeg", "Transfer-Encoding": "chunked" });
+      ttsCache.set(cacheKey, { audio: audioBuffer.toString("base64"), timestamp: Date.now() });
+      if (ttsCache.size > TTS_CACHE_MAX_SIZE) {
+        const entries = Array.from(ttsCache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
+        entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE).forEach(([key]) => ttsCache.delete(key));
+      }
 
-      const chunks: Buffer[] = [];
-      stream.on("data", (chunk: Buffer) => {
-        chunks.push(chunk);
-        res.write(chunk);
-      });
-      stream.on("end", () => {
-        res.end();
-        const full = Buffer.concat(chunks);
-        ttsCache.set(cacheKey, { audio: full.toString("base64"), timestamp: Date.now() });
-        if (ttsCache.size > TTS_CACHE_MAX_SIZE) {
-          const entries = Array.from(ttsCache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
-          entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE).forEach(([key]) => ttsCache.delete(key));
-        }
-      });
-      stream.on("error", (err: Error) => {
-        console.error("TTS stream error:", err);
-        if (!res.headersSent) res.status(500).json({ error: "Stream failed" });
-        else res.end();
-      });
+      res.set({ "Content-Type": "audio/mpeg", "Content-Length": String(audioBuffer.length) });
+      res.end(audioBuffer);
     } catch (error) {
       console.error("TTS stream error:", error);
       if (!res.headersSent) res.status(500).json({ error: "Failed to generate speech" });

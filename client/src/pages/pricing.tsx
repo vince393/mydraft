@@ -299,15 +299,20 @@ export default function PricingPage() {
   // Redirect users who already have a plan to the next step (unless they're changing their plan)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("success") || params.get("canceled") || params.get("change")) return;
+    if (params.get("success") || params.get("canceled") || params.get("change") || params.get("upgrade")) return;
     
-    if (userData?.user?.plan) {
+    if (userData?.user?.plan && !userData.user.onboardingCompleted) {
       setLocation("/connect-email");
     }
   }, [userData, setLocation]);
 
   // Show all plans if user hasn't completed onboarding (no preferences to base recommendation on)
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("upgrade")) {
+      setShowAllPlans(true);
+      return;
+    }
     if (userData?.user && !userData.user.onboardingCompleted && !userData.user.aiPreferences) {
       setShowAllPlans(true);
     }

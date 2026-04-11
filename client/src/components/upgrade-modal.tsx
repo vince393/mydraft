@@ -77,7 +77,7 @@ export function UpgradeModal({ open, onOpenChange, requiredPlan, feature }: Upgr
           <Button 
             className={`bg-gradient-to-r ${details.color} text-white border-0`}
             onClick={() => {
-              window.location.href = "/pricing";
+              window.location.href = "/pricing?upgrade=true";
             }}
           >
             View Plans
