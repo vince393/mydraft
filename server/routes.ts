@@ -12,12 +12,13 @@ import { microsoftProvider } from "./microsoft";
 import { imapProvider, testImapConnection, testSmtpConnection, detectProvider, encryptImapConfig, validateHost } from "./imap";
 import type { IEmailProvider, EmailListItem, EmailDetail, GetMessagesOptions } from "./email-provider";
 import { getRecentHealthLogs, getUnresolvedIssues, resolveIssue, resolveAllIssues, getHealthSummary } from "./api-health";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
 import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
+import { verifyAccessToken, signAccessToken, signRefreshToken, verifyRefreshToken, hashToken, generateTokenId, getRefreshTokenExpiresAt } from "./jwt";
 import { sendVerificationEmail, sendPasswordResetEmail, sendTrialEndedEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
 import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
@@ -119,7 +120,31 @@ declare module "express-session" {
   }
 }
 
+declare module "express" {
+  interface Request {
+    jwtUserId?: string;
+  }
+}
+
+function getUserId(req: Request): string | undefined {
+  return req.jwtUserId || req.session.userId;
+}
+
 function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    const payload = verifyAccessToken(token);
+    if (payload) {
+      req.jwtUserId = payload.userId;
+      if (!req.session.userId) {
+        req.session.userId = payload.userId;
+      }
+      return next();
+    }
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+
   if (!req.session.userId) {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -128,12 +153,13 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 // Owner/Admin authentication middleware
 async function requireOwner(req: Request, res: Response, next: NextFunction) {
-  if (!req.session.userId) {
+  const userId = getUserId(req);
+  if (!userId) {
     console.log("[requireOwner] No session userId");
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const user = await storage.getUser(req.session.userId);
+  const user = await storage.getUser(userId);
   if (!user) {
     console.log("[requireOwner] User not found for id:", req.session.userId);
     return res.status(401).json({ error: "User not found" });
@@ -166,11 +192,12 @@ function getEffectivePlan(user: any): string {
 
 async function requirePlan(minPlan: "pro" | "premium") {
   return async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.session.userId) {
+    const userId = getUserId(req);
+    if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const user = await storage.getUser(req.session.userId);
+    const user = await storage.getUser(userId);
     if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
@@ -261,7 +288,7 @@ const pendingOAuthStates: Map<
 
 const pendingOAuthLoginStates: Map<
   string,
-  { provider: string; expiresAt: number; referralCode?: string }
+  { provider: string; expiresAt: number; referralCode?: string; platform?: string; mobileRedirectUri?: string }
 > = new Map();
 
 function generateStateToken(): string {
@@ -1014,6 +1041,338 @@ export async function registerRoutes(
       res.json({ success: true });
     });
   });
+
+  // ========== Mobile JWT Auth Endpoints ==========
+
+  app.post("/api/auth/mobile/login", authLimiter, async (req, res) => {
+    try {
+      const { email, password, deviceInfo } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await storage.getUserByEmail(normalizedEmail);
+      const clientIp = getClientIp(req);
+      const userAgent = req.headers["user-agent"] || null;
+
+      if (!user) {
+        storage.createSecurityAuditLog({
+          userId: null, eventType: "login_failed", ipAddress: clientIp,
+          userAgent, outcome: "failure", details: `Mobile login failed for: ${normalizedEmail}`,
+        }).catch(() => {});
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const isValid = await verifyPassword(user.password, password);
+      if (!isValid) {
+        storage.createSecurityAuditLog({
+          userId: user.id, eventType: "login_failed", ipAddress: clientIp,
+          userAgent, outcome: "failure", details: "Mobile login: invalid password",
+        }).catch(() => {});
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      if (user.twoFactorEnabled) {
+        const verificationCode = await storage.createVerificationCode(normalizedEmail, "login");
+        await sendVerificationEmail(normalizedEmail, verificationCode.code, "login");
+
+        const tempTokenId = generateTokenId();
+        pending2FALogins.set(`mobile_${normalizedEmail}`, {
+          userId: user.id,
+          expiresAt: Date.now() + 10 * 60 * 1000,
+        });
+
+        return res.json({
+          requires2FA: true,
+          email: normalizedEmail,
+          message: "2FA code sent to your email",
+        });
+      }
+
+      const tokenId = generateTokenId();
+      const accessToken = signAccessToken(user.id);
+      const refreshToken = signRefreshToken(user.id, tokenId);
+      const expiresAt = getRefreshTokenExpiresAt();
+
+      await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, deviceInfo || userAgent || undefined);
+
+      storage.createSecurityAuditLog({
+        userId: user.id, eventType: "login", ipAddress: clientIp,
+        userAgent, outcome: "success", details: "Mobile JWT login",
+      }).catch(() => {});
+
+      res.json({
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          plan: user.plan,
+          onboardingCompleted: user.onboardingCompleted,
+          emailVerified: user.emailVerified,
+          twoFactorEnabled: user.twoFactorEnabled,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+        },
+      });
+    } catch (error) {
+      console.error("Mobile login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/mobile/register", authLimiter, async (req, res) => {
+    try {
+      const { email, password, referralCode } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+
+      const hashedPw = await hashPassword(password);
+      const verificationCode = await storage.createVerificationCode(normalizedEmail, "signup");
+
+      pendingRegistrations.set(normalizedEmail, {
+        email: normalizedEmail,
+        hashedPassword: hashedPw,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+        referralCode: referralCode || undefined,
+      });
+
+      const emailSent = await sendVerificationEmail(normalizedEmail, verificationCode.code, "signup");
+      if (!emailSent) {
+        pendingRegistrations.delete(normalizedEmail);
+        return res.status(500).json({ error: "Failed to send verification email. Please try again." });
+      }
+
+      res.json({
+        requiresVerification: true,
+        email: normalizedEmail,
+        message: "Verification code sent to your email",
+      });
+    } catch (error) {
+      console.error("Mobile registration error:", error);
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/mobile/verify-registration", twoFactorLimiter, async (req, res) => {
+    try {
+      const { email, code, deviceInfo } = req.body;
+
+      if (!email || !code) {
+        return res.status(400).json({ error: "Email and verification code are required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const pending = pendingRegistrations.get(normalizedEmail);
+      if (!pending || pending.expiresAt < Date.now()) {
+        pendingRegistrations.delete(normalizedEmail);
+        return res.status(400).json({ error: "Registration expired. Please start again." });
+      }
+
+      const verificationCode = await storage.getVerificationCode(normalizedEmail, code, "signup");
+      if (!verificationCode) {
+        return res.status(400).json({ error: "Invalid or expired verification code" });
+      }
+
+      await storage.markVerificationCodeUsed(verificationCode.id);
+
+      const user = await storage.createUser({
+        email: normalizedEmail,
+        password: pending.hashedPassword,
+      });
+      await storage.updateUser(user.id, { emailVerified: true });
+
+      if (pending.referralCode) {
+        try {
+          const referrer = await storage.getUserByReferralCode(pending.referralCode);
+          if (referrer && referrer.id !== user.id) {
+            await storage.createReferral(referrer.id, user.id);
+            await storage.updateUser(user.id, { referredByUserId: referrer.id });
+          }
+        } catch (refErr) {
+          console.error("Error processing referral:", refErr);
+        }
+      }
+
+      pendingRegistrations.delete(normalizedEmail);
+
+      await storage.createActivityLog(user.id, normalizedEmail, "signup", "New user registered via mobile app");
+
+      const tokenId = generateTokenId();
+      const accessToken = signAccessToken(user.id);
+      const refreshToken = signRefreshToken(user.id, tokenId);
+      const expiresAt = getRefreshTokenExpiresAt();
+
+      await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, deviceInfo || req.headers["user-agent"] || undefined);
+
+      res.json({
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          plan: user.plan,
+          onboardingCompleted: user.onboardingCompleted,
+          emailVerified: true,
+          twoFactorEnabled: false,
+        },
+      });
+    } catch (error) {
+      console.error("Mobile verify-registration error:", error);
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
+  app.post("/api/auth/mobile/verify-2fa", twoFactorLimiter, async (req, res) => {
+    try {
+      const { email, code, deviceInfo } = req.body;
+
+      if (!email || !code) {
+        return res.status(400).json({ error: "Email and verification code are required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+
+      const pending = pending2FALogins.get(`mobile_${normalizedEmail}`);
+      if (!pending || pending.expiresAt < Date.now()) {
+        pending2FALogins.delete(`mobile_${normalizedEmail}`);
+        return res.status(400).json({ error: "Login session expired. Please try again." });
+      }
+
+      const verificationCode = await storage.getVerificationCode(normalizedEmail, code, "login");
+      if (!verificationCode) {
+        return res.status(400).json({ error: "Invalid or expired verification code" });
+      }
+
+      await storage.markVerificationCodeUsed(verificationCode.id);
+
+      const user = await storage.getUser(pending.userId);
+      if (!user) {
+        return res.status(400).json({ error: "User not found" });
+      }
+
+      pending2FALogins.delete(`mobile_${normalizedEmail}`);
+
+      const tokenId = generateTokenId();
+      const accessToken = signAccessToken(user.id);
+      const refreshToken = signRefreshToken(user.id, tokenId);
+      const expiresAt = getRefreshTokenExpiresAt();
+
+      await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, deviceInfo || req.headers["user-agent"] || undefined);
+
+      const clientIp = getClientIp(req);
+      storage.createSecurityAuditLog({
+        userId: user.id, eventType: "login", ipAddress: clientIp,
+        userAgent: req.headers["user-agent"] || null, outcome: "success",
+        details: "Mobile JWT login with 2FA",
+      }).catch(() => {});
+
+      res.json({
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          plan: user.plan,
+          onboardingCompleted: user.onboardingCompleted,
+          emailVerified: user.emailVerified,
+          twoFactorEnabled: user.twoFactorEnabled,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+        },
+      });
+    } catch (error) {
+      console.error("Mobile 2FA verification error:", error);
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
+  app.post("/api/auth/mobile/refresh", async (req, res) => {
+    try {
+      const { refreshToken: oldRefreshToken } = req.body;
+
+      if (!oldRefreshToken) {
+        return res.status(400).json({ error: "Refresh token is required" });
+      }
+
+      const payload = verifyRefreshToken(oldRefreshToken);
+      if (!payload) {
+        return res.status(401).json({ error: "Invalid or expired refresh token" });
+      }
+
+      const oldTokenHash = hashToken(oldRefreshToken);
+      const storedToken = await storage.getRefreshTokenByHash(oldTokenHash);
+
+      if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
+        if (storedToken && !storedToken.revoked) {
+          await storage.revokeAllUserRefreshTokens(payload.userId);
+        }
+        return res.status(401).json({ error: "Refresh token revoked or expired" });
+      }
+
+      await storage.revokeRefreshToken(oldTokenHash);
+
+      const newTokenId = generateTokenId();
+      const newAccessToken = signAccessToken(payload.userId);
+      const newRefreshToken = signRefreshToken(payload.userId, newTokenId);
+      const expiresAt = getRefreshTokenExpiresAt();
+
+      await storage.createRefreshToken(payload.userId, hashToken(newRefreshToken), expiresAt, storedToken.deviceInfo || undefined);
+
+      res.json({
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      });
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      res.status(500).json({ error: "Token refresh failed" });
+    }
+  });
+
+  app.post("/api/auth/mobile/logout", async (req, res) => {
+    try {
+      const { refreshToken: tokenToRevoke } = req.body;
+
+      if (tokenToRevoke) {
+        const tokenHash = hashToken(tokenToRevoke);
+        await storage.revokeRefreshToken(tokenHash);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mobile logout error:", error);
+      res.status(500).json({ error: "Logout failed" });
+    }
+  });
+
+  app.get("/api/mobile/info", (_req, res) => {
+    res.json({
+      apiVersion: "1.0.0",
+      appName: "MyDraft",
+      authMethods: ["jwt"],
+      endpoints: {
+        login: "/api/auth/mobile/login",
+        register: "/api/auth/mobile/register",
+        verifyRegistration: "/api/auth/mobile/verify-registration",
+        verify2FA: "/api/auth/mobile/verify-2fa",
+        refresh: "/api/auth/mobile/refresh",
+        logout: "/api/auth/mobile/logout",
+        resendCode: "/api/auth/resend-code",
+      },
+    });
+  });
+
+  // ========== End Mobile JWT Auth Endpoints ==========
 
   app.post("/api/auth/forgot-password", passwordResetLimiter, async (req, res) => {
     try {
@@ -2245,10 +2604,14 @@ Return ONLY valid JSON, no other text.`;
       const stateToken = generateStateToken();
       const expiresAt = Date.now() + 10 * 60 * 1000;
       const referralCode = req.query.ref as string | undefined;
+      const platform = req.query.platform as string | undefined;
+      const mobileRedirectUri = req.query.redirect_uri as string | undefined;
       pendingOAuthLoginStates.set(stateToken, {
         provider,
         expiresAt,
         referralCode,
+        platform,
+        mobileRedirectUri,
       });
 
       const redirectUri = getEmailRedirectUri(req, provider);
@@ -2323,6 +2686,20 @@ Return ONLY valid JSON, no other text.`;
               console.error("Referral linking failed:", e);
             }
           }
+        }
+
+        if (loginState.platform === "mobile" && loginState.mobileRedirectUri) {
+          const tokenId = generateTokenId();
+          const accessToken = signAccessToken(user.id);
+          const refreshToken = signRefreshToken(user.id, tokenId);
+          const expiresAt = getRefreshTokenExpiresAt();
+          await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, "OAuth mobile login");
+
+          const mobileUrl = new URL(loginState.mobileRedirectUri);
+          mobileUrl.searchParams.set("access_token", accessToken);
+          mobileUrl.searchParams.set("refresh_token", refreshToken);
+          mobileUrl.searchParams.set("user_id", user.id);
+          return res.redirect(mobileUrl.toString());
         }
 
         req.session.userId = user.id;
@@ -2459,6 +2836,20 @@ Return ONLY valid JSON, no other text.`;
               console.error("Referral linking failed:", e);
             }
           }
+        }
+
+        if (loginState.platform === "mobile" && loginState.mobileRedirectUri) {
+          const tokenId = generateTokenId();
+          const accessToken = signAccessToken(user.id);
+          const refreshToken = signRefreshToken(user.id, tokenId);
+          const expiresAt = getRefreshTokenExpiresAt();
+          await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, "OAuth mobile login");
+
+          const mobileUrl = new URL(loginState.mobileRedirectUri);
+          mobileUrl.searchParams.set("access_token", accessToken);
+          mobileUrl.searchParams.set("refresh_token", refreshToken);
+          mobileUrl.searchParams.set("user_id", user.id);
+          return res.redirect(mobileUrl.toString());
         }
 
         req.session.userId = user.id;

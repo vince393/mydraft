@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, type PasswordResetToken, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts, aiCostLog, passwordResetTokens } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, type PasswordResetToken, type RefreshToken, type InsertRefreshToken, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts, aiCostLog, passwordResetTokens, refreshTokens } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
@@ -291,6 +291,12 @@ export interface IStorage {
   getPasswordResetToken(token: string): Promise<{ userId: string; expiresAt: Date; used: boolean } | undefined>;
   markPasswordResetTokenUsed(token: string): Promise<void>;
   invalidatePasswordResetTokens(userId: string): Promise<void>;
+
+  createRefreshToken(userId: string, tokenHash: string, expiresAt: Date, deviceInfo?: string): Promise<RefreshToken>;
+  getRefreshTokenByHash(tokenHash: string): Promise<RefreshToken | undefined>;
+  revokeRefreshToken(tokenHash: string): Promise<void>;
+  revokeAllUserRefreshTokens(userId: string): Promise<void>;
+  cleanupExpiredRefreshTokens(): Promise<void>;
 }
 
 const avatarColors = [
@@ -2808,6 +2814,34 @@ Business Development`,
         eq(passwordResetTokens.userId, userId),
         eq(passwordResetTokens.used, false)
       ));
+  }
+
+  async createRefreshToken(userId: string, tokenHash: string, expiresAt: Date, deviceInfo?: string): Promise<RefreshToken> {
+    const [token] = await db.insert(refreshTokens).values({
+      userId,
+      tokenHash,
+      expiresAt,
+      deviceInfo: deviceInfo || null,
+      revoked: false,
+    }).returning();
+    return token;
+  }
+
+  async getRefreshTokenByHash(tokenHash: string): Promise<RefreshToken | undefined> {
+    const [token] = await db.select().from(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash));
+    return token || undefined;
+  }
+
+  async revokeRefreshToken(tokenHash: string): Promise<void> {
+    await db.update(refreshTokens).set({ revoked: true }).where(eq(refreshTokens.tokenHash, tokenHash));
+  }
+
+  async revokeAllUserRefreshTokens(userId: string): Promise<void> {
+    await db.update(refreshTokens).set({ revoked: true }).where(eq(refreshTokens.userId, userId));
+  }
+
+  async cleanupExpiredRefreshTokens(): Promise<void> {
+    await db.delete(refreshTokens).where(lte(refreshTokens.expiresAt, new Date()));
   }
 }
 

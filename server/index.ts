@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -86,6 +87,27 @@ app.post(
     }
   }
 );
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const allowedPatterns = [
+      /\.replit\.app$/,
+      /\.replit\.dev$/,
+      /localhost/,
+      /127\.0\.0\.1/,
+    ];
+    const mobileOrigins = process.env.MOBILE_APP_ORIGINS?.split(",").map(o => o.trim()) || [];
+    if (allowedPatterns.some(p => p.test(origin)) || mobileOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["Content-Length", "X-Request-Id"],
+}));
 
 app.use(
   express.json({
