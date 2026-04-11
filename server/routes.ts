@@ -1078,13 +1078,15 @@ export async function registerRoutes(
         const verificationCode = await storage.createVerificationCode(normalizedEmail, "login");
         await sendVerificationEmail(normalizedEmail, verificationCode.code, "login");
 
-        pending2FALogins.set(`mobile_${normalizedEmail}`, {
+        const tempTokenId = generateTokenId();
+        pending2FALogins.set(`mobile_${tempTokenId}`, {
           userId: user.id,
           expiresAt: Date.now() + 10 * 60 * 1000,
         });
 
         return res.json({
           requires2FA: true,
+          tempToken: tempTokenId,
           email: normalizedEmail,
           message: "2FA code sent to your email",
         });
@@ -1234,17 +1236,17 @@ export async function registerRoutes(
 
   app.post("/api/auth/mobile/verify-2fa", twoFactorLimiter, async (req, res) => {
     try {
-      const { email, code, deviceInfo } = req.body;
+      const { tempToken, email, code, deviceInfo } = req.body;
 
-      if (!email || !code) {
-        return res.status(400).json({ error: "Email and verification code are required" });
+      if (!tempToken || !email || !code) {
+        return res.status(400).json({ error: "Temp token, email, and verification code are required" });
       }
 
       const normalizedEmail = email.toLowerCase().trim();
 
-      const pending = pending2FALogins.get(`mobile_${normalizedEmail}`);
+      const pending = pending2FALogins.get(`mobile_${tempToken}`);
       if (!pending || pending.expiresAt < Date.now()) {
-        pending2FALogins.delete(`mobile_${normalizedEmail}`);
+        pending2FALogins.delete(`mobile_${tempToken}`);
         return res.status(400).json({ error: "Login session expired. Please try again." });
       }
 
@@ -1260,7 +1262,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "User not found" });
       }
 
-      pending2FALogins.delete(`mobile_${normalizedEmail}`);
+      pending2FALogins.delete(`mobile_${tempToken}`);
 
       const tokenId = generateTokenId();
       const accessToken = signAccessToken(user.id);
@@ -1354,10 +1356,15 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/mobile/info", (_req, res) => {
+  app.get("/api/mobile/info", (req, res) => {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || req.hostname;
+    const baseUrl = `${protocol}://${host}`;
+
     res.json({
       apiVersion: "1.0.0",
       appName: "MyDraft",
+      baseUrl,
       authMethods: ["jwt"],
       endpoints: {
         login: "/api/auth/mobile/login",
