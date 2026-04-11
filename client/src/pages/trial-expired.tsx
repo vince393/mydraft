@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Check, Clock, Sparkles, Shield, Crown } from "lucide-react";
-import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
+import logoPath from "@assets/mydraft_logo.png";
 
 const plans = [
   {

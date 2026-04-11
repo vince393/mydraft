@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowRight, ArrowLeft, Loader2, Check, Star, Clock, Brain, Rocket, Shield, Mail, Briefcase, RefreshCw, Inbox, MailOpen, Mails, Waves, PenLine, Sparkles, Tag, FileText, Palette, Smile, Zap, Search, Users, Newspaper, Radio, Megaphone, MessageCircle, ChevronLeft } from "lucide-react";
-import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
+import logoPath from "@assets/mydraft_logo.png";
 import type { User } from "@shared/schema";
 
 interface AuthResponse {

@@ -137,7 +137,7 @@ function TypeaheadInput({
     </div>
   );
 }
-import logoPath from "@assets/bd6ad8b0-8b19-4e70-8b55-0ddd333f446e_removalai_preview_1768612163407.png";
+import logoPath from "@assets/mydraft_logo.png";
 import type { User } from "@shared/schema";
 
 interface AuthResponse {
