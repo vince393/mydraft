@@ -180,7 +180,7 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         }
       }
       
-      res.json({ audio, audioFormat: "mp3" });
+      res.json({ audio, audioFormat: "wav" });
     } catch (error) {
       console.error("TTS error:", error);
       res.status(500).json({ error: "Failed to generate speech" });
@@ -210,7 +210,7 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       const cached = ttsCache.get(cacheKey);
       if (cached && now - cached.timestamp < TTS_CACHE_TTL_MS) {
         const buf = Buffer.from(cached.audio, "base64");
-        res.set({ "Content-Type": "audio/mpeg", "Content-Length": String(buf.length) });
+        res.set({ "Content-Type": "audio/wav", "Content-Length": String(buf.length) });
         return res.end(buf);
       }
 
@@ -227,7 +227,7 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE).forEach(([key]) => ttsCache.delete(key));
       }
 
-      res.set({ "Content-Type": "audio/mpeg", "Content-Length": String(audioBuffer.length) });
+      res.set({ "Content-Type": "audio/wav", "Content-Length": String(audioBuffer.length) });
       res.end(audioBuffer);
     } catch (error) {
       console.error("TTS stream error:", error);

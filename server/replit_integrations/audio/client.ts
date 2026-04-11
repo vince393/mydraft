@@ -54,12 +54,13 @@ export async function voiceChat(
 
 export async function textToSpeech(text: string, voice: string = "nova"): Promise<string> {
   try {
+    console.log(`[TTS] Starting text-to-speech: voice=${voice}, textLength=${text.length}`);
     const response = await openai.chat.completions.create({
       model: "gpt-audio-mini",
       modalities: ["text", "audio"],
       audio: {
         voice: voice as "alloy" | "ash" | "ballad" | "coral" | "echo" | "fable" | "onyx" | "nova" | "sage" | "shimmer",
-        format: "mp3",
+        format: "wav",
       },
       messages: [
         {
@@ -75,9 +76,11 @@ export async function textToSpeech(text: string, voice: string = "nova"): Promis
 
     const choice = response.choices[0];
     const audioData = (choice?.message as { audio?: { data?: string } })?.audio;
-    return audioData?.data || "";
-  } catch (error) {
-    console.error("TTS error:", error);
+    const base64Audio = audioData?.data || "";
+    console.log(`[TTS] Result: audioDataLength=${base64Audio.length}, hasAudio=${!!base64Audio}`);
+    return base64Audio;
+  } catch (error: any) {
+    console.error("[TTS] Error:", error?.message || error);
     return "";
   }
 }
