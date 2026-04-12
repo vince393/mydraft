@@ -28,10 +28,11 @@ export function signAccessToken(userId: string): string {
 }
 
 export function signRefreshToken(userId: string): string {
+  const jti = randomBytes(16).toString("hex");
   return jwt.sign(
     { userId, type: "refresh" } as RefreshTokenPayload,
     JWT_SECRET,
-    { expiresIn: `${REFRESH_TOKEN_EXPIRY_DAYS}d` }
+    { expiresIn: `${REFRESH_TOKEN_EXPIRY_DAYS}d`, jwtid: jti }
   );
 }
 

@@ -137,6 +137,7 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
     const payload = verifyAccessToken(token);
     if (payload) {
       req.jwtUserId = payload.userId;
+      req.session.userId = payload.userId;
       return next();
     }
     if (!req.session.userId) {
@@ -1077,7 +1078,7 @@ export async function registerRoutes(
         const verificationCode = await storage.createVerificationCode(normalizedEmail, "login");
         await sendVerificationEmail(normalizedEmail, verificationCode.code, "login");
 
-        const tempTokenId = generateTokenId();
+        const tempTokenId = randomBytes(32).toString("hex");
         pending2FALogins.set(`mobile_${tempTokenId}`, {
           userId: user.id,
           expiresAt: Date.now() + 10 * 60 * 1000,
@@ -2711,9 +2712,8 @@ Return ONLY valid JSON, no other text.`;
         }
 
         if (loginState.platform === "mobile" && loginState.mobileRedirectUri) {
-          const tokenId = generateTokenId();
           const accessToken = signAccessToken(user.id);
-          const refreshToken = signRefreshToken(user.id, tokenId);
+          const refreshToken = signRefreshToken(user.id);
           const expiresAt = getRefreshTokenExpiresAt();
           await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, "OAuth mobile login");
 
@@ -2861,9 +2861,8 @@ Return ONLY valid JSON, no other text.`;
         }
 
         if (loginState.platform === "mobile" && loginState.mobileRedirectUri) {
-          const tokenId = generateTokenId();
           const accessToken = signAccessToken(user.id);
-          const refreshToken = signRefreshToken(user.id, tokenId);
+          const refreshToken = signRefreshToken(user.id);
           const expiresAt = getRefreshTokenExpiresAt();
           await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, "OAuth mobile login");
 
