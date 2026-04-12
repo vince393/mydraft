@@ -1236,13 +1236,11 @@ export async function registerRoutes(
 
   app.post("/api/auth/mobile/verify-2fa", twoFactorLimiter, async (req, res) => {
     try {
-      const { tempToken, email, code, deviceInfo } = req.body;
+      const { tempToken, code, deviceInfo } = req.body;
 
-      if (!tempToken || !email || !code) {
-        return res.status(400).json({ error: "Temp token, email, and verification code are required" });
+      if (!tempToken || !code) {
+        return res.status(400).json({ error: "Temp token and verification code are required" });
       }
-
-      const normalizedEmail = email.toLowerCase().trim();
 
       const pending = pending2FALogins.get(`mobile_${tempToken}`);
       if (!pending || pending.expiresAt < Date.now()) {
@@ -1250,17 +1248,20 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Login session expired. Please try again." });
       }
 
-      const verificationCode = await storage.getVerificationCode(normalizedEmail, code, "login");
+      const user = await storage.getUser(pending.userId);
+      if (!user) {
+        pending2FALogins.delete(`mobile_${tempToken}`);
+        return res.status(400).json({ error: "User not found" });
+      }
+
+      const boundEmail = user.email.toLowerCase().trim();
+
+      const verificationCode = await storage.getVerificationCode(boundEmail, code, "login");
       if (!verificationCode) {
         return res.status(400).json({ error: "Invalid or expired verification code" });
       }
 
       await storage.markVerificationCodeUsed(verificationCode.id);
-
-      const user = await storage.getUser(pending.userId);
-      if (!user) {
-        return res.status(400).json({ error: "User not found" });
-      }
 
       pending2FALogins.delete(`mobile_${tempToken}`);
 
