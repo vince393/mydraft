@@ -17,7 +17,6 @@ export interface AccessTokenPayload {
 export interface RefreshTokenPayload {
   userId: string;
   type: "refresh";
-  tokenId: string;
 }
 
 export function signAccessToken(userId: string): string {
@@ -28,9 +27,9 @@ export function signAccessToken(userId: string): string {
   );
 }
 
-export function signRefreshToken(userId: string, tokenId: string): string {
+export function signRefreshToken(userId: string): string {
   return jwt.sign(
-    { userId, type: "refresh", tokenId } as RefreshTokenPayload,
+    { userId, type: "refresh" } as RefreshTokenPayload,
     JWT_SECRET,
     { expiresIn: `${REFRESH_TOKEN_EXPIRY_DAYS}d` }
   );
@@ -60,9 +59,6 @@ export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export function generateTokenId(): string {
-  return randomBytes(32).toString("hex");
-}
 
 export function getRefreshTokenExpiresAt(): Date {
   return new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);

@@ -18,7 +18,7 @@ import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
-import { verifyAccessToken, signAccessToken, signRefreshToken, verifyRefreshToken, hashToken, generateTokenId, getRefreshTokenExpiresAt } from "./jwt";
+import { verifyAccessToken, signAccessToken, signRefreshToken, verifyRefreshToken, hashToken, getRefreshTokenExpiresAt } from "./jwt";
 import { sendVerificationEmail, sendPasswordResetEmail, sendTrialEndedEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
 import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
@@ -137,7 +137,6 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
     const payload = verifyAccessToken(token);
     if (payload) {
       req.jwtUserId = payload.userId;
-      req.session.userId = payload.userId;
       return next();
     }
     if (!req.session.userId) {
@@ -1092,9 +1091,8 @@ export async function registerRoutes(
         });
       }
 
-      const tokenId = generateTokenId();
       const accessToken = signAccessToken(user.id);
-      const refreshToken = signRefreshToken(user.id, tokenId);
+      const refreshToken = signRefreshToken(user.id);
       const expiresAt = getRefreshTokenExpiresAt();
 
       await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, deviceInfo || userAgent || undefined);
@@ -1209,9 +1207,8 @@ export async function registerRoutes(
 
       await storage.createActivityLog(user.id, normalizedEmail, "signup", "New user registered via mobile app");
 
-      const tokenId = generateTokenId();
       const accessToken = signAccessToken(user.id);
-      const refreshToken = signRefreshToken(user.id, tokenId);
+      const refreshToken = signRefreshToken(user.id);
       const expiresAt = getRefreshTokenExpiresAt();
 
       await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, deviceInfo || req.headers["user-agent"] || undefined);
@@ -1265,9 +1262,8 @@ export async function registerRoutes(
 
       pending2FALogins.delete(`mobile_${tempToken}`);
 
-      const tokenId = generateTokenId();
       const accessToken = signAccessToken(user.id);
-      const refreshToken = signRefreshToken(user.id, tokenId);
+      const refreshToken = signRefreshToken(user.id);
       const expiresAt = getRefreshTokenExpiresAt();
 
       await storage.createRefreshToken(user.id, hashToken(refreshToken), expiresAt, deviceInfo || req.headers["user-agent"] || undefined);
@@ -1324,9 +1320,8 @@ export async function registerRoutes(
 
       await storage.revokeRefreshToken(oldTokenHash);
 
-      const newTokenId = generateTokenId();
       const newAccessToken = signAccessToken(payload.userId);
-      const newRefreshToken = signRefreshToken(payload.userId, newTokenId);
+      const newRefreshToken = signRefreshToken(payload.userId);
       const expiresAt = getRefreshTokenExpiresAt();
 
       await storage.createRefreshToken(payload.userId, hashToken(newRefreshToken), expiresAt, storedToken.deviceInfo || undefined);
@@ -1757,7 +1752,6 @@ export async function registerRoutes(
       const payload = verifyAccessToken(token);
       if (payload) {
         req.jwtUserId = payload.userId;
-        req.session.userId = payload.userId;
       }
     }
 
