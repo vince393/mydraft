@@ -91,14 +91,25 @@ app.post(
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    const allowedPatterns = [
-      /\.replit\.app$/,
-      /\.replit\.dev$/,
-      /^https?:\/\/localhost(:\d+)?$/,
-      /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-    ];
+
+    const ownDomains = (process.env.REPLIT_DOMAINS || "").split(",").map(d => d.trim()).filter(Boolean);
+    const devDomain = process.env.REPLIT_DEV_DOMAIN || "";
     const mobileOrigins = process.env.MOBILE_APP_ORIGINS?.split(",").map(o => o.trim()).filter(Boolean) || [];
-    if (allowedPatterns.some(p => p.test(origin)) || mobileOrigins.includes(origin)) {
+
+    const allowedOrigins = new Set<string>();
+    for (const d of ownDomains) {
+      allowedOrigins.add(`https://${d}`);
+      allowedOrigins.add(`http://${d}`);
+    }
+    if (devDomain) {
+      allowedOrigins.add(`https://${devDomain}`);
+      allowedOrigins.add(`http://${devDomain}`);
+    }
+    for (const o of mobileOrigins) {
+      allowedOrigins.add(o);
+    }
+
+    if (allowedOrigins.has(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
       return callback(null, true);
     }
     callback(null, false);

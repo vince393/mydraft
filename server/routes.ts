@@ -1751,11 +1751,22 @@ export async function registerRoutes(
   });
 
   app.get("/api/auth/me", async (req, res) => {
-    if (!req.session.userId) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const payload = verifyAccessToken(token);
+      if (payload) {
+        req.jwtUserId = payload.userId;
+        req.session.userId = payload.userId;
+      }
+    }
+
+    const userId = getUserId(req);
+    if (!userId) {
       return res.json({ user: null });
     }
 
-    const user = await storage.getUser(req.session.userId);
+    const user = await storage.getUser(userId);
     if (!user) {
       return res.json({ user: null });
     }
