@@ -133,7 +133,6 @@ function extractJwtIdentity(req: Request, _res: Response, next: NextFunction) {
     const payload = verifyAccessToken(token);
     if (payload) {
       req.jwtUserId = payload.userId;
-      req.session.userId = payload.userId;
     }
   }
   next();
@@ -144,6 +143,9 @@ function getUserId(req: Request): string | undefined {
 }
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (req.jwtUserId) {
+    req.session.userId = req.jwtUserId;
+  }
   const userId = getUserId(req);
   if (!userId) {
     const authHeader = req.headers.authorization;
@@ -157,6 +159,9 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 // Owner/Admin authentication middleware
 async function requireOwner(req: Request, res: Response, next: NextFunction) {
+  if (req.jwtUserId) {
+    req.session.userId = req.jwtUserId;
+  }
   const userId = getUserId(req);
   if (!userId) {
     console.log("[requireOwner] No session userId");
