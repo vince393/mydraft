@@ -126,11 +126,7 @@ declare module "express" {
   }
 }
 
-function getUserId(req: Request): string | undefined {
-  return req.jwtUserId || req.session.userId;
-}
-
-function requireAuth(req: Request, res: Response, next: NextFunction) {
+function extractJwtIdentity(req: Request, _res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
@@ -138,14 +134,22 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
     if (payload) {
       req.jwtUserId = payload.userId;
       req.session.userId = payload.userId;
-      return next();
-    }
-    if (!req.session.userId) {
-      return res.status(401).json({ error: "Invalid or expired token" });
     }
   }
+  next();
+}
 
-  if (!req.session.userId) {
+function getUserId(req: Request): string | undefined {
+  return req.jwtUserId || req.session.userId;
+}
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const userId = getUserId(req);
+  if (!userId) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
     return res.status(401).json({ error: "Unauthorized" });
   }
   next();
@@ -381,6 +385,7 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express,
 ): Promise<Server> {
+  app.use(extractJwtIdentity);
   registerAudioRoutes(app);
   registerImageRoutes(app);
 
@@ -1747,15 +1752,6 @@ export async function registerRoutes(
   });
 
   app.get("/api/auth/me", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const payload = verifyAccessToken(token);
-      if (payload) {
-        req.jwtUserId = payload.userId;
-      }
-    }
-
     const userId = getUserId(req);
     if (!userId) {
       return res.json({ user: null });
