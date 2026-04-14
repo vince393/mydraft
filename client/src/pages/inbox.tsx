@@ -195,6 +195,25 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"], exact: true });
   }, []);
 
+  const findEmailById = useCallback((emailId: string | number) => {
+    const cached = queryClient.getQueryData<EmailWithNylasId[]>(["/api/emails", "cached"]);
+    const fresh = queryClient.getQueryData<EmailWithNylasId[]>(["/api/emails", "fresh"]);
+    const allEmails = fresh || cached || [];
+    return allEmails.find(e => (e.nylasId || e.id) === emailId);
+  }, []);
+
+  const adjustUnreadCount = useCallback((folder: string, delta: number) => {
+    queryClient.setQueryData<{ inbox: number; sent: number; archived: number; trash: number; drafts: number }>(
+      ["/api/emails/unread-counts"],
+      (old) => {
+        if (!old) return old;
+        const key = folder as keyof typeof old;
+        if (!(key in old)) return old;
+        return { ...old, [key]: Math.max(0, (old[key] || 0) + delta) };
+      }
+    );
+  }, []);
+
   const removeEmailFromCache = useCallback((emailId: string | number) => {
     const cached = queryClient.getQueryData<EmailWithNylasId[]>(["/api/emails", "cached"]);
     const fresh = queryClient.getQueryData<EmailWithNylasId[]>(["/api/emails", "fresh"]);
@@ -413,6 +432,11 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return response.json();
     },
     onMutate: async (emailId) => {
+      const email = findEmailById(emailId);
+      if (email && !email.isRead) {
+        const folder = email.folder || "inbox";
+        adjustUnreadCount(folder, -1);
+      }
       updateEmailInCache(emailId, { isRead: true });
     },
     onSuccess: () => {
@@ -421,18 +445,25 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     },
     onError: () => {
       invalidateEmailCache();
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
     },
   });
 
 
   const handleMarkUnread = async (emailId: string | number) => {
     try {
+      const email = findEmailById(emailId);
+      if (email && email.isRead) {
+        const folder = email.folder || "inbox";
+        adjustUnreadCount(folder, 1);
+      }
       updateEmailInCache(emailId, { isRead: false });
       await apiRequest("PATCH", `/api/emails/${emailId}/unread`, {});
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       toast({ title: "Marked as unread" });
     } catch (error) {
       console.error("Failed to mark as unread:", error);
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       toast({ title: "Failed to mark as unread", variant: "destructive" });
     }
   };
@@ -464,6 +495,12 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return { emailId, folder };
     },
     onMutate: async ({ emailId, folder }) => {
+      const email = findEmailById(emailId);
+      if (email && !email.isRead) {
+        const sourceFolder = email.folder || "trash";
+        adjustUnreadCount(sourceFolder, -1);
+        adjustUnreadCount(folder, 1);
+      }
       updateEmailInCache(emailId, { folder });
     },
     onSuccess: () => {
@@ -475,6 +512,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     },
     onError: (error: Error, variables) => {
       invalidateEmailCache();
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       toast({
         title: "Failed to restore email",
         description: error.message,
@@ -494,6 +532,12 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return { ...result, emailId, folder, previousFolder, showUndo };
     },
     onMutate: async ({ emailId, folder, previousFolder, showUndo = true }) => {
+      const email = findEmailById(emailId);
+      if (email && !email.isRead) {
+        const sourceFolder = email.folder || previousFolder || "inbox";
+        adjustUnreadCount(sourceFolder, -1);
+        adjustUnreadCount(folder, 1);
+      }
       setSelectedEmailId(null);
       setShowDetail(false);
       setGeneratedDraft(null);
@@ -677,6 +721,11 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   };
 
   const handlePermanentDeleteSingleEmail = async (emailId: string | number) => {
+    const email = findEmailById(emailId);
+    if (email && !email.isRead) {
+      const folder = email.folder || activeFolder;
+      adjustUnreadCount(folder, -1);
+    }
     setSelectedEmailId(null);
     setShowDetail(false);
     removeEmailFromCache(emailId);
@@ -686,12 +735,14 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       if (!response.ok) {
         throw new Error("Failed to delete email permanently");
       }
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       toast({
         title: "Email permanently deleted",
         duration: 3000,
       });
     } catch (error) {
       invalidateEmailCache();
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
       toast({
         title: "Failed to delete email",
         variant: "destructive",
