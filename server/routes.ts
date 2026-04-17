@@ -2649,6 +2649,46 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  const handleOAuthLoginRedirect = (provider: "google" | "microsoft") => async (req: any, res: any) => {
+    try {
+      cleanupExpiredStates();
+
+      const stateToken = generateStateToken();
+      const expiresAt = Date.now() + 10 * 60 * 1000;
+      const referralCode = req.query.ref as string | undefined;
+      const platform = req.query.platform as string | undefined;
+      const mobileRedirectUri = req.query.redirect_uri as string | undefined;
+
+      if (platform === "mobile" && mobileRedirectUri) {
+        const allowedSchemes = process.env.MOBILE_DEEP_LINK_SCHEMES?.split(",").map(s => s.trim()).filter(Boolean) || ["mydraft://"];
+        const isAllowedScheme = allowedSchemes.some(scheme => mobileRedirectUri.startsWith(scheme));
+        if (!isAllowedScheme) {
+          return res.status(400).send("Invalid redirect URI scheme");
+        }
+      }
+
+      pendingOAuthLoginStates.set(stateToken, {
+        provider,
+        expiresAt,
+        referralCode,
+        platform,
+        mobileRedirectUri,
+      });
+
+      const redirectUri = getEmailRedirectUri(req, provider);
+      const emailProvider = provider === "google" ? gmailProvider : microsoftProvider;
+      const authUrl = emailProvider.getAuthUrl(redirectUri, `login_${stateToken}`);
+
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error(`Error initiating ${provider} OAuth login:`, error);
+      res.status(500).send("Failed to initiate sign-in");
+    }
+  };
+
+  app.get("/api/auth/google/login", handleOAuthLoginRedirect("google"));
+  app.get("/api/auth/microsoft/login", handleOAuthLoginRedirect("microsoft"));
+
   app.get("/api/auth/google/callback", async (req, res) => {
     try {
       console.log("Google OAuth callback received:", JSON.stringify(req.query));
