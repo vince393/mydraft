@@ -3379,6 +3379,73 @@ Return ONLY valid JSON, no other text.`;
     }
   });
 
+  app.patch("/api/emails/:id/archive", requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const userId = req.session.userId!;
+      const account = await storage.getEmailAccount(userId);
+      const isExternal = isExternalEmailId(id, account);
+
+      if (isExternal) {
+        await storage.setLocalEmailFolder(userId, id, "archived");
+        return res.json({ success: true, folder: "archived" });
+      }
+
+      const numericId = parseInt(id);
+      const email = await storage.updateEmail(numericId, { folder: "archived" });
+      if (!email) {
+        return res.status(404).json({ error: "Email not found" });
+      }
+      res.json({ success: true, folder: "archived", email });
+    } catch (error) {
+      console.error("Error archiving email:", error);
+      res.status(500).json({ error: "Failed to archive email" });
+    }
+  });
+
+  app.patch("/api/emails/:id/move", requireAuth, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const { folder } = req.body;
+      const userId = req.session.userId!;
+
+      if (!folder || typeof folder !== "string") {
+        return res.status(400).json({ error: "Folder name is required" });
+      }
+
+      const standardFolders = ["inbox", "archived", "trash", "sent", "drafts", "junk"];
+      const account = await storage.getEmailAccount(userId);
+      const isExternal = isExternalEmailId(id, account);
+
+      if (standardFolders.includes(folder)) {
+        if (isExternal) {
+          await storage.setLocalEmailFolder(userId, id, folder);
+          return res.json({ success: true, folder });
+        }
+        const numericId = parseInt(id);
+        const email = await storage.updateEmail(numericId, { folder });
+        if (!email) {
+          return res.status(404).json({ error: "Email not found" });
+        }
+        return res.json({ success: true, folder, email });
+      }
+
+      const customFolders = await storage.getCustomFolders(userId);
+      const customFolder = customFolders.find(
+        (f) => f.name.toLowerCase() === folder.toLowerCase(),
+      );
+      if (!customFolder) {
+        return res.status(404).json({ error: "Folder not found" });
+      }
+
+      await storage.assignEmailToFolder(userId, id, customFolder.id);
+      res.json({ success: true, folder: customFolder.name, folderId: customFolder.id });
+    } catch (error) {
+      console.error("Error moving email:", error);
+      res.status(500).json({ error: "Failed to move email" });
+    }
+  });
+
   app.patch("/api/emails/:id/star", requireAuth, async (req, res) => {
     try {
       const messageId = req.params.id;
