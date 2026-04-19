@@ -29,6 +29,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { AccountSwitcher } from "@/components/account-switcher";
 import { useSidebar } from "@/components/ui/sidebar";
 import type { Email, Draft } from "@shared/schema";
+import { useEmailSyncSocket } from "@/hooks/use-email-sync-socket";
 
 interface EmailWithNylasId extends Email {
   nylasId?: string;
@@ -97,6 +98,16 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   const userInitials = userName.slice(0, 2).toUpperCase();
   const userPlan = userData?.user?.plan || "free";
   const connectedProvider = userData?.user?.connectedProvider;
+
+  useEmailSyncSocket({
+    userEmail,
+    enabled: !!userEmail,
+    onSync: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emails", "fresh"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
+    },
+  });
 
   const getProviderIcon = () => {
     if (!connectedProvider) return null;

@@ -7,6 +7,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startEmailScheduler } from "./email-scheduler";
+import { setupEmailSyncWebSocket } from "./ws-email-sync";
 import { runMigrations } from "stripe-replit-sync";
 import { getStripeSync } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
@@ -205,6 +206,8 @@ app.use((req, res, next) => {
   await registerRoutes(httpServer, app);
   
   startEmailScheduler();
+
+  setupEmailSyncWebSocket(httpServer);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

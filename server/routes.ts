@@ -3135,6 +3135,14 @@ Return ONLY valid JSON, no other text.`;
         console.error("Failed to cache emails:", err);
       });
 
+      // Notify connected clients (web + mobile) that a fresh sync completed
+      try {
+        const { broadcastSyncToUser } = await import("./ws-email-sync");
+        broadcastSyncToUser(userId);
+      } catch (err) {
+        console.error("Failed to broadcast sync:", err);
+      }
+
       // Auto-save contacts from senders (async, don't block response)
       const sendersSeen = new Set<string>();
       for (const msg of allMessages) {
