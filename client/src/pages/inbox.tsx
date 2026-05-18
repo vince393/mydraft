@@ -290,7 +290,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   });
 
   // Step 2: Fetch fresh emails from provider in background
-  const { data: freshEmails, isFetching: isFetchingFresh, isSuccess: hasFreshData, isLoading: isFreshInitialLoading } = useQuery<EmailWithNylasId[]>({
+  const { data: freshEmails, isFetching: isFetchingFresh, isSuccess: hasFreshData, isLoading: isFreshInitialLoading, isError: isFreshError } = useQuery<EmailWithNylasId[]>({
     queryKey: ["/api/emails", "fresh"],
     queryFn: async () => {
       const response = await fetch(`/api/emails?allFolders=true`);
@@ -308,13 +308,25 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 8000),
     placeholderData: keepPreviousData,
   });
-  
-  // Show fresh emails once available, otherwise show cached
-  const allEmails = hasFreshData && freshEmails ? freshEmails : cachedEmails;
-  
-  // Show loading skeleton only on very first load when no data exists at all
-  const isLoadingEmails = (!hasCachedData && !hasFreshData) || 
-                          (cachedEmails.length === 0 && !hasFreshData && isFetchingFresh);
+
+  // Prefer fresh when it actually returned emails; otherwise fall back to cached
+  // so transient fresh failures or empty responses don't wipe a populated inbox.
+  const freshHasEmails = hasFreshData && Array.isArray(freshEmails) && freshEmails.length > 0;
+  const cachedHasEmails = cachedEmails.length > 0;
+  const allEmails = freshHasEmails
+    ? freshEmails!
+    : cachedHasEmails
+      ? cachedEmails
+      : hasFreshData
+        ? (freshEmails ?? [])
+        : cachedEmails;
+
+  // Show loading skeleton while we have no confirmed data yet. Also keep the
+  // skeleton up if the fresh query errored and we never got any cached data,
+  // so we don't flash "All caught up" on a transient fetch failure.
+  const isLoadingEmails =
+    (!hasCachedData && !hasFreshData) ||
+    (cachedEmails.length === 0 && !hasFreshData && (isFetchingFresh || isFreshError));
   
   // Show subtle syncing banner when we have cached data displaying and are fetching fresh
   const isSyncing = isFetchingFresh && (cachedEmails.length > 0 || (hasFreshData && (freshEmails?.length ?? 0) > 0)) && !isLoadingEmails;
