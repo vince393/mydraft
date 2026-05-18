@@ -2064,6 +2064,10 @@ export async function registerRoutes(
         return res.status(404).json({ error: "User not found" });
       }
       const emailAccount = await storage.getEmailAccount(user.id);
+      const now = new Date();
+      const trialEndsAt = user.trialEndsAt ? new Date(user.trialEndsAt) : null;
+      const trialActive =
+        trialEndsAt !== null && trialEndsAt > now && !user.stripeSubscriptionId;
       res.json({
         email: user.email,
         plan: user.plan,
@@ -2075,6 +2079,9 @@ export async function registerRoutes(
           : null,
         emailVerified: user.emailVerified,
         twoFactorEnabled: user.twoFactorEnabled,
+        trialEndsAt: user.trialEndsAt,
+        trialActive,
+        hasActiveSubscription: !!user.stripeSubscriptionId,
       });
     } catch (error) {
       console.error("Settings fetch error:", error);
@@ -2505,6 +2512,33 @@ Return ONLY valid JSON, no other text.`;
 
   app.delete("/api/user", requireAuth, async (req, res) => {
     try {
+      const user = await storage.getUser(req.session.userId!);
+
+      // Cancel any active Stripe subscription so the user is not charged after deletion.
+      if (user?.stripeSubscriptionId) {
+        try {
+          const { getUncachableStripeClient } = await import("./stripeClient");
+          const stripe = await getUncachableStripeClient();
+          await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+          console.log(
+            `[account-delete] Cancelled Stripe subscription ${user.stripeSubscriptionId} for user ${user.id}`,
+          );
+        } catch (stripeErr: any) {
+          // Treat "already cancelled" / "not found" as success; abort on anything else.
+          const code = stripeErr?.code || stripeErr?.raw?.code;
+          if (code !== "resource_missing") {
+            console.error(
+              "[account-delete] Failed to cancel Stripe subscription:",
+              stripeErr,
+            );
+            return res.status(500).json({
+              error:
+                "Failed to cancel your active subscription. Please try again or contact support so you aren't charged.",
+            });
+          }
+        }
+      }
+
       await storage.deleteEmailAccount(req.session.userId!);
       await storage.deleteUser(req.session.userId!);
       req.session.destroy((err) => {

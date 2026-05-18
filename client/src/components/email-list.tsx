@@ -796,9 +796,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
         {categoryFilteredEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center p-8">
             <Search className="w-10 h-10 text-muted-foreground/40 mb-4" />
-            <h3 className="font-medium text-sm mb-1">No emails found</h3>
+            <h3 className="font-medium text-sm mb-1">No emails match your filters</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              {searchQuery ? `No results for "${searchQuery}"` : activeCategory ? `No ${activeCategory} emails` : "Try adjusting your filters"}
+              {searchQuery
+                ? `No results for "${searchQuery}" out of ${emails.length} emails`
+                : activeCategory
+                  ? `No ${activeCategory} emails match — ${emails.length} total in this folder`
+                  : `0 of ${emails.length} emails match — try clearing filters`}
             </p>
             {(hasActiveFilters || searchQuery) && (
               <Button

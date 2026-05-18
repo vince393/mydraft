@@ -99,10 +99,16 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   const userPlan = userData?.user?.plan || "free";
   const connectedProvider = userData?.user?.connectedProvider;
 
+  const lastSelfFetchAtRef = useRef(0);
+
   useEmailSyncSocket({
     userEmail,
     enabled: !!userEmail,
     onSync: () => {
+      // Avoid self-triggered refetch loop: when our own /api/emails fetch finishes,
+      // the server broadcasts a sync event back to us. Ignore sync events that
+      // arrive within a short window after our last fetch completed.
+      if (Date.now() - lastSelfFetchAtRef.current < 5000) return;
       queryClient.invalidateQueries({ queryKey: ["/api/emails", "fresh"] });
       queryClient.invalidateQueries({ queryKey: ["/api/emails", "cached"] });
       queryClient.invalidateQueries({ queryKey: ["/api/emails/unread-counts"] });
@@ -292,12 +298,12 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return response.json();
     },
     enabled: !!userData?.user && !isCustomFolder,
-    staleTime: 15 * 1000,
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchInterval: 60 * 1000,
+    refetchInterval: false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
-    refetchOnMount: "always",
+    refetchOnMount: true,
     retry: 2,
     retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 8000),
     placeholderData: keepPreviousData,
@@ -318,6 +324,14 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       setIsManualRefresh(false);
     }
   }, [isFetchingFresh, isManualRefresh]);
+
+  // Stamp when our own /api/emails fetch finishes so the WS sync handler can
+  // ignore the echo from our own fetch and avoid a refetch loop.
+  useEffect(() => {
+    if (!isFetchingFresh && hasFreshData) {
+      lastSelfFetchAtRef.current = Date.now();
+    }
+  }, [isFetchingFresh, hasFreshData]);
 
   // Fetch emails from custom folder when viewing a custom folder
   const { data: customFolderData, isLoading: isLoadingCustomFolder } = useQuery<{ emails: EmailWithNylasId[] }>({

@@ -81,6 +81,9 @@ interface Settings {
   emailSignature: string | null;
   signatureEnabled: boolean;
   connectedEmail: { email: string; provider: string } | null;
+  trialEndsAt?: string | null;
+  trialActive?: boolean;
+  hasActiveSubscription?: boolean;
 }
 
 type SettingsSection = "account" | "security" | "appearance" | "ai" | "email" | "billing" | "referrals" | "feedback" | "team";
@@ -318,6 +321,17 @@ function AccountTab({ settings }: { settings: Settings }) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  const planLabel = settings.plan === "premium"
+    ? "Business"
+    : settings.plan === "pro"
+      ? "Pro"
+      : settings.plan === "free"
+        ? "Free"
+        : null;
+  const isPaidPlan = settings.plan === "pro" || settings.plan === "premium";
+  const isOnTrial = !!settings.trialActive;
+  const hasActiveSubscription = !!settings.hasActiveSubscription;
+
   const deleteAccountMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("DELETE", "/api/user");
@@ -379,10 +393,30 @@ function AccountTab({ settings }: { settings: Settings }) {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete your account, 
-                disconnect your email, and remove all your data from our servers.
+              <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    This action cannot be undone. We'll permanently delete your account,
+                    disconnect your email, and remove all your data from our servers.
+                  </p>
+                  {isOnTrial && (
+                    <p className="text-foreground/80">
+                      <strong>Your active {planLabel} free trial will be cancelled.</strong> You
+                      won't be charged when the trial ends.
+                    </p>
+                  )}
+                  {!isOnTrial && hasActiveSubscription && isPaidPlan && (
+                    <p className="text-foreground/80">
+                      <strong>Your active {planLabel} plan will be cancelled</strong> as part of
+                      deleting your account, so you won't be charged again.
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground/70">
+                    If you sign up again later with the same email, it'll be a completely fresh
+                    account with no past trial or subscription.
+                  </p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
