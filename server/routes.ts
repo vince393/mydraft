@@ -18,7 +18,7 @@ import { aiPreferencesSchema, insertCustomFolderSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
-import { verifyAccessToken, signAccessToken, signRefreshToken, verifyRefreshToken, hashToken, getRefreshTokenExpiresAt } from "./jwt";
+import { verifyAccessToken, signAccessToken, signRefreshToken, verifyRefreshToken, hashToken, getRefreshTokenExpiresAt, signDeviceSwitchToken, verifyDeviceSwitchToken } from "./jwt";
 import { sendVerificationEmail, sendPasswordResetEmail, sendTrialEndedEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
 import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
@@ -942,11 +942,49 @@ export async function registerRoutes(
             emailVerified: user.emailVerified,
             twoFactorEnabled: user.twoFactorEnabled,
           },
+          deviceSwitchToken: signDeviceSwitchToken(user.id),
         });
       });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/device-switch", async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ error: "Token required" });
+      }
+      const payload = verifyDeviceSwitchToken(token);
+      if (!payload) {
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
+      const user = await storage.getUser(payload.userId);
+      if (!user) {
+        return res.status(404).json({ error: "Account no longer exists" });
+      }
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regenerate error (device-switch):", err);
+          return res.status(500).json({ error: "Session error" });
+        }
+        req.session.userId = user.id;
+        res.json({
+          user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+            plan: user.plan,
+            onboardingCompleted: user.onboardingCompleted,
+          },
+          deviceSwitchToken: signDeviceSwitchToken(user.id),
+        });
+      });
+    } catch (error) {
+      console.error("Device switch error:", error);
+      res.status(500).json({ error: "Switch failed" });
     }
   });
 
@@ -1029,6 +1067,7 @@ export async function registerRoutes(
             emailVerified: user.emailVerified,
             twoFactorEnabled: user.twoFactorEnabled,
           },
+          deviceSwitchToken: signDeviceSwitchToken(user.id),
         });
       });
     } catch (error) {

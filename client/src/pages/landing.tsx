@@ -52,7 +52,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <MarketingNav />
-      <HeroSection getStartedHref={getStartedHref()} />
+      <HeroSection getStartedHref={getStartedHref()} isLoggedIn={!!authData?.user} />
       <FeatureShowcase />
       <ComparisonSection getStartedHref={getStartedHref()} />
       <HowItWorksSection getStartedHref={getStartedHref()} />
@@ -64,7 +64,7 @@ export default function LandingPage() {
   );
 }
 
-function HeroSection({ getStartedHref }: { getStartedHref: string }) {
+function HeroSection({ getStartedHref, isLoggedIn }: { getStartedHref: string; isLoggedIn: boolean }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -130,11 +130,13 @@ function HeroSection({ getStartedHref }: { getStartedHref: string }) {
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
-              <Link href="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-md border-black/[0.12] dark:border-white/[0.12]" data-testid="hero-signin">
-                  Sign in
-                </Button>
-              </Link>
+              {!isLoggedIn && (
+                <Link href="/login">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-md border-black/[0.12] dark:border-white/[0.12]" data-testid="hero-signin">
+                    Sign in
+                  </Button>
+                </Link>
+              )}
             </div>
             
             <p 

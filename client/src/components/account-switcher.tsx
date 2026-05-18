@@ -6,10 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Check, Plus, Loader2, X, Crown, Sparkles, LogOut } from "lucide-react";
+import { Check, Plus, Loader2, X, Crown, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { getDeviceAccounts, removeDeviceAccount, type DeviceAccount } from "@/lib/device-accounts";
+import {
+  getDeviceAccounts,
+  removeDeviceAccount,
+  saveDeviceAccount,
+  clearSwitchToken,
+  hasValidSwitchToken,
+  type DeviceAccount,
+} from "@/lib/device-accounts";
 
 interface AccountSwitcherProps {
   open: boolean;
@@ -48,6 +55,43 @@ export function AccountSwitcher({ open, onOpenChange }: AccountSwitcherProps) {
 
   const handleSwitchAccount = async (account: DeviceAccount) => {
     setSwitchingTo(account.userId);
+
+    if (hasValidSwitchToken(account)) {
+      try {
+        const response = await apiRequest("POST", "/api/auth/device-switch", {
+          token: account.switchToken,
+        });
+        const data = await response.json();
+
+        if (data.user && data.deviceSwitchToken) {
+          saveDeviceAccount({
+            userId: data.user.id,
+            email: data.user.email,
+            displayName: data.user.displayName ?? null,
+            plan: data.user.plan ?? null,
+            switchToken: data.deviceSwitchToken,
+          });
+        }
+
+        queryClient.clear();
+        onOpenChange(false);
+
+        if (data.user && !data.user.onboardingCompleted) {
+          setLocation("/onboarding");
+        } else {
+          setLocation("/inbox");
+        }
+        return;
+      } catch (err: any) {
+        clearSwitchToken(account.userId);
+        setDeviceAccounts(getDeviceAccounts());
+        toast({
+          title: "Session expired",
+          description: "Please sign in again to continue.",
+        });
+      }
+    }
+
     try {
       await logoutMutation.mutateAsync();
       queryClient.clear();
@@ -151,43 +195,55 @@ export function AccountSwitcher({ open, onOpenChange }: AccountSwitcherProps) {
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Other Accounts on This Device</p>
               <div className="space-y-1">
-                {otherAccounts.map((account) => (
-                  <div
-                    key={account.userId}
-                    className="group flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-all"
-                    onClick={() => handleSwitchAccount(account)}
-                    data-testid={`account-switch-${account.userId}`}
-                  >
-                    <Avatar className="w-10 h-10">
-                      <AvatarFallback>
-                        {getInitials(account.email, account.displayName)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium truncate">
-                          {account.displayName || account.email.split("@")[0]}
-                        </p>
-                        {getPlanBadge(account.plan)}
+                {otherAccounts.map((account) => {
+                  const isQuickSwitch = hasValidSwitchToken(account);
+                  return (
+                    <div
+                      key={account.userId}
+                      className="group flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-all"
+                      onClick={() => handleSwitchAccount(account)}
+                      data-testid={`account-switch-${account.userId}`}
+                    >
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback>
+                          {getInitials(account.email, account.displayName)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium truncate">
+                            {account.displayName || account.email.split("@")[0]}
+                          </p>
+                          {getPlanBadge(account.plan)}
+                          {!isQuickSwitch && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0 h-4 text-muted-foreground border-muted-foreground/30"
+                              data-testid={`badge-logged-out-${account.userId}`}
+                            >
+                              Logged out
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{account.email}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground truncate">{account.email}</p>
+                      {switchingTo === account.userId ? (
+                        <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveAccount(account.userId);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
+                          data-testid={`account-remove-${account.userId}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
-                    {switchingTo === account.userId ? (
-                      <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveAccount(account.userId);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
-                        data-testid={`account-remove-${account.userId}`}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

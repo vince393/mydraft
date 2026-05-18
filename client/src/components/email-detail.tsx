@@ -1815,27 +1815,28 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
             </div>
           )}
 
-          <div className="flex items-center gap-2 sm:gap-3 pt-6 border-t border-border/50 flex-wrap">
-            <Button 
-              size="sm"
-              className="gap-1.5 sm:gap-2 px-4 sm:px-5 h-10 sm:h-8 text-[13px] sm:text-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0" 
-              data-testid="button-reply"
-              onClick={onReply}
-            >
-              <Reply className="w-4 h-4 sm:w-4 sm:h-4" />
-              Reply
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 px-4 sm:px-3 h-10 sm:h-8 text-[13px] sm:text-sm" data-testid="button-reply-all" onClick={onReplyAll}>
-              <ReplyAll className="w-4 h-4 sm:w-4 sm:h-4" />
-              Reply All
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 px-4 sm:px-3 h-10 sm:h-8 text-[13px] sm:text-sm" data-testid="button-forward" onClick={onForward}>
-              <Forward className="w-4 h-4 sm:w-4 sm:h-4" />
-              Forward
-            </Button>
-          </div>
         </div>
       </ScrollArea>
+
+      <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 border-t border-border/40 bg-background/95 backdrop-blur-md flex-wrap flex-shrink-0">
+        <Button
+          size="sm"
+          className="gap-1.5 sm:gap-2 px-4 sm:px-5 h-10 sm:h-8 text-[13px] sm:text-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-0"
+          data-testid="button-reply"
+          onClick={onReply}
+        >
+          <Reply className="w-4 h-4 sm:w-4 sm:h-4" />
+          Reply
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 px-4 sm:px-3 h-10 sm:h-8 text-[13px] sm:text-sm" data-testid="button-reply-all" onClick={onReplyAll}>
+          <ReplyAll className="w-4 h-4 sm:w-4 sm:h-4" />
+          Reply All
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 px-4 sm:px-3 h-10 sm:h-8 text-[13px] sm:text-sm" data-testid="button-forward" onClick={onForward}>
+          <Forward className="w-4 h-4 sm:w-4 sm:h-4" />
+          Forward
+        </Button>
+      </div>
     </div>
   );
 }

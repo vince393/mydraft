@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { saveDeviceAccount } from "@/lib/device-accounts";
 import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft, Building2, Inbox, Shield, Sparkles, Lock, Zap, Globe } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import logoPath from "@assets/mydraft_logo.png";
@@ -121,6 +122,15 @@ export default function LoginPage() {
         return;
       }
       
+      if (data.user && data.deviceSwitchToken) {
+        saveDeviceAccount({
+          userId: data.user.id,
+          email: data.user.email,
+          displayName: data.user.displayName ?? null,
+          plan: data.user.plan ?? null,
+          switchToken: data.deviceSwitchToken,
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       navigateAfterAuth(data.user);
     },
@@ -188,6 +198,15 @@ export default function LoginPage() {
       return response.json();
     },
     onSuccess: (data) => {
+      if (data.user && data.deviceSwitchToken) {
+        saveDeviceAccount({
+          userId: data.user.id,
+          email: data.user.email,
+          displayName: data.user.displayName ?? null,
+          plan: data.user.plan ?? null,
+          switchToken: data.deviceSwitchToken,
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Verified!",
