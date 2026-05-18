@@ -12,12 +12,48 @@ const openai = new OpenAI({
 });
 
 type Generated = {
-  sender_name: string;
-  sender_handle: string;
   subject: string;
   body_text: string;
   body_html: string;
 };
+
+const FIRST_NAMES = [
+  "Aisha","Marcus","Priya","Diego","Mei","Soren","Naomi","Tariq","Elena","Jamal",
+  "Yuki","Oliver","Zara","Theo","Anaya","Felix","Imani","Lucas","Saoirse","Andre",
+  "Camila","Rohan","Freya","Kofi","Ines","Mateo","Hina","Bjorn","Leilani","Cyrus",
+  "Maya","Reuben","Sienna","Dmitri","Aaliyah","Kenji","Noor","Ezra","Tatiana","Owen",
+  "Sade","Hassan","Ingrid","Pablo","Wren","Kiran","Lila","Anders","Beatriz","Malik",
+  "Esme","Jonas","Niamh","Rashid","Tomoko","Wesley","Yara","Avani","Caleb","Florence",
+  "Hiroshi","Juniper","Kwame","Layla","Mireille","Ophelia","Rafael","Sloane","Thiago","Vera",
+];
+
+const LAST_NAMES = [
+  "Okafor","Patel","Ramirez","Nakamura","Bergstrom","Hassan","Cohen","Adeyemi","Chen","Vasquez",
+  "Singh","Lindqvist","Iqbal","Delacroix","Park","Khoury","O'Sullivan","Tanaka","Mwangi","Petrov",
+  "Sundberg","Ghosh","Romano","Andersen","Diallo","Krishnan","Whitfield","Saito","Acosta","Halverson",
+  "Brennan","Castillo","Mensah","Holloway","Larsen","Nguyen","Pereira","Volkov","Yamamoto","Abbas",
+  "Galindo","Klein","Murphy","Sokolova","Tremblay","Underwood","Vargas","Wadekar","Yoon","Zadeh",
+  "Bianchi","Espinoza","Fitzgerald","Goldberg","Haddad","Ito","Joshi","Kalinski","Loomis","Montoya",
+];
+
+function randomItem<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function makeHandle(first: string, last: string): string {
+  const styles = [
+    () => `${first}.${last}`,
+    () => `${first}${last}`,
+    () => `${first[0]}${last}`,
+    () => `${first}.${last[0]}`,
+    () => `${first}_${last}`,
+    () => `${first}${Math.floor(Math.random() * 90 + 10)}`,
+  ];
+  return randomItem(styles)()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[^a-z0-9._]/g, "");
+}
 
 const SCENARIOS = [
   "A college friend you haven't talked to in two years suggesting catching up over dinner next week",
@@ -42,7 +78,7 @@ const SCENARIOS = [
   "A friend asking for restaurant recommendations because they're visiting your city",
 ];
 
-async function generateEmail(scenario: string): Promise<Generated> {
+async function generateEmail(scenario: string, senderFirst: string): Promise<Generated> {
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
@@ -56,20 +92,20 @@ async function generateEmail(scenario: string): Promise<Generated> {
         role: "user",
         content: `Write a realistic personal email matching this scenario: "${scenario}".
 
+The sender's first name is "${senderFirst}". Sign off using ONLY this first name.
+
 STRICT RULES:
 - NO brand names, NO companies, NO products, NO services. Person-to-person only.
-- The sender is always a real human writing personally — not a notification, not a marketing email.
-- Use a plausible first + last human name. No company names anywhere.
-- No links to any branded site.
+- The sender is a real human writing personally — not a notification, not marketing.
+- No links.
+- Do NOT mention any other person's last name.
 
 Return ONLY a JSON object with these fields:
-- sender_name: a plausible full human name
-- sender_handle: a lowercase email local-part like "sarah.chen" or "mike.t" (no @, no domain, no company)
 - subject: a natural, casual email subject line
-- body_text: the plain-text body (2-5 short paragraphs, natural conversational tone, signed off with just a first name)
+- body_text: the plain-text body (2-5 short paragraphs, natural conversational tone, signed off with "${senderFirst}")
 - body_html: the same body wrapped in simple <p> tags. No styling, no links.
 
-Vary tone, length, and warmth. Make it feel like a real email from a real friend or family member.`,
+Vary tone, length, and warmth.`,
       },
     ],
   });
@@ -87,14 +123,15 @@ async function main() {
   for (let i = 0; i < COUNT; i++) {
     const scenario = SCENARIOS[i % SCENARIOS.length];
     try {
-      console.log(`\n[${i + 1}/${COUNT}] Generating: ${scenario}`);
-      const email = await generateEmail(scenario);
+      const first = randomItem(FIRST_NAMES);
+      const last = randomItem(LAST_NAMES);
+      const senderName = `${first} ${last}`;
+      const handle = makeHandle(first, last);
 
-      const safeHandle = email.sender_handle
-        .toLowerCase()
-        .replace(/[^a-z0-9._-]/g, "")
-        .slice(0, 40) || "noreply";
-      const fromAddress = `${email.sender_name} <${safeHandle}@${FROM_DOMAIN}>`;
+      console.log(`\n[${i + 1}/${COUNT}] Generating: ${scenario}`);
+      const email = await generateEmail(scenario, first);
+
+      const fromAddress = `${senderName} <${handle}@${FROM_DOMAIN}>`;
 
       console.log(`  From: ${fromAddress}`);
       console.log(`  Subject: ${email.subject}`);
