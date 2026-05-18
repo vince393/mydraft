@@ -191,7 +191,6 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
     plan: string | null;
     trialActive?: boolean;
     trialDaysRemaining?: number;
-    hasDemoEmails?: boolean;
   } | null }>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
@@ -854,7 +853,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                         Email Campaigns
                       </button>
                     )}
-                    {!userData?.user?.connectedEmail && !userData?.user?.hasDemoEmails && (
+                    {!userData?.user?.connectedEmail && (
                       <button
                         className="w-full flex items-center gap-3 px-4 py-3.5 text-base rounded-xl hover:bg-muted/50 active:bg-muted transition-colors"
                         onClick={() => { setShowMobileProfileMenu(false); setOpenMobile(false); setLocation("/connect-email"); }}
@@ -935,7 +934,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
                     Email Campaigns
                   </DropdownMenuItem>
                 )}
-                {!userData?.user?.connectedEmail && !userData?.user?.hasDemoEmails && (
+                {!userData?.user?.connectedEmail && (
                   <DropdownMenuItem className="gap-2" onClick={() => setLocation("/connect-email")}>
                     <Link className="w-4 h-4" />
                     Connect Email

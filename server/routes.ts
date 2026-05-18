@@ -19,7 +19,6 @@ import { z } from "zod";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
 import { verifyAccessToken, signAccessToken, signRefreshToken, verifyRefreshToken, hashToken, getRefreshTokenExpiresAt } from "./jwt";
-import { isDemoEmailAccount, ensureDemoEmailsForUser } from "./demo-emails-seed";
 import { sendVerificationEmail, sendPasswordResetEmail, sendTrialEndedEmail } from "./email";
 import { jsonSchema } from "drizzle-zod";
 import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
@@ -1808,7 +1807,6 @@ export async function registerRoutes(
         trialDaysRemaining,
         trialEndsAt: user.trialEndsAt,
         hasUsedTrial: user.hasUsedTrial,
-        hasDemoEmails: isDemoEmailAccount(user.email),
       },
     });
   });
@@ -3028,27 +3026,6 @@ Return ONLY valid JSON, no other text.`;
 
       const providerResult = await getProviderAndToken(userId);
       if (!providerResult) {
-        const user = await storage.getUser(userId);
-        if (user && isDemoEmailAccount(user.email)) {
-          await ensureDemoEmailsForUser(userIdNum);
-          const demoCached = await storage.getCachedEmails(userIdNum);
-          const starredIds = await storage.getStarredEmailIds(userId);
-          const starredSet = new Set(starredIds);
-          const localStates = await storage.getAllLocalEmailStates(userId);
-          const demoEmails = demoCached.map((email) => {
-            const localState = localStates.get(email.nylasId);
-            return {
-              ...email,
-              isStarred: starredSet.has(email.nylasId),
-              folder: localState?.folder || email.folder,
-              isRead: localState?.isRead !== null && localState?.isRead !== undefined ? localState.isRead : email.isRead,
-            };
-          });
-          const filtered = folder && !allFolders
-            ? demoEmails.filter((e) => (e.folder || "inbox") === folder)
-            : demoEmails;
-          return res.json(filtered);
-        }
         return res.json([]);
       }
 
