@@ -20,18 +20,26 @@ type Generated = {
 };
 
 const SCENARIOS = [
-  "A founder of a YC-backed startup pitching a partnership opportunity",
-  "A friend forwarding an interesting article about AI productivity",
-  "A SaaS company sending a monthly invoice receipt",
-  "A recruiter reaching out about a senior engineering role",
-  "A conference organizer inviting you to give a keynote talk",
-  "A bank sending a fraud alert about a suspicious transaction",
-  "A college classmate suggesting catching up over coffee",
-  "An open-source maintainer asking if you can review a pull request",
-  "A nonprofit thanking you for a recent donation",
-  "An airline notifying you that your flight has been rescheduled",
-  "A real estate agent following up on a property viewing",
-  "A book club coordinator sharing this month's pick",
+  "A college friend you haven't talked to in two years suggesting catching up over dinner next week",
+  "Your cousin asking if you can come to their kid's birthday party on Saturday",
+  "A neighbor letting you know they found your missing package on their porch",
+  "Your mom forwarding a long article she thought you'd like, with her usual short note on top",
+  "An old coworker reaching out because they're hiring at a new company and thought of you",
+  "Someone you met at a conference last month following up about a project idea",
+  "A friend asking for honest feedback on a personal essay they wrote",
+  "Your sibling complaining about family drama and asking for your take",
+  "A friend inviting you to be a groomsman/bridesmaid in their wedding next spring",
+  "Someone from your gym asking if you want to do a 10k together in the fall",
+  "A mentor checking in to see how a recent career decision is going",
+  "An ex-roommate asking if you still have a box of their stuff",
+  "A friend sharing exciting news that they just got engaged",
+  "A book club friend recommending three books they loved this month",
+  "Someone you went on one date with three weeks ago asking if you want to grab a drink again",
+  "A friend asking to borrow your truck/SUV to move apartments this weekend",
+  "Your dad sharing a long story about a home repair project gone wrong",
+  "A friend asking if you can pick them up from the airport on Friday night",
+  "Someone you used to coach/teach reaching out years later to say thanks",
+  "A friend asking for restaurant recommendations because they're visiting your city",
 ];
 
 async function generateEmail(scenario: string): Promise<Generated> {
@@ -46,16 +54,22 @@ async function generateEmail(scenario: string): Promise<Generated> {
       },
       {
         role: "user",
-        content: `Write a realistic email matching this scenario: "${scenario}".
+        content: `Write a realistic personal email matching this scenario: "${scenario}".
+
+STRICT RULES:
+- NO brand names, NO companies, NO products, NO services. Person-to-person only.
+- The sender is always a real human writing personally — not a notification, not a marketing email.
+- Use a plausible first + last human name. No company names anywhere.
+- No links to any branded site.
 
 Return ONLY a JSON object with these fields:
-- sender_name: a plausible full human name (or company name for automated)
-- sender_handle: a lowercase email local-part to use, like "sarah.chen" or "notifications" (no @ symbol, no domain)
-- subject: a natural email subject line (no "Re:" unless it fits)
-- body_text: the plain-text body (2-5 short paragraphs, natural tone, signed off)
-- body_html: the same body wrapped in simple HTML (<p> tags, optional <a> links). Dark-mode friendly, no inline styles needed.
+- sender_name: a plausible full human name
+- sender_handle: a lowercase email local-part like "sarah.chen" or "mike.t" (no @, no domain, no company)
+- subject: a natural, casual email subject line
+- body_text: the plain-text body (2-5 short paragraphs, natural conversational tone, signed off with just a first name)
+- body_html: the same body wrapped in simple <p> tags. No styling, no links.
 
-Make it feel like a real email someone would receive. Vary tone and length.`,
+Vary tone, length, and warmth. Make it feel like a real email from a real friend or family member.`,
       },
     ],
   });
