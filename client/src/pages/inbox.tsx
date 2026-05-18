@@ -83,6 +83,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     connectedEmail: string | null;
     connectedProvider: string | null;
     plan: string | null;
+    hasDemoEmails?: boolean;
   } | null }>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
@@ -868,7 +869,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
             isLoading={isLoadingEmails || isLoadingCustomFolder}
             isSyncing={isSyncing}
             activeFolder={activeFolder}
-            hasConnectedAccount={!!userData?.user?.connectedEmail}
+            hasConnectedAccount={!!userData?.user?.connectedEmail || !!userData?.user?.hasDemoEmails}
             onConnectAccount={() => setLocation("/connect-email")}
             onRefresh={() => {
               setIsManualRefresh(true);
@@ -914,7 +915,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
                   </Button>
                 )}
                 <div className="flex items-center gap-2 ml-auto">
-                  {!userData?.user?.connectedEmail && !screen.isMobile && (
+                  {!userData?.user?.connectedEmail && !userData?.user?.hasDemoEmails && !screen.isMobile && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -952,7 +953,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              {!userData?.user?.connectedEmail ? (
+              {!userData?.user?.connectedEmail && !userData?.user?.hasDemoEmails ? (
                 <div className="text-center max-w-[300px] px-4">
                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/10 to-violet-500/10 border border-blue-500/10 flex items-center justify-center mx-auto mb-6">
                     <Mail className="w-9 h-9 text-blue-400/40" />
