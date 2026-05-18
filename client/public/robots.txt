@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /inbox
+Disallow: /onboarding
+Disallow: /select-plan
+Disallow: /connect-email
+Disallow: /settings
+Disallow: /trial-expired
+Disallow: /reset-password
+Disallow: /forgot-password
+
+Sitemap: https://mydraft.io/sitemap.xml
