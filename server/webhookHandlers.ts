@@ -256,6 +256,41 @@ export class WebhookHandlers {
         break;
       }
 
+      case 'payment_intent.succeeded': {
+        // One-time credit pack bought via on-site checkout (Stripe Elements →
+        // PaymentIntent). The confirm-pack endpoint also grants synchronously;
+        // this is the durability backup if the browser closes before confirming.
+        // Same idempotency key as confirm-pack, so credits are never double-granted.
+        const pi = data.object;
+        if (pi.metadata?.type !== 'pack') break;
+
+        let userId = pi.metadata?.userId as string | undefined;
+        if (!userId && pi.customer) {
+          const u = await storage.getUserByStripeCustomerId(pi.customer as string);
+          userId = u?.id;
+        }
+        if (!userId) break;
+
+        try {
+          const credits = parseInt(pi.metadata.credits || '0', 10);
+          if (credits > 0) {
+            await grantCredits({
+              userId,
+              amount: credits,
+              source: 'pack',
+              action: 'pack_purchase',
+              reference: pi.id,
+              idempotencyKey: `pack:pi:${pi.id}`,
+              metadata: { stripePaymentIntentId: pi.id, packCredits: credits, note: pi.metadata.sku },
+            });
+            console.log(`[Webhook] Granted ${credits} pack credits to user ${userId} (payment_intent)`);
+          }
+        } catch (packErr) {
+          console.error('[Webhook] Failed to grant pack credits (payment_intent):', packErr);
+        }
+        break;
+      }
+
       case 'invoice.paid': {
         const invoice = data.object;
         const customerId = invoice.customer;

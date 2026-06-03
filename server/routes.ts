@@ -10356,8 +10356,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
-  // Buy a one-time credit pack (Stripe Checkout, payment mode)
-  app.post("/api/credits/buy-pack", requireAuth, async (req, res) => {
+  // --- One-time credit pack: on-site checkout (PaymentIntent) ---
+  // Step 1: create a PaymentIntent for the pack so the client can collect the
+  // card with Stripe Elements (no redirect to Stripe-hosted checkout).
+  app.post("/api/credits/create-pack-intent", requireAuth, async (req, res) => {
     try {
       const packId = req.body.packId || req.body.sku;
       const pack = CREDIT_PACKS.find((p) => p.id === packId);
@@ -10373,37 +10375,77 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       const customerId = await ensureStripeCustomer(stripe, user);
 
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
-      const session = await stripe.checkout.sessions.create({
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: pack.priceCents,
+        currency: "usd",
         customer: customerId,
-        mode: "payment",
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              unit_amount: pack.priceCents,
-              product_data: {
-                name: `MyDraft — ${pack.label}`,
-                metadata: { type: "pack", credits: String(pack.credits), sku: pack.id },
-              },
-            },
-            quantity: 1,
-          },
-        ],
-        success_url: `${baseUrl}/credits?purchase=success`,
-        cancel_url: `${baseUrl}/credits?purchase=canceled`,
-        metadata: { userId: String(user.id), type: "pack", credits: String(pack.credits), sku: pack.id },
+        description: `MyDraft — ${pack.label}`,
+        automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+        metadata: {
+          userId: String(user.id),
+          type: "pack",
+          credits: String(pack.credits),
+          sku: pack.id,
+        },
       });
 
-      res.json({ url: session.url });
+      res.json({ clientSecret: paymentIntent.client_secret });
     } catch (error: any) {
-      console.error("Error creating pack checkout:", error?.message || error);
+      console.error("Error creating pack payment intent:", error?.message || error);
       res.status(500).json({ error: "Failed to start checkout", details: error?.message });
     }
   });
 
-  // Buy a recurring monthly credit add-on (Stripe Checkout, subscription mode)
-  app.post("/api/credits/buy-addon", requireAuth, async (req, res) => {
+  // Step 2: after the client confirms the card payment, grant the credits.
+  // Idempotent (same key as the payment_intent.succeeded webhook) so credits are
+  // never double-granted regardless of which path runs first.
+  app.post("/api/credits/confirm-pack", requireAuth, async (req, res) => {
+    try {
+      const { paymentIntentId } = req.body;
+      if (!paymentIntentId) {
+        return res.status(400).json({ error: "Payment is required" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      if (pi.metadata?.userId !== String(user.id) || pi.metadata?.type !== "pack") {
+        return res.status(403).json({ error: "Payment does not belong to this account" });
+      }
+      if (pi.status !== "succeeded") {
+        return res.status(400).json({ error: "Payment has not completed yet" });
+      }
+
+      const credits = parseInt(pi.metadata.credits || "0", 10);
+      if (credits > 0) {
+        await grantCredits({
+          userId: user.id,
+          amount: credits,
+          source: "pack",
+          action: "pack_purchase",
+          reference: pi.id,
+          idempotencyKey: `pack:pi:${pi.id}`,
+          metadata: { stripePaymentIntentId: pi.id, packCredits: credits, note: pi.metadata.sku },
+        });
+      }
+
+      const balance = await getBalance(user.id);
+      res.json({ success: true, credits, balance });
+    } catch (error: any) {
+      console.error("Error confirming pack purchase:", error?.message || error);
+      res.status(500).json({ error: error?.message || "Failed to confirm purchase" });
+    }
+  });
+
+  // --- Recurring monthly credit add-on: on-site checkout (SetupIntent + subscription) ---
+  // Step 1: create a SetupIntent so the client can collect the card with Stripe
+  // Elements, mirroring the plan checkout flow (no Stripe-hosted redirect).
+  app.post("/api/credits/create-addon-intent", requireAuth, async (req, res) => {
     try {
       const addonId = req.body.addonId || req.body.sku;
       const addon = CREDIT_ADDONS.find((a) => a.id === addonId);
@@ -10419,8 +10461,78 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       const customerId = await ensureStripeCustomer(stripe, user);
 
-      // Find or create product + recurring price tagged as an add-on.
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        payment_method_types: ["card"],
+        metadata: {
+          userId: String(user.id),
+          type: "addon",
+          credits: String(addon.credits),
+          sku: addon.id,
+        },
+      });
+
+      res.json({ clientSecret: setupIntent.client_secret });
+    } catch (error: any) {
+      console.error("Error creating add-on setup intent:", error?.message || error);
+      res.status(500).json({ error: "Failed to start checkout", details: error?.message });
+    }
+  });
+
+  // Step 2: after the card is collected, attach it and create the recurring
+  // add-on subscription. Credits are granted by the invoice.paid webhook and the
+  // add-on is recorded by the subscription.created webhook.
+  app.post("/api/credits/confirm-addon", requireAuth, async (req, res) => {
+    try {
+      const { paymentMethodId } = req.body;
+      const addonId = req.body.addonId || req.body.sku;
+      const addon = CREDIT_ADDONS.find((a) => a.id === addonId);
+      if (!addon) {
+        return res.status(400).json({ error: "Invalid add-on" });
+      }
+      if (!paymentMethodId) {
+        return res.status(400).json({ error: "Payment method is required" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || !user.stripeCustomerId) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
       const sku = addon.id;
+
+      // Guard against duplicate add-on subscriptions from retries / double-submits:
+      // if this customer already has a live subscription for this SKU, return it
+      // instead of creating (and charging for) another one.
+      const existingSubs = await stripe.subscriptions.list({
+        customer: user.stripeCustomerId,
+        status: "all",
+        limit: 100,
+      });
+      const duplicate = existingSubs.data.find(
+        (s) =>
+          s.metadata?.type === "addon" &&
+          s.metadata?.sku === sku &&
+          ["active", "trialing", "past_due", "incomplete"].includes(s.status),
+      );
+      if (duplicate) {
+        return res.json({ success: true, subscriptionId: duplicate.id, alreadyActive: true });
+      }
+
+      // Attach the payment method and make it the default for invoices.
+      try {
+        await stripe.paymentMethods.attach(paymentMethodId, { customer: user.stripeCustomerId });
+      } catch (attachErr: any) {
+        if (!attachErr.message?.includes("already been attached")) throw attachErr;
+      }
+      await stripe.customers.update(user.stripeCustomerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+
+      // Find or create product + recurring price tagged as an add-on.
       let product = (await stripe.products.search({ query: `metadata['mydraft_sku']:'${sku}'` })).data[0];
       if (!product) {
         product = await stripe.products.create({
@@ -10440,23 +10552,17 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         });
       }
 
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
-      const session = await stripe.checkout.sessions.create({
-        customer: customerId,
-        mode: "subscription",
-        line_items: [{ price: price.id, quantity: 1 }],
-        subscription_data: {
-          metadata: { userId: String(user.id), type: "addon", credits: String(addon.credits), sku },
-        },
-        success_url: `${baseUrl}/credits?purchase=success`,
-        cancel_url: `${baseUrl}/credits?purchase=canceled`,
+      const subscription = await stripe.subscriptions.create({
+        customer: user.stripeCustomerId,
+        items: [{ price: price.id }],
+        default_payment_method: paymentMethodId,
         metadata: { userId: String(user.id), type: "addon", credits: String(addon.credits), sku },
       });
 
-      res.json({ url: session.url });
+      res.json({ success: true, subscriptionId: subscription.id });
     } catch (error: any) {
-      console.error("Error creating add-on checkout:", error?.message || error);
-      res.status(500).json({ error: "Failed to start checkout", details: error?.message });
+      console.error("Error confirming add-on:", error?.message || error);
+      res.status(500).json({ error: error?.message || "Failed to start add-on" });
     }
   });
 

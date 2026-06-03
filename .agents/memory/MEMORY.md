@@ -2,3 +2,4 @@
 - [Credit grant idempotency](credit-grant-idempotency.md) — Stripe retries webhooks; every webhook grantCredits must pass a price/line-specific idempotencyKey or it double-grants.
 - [SEO meta strategy](seo-meta-strategy.md) — static OG/JSON-LD in index.html (for non-JS social scrapers) + runtime <Seo> head manager for per-page tags; keep robots directives in sync between both.
 - [Stripe customer id staleness](stripe-customer-staleness.md) — stored stripeCustomerId can vanish across Stripe key/mode switches; validate-or-recreate via ensureStripeCustomer before any customer-bound call.
+- [On-site Stripe checkout](onsite-stripe-checkout.md) — packs use PaymentIntent+confirmCardPayment, addons/plans use SetupIntent+subscription; same idempotencyKey across confirm-endpoint & webhook; guard subscription creates against duplicates.

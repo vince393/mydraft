@@ -280,6 +280,7 @@ export const creditLots = pgTable("credit_lots", {
   metadata: jsonb("metadata").$type<{
     stripeInvoiceId?: string;
     stripeSessionId?: string;
+    stripePaymentIntentId?: string;
     stripeSubscriptionId?: string;
     packCredits?: number;
     plan?: string;

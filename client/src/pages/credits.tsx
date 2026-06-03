@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { useCredits, useCreditsConfig, type CreditPack, type CreditAddon } from "@/hooks/use-credits";
+import { CreditCheckoutDialog, type CreditCheckoutItem } from "@/components/credit-checkout-dialog";
 import {
   ArrowLeft,
   Coins,
@@ -54,7 +54,7 @@ function formatDate(dateStr: string): string {
 
 export default function CreditsPage() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
+  const [checkoutItem, setCheckoutItem] = useState<CreditCheckoutItem | null>(null);
 
   const { balance, addons: activeAddons, expiringSoon, isLoading: creditsLoading } = useCredits();
   const { data: config, isLoading: configLoading } = useCreditsConfig();
@@ -62,43 +62,6 @@ export default function CreditsPage() {
   const { data: transactions = [], isLoading: txLoading } = useQuery<CreditTransaction[]>({
     queryKey: ["/api/credits/transactions"],
   });
-
-  const buyPackMutation = useMutation({
-    mutationFn: async (sku: string) => {
-      const res = await apiRequest("POST", "/api/credits/buy-pack", { sku });
-      return res.json() as Promise<{ url: string }>;
-    },
-    onSuccess: (data) => {
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        toast({ title: "Could not start checkout", description: "Please try again.", variant: "destructive" });
-      }
-    },
-    onError: (error: Error) => {
-      toast({ title: "Purchase failed", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const buyAddonMutation = useMutation({
-    mutationFn: async (sku: string) => {
-      const res = await apiRequest("POST", "/api/credits/buy-addon", { sku });
-      return res.json() as Promise<{ url: string }>;
-    },
-    onSuccess: (data) => {
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        toast({ title: "Could not start checkout", description: "Please try again.", variant: "destructive" });
-      }
-    },
-    onError: (error: Error) => {
-      toast({ title: "Subscription failed", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const pendingPackSku = buyPackMutation.isPending ? (buyPackMutation.variables as string | undefined) : undefined;
-  const pendingAddonSku = buyAddonMutation.isPending ? (buyAddonMutation.variables as string | undefined) : undefined;
 
   const warningLevel: "urgent" | "strong" | "subtle" | null =
     creditsLoading ? null : balance < 5 ? "urgent" : balance < 10 ? "strong" : balance < 20 ? "subtle" : null;
@@ -257,11 +220,9 @@ export default function CreditsPage() {
                     </p>
                     <Button
                       className="w-full"
-                      onClick={() => buyPackMutation.mutate(pack.sku)}
-                      disabled={buyPackMutation.isPending}
+                      onClick={() => setCheckoutItem({ type: "pack", sku: pack.sku, credits: pack.credits, price: pack.price })}
                       data-testid={`button-buy-pack-${pack.sku}`}
                     >
-                      {pendingPackSku === pack.sku && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Buy
                     </Button>
                   </CardContent>
@@ -305,11 +266,10 @@ export default function CreditsPage() {
                       <Button
                         className="w-full"
                         variant={isActive ? "secondary" : "default"}
-                        onClick={() => buyAddonMutation.mutate(addon.sku)}
-                        disabled={buyAddonMutation.isPending || isActive}
+                        onClick={() => setCheckoutItem({ type: "addon", sku: addon.sku, credits: addon.credits, price: addon.price })}
+                        disabled={isActive}
                         data-testid={`button-buy-addon-${addon.sku}`}
                       >
-                        {pendingAddonSku === addon.sku && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         {isActive ? "Active" : "Subscribe"}
                       </Button>
                     </CardContent>
@@ -367,6 +327,8 @@ export default function CreditsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <CreditCheckoutDialog item={checkoutItem} onClose={() => setCheckoutItem(null)} />
     </div>
   );
 }
