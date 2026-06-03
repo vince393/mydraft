@@ -73,8 +73,19 @@ async function grantReferralRewardOnConnect(referredUserId: string): Promise<voi
       metadata: { referredUserId },
     });
 
-    // Referred user gets 1 month of Pro free.
+    // Referred user gets 1 month of Pro free: Pro-level access (enforced via
+    // proCreditsUntil in getEffectivePlan) plus the Pro monthly credit allowance.
+    // Runs once — markReferralConnected only transitions a pending referral a single time.
     await storage.applyProCredit(referredUserId, 1);
+    await grantCredits({
+      userId: referredUserId,
+      amount: PLAN_MONTHLY_CREDITS.pro,
+      source: "referral",
+      action: "referral_pro_month",
+      reference: referredUserId,
+      idempotencyKey: `referral:promonth:${referredUserId}`,
+      metadata: { note: "referred_pro_free_month" },
+    });
 
     const referrer = await storage.getUser(referrerUserId);
     if (referrer) {
@@ -393,10 +404,19 @@ async function requireOwner(req: Request, res: Response, next: NextFunction) {
 
 // Plan-based gating middleware
 function getEffectivePlan(user: any): string {
+  // Referral reward: an active Pro-credit window grants Pro-level access for its duration.
+  const proCreditActive =
+    user.proCreditsUntil && new Date(user.proCreditsUntil) > new Date();
   if (user.trialEndsAt && new Date(user.trialEndsAt) <= new Date() && !user.stripeSubscriptionId) {
-    return "free";
+    return proCreditActive ? "pro" : "free";
   }
-  return user.plan || "free";
+  const base = user.plan || "free";
+  if (proCreditActive) {
+    const hierarchy: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+    // Don't downgrade a paying Business/premium user; only lift free up to pro.
+    if ((hierarchy[base] || 0) < hierarchy.pro) return "pro";
+  }
+  return base;
 }
 
 async function requirePlan(minPlan: "pro" | "premium") {
@@ -10991,10 +11011,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           });
       }
 
-      // Pricing
+      // Pricing — canonical credit-economy prices (single source: PLAN_PRICES).
       const pricing: Record<string, Record<string, number>> = {
-        pro: { monthly: 1000, annual: 9900 },
-        business: { monthly: 2900, annual: 29900 },
+        pro: { monthly: PLAN_PRICES.pro.monthly, annual: PLAN_PRICES.pro.annual },
+        business: { monthly: PLAN_PRICES.premium.monthly, annual: PLAN_PRICES.premium.annual },
       };
 
       const amount = pricing[plan][interval];
