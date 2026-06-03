@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
 import { chatStorage } from "./storage";
-import { getActionCost, getBalance, spendCredits } from "../../credits";
+import { getActionCost, spendCredits, refundCredits } from "../../credits";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -57,25 +57,31 @@ export function registerChatRoutes(app: Express): void {
   });
 
   app.post("/api/conversations/:id/messages", async (req: Request, res: Response) => {
+    const conversationId = parseInt(req.params.id);
+    const userId = (req as any).jwtUserId || (req.session as any)?.userId;
+    const chatCost = getActionCost("ai_chat");
+    let reserved = false;
     try {
-      const conversationId = parseInt(req.params.id);
       const { content } = req.body;
 
-      const userId = (req as any).jwtUserId || (req.session as any)?.userId;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const chatCost = getActionCost("ai_chat");
+
+      // Reserve (atomically spend) credits up front so two concurrent requests
+      // near zero balance can't both proceed when only one is affordable. The
+      // reservation is refunded in the catch block if the AI call fails.
       if (chatCost > 0) {
-        const balance = await getBalance(userId);
-        if (balance < chatCost) {
+        const result = await spendCredits({ userId, amount: chatCost, action: "ai_chat", reference: String(conversationId) });
+        if (!result.success) {
           return res.status(402).json({
             error: "Not enough credits",
             code: "INSUFFICIENT_CREDITS",
             creditsNeeded: chatCost,
-            balance,
+            balance: result.balanceAfter,
           });
         }
+        reserved = true;
       }
 
       await chatStorage.createMessage(conversationId, "user", content);
@@ -109,18 +115,17 @@ export function registerChatRoutes(app: Express): void {
 
       await chatStorage.createMessage(conversationId, "assistant", fullResponse);
 
-      if (chatCost > 0) {
-        try {
-          await spendCredits({ userId, amount: chatCost, action: "ai_chat", reference: String(conversationId) });
-        } catch (creditErr) {
-          console.error("Failed to charge chat credits:", creditErr);
-        }
-      }
-
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
     } catch (error) {
       console.error("Error sending message:", error);
+      if (reserved && userId) {
+        try {
+          await refundCredits({ userId, amount: chatCost, action: "ai_chat", reference: String(conversationId) });
+        } catch (refundErr) {
+          console.error("Failed to refund chat credits:", refundErr);
+        }
+      }
       if (res.headersSent) {
         res.write(`data: ${JSON.stringify({ error: "Failed to send message" })}\n\n`);
         res.end();

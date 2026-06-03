@@ -253,6 +253,95 @@ async function checkCreditsAmount(
   return { ok: true, cost, userId };
 }
 
+// ── Reserve-then-settle credit model ────────────────────────────────────────
+// To prevent a concurrency race where two requests near zero balance both pass a
+// pre-check but only one can afford the charge (yielding one un-billed AI action),
+// gated routes RESERVE (atomically spend) credits *before* running the AI call and
+// REFUND the reservation if the AI call fails or produces no usable output. The
+// atomic, row-locked spendCredits() guarantees only one concurrent request can
+// reserve when only one is affordable; the loser is rejected with 402 before any
+// AI work runs.
+interface Reservation {
+  userId: string;
+  cost: number;
+  action: string;
+  reference?: string;
+  balanceAfter: number;
+}
+
+// Atomically reserve `getActionCost(action)` credits. On insufficient balance (or
+// a lost concurrency race) sends a 402 and returns null — callers must `return`.
+async function reserveCredits(
+  req: Request,
+  res: Response,
+  action: CreditAction,
+  reference?: string,
+): Promise<Reservation | null> {
+  const userId = getUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+  const cost = getActionCost(action);
+  if (cost <= 0) return { userId, cost: 0, action, reference, balanceAfter: await getBalance(userId) };
+  const result = await spendCredits({ userId, amount: cost, action, reference });
+  if (!result.success) {
+    res.status(402).json({
+      error: "Not enough credits",
+      code: "INSUFFICIENT_CREDITS",
+      creditsNeeded: cost,
+      balance: result.balanceAfter,
+    });
+    return null;
+  }
+  return { userId, cost, action, reference, balanceAfter: result.balanceAfter };
+}
+
+// Atomically reserve a dynamic `amount` of credits. Same semantics as reserveCredits.
+async function reserveCreditsAmount(
+  req: Request,
+  res: Response,
+  amount: number,
+  action: string,
+  reference?: string,
+): Promise<Reservation | null> {
+  const userId = getUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+  const cost = Math.max(0, Math.round(amount));
+  if (cost <= 0) return { userId, cost: 0, action, reference, balanceAfter: await getBalance(userId) };
+  const result = await spendCredits({ userId, amount: cost, action, reference });
+  if (!result.success) {
+    res.status(402).json({
+      error: "Not enough credits",
+      code: "INSUFFICIENT_CREDITS",
+      creditsNeeded: cost,
+      balance: result.balanceAfter,
+    });
+    return null;
+  }
+  return { userId, cost, action, reference, balanceAfter: result.balanceAfter };
+}
+
+// Cancel (refund) all or part of a reservation when the AI call fails or yields no
+// usable output. Safe to call with null / zero. `amount` defaults to the full cost.
+async function cancelReservation(
+  reservation: Reservation | null,
+  amount?: number,
+): Promise<void> {
+  if (!reservation) return;
+  const refundAmount = amount ?? reservation.cost;
+  if (refundAmount <= 0) return;
+  await refundCredits({
+    userId: reservation.userId,
+    amount: refundAmount,
+    action: reservation.action,
+    reference: reservation.reference,
+  });
+}
+
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (req.jwtUserId) {
     req.session.userId = req.jwtUserId;
@@ -4530,12 +4619,21 @@ JSON response only:
           });
         }
 
-        // Dynamic credit cost: 1 credit per item acted on.
-        const credit = await checkCreditsAmount(req, res, approvedSuggestions.length);
-        if (!credit.ok) return;
+        // Dynamic credit cost: 1 credit per item acted on. Reserve the full
+        // potential cost up front (atomic) so concurrent executes can't both pass
+        // a pre-check while only one is affordable, then refund the items that did
+        // not actually execute.
+        const reservation = await reserveCreditsAmount(
+          req,
+          res,
+          approvedSuggestions.length,
+          "inbox_cleanup",
+        );
+        if (!reservation) return;
 
         const results = { executed: 0, failed: 0, errors: [] as string[] };
 
+        try {
         for (const suggestion of approvedSuggestions) {
           try {
             switch (suggestion.actionType) {
@@ -4614,12 +4712,16 @@ JSON response only:
             );
           }
         }
-
-        let creditsRemaining = await getBalance(userId);
-        if (results.executed > 0) {
-          const spendResult = await spendCredits({ userId, amount: results.executed, action: "inbox_cleanup" });
-          creditsRemaining = spendResult.balanceAfter;
+        } catch (execErr) {
+          // Unexpected failure mid-execution: refund the entire reservation.
+          await cancelReservation(reservation);
+          throw execErr;
         }
+
+        // Refund the reserved credits for items that did not actually execute.
+        const unused = reservation.cost - results.executed;
+        if (unused > 0) await cancelReservation(reservation, unused);
+        const creditsRemaining = await getBalance(userId);
 
         res.json({ ...results, creditsRemaining });
       } catch (error) {
@@ -4701,12 +4803,14 @@ JSON response only:
         return res.json(dbParsed);
       }
 
-      const credit = await checkCredits(req, res, "ai_summary");
-      if (!credit.ok) return;
+      const reservation = await reserveCredits(req, res, "ai_summary", id);
+      if (!reservation) return;
 
       const cleanBody = stripEmailNoise(body).substring(0, 8000);
 
-      const completion = await openai.chat.completions.create({
+      let completion;
+      try {
+        completion = await openai.chat.completions.create({
         model: getAiModel(userPlan),
         messages: [
           {
@@ -4737,8 +4841,10 @@ Rules:
         temperature: 0.3,
         max_tokens: 800,
       });
-
-      await spendCredits({ userId: credit.userId, amount: credit.cost, action: "ai_summary", reference: id });
+      } catch (aiErr) {
+        await cancelReservation(reservation);
+        throw aiErr;
+      }
 
       const responseText = completion.choices[0]?.message?.content || "{}";
       let parsed = { summary: "", keyPoints: [] as string[], actionItems: [] as string[] };
@@ -5015,8 +5121,8 @@ Rules:
         });
       }
 
-      const credit = await checkCredits(req, res, "translate");
-      if (!credit.ok) return;
+      const reservation = await reserveCredits(req, res, "translate", id);
+      if (!reservation) return;
 
       const cleanBody = stripEmailNoise(body);
       const MAX_BODY_LENGTH = 6000;
@@ -5030,7 +5136,9 @@ Rules:
         : userFormality === "neutral" ? "Use a balanced, professional tone."
         : `Match ${culturalContext.culture} business norms (${culturalContext.formality}).`;
 
-      const completion = await openai.chat.completions.create({
+      let completion;
+      try {
+        completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
@@ -5045,8 +5153,10 @@ Rules:
         max_tokens: 2000,
         temperature: 0.3,
       });
-
-      await spendCredits({ userId: credit.userId, amount: credit.cost, action: "translate", reference: id });
+      } catch (aiErr) {
+        await cancelReservation(reservation);
+        throw aiErr;
+      }
 
       const responseText = completion.choices[0]?.message?.content || "{}";
 
@@ -5065,6 +5175,7 @@ Rules:
 
         res.json({ ...result, cached: false });
       } catch {
+        await cancelReservation(reservation);
         res.status(500).json({ error: "Failed to parse translation" });
       }
     } catch (error) {
@@ -5551,7 +5662,14 @@ Reply:`;
             ? `You are an email assistant that writes replies matching the user's personal writing style. The user tends to write in a ${learnedStyle.toneDescription || tone} manner with ${learnedStyle.avgSentenceLength || "medium"} sentences. Mimic their natural voice while maintaining the requested ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`
             : `You are an email assistant that writes clear, concise email replies with a ${tone} tone. Write only the email body without greetings, sign-offs, or subject lines.`;
 
-        const response = await openai.chat.completions.create({
+        // Reserve credits atomically right before the AI call so concurrent
+        // requests can't both run while only one is affordable.
+        const reservation = await reserveCredits(req, res, "ai_reply");
+        if (!reservation) return;
+
+        let response;
+        try {
+          response = await openai.chat.completions.create({
           model: getAiModel(userPlan),
           messages: [
             {
@@ -5565,10 +5683,15 @@ Reply:`;
           ],
           max_tokens: 1024,
         });
+        } catch (aiErr) {
+          await cancelReservation(reservation);
+          throw aiErr;
+        }
 
         let generatedContent = response.choices[0]?.message?.content;
 
         if (!generatedContent || generatedContent.trim().length === 0) {
+          await cancelReservation(reservation);
           return res.status(422).json({
             error: "Unable to generate AI response",
             reason:
@@ -5651,8 +5774,6 @@ Reply:`;
           };
         }
 
-        await spendCredits({ userId: credit.userId, amount: credit.cost, action: "ai_reply" });
-
         res.json(draft);
       } catch (error: any) {
         console.error("Error generating draft:", error);
@@ -5707,9 +5828,6 @@ Reply:`;
           return res.status(400).json({ error: "Text is required" });
         }
 
-        const credit = await checkCredits(req, res, "ai_rewrite");
-        if (!credit.ok) return;
-
         const modeInstructions: Record<string, string> = {
           basic:
             "Fix grammar, spelling, and punctuation. Improve clarity while keeping the original tone and meaning.",
@@ -5727,7 +5845,12 @@ Reply:`;
 
         const instruction = modeInstructions[mode] || modeInstructions.basic;
 
-        const response = await openai.chat.completions.create({
+        const reservation = await reserveCredits(req, res, "ai_rewrite");
+        if (!reservation) return;
+
+        let response;
+        try {
+          response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [
             {
@@ -5741,14 +5864,17 @@ Reply:`;
           ],
           max_tokens: 1024,
         });
+        } catch (aiErr) {
+          await cancelReservation(reservation);
+          throw aiErr;
+        }
 
         const polishedText = response.choices[0]?.message?.content;
 
         if (!polishedText || polishedText.trim().length === 0) {
+          await cancelReservation(reservation);
           return res.status(422).json({ error: "Unable to polish text" });
         }
-
-        await spendCredits({ userId: credit.userId, amount: credit.cost, action: "ai_rewrite" });
 
         res.json({ polished: polishedText.trim() });
       } catch (error) {
@@ -5772,8 +5898,8 @@ Reply:`;
         return res.status(400).json({ error: "Instruction is required" });
       }
 
-      const credit = await checkCredits(req, res, "ai_rewrite");
-      if (!credit.ok) return;
+      const reservation = await reserveCredits(req, res, "ai_rewrite");
+      if (!reservation) return;
 
       let contextPrompt = "";
       if (originalEmail) {
@@ -5786,7 +5912,9 @@ ${originalEmail.body || originalEmail.preview || ""}
 `;
       }
 
-      const response = await openai.chat.completions.create({
+      let response;
+      try {
+        response = await openai.chat.completions.create({
         model: getAiModel(userPlan),
         messages: [
           {
@@ -5805,14 +5933,17 @@ Please modify the response according to the instruction.`,
         ],
         max_tokens: 1024,
       });
+      } catch (aiErr) {
+        await cancelReservation(reservation);
+        throw aiErr;
+      }
 
       const refinedText = response.choices[0]?.message?.content;
 
       if (!refinedText || refinedText.trim().length === 0) {
+        await cancelReservation(reservation);
         return res.status(422).json({ error: "Unable to refine text" });
       }
-
-      await spendCredits({ userId: credit.userId, amount: credit.cost, action: "ai_rewrite" });
 
       // Capture draft edit as writing sample for personalization
       const wordCount = refinedText
@@ -5847,10 +5978,12 @@ Please modify the response according to the instruction.`,
         return res.status(400).json({ error: "Text must be at least 5 characters" });
       }
 
-      const credit = await checkCredits(req, res, "grammar_check");
-      if (!credit.ok) return;
+      const reservation = await reserveCredits(req, res, "grammar_check");
+      if (!reservation) return;
 
-      const response = await openai.chat.completions.create({
+      let response;
+      try {
+        response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
@@ -5887,9 +6020,14 @@ Rules:
         max_tokens: 1024,
         response_format: { type: "json_object" },
       });
+      } catch (aiErr) {
+        await cancelReservation(reservation);
+        throw aiErr;
+      }
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
+        await cancelReservation(reservation);
         return res.status(422).json({ error: "Unable to check grammar" });
       }
 
@@ -5897,6 +6035,7 @@ Rules:
       try {
         result = JSON.parse(content);
       } catch {
+        await cancelReservation(reservation);
         return res.status(422).json({ error: "Invalid response from AI" });
       }
 
@@ -5909,8 +6048,6 @@ Rules:
       if (typeof result.correctedText !== "string") {
         result.correctedText = text;
       }
-
-      await spendCredits({ userId: credit.userId, amount: credit.cost, action: "grammar_check" });
 
       res.json(result);
     } catch (error) {
@@ -5938,12 +6075,12 @@ Rules:
           existingBody,
         } = req.body;
 
-        const credit = await checkCredits(
+        const reservation = await reserveCredits(
           req,
           res,
           mode === "compose" ? "ai_compose" : "ai_reply",
         );
-        if (!credit.ok) return;
+        if (!reservation) return;
 
         // Use requested tone or fall back to user's AI preferences
         const aiPrefs = user?.aiPreferences as
@@ -6094,7 +6231,9 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
           }
         }
 
-        const response = await openai.chat.completions.create({
+        let response;
+        try {
+          response = await openai.chat.completions.create({
           model: getAiModel(userPlan),
           messages: [
             { role: "system", content: systemMessage },
@@ -6103,10 +6242,15 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
           max_tokens: 512,
           response_format: { type: "json_object" },
         });
+        } catch (aiErr) {
+          await cancelReservation(reservation);
+          throw aiErr;
+        }
 
         const content = response.choices[0]?.message?.content;
 
         if (!content || content.trim().length === 0) {
+          await cancelReservation(reservation);
           return res.status(422).json({
             error: "Unable to generate AI response",
             reason:
@@ -6115,7 +6259,7 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
           });
         }
 
-        const spendResult = await spendCredits({ userId: credit.userId, amount: credit.cost, action: mode === "compose" ? "ai_compose" : "ai_reply" });
+        const spendResult = { balanceAfter: reservation.balanceAfter };
 
         try {
           const parsed = JSON.parse(content);
@@ -7633,7 +7777,19 @@ ${originalBody.substring(0, 1500)}
 ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note explaining why you're forwarding this."}`;
         }
 
-        const completion = await openai.chat.completions.create({
+        // Reserve credits atomically right before the AI call so concurrent
+        // requests can't both run while only one is affordable.
+        const reservation = await reserveCredits(
+          req,
+          res,
+          actionType === "compose" ? "ai_compose" : "ai_reply",
+          messageId,
+        );
+        if (!reservation) return;
+
+        let completion;
+        try {
+          completion = await openai.chat.completions.create({
           model: getAiModel(userPlan),
           messages: [
             { role: "system", content: systemPrompt },
@@ -7642,6 +7798,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           max_tokens: 800,
           temperature: 0.7,
         });
+        } catch (aiErr) {
+          await cancelReservation(reservation);
+          throw aiErr;
+        }
 
         let draftBody = completion.choices[0]?.message?.content || "";
 
@@ -7672,8 +7832,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           },
         });
 
-        const spendResult = await spendCredits({ userId: credit.userId, amount: credit.cost, action: actionType === "compose" ? "ai_compose" : "ai_reply", reference: messageId });
-
         res.json({
           actionId: action.id,
           actionType,
@@ -7685,7 +7843,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             body: draftBody,
           },
           status: "pending",
-          creditsRemaining: spendResult.balanceAfter,
+          creditsRemaining: reservation.balanceAfter,
         });
       } catch (error) {
         console.error("Error generating AI draft:", error);

@@ -275,6 +275,11 @@ export async function spendCredits(params: {
 
   return db.transaction(async (tx) => {
     const now = new Date();
+    // SELECT ... FOR UPDATE locks the candidate lot rows for the duration of this
+    // transaction. Concurrent spends for the same user serialize on these locks: the
+    // second transaction blocks until the first commits, then re-reads the updated
+    // remaining amounts. This makes the affordability check + deduction atomic, so two
+    // requests can never both succeed when only one is affordable.
     const lots = await tx
       .select()
       .from(creditLots)
@@ -287,13 +292,14 @@ export async function spendCredits(params: {
           gt(creditLots.amountRemaining, 0),
         ),
       )
-      .orderBy(asc(creditLots.expiresAt), asc(creditLots.issuedAt));
+      .orderBy(asc(creditLots.expiresAt), asc(creditLots.issuedAt))
+      .for("update");
 
     const available = lots.reduce((s, l) => s + l.amountRemaining, 0);
     if (available < amount) {
-      // Reaching here after a passing checkCredits() means a concurrent spend drained the
-      // balance between the pre-check and this charge (a benign race). Surface it so it can
-      // be monitored; callers should treat success:false as "not charged".
+      // Insufficient funds at charge time. With reserve-then-settle callers this is the
+      // atomic gate that rejects a concurrent request before any AI work runs. Callers
+      // should treat success:false as "not charged" (return 402, do NOT run the action).
       console.warn(
         `[credits] spend race/shortfall: user=${userId} action=${action} needed=${amount} available=${available}`,
       );

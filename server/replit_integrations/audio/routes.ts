@@ -6,31 +6,36 @@ import { microsoftProvider } from "../../microsoft";
 import { imapProvider } from "../../imap";
 import { stripEmailNoise } from "../../email-utils";
 import type { IEmailProvider, EmailListItem } from "../../email-provider";
-import { getActionCost, getBalance, spendCredits } from "../../credits";
+import { getActionCost, getBalance, spendCredits, refundCredits } from "../../credits";
 
-async function ensureAudioCredits(
+// Atomically RESERVE (spend up front) credits for an audio action so two concurrent
+// requests near zero balance can't both pass a pre-check when only one is affordable.
+// Sends 401/402 and returns { ok: false } on failure. Callers MUST refund via
+// refundCredits if the downstream AI call fails or yields no usable audio.
+async function reserveAudioCredits(
   req: Request,
   res: Response,
   action: "voice_chat" | "read_aloud",
-): Promise<{ ok: true; userId: string; cost: number } | { ok: false }> {
+  reference?: string,
+): Promise<{ ok: true; userId: string; cost: number; balanceAfter: number } | { ok: false }> {
   const userId = (req as any).jwtUserId || (req.session as any)?.userId;
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return { ok: false };
   }
   const cost = getActionCost(action);
-  if (cost <= 0) return { ok: true, userId, cost: 0 };
-  const balance = await getBalance(userId);
-  if (balance < cost) {
+  if (cost <= 0) return { ok: true, userId, cost: 0, balanceAfter: await getBalance(userId) };
+  const result = await spendCredits({ userId, amount: cost, action, reference });
+  if (!result.success) {
     res.status(402).json({
       error: "Not enough credits",
       code: "INSUFFICIENT_CREDITS",
       creditsNeeded: cost,
-      balance,
+      balance: result.balanceAfter,
     });
     return { ok: false };
   }
-  return { ok: true, userId, cost };
+  return { ok: true, userId, cost, balanceAfter: result.balanceAfter };
 }
 
 const ttsCache: Map<string, { audio: string; timestamp: number }> = new Map();
@@ -109,17 +114,18 @@ export function registerAudioRoutes(app: Express) {
   });
 
   app.post("/api/voice/chat", async (req: Request, res: Response) => {
+    const { message, conversationHistory = [] } = req.body;
+
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Message required" });
+    }
+
+    // Reserve credits up front (atomic) before any AI work; refund on failure.
+    const reservation = await reserveAudioCredits(req, res, "voice_chat");
+    if (!reservation.ok) return;
+    const userId = reservation.userId;
+
     try {
-      const credit = await ensureAudioCredits(req, res, "voice_chat");
-      if (!credit.ok) return;
-
-      const userId = credit.userId;
-      const { message, conversationHistory = [] } = req.body;
-      
-      if (!message || typeof message !== "string") {
-        return res.status(400).json({ error: "Message required" });
-      }
-
       const user = await storage.getUser(userId);
       const emailAccount = await storage.getEmailAccount(userId);
       const emailContext = await getEmailContext(userId);
@@ -154,24 +160,21 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
 
       await storage.addAssistantMessage(userId, "assistant", text);
 
-      let creditsRemaining: number | undefined;
-      if (credit.cost > 0) {
-        try {
-          const spendResult = await spendCredits({ userId, amount: credit.cost, action: "voice_chat" });
-          creditsRemaining = spendResult.balanceAfter;
-        } catch (creditErr) {
-          console.error("Failed to charge voice chat credits:", creditErr);
-        }
-      }
-
       res.json({ 
         response: text, 
         audio,
         audioFormat: "wav",
-        creditsRemaining,
+        creditsRemaining: reservation.cost > 0 ? reservation.balanceAfter : undefined,
       });
     } catch (error) {
       console.error("Voice chat error:", error);
+      if (reservation.cost > 0) {
+        try {
+          await refundCredits({ userId, amount: reservation.cost, action: "voice_chat" });
+        } catch (refundErr) {
+          console.error("Failed to refund voice chat credits:", refundErr);
+        }
+      }
       res.status(500).json({ error: "Failed to process voice chat" });
     }
   });
@@ -202,25 +205,25 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         return res.json({ audio: cached.audio, audioFormat: "wav", cached: true });
       }
 
-      const ttsCost = getActionCost("read_aloud");
-      if (ttsCost > 0) {
-        const balance = await getBalance(userId);
-        if (balance < ttsCost) {
-          return res.status(402).json({
-            error: "Not enough credits",
-            code: "INSUFFICIENT_CREDITS",
-            creditsNeeded: ttsCost,
-            balance,
-          });
-        }
-      }
-
       let cleanText = stripEmailNoise(text).slice(0, 2000);
       if (!cleanText.trim()) {
         cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 2000);
       }
       console.log(`[TTS] Request: voice=${selectedVoice}, textLength=${text.length}, cleanLength=${cleanText.length}`);
-      const audio = await textToSpeech(cleanText || text.slice(0, 2000), selectedVoice);
+
+      // Reserve credits atomically right before the AI call; refund below if no audio.
+      const reservation = await reserveAudioCredits(req, res, "read_aloud", emailId ? String(emailId) : undefined);
+      if (!reservation.ok) return;
+
+      let audio: string | undefined;
+      try {
+        audio = await textToSpeech(cleanText || text.slice(0, 2000), selectedVoice);
+      } catch (aiErr) {
+        if (reservation.cost > 0) {
+          try { await refundCredits({ userId, amount: reservation.cost, action: "read_aloud", reference: emailId ? String(emailId) : undefined }); } catch (e) { console.error("Failed to refund TTS credits:", e); }
+        }
+        throw aiErr;
+      }
 
       let creditsRemaining: number | undefined;
       if (audio) {
@@ -234,14 +237,10 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
             .forEach(([key]) => ttsCache.delete(key));
         }
 
-        if (ttsCost > 0) {
-          try {
-            const spendResult = await spendCredits({ userId, amount: ttsCost, action: "read_aloud", reference: emailId ? String(emailId) : undefined });
-            creditsRemaining = spendResult.balanceAfter;
-          } catch (creditErr) {
-            console.error("Failed to charge TTS credits:", creditErr);
-          }
-        }
+        creditsRemaining = reservation.cost > 0 ? reservation.balanceAfter : undefined;
+      } else if (reservation.cost > 0) {
+        // No usable audio produced — refund the reservation.
+        try { await refundCredits({ userId, amount: reservation.cost, action: "read_aloud", reference: emailId ? String(emailId) : undefined }); } catch (e) { console.error("Failed to refund TTS credits:", e); }
       }
       
       res.json({ audio, audioFormat: "wav", creditsRemaining });
@@ -283,19 +282,6 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         return res.end(buf);
       }
 
-      const ttsCost = getActionCost("read_aloud");
-      if (ttsCost > 0) {
-        const balance = await getBalance(userId);
-        if (balance < ttsCost) {
-          return res.status(402).json({
-            error: "Not enough credits",
-            code: "INSUFFICIENT_CREDITS",
-            creditsNeeded: ttsCost,
-            balance,
-          });
-        }
-      }
-
       let cleanText = stripEmailNoise(text).slice(0, 2000);
       if (!cleanText.trim()) {
         cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 2000);
@@ -305,9 +291,31 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         return res.status(400).json({ error: "No readable text found" });
       }
       console.log(`[TTS Stream] Clean text length: ${cleanText.length}`);
-      const audioBuffer = await textToSpeechStream(cleanText, selectedVoice);
+
+      // Reserve credits atomically right before the AI call; refund if no audio.
+      const reservation = await reserveAudioCredits(req, res, "read_aloud", emailId ? String(emailId) : undefined);
+      if (!reservation.ok) return;
+
+      const refundReservation = async () => {
+        if (reservation.cost > 0) {
+          try {
+            await refundCredits({ userId, amount: reservation.cost, action: "read_aloud", reference: emailId ? String(emailId) : undefined });
+          } catch (e) {
+            console.error("Failed to refund TTS stream credits:", e);
+          }
+        }
+      };
+
+      let audioBuffer: Buffer | null | undefined;
+      try {
+        audioBuffer = await textToSpeechStream(cleanText, selectedVoice);
+      } catch (aiErr) {
+        await refundReservation();
+        throw aiErr;
+      }
 
       if (!audioBuffer) {
+        await refundReservation();
         return res.status(500).json({ error: "Failed to generate speech" });
       }
 
@@ -315,14 +323,6 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       if (ttsCache.size > TTS_CACHE_MAX_SIZE) {
         const entries = Array.from(ttsCache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
         entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE).forEach(([key]) => ttsCache.delete(key));
-      }
-
-      if (ttsCost > 0) {
-        try {
-          await spendCredits({ userId, amount: ttsCost, action: "read_aloud", reference: emailId ? String(emailId) : undefined });
-        } catch (creditErr) {
-          console.error("Failed to charge TTS stream credits:", creditErr);
-        }
       }
 
       res.set({ "Content-Type": "audio/wav", "Content-Length": String(audioBuffer.length) });
