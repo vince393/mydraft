@@ -4,14 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useCredits, useCreditsConfig, type CreditPack, type CreditAddon } from "@/hooks/use-credits";
 import { CreditCheckoutDialog, type CreditCheckoutItem } from "@/components/credit-checkout-dialog";
 import {
@@ -70,9 +62,9 @@ export default function CreditsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-6 sm:mb-8">
           <button
             onClick={() => setLocation("/inbox")}
             data-testid="button-back"
@@ -85,12 +77,12 @@ export default function CreditsPage() {
 
         {/* Balance */}
         <Card className="mb-6" data-testid="card-credit-balance">
-          <CardContent className="p-6 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Coins className="w-6 h-6 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Current balance</p>
                 {creditsLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground/40 mt-1" />
@@ -105,6 +97,7 @@ export default function CreditsPage() {
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto flex-shrink-0"
               onClick={() => {
                 const el = document.getElementById("credit-packs");
                 el?.scrollIntoView({ behavior: "smooth" });
@@ -297,32 +290,31 @@ export default function CreditsPage() {
             ) : transactions.length === 0 ? (
               <p className="text-sm text-muted-foreground/50">No transactions yet.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((tx) => (
-                    <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`}>
-                      <TableCell className="font-medium">{humanizeAction(tx.action || tx.source)}</TableCell>
-                      <TableCell className="text-muted-foreground/60">{formatDate(tx.createdAt)}</TableCell>
-                      <TableCell
-                        className={`text-right font-medium ${
-                          tx.amount >= 0 ? "text-emerald-400" : "text-destructive"
-                        }`}
-                        data-testid={`text-amount-${tx.id}`}
-                      >
-                        {tx.amount >= 0 ? "+" : ""}
-                        {tx.amount.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04] -my-1">
+                {transactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                    data-testid={`row-transaction-${tx.id}`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {humanizeAction(tx.action || tx.source)}
+                      </p>
+                      <p className="text-xs text-muted-foreground/60 mt-0.5">{formatDate(tx.createdAt)}</p>
+                    </div>
+                    <span
+                      className={`text-sm font-semibold tabular-nums flex-shrink-0 ${
+                        tx.amount >= 0 ? "text-emerald-400" : "text-destructive"
+                      }`}
+                      data-testid={`text-amount-${tx.id}`}
+                    >
+                      {tx.amount >= 0 ? "+" : ""}
+                      {tx.amount.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
