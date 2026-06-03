@@ -124,6 +124,23 @@ export class WebhookHandlers {
               await sendPlanPurchaseEmail(user.email, planLabel, amt, interval);
             } catch (emailErr) { console.error("[Webhook] Failed to send plan purchase email:", emailErr); }
           }
+
+          // Grant the plan's monthly credits at trial start. During a trial,
+          // invoice.paid does not fire until the trial ends, so trial users would
+          // otherwise have no credits. Idempotent per subscription via a synthetic key.
+          if (type === 'customer.subscription.created' && status === 'trialing' && plan !== 'free') {
+            try {
+              await grantPlanMonthlyCredits({
+                userId: user.id,
+                plan,
+                stripeInvoiceId: `trialstart_${subscriptionId}`,
+                stripeSubscriptionId: subscriptionId,
+              });
+              console.log(`[Webhook] Granted trial-start ${plan} credits to user ${user.id}`);
+            } catch (creditErr) {
+              console.error('[Webhook] Failed to grant trial-start credits:', creditErr);
+            }
+          }
         } else if (status === 'past_due' || status === 'unpaid') {
           console.log(`[Webhook] Subscription ${subscriptionId} is ${status} for user ${user.id} — keeping current plan but flagging`);
           await storage.createActivityLog(

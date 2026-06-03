@@ -4128,6 +4128,7 @@ Return ONLY valid JSON, no other text.`;
 
   // AI Folder Auto-Sort - analyze emails and automatically assign matches to the folder
   app.post("/api/folders/:id/ai-auto-sort", requireAuth, async (req, res) => {
+    let reservation: Reservation | null = null;
     try {
       const folderId = parseInt(req.params.id);
       if (isNaN(folderId)) {
@@ -4181,6 +4182,12 @@ Return ONLY valid JSON, no other text.`;
       for (let i = 0; i < emailSummaries.length; i += batchSize) {
         sortBatches.push(emailSummaries.slice(i, i + batchSize));
       }
+
+      // Credit gate (dynamic): reserve 1 credit up front to block zero-balance users
+      // and win the concurrency race; the final charge is 1 credit per email actually
+      // sorted into the folder (settled below).
+      reservation = await reserveCreditsAmount(req, res, 1, "ai_auto_sort", String(folderId));
+      if (!reservation) return;
 
       const sortResults = await Promise.allSettled(
         sortBatches.map(async (batch, idx) => {
@@ -4247,9 +4254,27 @@ If truly nothing matches, return: []`,
         }
       }
 
+      // Settle dynamic cost: 1 credit per email sorted (min 1 already reserved above).
+      const autoSortExtra = assignedCount - 1;
+      if (autoSortExtra > 0) {
+        try {
+          const topUp = await spendCredits({ userId, amount: autoSortExtra, action: "ai_auto_sort", reference: String(folderId) });
+          if (!topUp.success) {
+            // Work already delivered; drain remaining balance so usage isn't free.
+            const bal = await getBalance(userId);
+            if (bal > 0) await spendCredits({ userId, amount: bal, action: "ai_auto_sort", reference: String(folderId) });
+            console.warn(`[credits] auto-sort top-up shortfall: user=${userId} needed=${autoSortExtra} folder=${folderId}`);
+          }
+        } catch (settleErr) {
+          console.error("[credits] auto-sort settlement error:", settleErr);
+        }
+      }
+      reservation = null; // settled — prevent the outer catch from refunding
+
       res.json({ sorted: assignedCount, folderName: folder.name });
     } catch (error) {
       console.error("Error in AI auto-sort:", error);
+      if (reservation) { try { await cancelReservation(reservation); } catch {} }
       res.status(500).json({ error: "Failed to auto-sort emails" });
     }
   });
@@ -4292,6 +4317,7 @@ If truly nothing matches, return: []`,
   // AI Inbox Refresh - analyze emails and suggest actions
   app.post("/api/ai/inbox-refresh", requireAuth, async (req, res) => {
     console.log("[AI Inbox Refresh] Starting analysis...");
+    let refreshReservation: Reservation | null = null;
     try {
       const userId = req.session.userId!;
       const customInstructions = typeof req.body?.customInstructions === "string" ? req.body.customInstructions.trim().slice(0, 500) : "";
@@ -4451,6 +4477,12 @@ PRIORITY: Suggest deleting/archiving emails from senders/domains the user has hi
       let aiSuggestions: any[] = [];
 
       if (emailSummaries.length > 0) {
+        // Credit gate (dynamic): reserve 1 credit up front to block zero-balance users
+        // and win the concurrency race; settled to 1 credit per actionable AI suggestion
+        // below. Rule-based suggestions cost nothing; refunded if AI produces nothing.
+        refreshReservation = await reserveCreditsAmount(req, res, 1, "inbox_refresh", batchId);
+        if (!refreshReservation) return;
+
         const customSection = customInstructions ? `
 USER'S CUSTOM CLEANUP INSTRUCTIONS (HIGH PRIORITY):
 The user specifically wants the following filtered from their inbox. Apply these rules aggressively:
@@ -4573,6 +4605,30 @@ JSON response only:
         createdSuggestions.push(created);
       }
 
+      // Settle dynamic cost: 1 credit per AI suggestion actually persisted (min 1
+      // already reserved). Rule-based suggestions cost nothing, so they are excluded
+      // from the billable count. Refund the held credit if AI produced none.
+      if (refreshReservation) {
+        const ruleIds = new Set(ruleSuggestions.map((s: any) => s.messageId));
+        const billable = createdSuggestions.filter((c: any) => !ruleIds.has(c.messageId)).length;
+        if (billable === 0) {
+          try { await cancelReservation(refreshReservation); } catch (e) { console.error("[credits] inbox-refresh refund error:", e); }
+        } else if (billable > 1) {
+          const extra = billable - 1;
+          try {
+            const topUp = await spendCredits({ userId, amount: extra, action: "inbox_refresh", reference: batchId });
+            if (!topUp.success) {
+              const bal = await getBalance(userId);
+              if (bal > 0) await spendCredits({ userId, amount: bal, action: "inbox_refresh", reference: batchId });
+              console.warn(`[credits] inbox-refresh top-up shortfall: user=${userId} needed=${extra}`);
+            }
+          } catch (settleErr) {
+            console.error("[credits] inbox-refresh settlement error:", settleErr);
+          }
+        }
+        refreshReservation = null; // settled — prevent the outer catch from refunding
+      }
+
       res.json({
         batchId,
         suggestions: createdSuggestions,
@@ -4580,6 +4636,7 @@ JSON response only:
       });
     } catch (error) {
       console.error("AI inbox refresh error:", error);
+      if (refreshReservation) { try { await cancelReservation(refreshReservation); } catch {} }
       res.status(500).json({ error: "Failed to analyze inbox" });
     }
   });
@@ -6475,14 +6532,23 @@ ${subject ? `Context - Email subject: ${subject}` : ""}
 Return only the improved text, nothing else.`;
       }
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemMessage },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 1024,
-      });
+      const reservation = await reserveCredits(req, res, "ai_rewrite");
+      if (!reservation) return;
+
+      let response;
+      try {
+        response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemMessage },
+            { role: "user", content: prompt },
+          ],
+          max_tokens: 1024,
+        });
+      } catch (aiErr) {
+        await cancelReservation(reservation);
+        throw aiErr;
+      }
 
       const polishedContent = response.choices[0]?.message?.content || content;
 
@@ -7112,16 +7178,25 @@ RESPONSE STYLE:
       const thinkingDelay = 800 + Math.random() * 700;
       await new Promise((resolve) => setTimeout(resolve, thinkingDelay));
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...conversationHistory,
-          { role: "user", content: message },
-        ],
-        max_tokens: 800,
-        temperature: 0.8,
-      });
+      const reservation = await reserveCredits(req, res, "ai_chat");
+      if (!reservation) return;
+
+      let completion;
+      try {
+        completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...conversationHistory,
+            { role: "user", content: message },
+          ],
+          max_tokens: 800,
+          temperature: 0.8,
+        });
+      } catch (aiErr) {
+        await cancelReservation(reservation);
+        throw aiErr;
+      }
 
       let responseContent =
         completion.choices[0]?.message?.content ||
@@ -7920,22 +7995,31 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const instruction =
         improvementPrompts[improvementType] || improvementPrompts.clearer;
 
-      const completion = await openai.chat.completions.create({
-        model: getAiModel(userPlan),
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an email editing assistant. Improve the provided email draft according to the instructions. Return only the improved email body, no explanations.",
-          },
-          {
-            role: "user",
-            content: `${instruction}\n\nOriginal draft:\n${draft}`,
-          },
-        ],
-        max_tokens: 800,
-        temperature: 0.7,
-      });
+      const reservation = await reserveCredits(req, res, "ai_rewrite");
+      if (!reservation) return;
+
+      let completion;
+      try {
+        completion = await openai.chat.completions.create({
+          model: getAiModel(userPlan),
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are an email editing assistant. Improve the provided email draft according to the instructions. Return only the improved email body, no explanations.",
+            },
+            {
+              role: "user",
+              content: `${instruction}\n\nOriginal draft:\n${draft}`,
+            },
+          ],
+          max_tokens: 800,
+          temperature: 0.7,
+        });
+      } catch (aiErr) {
+        await cancelReservation(reservation);
+        throw aiErr;
+      }
 
       const improvedDraft = completion.choices[0]?.message?.content || draft;
 
@@ -10123,10 +10207,14 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           });
         }
 
+        // Create the subscription WITH a 3-day trial so the user is not charged
+        // today (matches the checkout UI's "Due today $0.00 / charged after trial").
+        // Plan + credits are granted on trial start by the subscription.created webhook.
         const subscription = await stripe.subscriptions.create({
           customer: user.stripeCustomerId,
           items: [{ price: price.id }],
           default_payment_method: paymentMethodId,
+          trial_period_days: TRIAL_DAYS,
           metadata: { userId: user.id, plan: internalPlan },
         });
 
@@ -10134,6 +10222,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           stripeSubscriptionId: subscription.id,
           plan: internalPlan as any,
           onboardingCompleted: true,
+          hasUsedTrial: true,
           trialEndsAt: null,
         });
 
