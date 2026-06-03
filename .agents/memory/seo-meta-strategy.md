@@ -14,6 +14,6 @@ This is a React + Vite SPA. SEO uses two layers:
 
 **How to apply / gotchas:**
 - Keep the `robots` directive identical in both layers. The static HTML uses `index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1`; the `<Seo>` component must emit the same string for indexable pages or it silently downgrades the defaults on every page that renders it.
-- When adding `<Seo>` to a page, remember the **import** — a missing `import { Seo }` only fails at runtime (Vite/esbuild won't catch it like a full tsc would; full-project `tsc` OOMs in this container).
+- When adding `<Seo>` to a page, remember the **import** — the dev server (Vite/esbuild) does not type-check, so a missing `import { Seo }` surfaces only at runtime. Run `npx tsc --noEmit` to catch it before relying on the running app.
 - FAQPage JSON-LD on `/help` is built from the in-scope `articles` array (question + content.intro). Belongs on the page where the FAQ is actually visible.
 - OG image is `client/public/og-image.png` (1200x630 referenced). Do not exclude marketing/public routes from the sitemap; do exclude auth/utility routes (login, reset, onboarding) — robots.txt already disallows the app routes.

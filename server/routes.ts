@@ -10144,14 +10144,18 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           });
         }
 
-        // Create the subscription WITH a 3-day trial so the user is not charged
-        // today (matches the checkout UI's "Due today $0.00 / charged after trial").
-        // Plan + credits are granted on trial start by the subscription.created webhook.
+        // One trial per account lifetime: only first-time subscribers get the
+        // 3-day trial. Users who already consumed a trial (even after cancelling)
+        // are charged immediately with no trial. When a trial is granted the user
+        // is not charged today (matches the checkout UI's "Due today $0.00");
+        // plan + credits are granted on trial start by the subscription.created
+        // webhook, otherwise on invoice.paid for an immediately-active sub.
+        const eligibleForTrial = !user.hasUsedTrial;
         const subscription = await stripe.subscriptions.create({
           customer: user.stripeCustomerId,
           items: [{ price: price.id }],
           default_payment_method: paymentMethodId,
-          trial_period_days: TRIAL_DAYS,
+          ...(eligibleForTrial ? { trial_period_days: TRIAL_DAYS } : {}),
           metadata: { userId: user.id, plan: internalPlan },
         });
 
