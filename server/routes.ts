@@ -50,7 +50,6 @@ import {
   REFERRAL_REFERRER_CREDITS,
   grantCredits,
   getActiveAddons,
-  getCreditAnalytics,
   type CreditAction,
 } from "./credits";
 

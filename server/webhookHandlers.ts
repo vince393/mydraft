@@ -185,12 +185,18 @@ export class WebhookHandlers {
           userId = u?.id;
         }
 
-        // Link plan subscription to the user (credits granted via invoice.paid).
-        if (userId && subscriptionId) {
+        // Link the PLAN subscription to the user (credits granted via invoice.paid).
+        // Add-on subscriptions (type=addon) must NOT overwrite the primary plan
+        // subscription id, or cancellation/downgrade logic keyed on it will break.
+        const isAddonCheckout = session.metadata?.type === 'addon';
+        if (userId && subscriptionId && !isAddonCheckout) {
           const updates: any = { stripeSubscriptionId: subscriptionId };
           if (customerId) updates.stripeCustomerId = customerId;
           await storage.updateUser(userId, updates);
           console.log(`[Webhook] Linked subscription ${subscriptionId} to user ${userId}`);
+        } else if (userId && customerId && isAddonCheckout) {
+          // Still ensure the customer id is linked for add-on purchases.
+          await storage.updateUser(userId, { stripeCustomerId: customerId } as any);
         }
 
         // One-time credit pack purchase (payment mode → no invoice.paid). Granted

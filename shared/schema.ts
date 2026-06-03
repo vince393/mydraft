@@ -284,6 +284,7 @@ export const creditLots = pgTable("credit_lots", {
     packCredits?: number;
     plan?: string;
     note?: string;
+    referredUserId?: string;
   }>(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
