@@ -550,12 +550,21 @@ ${headContent}
         return;
       }
 
+      // Track the last committed values so the ResizeObserver can't ping-pong
+      // with our own height/scale updates — that feedback loop is a classic
+      // cause of the UI freezing (especially on mobile).
+      let lastHeight = 0;
+      let lastScale = 1;
+
       const updateHeight = () => {
         if (!doc.body) return;
         const scrollH =
           doc.documentElement?.scrollHeight || doc.body.scrollHeight;
         const rawHeight = Math.max(scrollH + 8, 80);
-        setHeight(rawHeight);
+        if (Math.abs(rawHeight - lastHeight) > 1) {
+          lastHeight = rawHeight;
+          setHeight(rawHeight);
+        }
       };
 
       const updateScale = () => {
@@ -565,11 +574,13 @@ ${headContent}
           doc.body.scrollWidth,
           doc.documentElement?.scrollWidth || 0
         );
-        if (contentWidth > containerWidth + 10) {
-          const newScale = Math.max(containerWidth / contentWidth, 0.5);
+        const newScale =
+          contentWidth > containerWidth + 10
+            ? Math.max(containerWidth / contentWidth, 0.5)
+            : 1;
+        if (Math.abs(newScale - lastScale) > 0.01) {
+          lastScale = newScale;
           setScale(newScale);
-        } else {
-          setScale(1);
         }
       };
 
@@ -589,19 +600,26 @@ ${headContent}
 
         updateHeight();
         updateScale();
-        setTimeout(() => { updateHeight(); updateScale(); }, 200);
-        setTimeout(() => { updateHeight(); updateScale(); }, 800);
-        setTimeout(() => { updateHeight(); updateScale(); }, 2000);
-        setTimeout(() => { updateHeight(); updateScale(); }, 4000);
+        // Two late passes catch async fonts/images without the previous
+        // 4-deep timer cascade that hammered the main thread on every email.
+        setTimeout(() => { updateHeight(); updateScale(); }, 400);
+        setTimeout(() => { updateHeight(); updateScale(); }, 1500);
       };
 
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
       }
 
+      // Coalesce resize bursts into one animation frame so a flood of observer
+      // notifications can never saturate the main thread.
+      let roFrame = 0;
       const ro = new ResizeObserver(() => {
-        updateHeight();
-        updateScale();
+        if (roFrame) return;
+        roFrame = requestAnimationFrame(() => {
+          roFrame = 0;
+          updateHeight();
+          updateScale();
+        });
       });
       resizeObserverRef.current = ro;
 

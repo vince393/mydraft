@@ -37,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { AssistantMessage, AssistantSettings, ChatSession } from "@shared/schema";
 import { VoiceChatModal } from "./voice-chat-modal";
+import { CreditCostBadge, useActionCost } from "@/components/credit-cost-badge";
 
 interface ProposedAction {
   id: number;
@@ -99,6 +100,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { hasPremium } = usePlan();
+  const { canAfford: canAffordChat } = useActionCost("ai_chat");
   
   const handleOpenVoiceChat = () => {
     if (!hasPremium) {
@@ -299,7 +301,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
   }, [open]);
 
   const handleSendMessage = () => {
-    if (!message.trim() || sendMessageMutation.isPending) return;
+    if (!message.trim() || sendMessageMutation.isPending || !canAffordChat) return;
     const trimmed = message.trim();
     setOptimisticMessage(trimmed);
     sendMessageMutation.mutate(trimmed);
@@ -855,7 +857,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                   : "transparent",
               }}
               onClick={handleSendMessage}
-              disabled={!message.trim() || sendMessageMutation.isPending}
+              disabled={!message.trim() || sendMessageMutation.isPending || !canAffordChat}
               data-testid="button-send-message"
             >
               {sendMessageMutation.isPending ? (
@@ -864,6 +866,7 @@ export function AssistantModal({ open, onOpenChange }: AssistantModalProps) {
                 <Send className="w-4 h-4" />
               )}
             </button>
+            <CreditCostBadge action="ai_chat" className="shrink-0 self-center" />
           </div>
         </div>
       </DialogContent>

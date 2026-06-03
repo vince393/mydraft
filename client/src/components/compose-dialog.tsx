@@ -37,6 +37,7 @@ import {
 import { format } from "date-fns";
 import { EmailAutocomplete } from "@/components/email-autocomplete";
 import { useScreenSize } from "@/hooks/use-screen-size";
+import { CreditCostBadge, useActionCost } from "@/components/credit-cost-badge";
 
 interface ComposeDialogProps {
   open: boolean;
@@ -75,6 +76,10 @@ export function ComposeDialog({
 }: ComposeDialogProps) {
   const { toast } = useToast();
   const screen = useScreenSize();
+  const { canAfford: canAffordCompose } = useActionCost("ai_compose");
+  const { canAfford: canAffordRewrite } = useActionCost("ai_rewrite");
+  const { canAfford: canAffordGrammar } = useActionCost("grammar_check");
+  const { canAfford: canAffordImage } = useActionCost("image_generate");
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
@@ -1345,25 +1350,30 @@ export function ComposeDialog({
                 <DropdownMenuContent align="start" className="w-56">
                   <DropdownMenuItem
                     onClick={() => aiReplyMutation.mutate()}
-                    disabled={isGenerating || sendMutation.isPending || aiLimitReached}
+                    disabled={isGenerating || sendMutation.isPending || aiLimitReached || !canAffordCompose}
                     data-testid="button-ai-draft"
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
                     {getUserContent() ? "Improve Draft" : "Generate Draft"}
-                    {aiLimitReached && <span className="text-xs text-destructive ml-auto">Limit</span>}
+                    {aiLimitReached ? (
+                      <span className="text-xs text-destructive ml-auto">Limit</span>
+                    ) : (
+                      <CreditCostBadge action="ai_compose" className="ml-auto" />
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => aiPolishMutation.mutate("polish")}
-                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent() || !canAffordRewrite}
                     data-testid="button-polish-improve"
                   >
                     <Wand2 className="w-4 h-4 mr-2" />
                     Polish Writing
+                    <CreditCostBadge action="ai_rewrite" className="ml-auto" />
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => isPro ? aiPolishMutation.mutate("shorter") : toast({ title: "Pro feature", description: "Upgrade to Pro for this feature" })}
-                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent() || !canAffordRewrite}
                     className="flex items-center justify-between"
                     data-testid="button-polish-shorter"
                   >
@@ -1371,11 +1381,14 @@ export function ComposeDialog({
                       <ArrowDownRight className="w-4 h-4 mr-2" />
                       Make Shorter
                     </div>
-                    {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    <div className="flex items-center gap-1.5">
+                      <CreditCostBadge action="ai_rewrite" />
+                      {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => isPro ? aiPolishMutation.mutate("longer") : toast({ title: "Pro feature", description: "Upgrade to Pro for this feature" })}
-                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent() || !canAffordRewrite}
                     className="flex items-center justify-between"
                     data-testid="button-polish-longer"
                   >
@@ -1383,11 +1396,14 @@ export function ComposeDialog({
                       <ArrowUpRight className="w-4 h-4 mr-2" />
                       Make Longer
                     </div>
-                    {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    <div className="flex items-center gap-1.5">
+                      <CreditCostBadge action="ai_rewrite" />
+                      {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => isPro ? aiPolishMutation.mutate("concise") : toast({ title: "Pro feature", description: "Upgrade to Pro for this feature" })}
-                    disabled={isGenerating || sendMutation.isPending || !hasUserContent()}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent() || !canAffordRewrite}
                     className="flex items-center justify-between"
                     data-testid="button-polish-concise"
                   >
@@ -1395,16 +1411,20 @@ export function ComposeDialog({
                       <FileText className="w-4 h-4 mr-2" />
                       More Concise
                     </div>
-                    {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    <div className="flex items-center gap-1.5">
+                      <CreditCostBadge action="ai_rewrite" />
+                      {!isPro && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    </div>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => grammarCheckMutation.mutate()}
-                    disabled={isGenerating || sendMutation.isPending || !hasUserContent() || isCheckingGrammar}
+                    disabled={isGenerating || sendMutation.isPending || !hasUserContent() || isCheckingGrammar || !canAffordGrammar}
                     data-testid="button-grammar-check"
                   >
                     <SpellCheck className="w-4 h-4 mr-2" />
                     {isCheckingGrammar ? "Checking..." : "Check Grammar & Style"}
+                    <CreditCostBadge action="grammar_check" className="ml-auto" />
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -1473,7 +1493,7 @@ export function ComposeDialog({
                       setShowAiOptions(false);
                       aiReplyMutation.mutate();
                     }}
-                    disabled={isGenerating || sendMutation.isPending || aiLimitReached}
+                    disabled={isGenerating || sendMutation.isPending || aiLimitReached || !canAffordCompose}
                     data-testid="button-generate-draft"
                   >
                     {isGenerating ? (
@@ -1482,6 +1502,7 @@ export function ComposeDialog({
                       <Sparkles className="w-4 h-4" />
                     )}
                     {getUserContent() ? "Improve Draft" : "Generate Draft"}
+                    <CreditCostBadge action="ai_compose" />
                   </Button>
                   {getUserContent() && (
                     <p className="text-xs text-muted-foreground">
@@ -1514,7 +1535,7 @@ export function ComposeDialog({
                     <Button
                       className="w-full gap-2"
                       onClick={handleGenerateImage}
-                      disabled={isGeneratingImage || !imagePrompt.trim()}
+                      disabled={isGeneratingImage || !imagePrompt.trim() || !canAffordImage}
                       data-testid="button-generate-image"
                     >
                       {isGeneratingImage ? (
@@ -1523,6 +1544,7 @@ export function ComposeDialog({
                         <Image className="w-4 h-4" />
                       )}
                       {isGeneratingImage ? "Generating..." : "Generate Image"}
+                      <CreditCostBadge action="image_generate" />
                     </Button>
                     {generatedImages.length > 0 && (
                       <div className="space-y-2">

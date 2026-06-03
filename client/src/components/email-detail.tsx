@@ -56,6 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SmartAvatar } from "@/components/smart-avatar";
 import { isHtmlContent, stripHtmlToPlainText } from "@/lib/email-formatter";
 import { EmailIframeRenderer } from "@/components/email-iframe-renderer";
+import { CreditCostBadge, useActionCost } from "@/components/credit-cost-badge";
 import type { Email, Draft } from "@shared/schema";
 
 interface EmailAttachment {
@@ -215,6 +216,10 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   const readAloudAbortRef = useRef<AbortController | null>(null);
   const readAloudStoppedRef = useRef(false);
   const { toast } = useToast();
+
+  const { canAfford: canAffordSummary } = useActionCost("ai_summary");
+  const { canAfford: canAffordReadAloud } = useActionCost("read_aloud");
+  const { canAfford: canAffordTranslate } = useActionCost("translate");
 
   const emailId = email ? ((email as any).nylasId || email.id) : null;
 
@@ -974,6 +979,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   variant="ghost"
                   className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs px-3 rounded-r-none"
                   onClick={handleReadAloud}
+                  disabled={!canAffordReadAloud && readAloudState !== "playing" && readAloudState !== "paused" && readAloudState !== "loading"}
                   data-testid="button-read-aloud-top"
                 >
                   {readAloudState === "loading" ? (
@@ -984,6 +990,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   )}
                   {readAloudState === "loading" ? "Loading..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
+                  {readAloudState === "idle" && <CreditCostBadge action="read_aloud" />}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1065,7 +1072,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                     variant="ghost"
                     className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs rounded-full px-3"
                     onClick={handleSummarize}
-                    disabled={isSummaryLoading}
+                    disabled={isSummaryLoading || !canAffordSummary}
                     data-testid="button-summarize"
                   >
                     {isSummaryLoading ? (
@@ -1074,6 +1081,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       <FileText className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                     )}
                     Summarize
+                    <CreditCostBadge action="ai_summary" />
                     {!hasPro && (
                       <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
                         Pro
@@ -1101,6 +1109,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       variant="ghost"
                       className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs rounded-full rounded-r-none px-3"
                       onClick={handleReadAloud}
+                      disabled={!canAffordReadAloud && readAloudState !== "playing" && readAloudState !== "paused" && readAloudState !== "loading"}
                       data-testid="button-read-aloud"
                     >
                       {readAloudState === "loading" ? (
@@ -1111,6 +1120,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                         <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                       )}
                       {readAloudState === "loading" ? "Loading..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
+                      {readAloudState === "idle" && <CreditCostBadge action="read_aloud" />}
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1401,7 +1411,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={translateMutation.isPending}
+                        disabled={translateMutation.isPending || !canAffordTranslate}
                         className="text-xs rounded-full text-blue-500 border-blue-500/30"
                         data-testid="button-translate"
                       >
@@ -1414,6 +1424,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                           <>
                             <Languages className="w-3 h-3" />
                             Translate from {detectedLanguage.name}
+                            <CreditCostBadge action="translate" />
                             <ChevronDown className="w-3 h-3 ml-0.5" />
                           </>
                         )}

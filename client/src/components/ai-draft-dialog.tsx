@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Email, Draft } from "@shared/schema";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useScreenSize } from "@/hooks/use-screen-size";
+import { CreditCostBadge, useActionCost } from "@/components/credit-cost-badge";
 
 interface GenerateError {
   error: string;
@@ -62,6 +63,8 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const screen = useScreenSize();
+  const { canAfford: canAffordReply } = useActionCost("ai_reply");
+  const { canAfford: canAffordRewrite } = useActionCost("ai_rewrite");
 
   const { data: writingStyle } = useQuery<WritingStyleResponse>({
     queryKey: ["/api/writing-style"],
@@ -98,25 +101,27 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
       setAiInstructions("");
       setGeneratedDraft(null);
       setGenerateError(null);
-      generateMutation.mutate({ emailId: getEmailId(email), tone: selectedTone });
+      if (canAffordReply) {
+        generateMutation.mutate({ emailId: getEmailId(email), tone: selectedTone });
+      }
     }
   }, [open, email?.id]);
 
   const handleRegenerate = () => {
-    if (email) {
+    if (email && canAffordReply) {
       generateMutation.mutate({ emailId: getEmailId(email), tone: selectedTone, instructions: aiInstructions || undefined });
     }
   };
 
   const handleToneChange = (tone: ToneType) => {
     setSelectedTone(tone);
-    if (email) {
+    if (email && canAffordReply) {
       generateMutation.mutate({ emailId: getEmailId(email), tone, instructions: aiInstructions || undefined });
     }
   };
 
   const handleRefine = async () => {
-    if (!aiInstructions.trim() || !draftContent || !draftContent.trim()) return;
+    if (!aiInstructions.trim() || !draftContent || !draftContent.trim() || !canAffordRewrite) return;
     setIsRefining(true);
     try {
       const response = await apiRequest("POST", "/api/ai/refine", {
@@ -331,22 +336,24 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
                   size="sm"
                   variant="ghost"
                   onClick={handleRefine}
-                  disabled={!aiInstructions.trim() || isRefining || !hasDraftContent}
-                  className="h-6 px-2 text-xs"
+                  disabled={!aiInstructions.trim() || isRefining || !hasDraftContent || !canAffordRewrite}
+                  className="h-6 px-2 text-xs gap-1"
                   data-testid="button-apply-instructions"
                 >
                   {isRefining ? <Loader2 className="w-3 h-3 animate-spin" /> : "Apply"}
+                  <CreditCostBadge action="ai_rewrite" />
                 </Button>
               </div>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={handleRegenerate}
-                disabled={generateMutation.isPending || !email}
-                className="h-9 px-2"
+                disabled={generateMutation.isPending || !email || !canAffordReply}
+                className="h-9 px-2 gap-1"
                 data-testid="button-regenerate"
               >
                 <RefreshCw className={`w-4 h-4 ${generateMutation.isPending ? 'animate-spin' : ''}`} />
+                <CreditCostBadge action="ai_reply" />
               </Button>
             </div>
           </div>

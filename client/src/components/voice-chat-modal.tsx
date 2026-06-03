@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Mic, X, Volume2, VolumeX, Loader2, Phone, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScreenSize } from "@/hooks/use-screen-size";
+import { CreditCostBadge, useActionCost } from "@/components/credit-cost-badge";
 
 interface VoiceChatModalProps {
   open: boolean;
@@ -19,6 +20,7 @@ type ConversationState = "idle" | "listening" | "processing" | "speaking";
 
 export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
   const screen = useScreenSize();
+  const { canAfford: canAffordVoice } = useActionCost("voice_chat");
   const [conversationState, setConversationState] = useState<ConversationState>("idle");
   const [transcript, setTranscript] = useState("");
   const [isMuted, setIsMuted] = useState(false);
@@ -391,6 +393,7 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
 
   useEffect(() => {
     if (open) {
+      if (!canAffordVoice) return;
       const timer = setTimeout(() => {
         startListening();
       }, 500);
@@ -462,7 +465,10 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <div>
-                <p className="text-sm font-medium text-white">Vince</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-white">Vince</p>
+                  <CreditCostBadge action="voice_chat" />
+                </div>
                 <p className="text-[11px] text-black/30 dark:text-white/30">{formatDuration(callDuration)}</p>
               </div>
             </div>
@@ -617,7 +623,10 @@ export function VoiceChatModal({ open, onOpenChange }: VoiceChatModalProps) {
                     : "1px solid rgba(var(--overlay-rgb), 0.08)",
                 }}
                 onClick={() => {
-                  if (conversationState === "idle") startListening();
+                  if (conversationState === "idle") {
+                    if (!canAffordVoice) return;
+                    startListening();
+                  }
                   else if (conversationState === "listening") stopListening();
                   else if (conversationState === "speaking") {
                     stopAudioPlayback();
