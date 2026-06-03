@@ -62,8 +62,11 @@ export function registerChatRoutes(app: Express): void {
       const { content } = req.body;
 
       const userId = (req as any).jwtUserId || (req.session as any)?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
       const chatCost = getActionCost("ai_chat");
-      if (userId && chatCost > 0) {
+      if (chatCost > 0) {
         const balance = await getBalance(userId);
         if (balance < chatCost) {
           return res.status(402).json({
@@ -106,7 +109,7 @@ export function registerChatRoutes(app: Express): void {
 
       await chatStorage.createMessage(conversationId, "assistant", fullResponse);
 
-      if (userId && chatCost > 0) {
+      if (chatCost > 0) {
         try {
           await spendCredits({ userId, amount: chatCost, action: "ai_chat", reference: String(conversationId) });
         } catch (creditErr) {

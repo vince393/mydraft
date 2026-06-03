@@ -8,6 +8,7 @@ import {
   createCreditAddon,
   cancelCreditAddon,
   getAddonBySubscriptionId,
+  getActiveAddons,
 } from './credits';
 
 const KNOWN_PRICE_AMOUNTS: Record<number, 'pro' | 'premium'> = {
@@ -161,6 +162,37 @@ export class WebhookHandlers {
           stripeSubscriptionId: null,
           plan: 'free',
         });
+
+        // When the primary plan subscription is canceled, also cancel any
+        // recurring credit add-ons — they are an upsell on top of a paid plan
+        // and should not keep billing once the user is back on Free.
+        try {
+          const activeAddons = await getActiveAddons(user.id);
+          if (activeAddons.length > 0) {
+            const stripe = await getUncachableStripeClient();
+            for (const addon of activeAddons) {
+              if (!addon.stripeSubscriptionId) continue;
+              try {
+                await stripe.subscriptions.cancel(addon.stripeSubscriptionId);
+              } catch (cancelErr: any) {
+                // Ignore "already canceled / not found" so the add-on is still
+                // marked inactive locally; surface anything else.
+                if (cancelErr?.code !== 'resource_missing') {
+                  console.error(
+                    `[Webhook] Failed to cancel add-on ${addon.stripeSubscriptionId} in Stripe:`,
+                    cancelErr,
+                  );
+                }
+              }
+              await cancelCreditAddon(addon.stripeSubscriptionId);
+              console.log(
+                `[Webhook] Canceled add-on ${addon.stripeSubscriptionId} (primary plan ended)`,
+              );
+            }
+          }
+        } catch (addonErr) {
+          console.error('[Webhook] Failed to cancel add-ons on plan cancellation:', addonErr);
+        }
 
         await storage.createActivityLog(
           user.id,

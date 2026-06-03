@@ -1939,6 +1939,12 @@ export async function registerRoutes(
 
     let creditBalance = 0;
     try {
+      await ensureMonthlyGrant({
+        id: user.id,
+        plan: user.plan,
+        lastMonthlyGrantAt: user.lastMonthlyGrantAt ?? null,
+        stripeSubscriptionId: user.stripeSubscriptionId,
+      });
       creditBalance = await getBalance(user.id);
     } catch (balErr) {
       console.error("Failed to load credit balance for /api/auth/me:", balErr);
