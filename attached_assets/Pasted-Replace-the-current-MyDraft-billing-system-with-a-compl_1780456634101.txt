@@ -1,0 +1,243 @@
+Replace the current MyDraft billing system with a complete credit-based economy.
+
+GOAL
+
+The goal is to prevent AI abuse, control AI costs, increase profitability, and create additional revenue through credit purchases while keeping the system simple and easy for users to understand.
+
+CREDIT SYSTEM
+
+Every AI action must consume credits.
+
+Credit Costs:
+
+* AI Reply = 2 credits
+* AI Compose = 2 credits
+* AI Summary = 1 credit
+* AI Rewrite = 1 credit
+* Inbox Cleanup = dynamic based on the number of emails scanned
+* Bulk AI Actions = dynamic based on workload
+
+Inbox Cleanup includes:
+
+* Spam detection
+* Scam detection
+* Junk identification
+* Email organization
+* Cleanup suggestions
+
+Do NOT charge separately for spam or scam scanning.
+
+Before any AI action:
+
+1. Check available credits.
+2. Calculate required credits.
+3. If enough credits exist:
+
+   * Deduct credits.
+   * Log the transaction.
+   * Run the action.
+4. If not enough credits exist:
+
+   * Block the action.
+   * Show an upgrade/purchase modal.
+
+Users must never be able to have a negative credit balance.
+
+PLANS
+
+Free:
+
+* 10 credits per month
+
+Pro:
+
+* $4.99/month
+* 50 credits per month
+
+Business:
+
+* $14.99/month
+* 200 credits per month
+
+All plan credits expire 30 days after being issued.
+
+CREDIT PACKS
+
+Allow one-time purchases of additional credits.
+
+Create:
+
+* 50 Credits
+* 150 Credits
+* 500 Credits
+* 1,500 Credits
+
+All purchased credits expire 30 days after purchase.
+
+MONTHLY CREDIT ADD-ONS
+
+Allow users to subscribe to additional monthly credits.
+
+Requirements:
+
+* Add-ons renew monthly.
+* Add-ons can be canceled individually.
+* If the main subscription is canceled, all active add-ons are automatically canceled.
+* Add-on credits expire 30 days after being issued.
+
+CREDIT EXPIRATION RULES
+
+All credits expire exactly 30 days after being added to the account regardless of source.
+
+This includes:
+
+* Subscription credits
+* Purchased credits
+* Add-on credits
+* Referral credits
+
+Always use the oldest credits first.
+
+Display expiration dates clearly to users.
+
+REFERRAL PROGRAM
+
+Add a referral system.
+
+Referrer Reward:
+
+* 25 credits
+
+Referred User Reward:
+
+* 1 month of Pro for free
+
+Requirements:
+
+* User creates an account.
+* User verifies their email.
+* User connects an email account.
+* No self-referrals.
+* One reward per unique user.
+* Prevent duplicate and fraudulent referrals.
+
+When requirements are met:
+
+* Grant 25 credits to the referrer.
+* Grant 1 month of Pro access to the referred user.
+
+Referral credits expire after 30 days.
+
+STRIPE INTEGRATION
+
+Update Stripe to support:
+
+Subscriptions:
+
+* Pro Monthly
+* Business Monthly
+
+One-Time Credit Packs:
+
+* 50 Credits
+* 150 Credits
+* 500 Credits
+* 1,500 Credits
+
+Monthly Credit Add-Ons:
+
+* Extra monthly credit subscriptions
+
+Implement Stripe webhooks for:
+
+* checkout.session.completed
+* invoice.paid
+* customer.subscription.created
+* customer.subscription.updated
+* customer.subscription.deleted
+
+Automatically issue credits when payments succeed.
+
+DATABASE
+
+Create a complete credit ledger system.
+
+Track:
+
+* User ID
+* Credits added
+* Credits used
+* Credit source
+* Action performed
+* Expiration date
+* Timestamp
+
+Every credit transaction must be recorded.
+
+CREDITS PAGE
+
+Create a dedicated Credits page showing:
+
+* Current credit balance
+* Credits expiring soon
+* Usage history
+* Referral rewards
+* Active add-ons
+* Credit pack purchases
+* Expiration dates
+
+BILLING PAGE
+
+Update the Billing page to show:
+
+* Current plan
+* Renewal date
+* Available credits
+* Credits used this month
+* Active add-ons
+* Upgrade plan button
+* Buy credits button
+* Manage subscription button
+
+GLOBAL CREDIT DISPLAY
+
+Show credit balance throughout the application:
+
+* Sidebar
+* Credits page
+* Billing page
+* Upgrade modal
+
+Example:
+"42 Credits Remaining"
+
+LOW CREDIT WARNINGS
+
+Show warnings when:
+
+* Below 20 credits
+* Below 10 credits
+* Below 5 credits
+
+Suggest:
+
+* Buying credits
+* Adding a monthly add-on
+* Upgrading plan
+
+ADMIN ANALYTICS
+
+Track:
+
+* Subscription revenue
+* Credit pack revenue
+* Add-on revenue
+* Credits issued
+* Credits used
+* Referral statistics
+* Most-used AI features
+* Average credit usage per user
+
+FINAL GOAL
+
+Transform MyDraft into a profitable credit-based AI email platform where every AI action consumes credits, all credits expire after 30 days, users can purchase additional credits, referrals drive growth, costs remain predictable, abuse is prevented, and Stripe fully manages subscriptions, add-ons, credit packs, and billing.
