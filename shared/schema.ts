@@ -131,7 +131,9 @@ export const cachedEmails = pgTable("cached_emails", {
   threadId: varchar("thread_id"),
   avatarColor: text("avatar_color"),
   cachedAt: timestamp("cached_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
-});
+}, (table) => ({
+  userNylasUnique: uniqueIndex("cached_emails_user_nylas_unique").on(table.userId, table.nylasId),
+}));
 
 export type CachedEmail = typeof cachedEmails.$inferSelect;
 

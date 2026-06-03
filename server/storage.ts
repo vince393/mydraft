@@ -2572,10 +2572,8 @@ Business Development`,
       }
     }
 
-    // Clear existing cache for user
-    await db.delete(cachedEmails).where(eq(cachedEmails.userId, userId));
-    
-    // Insert new emails with encrypted body and preview
+    // Upsert (merge) into the durable cache so emails accumulate over time
+    // instead of being wiped on every sync. Keyed on (userId, nylasId).
     if (emails.length > 0) {
       const toInsert = emails.map(email => ({
         nylasId: email.nylasId,
@@ -2592,11 +2590,28 @@ Business Development`,
         avatarColor: email.avatarColor,
       }));
       
-      // Insert in batches to avoid query size limits
+      // Insert in batches to avoid query size limits. On conflict, refresh the
+      // mutable fields but preserve any previously-cached body (the list fetch
+      // sends an empty body, so we must not clobber a stored full body).
       const batchSize = 100;
       for (let i = 0; i < toInsert.length; i += batchSize) {
         const batch = toInsert.slice(i, i + batchSize);
-        await db.insert(cachedEmails).values(batch);
+        await db.insert(cachedEmails).values(batch)
+          .onConflictDoUpdate({
+            target: [cachedEmails.userId, cachedEmails.nylasId],
+            set: {
+              sender: sql`excluded.sender`,
+              senderEmail: sql`excluded.sender_email`,
+              subject: sql`excluded.subject`,
+              preview: sql`excluded.preview`,
+              receivedAt: sql`excluded.received_at`,
+              isRead: sql`excluded.is_read`,
+              folder: sql`excluded.folder`,
+              threadId: sql`excluded.thread_id`,
+              avatarColor: sql`excluded.avatar_color`,
+              cachedAt: sql`CURRENT_TIMESTAMP`,
+            },
+          });
       }
     }
   }

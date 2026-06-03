@@ -3406,7 +3406,7 @@ Return ONLY valid JSON, no other text.`;
             try {
               const messages = await providerResult.provider.getMessages(
                 providerResult.accessToken,
-                { folder: f },
+                { folder: f, limit: f === "inbox" ? 300 : 100 },
               );
               return messages.map((m) => ({ ...m, folder: f }));
             } catch {
@@ -3430,7 +3430,7 @@ Return ONLY valid JSON, no other text.`;
       } else {
         const messages = await providerResult.provider.getMessages(
           providerResult.accessToken,
-          { folder: folder || "inbox" },
+          { folder: folder || "inbox", limit: 300 },
         );
         allMessages = messages.map((m) => ({
           ...m,

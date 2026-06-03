@@ -166,6 +166,8 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   const pullThreshold = 60;
   const hasAnimatedRef = useRef(false);
   const prevEmailIdsRef = useRef<Set<string | number>>(new Set());
+  const [visibleCount, setVisibleCount] = useState(50);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   
   const { data: responseTime, isLoading: isLoadingTime } = useQuery<ResponseTimeEstimate>({
     queryKey: ['/api/response-time', activeFolder],
@@ -261,6 +263,29 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     if (!activeCategory) return filteredEmails;
     return filteredEmails.filter(email => categorizeEmail(email) === activeCategory);
   }, [filteredEmails, activeCategory]);
+
+  // Windowed rendering: only mount a slice of the list at a time, growing as the
+  // user scrolls. Keeps large inboxes smooth without dropping any emails.
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [activeFolder, activeCategory, searchQuery, filters]);
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((c) =>
+            c < categoryFilteredEmails.length ? c + 50 : c,
+          );
+        }
+      },
+      { root: scrollContainerRef.current || null, rootMargin: "400px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [categoryFilteredEmails.length, visibleCount]);
 
   const clearFilters = () => {
     setFilters({ unreadOnly: false, dateRange: "all", sender: "" });
@@ -818,7 +843,7 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
           </div>
         ) : (
         <div className="p-3" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {categoryFilteredEmails.map((email, index) => {
+        {categoryFilteredEmails.slice(0, visibleCount).map((email, index) => {
           const emailId = getEmailId(email);
           const isSelected = getEmailId(email) === selectedEmailId;
           const isChecked = selectedIds.has(emailId);
@@ -869,6 +894,15 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             </div>
           );
         })}
+        {visibleCount < categoryFilteredEmails.length && (
+          <div
+            ref={loadMoreRef}
+            className="h-10 flex items-center justify-center"
+            data-testid="loader-more-emails"
+          >
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground/40" />
+          </div>
+        )}
         </div>
         )}
       </div>
