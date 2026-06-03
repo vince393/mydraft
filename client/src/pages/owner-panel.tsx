@@ -8,6 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
@@ -44,6 +51,8 @@ import {
   PieChart,
   BarChart3,
   Plus,
+  Minus,
+  Coins,
   Trash2,
   TrendingDown,
   Star,
@@ -742,6 +751,60 @@ export default function OwnerPanel() {
     },
   });
 
+  const [creditUser, setCreditUser] = useState<UserData | null>(null);
+  const [creditAmount, setCreditAmount] = useState("");
+
+  const { data: creditData, isLoading: creditLoading } = useQuery<{ balance: number }>({
+    queryKey: ["/api/owner/users", creditUser?.id, "credits"],
+    enabled: !!creditUser,
+  });
+
+  const adjustCreditsMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      amount,
+      mode,
+    }: {
+      userId: string;
+      amount: number;
+      mode: "give" | "take";
+    }) => {
+      const res = await apiRequest("POST", `/api/owner/users/${userId}/credits`, {
+        amount,
+        mode,
+      });
+      return res.json() as Promise<{ balance: number; removed: number }>;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/owner/users", variables.userId, "credits"],
+      });
+      setCreditAmount("");
+      toast({
+        title:
+          variables.mode === "give"
+            ? `Gave ${variables.amount} credits`
+            : `Removed ${data.removed} credits`,
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to update credits", variant: "destructive" });
+    },
+  });
+
+  const handleAdjustCredits = (mode: "give" | "take") => {
+    if (!creditUser) return;
+    const amount = parseInt(creditAmount, 10);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      toast({
+        title: "Enter a whole number greater than 0",
+        variant: "destructive",
+      });
+      return;
+    }
+    adjustCreditsMutation.mutate({ userId: creditUser.id, amount, mode });
+  };
+
   const sendNotificationMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("POST", "/api/owner/notifications/send", {
@@ -1375,6 +1438,18 @@ export default function OwnerPanel() {
                                     <Button
                                       size="icon"
                                       variant="ghost"
+                                      onClick={() => {
+                                        setCreditAmount("");
+                                        setCreditUser(user);
+                                      }}
+                                      title="Manage credits"
+                                      data-testid={`button-manage-credits-${user.id}`}
+                                    >
+                                      <Coins className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
                                       onClick={() => resetUserLimitsMutation.mutate(user.id)}
                                       disabled={resetUserLimitsMutation.isPending}
                                       title="Reset AI usage limits"
@@ -1408,16 +1483,30 @@ export default function OwnerPanel() {
                                 )}
                               </div>
                             </div>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="flex-shrink-0 h-8 w-8"
-                              onClick={() => resetUserLimitsMutation.mutate(user.id)}
-                              disabled={resetUserLimitsMutation.isPending}
-                              data-testid={`button-reset-limits-${user.id}`}
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                            </Button>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  setCreditAmount("");
+                                  setCreditUser(user);
+                                }}
+                                data-testid={`button-manage-credits-${user.id}`}
+                              >
+                                <Coins className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => resetUserLimitsMutation.mutate(user.id)}
+                                disabled={resetUserLimitsMutation.isPending}
+                                data-testid={`button-reset-limits-${user.id}`}
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs text-muted-foreground">
@@ -3217,6 +3306,77 @@ export default function OwnerPanel() {
           </div>
         </Tabs>
       </div>
+
+      <Dialog
+        open={!!creditUser}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreditUser(null);
+            setCreditAmount("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[420px]" data-testid="dialog-manage-credits">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Coins className="w-5 h-5" />
+              Manage Credits
+            </DialogTitle>
+            <DialogDescription className="truncate">
+              {creditUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/40 p-4 text-center">
+              <p className="text-xs text-muted-foreground">Current balance</p>
+              {creditLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin mx-auto mt-1 text-muted-foreground" />
+              ) : (
+                <p
+                  className="text-3xl font-bold mt-1"
+                  data-testid="text-credit-balance"
+                >
+                  {creditData?.balance ?? 0}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Amount</label>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                placeholder="e.g. 100"
+                value={creditAmount}
+                onChange={(e) => setCreditAmount(e.target.value)}
+                data-testid="input-credit-amount"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleAdjustCredits("take")}
+                disabled={adjustCreditsMutation.isPending}
+                data-testid="button-take-credits"
+              >
+                <Minus className="w-4 h-4 mr-1" />
+                Take
+              </Button>
+              <Button
+                onClick={() => handleAdjustCredits("give")}
+                disabled={adjustCreditsMutation.isPending}
+                data-testid="button-give-credits"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Give
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

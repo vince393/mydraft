@@ -9233,6 +9233,92 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
+  // Get a user's current credit balance (owner only)
+  app.get("/api/owner/users/:userId/credits", requireOwner, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const balance = await getBalance(userId);
+      res.json({ balance });
+    } catch (error) {
+      console.error("Error fetching user credits:", error);
+      res.status(500).json({ error: "Failed to fetch user credits" });
+    }
+  });
+
+  // Give or take a user's credits (owner only)
+  app.post("/api/owner/users/:userId/credits", requireOwner, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { amount, mode } = req.body as { amount?: number; mode?: string };
+
+      if (mode !== "give" && mode !== "take") {
+        return res.status(400).json({ error: "mode must be 'give' or 'take'" });
+      }
+      if (
+        typeof amount !== "number" ||
+        !Number.isInteger(amount) ||
+        amount <= 0
+      ) {
+        return res
+          .status(400)
+          .json({ error: "amount must be a positive whole number" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      let removed = 0;
+      if (mode === "give") {
+        await grantCredits({
+          userId,
+          amount,
+          source: "admin",
+          action: "admin_grant",
+          metadata: { grantedBy: req.session.userId },
+        });
+        await storage.createActivityLog(
+          userId,
+          user.email,
+          "credits_granted",
+          `Owner granted ${amount} credits`,
+        );
+      } else {
+        // "take": remove up to the user's current balance (never goes negative).
+        // spendCredits is atomic; if the balance changed underneath us it returns
+        // success:false (spent 0), so we always report the amount actually removed
+        // rather than the optimistic pre-read, keeping the log/response truthful.
+        const current = await getBalance(userId);
+        const requested = Math.min(amount, current);
+        if (requested > 0) {
+          const result = await spendCredits({
+            userId,
+            amount: requested,
+            action: "admin_adjustment",
+          });
+          removed = result.success ? result.spent : 0;
+        }
+        await storage.createActivityLog(
+          userId,
+          user.email,
+          "credits_removed",
+          `Owner removed ${removed} credits`,
+        );
+      }
+
+      const balance = await getBalance(userId);
+      res.json({ success: true, balance, removed });
+    } catch (error) {
+      console.error("Error adjusting user credits:", error);
+      res.status(500).json({ error: "Failed to adjust user credits" });
+    }
+  });
+
   // Get users by plan for owner
   app.get("/api/owner/users/by-plan/:plan", requireOwner, async (req, res) => {
     try {
