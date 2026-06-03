@@ -70,6 +70,7 @@ async function grantReferralRewardOnConnect(referredUserId: string): Promise<voi
       source: "referral",
       action: "referral_reward",
       reference: referredUserId,
+      idempotencyKey: `referral:referrer:${referredUserId}`,
       metadata: { referredUserId },
     });
 

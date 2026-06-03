@@ -36,3 +36,6 @@ not `db:push`, to avoid its interactive prompt.
 account* (`grantReferralRewardOnConnect`), NOT on subscription payment. Do not re-add a
 referral hook in the `invoice.paid` handler — the old `markReferralSubscribed` call there
 was obsolete and broken (method was renamed to `markReferralConnected`).
+
+## Non-webhook grants too
+The same rule applies to any `grantCredits` call (referrals, manual grants), not just Stripe webhooks. Never store a bare entity id (e.g. a userId) as the grant `reference` with no `idempotencyKey`: a partial unique index on `credit_transactions(reference) WHERE type='grant'` means that bare id can collide with any other grant that happens to use the same value. Always pass a namespaced `idempotencyKey` like `referral:referrer:<id>` so the grant is both idempotent and collision-free.
