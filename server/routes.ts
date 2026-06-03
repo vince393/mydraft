@@ -586,6 +586,33 @@ function generateUnreadSignature(unreadEmailIds: number[]): string {
   return unreadEmailIds.sort((a, b) => a - b).join(",");
 }
 
+// Returns a valid Stripe customer id for the user, recreating it if the stored
+// one no longer exists in the current Stripe account (e.g. after a key/mode
+// switch). Without this, checkout fails with "No such customer".
+async function ensureStripeCustomer(stripe: any, user: any): Promise<string> {
+  const existingId = user.stripeCustomerId;
+  if (existingId) {
+    try {
+      const customer = await stripe.customers.retrieve(existingId);
+      if (customer && !(customer as any).deleted) {
+        return existingId;
+      }
+    } catch (err: any) {
+      if (err?.code !== "resource_missing") {
+        throw err;
+      }
+      // Stored customer is gone — fall through and create a fresh one.
+    }
+  }
+  const customer = await stripe.customers.create({
+    email: user.email,
+    metadata: { userId: user.id },
+  });
+  await storage.updateUser(user.id, { stripeCustomerId: customer.id });
+  user.stripeCustomerId = customer.id;
+  return customer.id;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express,
@@ -9928,16 +9955,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
 
-      // Create or get customer
-      let customerId = user.stripeCustomerId;
-      if (!customerId) {
-        const customer = await stripe.customers.create({
-          email: user.email,
-          metadata: { userId: user.id },
-        });
-        await storage.updateUser(user.id, { stripeCustomerId: customer.id });
-        customerId = customer.id;
-      }
+      // Create or get customer (recreates if stored id is stale)
+      const customerId = await ensureStripeCustomer(stripe, user);
 
       // Create a SetupIntent to collect payment method
       const setupIntent = await stripe.setupIntents.create({
@@ -10177,16 +10196,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       };
       const productName = productNames[plan];
 
-      // Create or get customer
-      let customerId = user.stripeCustomerId;
-      if (!customerId) {
-        const customer = await stripe.customers.create({
-          email: user.email,
-          metadata: { userId: user.id },
-        });
-        await storage.updateUser(user.id, { stripeCustomerId: customer.id });
-        customerId = customer.id;
-      }
+      // Create or get customer (recreates if stored id is stale)
+      const customerId = await ensureStripeCustomer(stripe, user);
 
       // Find or create the product
       let product;
@@ -10360,12 +10371,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
 
-      let customerId = user.stripeCustomerId;
-      if (!customerId) {
-        const customer = await stripe.customers.create({ email: user.email, metadata: { userId: user.id } });
-        await storage.updateUser(user.id, { stripeCustomerId: customer.id });
-        customerId = customer.id;
-      }
+      const customerId = await ensureStripeCustomer(stripe, user);
 
       const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
       const session = await stripe.checkout.sessions.create({
@@ -10411,12 +10417,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
 
-      let customerId = user.stripeCustomerId;
-      if (!customerId) {
-        const customer = await stripe.customers.create({ email: user.email, metadata: { userId: user.id } });
-        await storage.updateUser(user.id, { stripeCustomerId: customer.id });
-        customerId = customer.id;
-      }
+      const customerId = await ensureStripeCustomer(stripe, user);
 
       // Find or create product + recurring price tagged as an add-on.
       const sku = addon.id;
