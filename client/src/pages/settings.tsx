@@ -999,10 +999,10 @@ function BillingTab({ settings }: { settings: Settings }) {
   const [cancelReason, setCancelReason] = useState("");
 
   const planDetails: Record<string, { name: string; price: string; features: string[] }> = {
-    free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "5 emails/day limit", "Standard support"] },
-    pro: { name: "Pro", price: "$4.99/mo or $8.25/mo billed annually", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
-    premium: { name: "Business", price: "$14.99/mo or $24.92/mo billed annually", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
-    business: { name: "Business", price: "$14.99/mo or $24.92/mo billed annually", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
+    free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "10 AI credits per month", "Standard support"] },
+    pro: { name: "Pro", price: "$4.99/mo or $4.16/mo billed annually", features: ["50 AI credits per month", "Advanced tone customization", "Email scheduling", "Priority support"] },
+    premium: { name: "Business", price: "$14.99/mo or $12.49/mo billed annually", features: ["200 AI credits per month", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
+    business: { name: "Business", price: "$14.99/mo or $12.49/mo billed annually", features: ["200 AI credits per month", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
   };
 
   const currentPlan = (settings?.plan && planDetails[settings.plan]) ? planDetails[settings.plan] : planDetails.free;

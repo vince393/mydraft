@@ -166,7 +166,7 @@ export default function PublicPricingPage() {
               description="Perfect for trying out MyDraft"
               features={[
                 { text: "Connect 1 email account", included: true },
-                { text: "5 AI drafts per day", included: true },
+                { text: "10 AI credits per month", included: true },
                 { text: "Basic inbox management", included: true },
                 { text: "Standard support", included: true },
                 { text: "Writing style memory", included: false },
@@ -187,7 +187,7 @@ export default function PublicPricingPage() {
               description="For professionals who need more"
               features={[
                 { text: "Connect 1 email account", included: true },
-                { text: "Unlimited AI replies", included: true },
+                { text: "50 AI credits per month", included: true },
                 { text: "Writing style memory", included: true },
                 { text: "Email scheduling", included: true },
                 { text: "Priority support", included: true },
@@ -210,7 +210,7 @@ export default function PublicPricingPage() {
               features={[
                 { text: "Connect 1 email account", included: true },
                 { text: "Enhanced AI quality", included: true },
-                { text: "Unlimited AI replies", included: true },
+                { text: "200 AI credits per month", included: true },
                 { text: "Voice assistant", included: true },
                 { text: "Custom AI training", included: true },
                 { text: "Team collaboration", included: true },
@@ -365,7 +365,7 @@ function FeatureComparison() {
   const features = [
     { name: "Email accounts", free: "1", pro: "1", business: "1" },
     { name: "Free trial", free: "x", pro: "3 days", business: "3 days" },
-    { name: "AI replies", free: "5/day", pro: "Unlimited", business: "Unlimited" },
+    { name: "AI credits / month", free: "10", pro: "50", business: "200" },
     { name: "Writing style memory", free: "x", pro: "check", business: "check" },
     { name: "AI model", free: "Standard", pro: "Standard", business: "Enhanced" },
     { name: "Inbox management", free: "Basic", pro: "Advanced", business: "Advanced" },

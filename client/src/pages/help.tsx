@@ -127,7 +127,7 @@ const articles: HelpArticle[] = [
       paragraphs: [
         "When you choose Pro or Business during signup, you'll be asked to enter a payment method. This is just to set up your subscription — you won't be charged anything for the first 3 days. During the trial, you get full access to every feature included in your chosen plan.",
         "If you decide MyDraft isn't for you, simply cancel before the trial ends and you won't be charged at all. You can cancel from Settings > Billing at any time. If you don't cancel, your subscription starts automatically on day 4 at the regular plan price.",
-        "The Free plan doesn't require a trial — it's free forever with basic features and up to 5 AI-generated replies per day."
+        "The Free plan doesn't require a trial — it's free forever with basic features and 10 AI credits per month."
       ],
       steps: [
         { title: "Choose Pro or Business", description: "Select your plan during onboarding or from the Pricing page." },
@@ -279,7 +279,7 @@ const articles: HelpArticle[] = [
         "When you open an email, you'll see an AI button that lets you generate a reply draft. Click it and MyDraft's AI will analyze the email content, understand what kind of response is needed, and write a professional reply in your preferred tone. The draft appears in the reply editor where you can review, edit, and customize it before sending.",
         "The AI takes into account your preferences set during onboarding — things like your preferred writing tone (professional, casual, friendly), how formal or informal you like to be, and your communication style. Pro and Business users get even better results because MyDraft learns their unique writing style over time by analyzing emails they've sent.",
         "You can also use quick-generate to get a reply with just one click, or use the AI refine feature to improve a draft you've already started writing. The AI assistant in the sidebar can help with more complex email tasks like drafting from scratch, summarizing threads, or translating content.",
-        "Free users get up to 5 AI-generated replies per day. Pro users get 100 per day, and Business users get unlimited AI assistance."
+        "Free users get 10 AI credits per month. Pro users get 50 credits per month, and Business users get 200 credits per month. Each AI action uses credits (for example, an AI reply costs 2 credits and a summary costs 1), and you can top up anytime with credit packs."
       ],
       steps: [
         { title: "Open an email", description: "Click on the email you want to reply to." },
@@ -411,9 +411,9 @@ const articles: HelpArticle[] = [
     content: {
       intro: "MyDraft offers three plans to fit different needs: Free, Pro, and Business. Pro and Business include a 3-day free trial.",
       paragraphs: [
-        "The Free plan gives you basic inbox management with up to 5 AI-generated replies per day. It's a great way to try MyDraft and see if it works for you. There's no time limit on the Free plan — it's free forever.",
-        "Pro is $4.99/month (or $8.25/month billed annually — saving $21/year). It includes writing style memory so the AI learns to write like you, up to 100 AI emails per day, email scheduling, advanced inbox management, and custom folders with AI sorting. Pro is the best value for individuals who use email heavily.",
-        "Business is $14.99/month (or $24.92/month billed annually — saving $49/year). It includes everything in Pro plus enhanced AI quality for better draft generation, unlimited AI assistance, voice assistant, custom AI training, and team collaboration features. Business is designed for professionals and teams who want the best AI email experience."
+        "The Free plan gives you basic inbox management with 10 AI credits per month. It's a great way to try MyDraft and see if it works for you. There's no time limit on the Free plan — it's free forever.",
+        "Pro is $4.99/month (or $4.16/month billed annually — saving $21/year). It includes writing style memory so the AI learns to write like you, 50 AI credits per month, email scheduling, advanced inbox management, and custom folders with AI sorting. Pro is the best value for individuals who use email heavily.",
+        "Business is $14.99/month (or $12.49/month billed annually — saving $49/year). It includes everything in Pro plus enhanced AI quality for better draft generation, 200 AI credits per month, voice assistant, custom AI training, and team collaboration features. Business is designed for professionals and teams who want the best AI email experience."
       ],
       steps: [
         { title: "Compare plans", description: "Visit the Pricing page to see a full feature comparison." },
@@ -908,17 +908,17 @@ const articles: HelpArticle[] = [
   },
   {
     id: "ai-limits",
-    question: "What are the daily AI limits for each plan?",
+    question: "How do AI credits work for each plan?",
     readTime: "2 min read",
     category: "AI Features",
     icon: RefreshCw,
     iconColor: "#F59E0B",
     content: {
-      intro: "Each plan has a daily limit on AI-generated replies. Here's how many you get and what counts toward the limit.",
+      intro: "Every AI action uses credits. Here's how many credits each plan includes and what different actions cost.",
       paragraphs: [
-        "Free users get 5 AI-generated replies per day. This includes AI draft generation, quick replies, and AI refinements. The counter resets every 24 hours at midnight UTC. If you hit your limit, you can still compose and send emails manually — only the AI generation feature is paused.",
-        "Pro users get 100 AI-generated replies per day, which is more than enough for heavy email users. Business users get unlimited AI assistance with no daily cap at all. If you find yourself regularly hitting the Free limit, upgrading to Pro gives you 20x more AI replies plus writing style learning.",
-        "Translations, summaries, and the AI chat assistant also count toward your daily AI usage. The limit applies to all AI features combined, not each one separately."
+        "Free users get 10 AI credits per month, Pro users get 50, and Business users get 200. Your monthly credits refresh each billing cycle, and credits expire 30 days after they're added. If you run out, you can still compose and send emails manually — only the AI features pause until you have credits again.",
+        "Different AI actions cost different amounts. An AI reply or compose costs 2 credits, while a summary, rewrite, grammar check, translation, AI chat message, or read-aloud costs 1 credit each. Language detection is free. You can always see your balance in the sidebar and on the Credits page.",
+        "Need more? You can buy one-time credit packs (50 credits for $4.99 up to 1,500 for $99.99) or add a recurring monthly top-up to your plan. Referring a friend earns you 25 bonus credits when they connect an email account."
       ],
     }
   },

@@ -40,7 +40,7 @@ const basePlans = [
     description: "Perfect for trying out MyDraft",
     features: [
       "Connect 1 email account",
-      "5 AI drafts per day",
+      "10 AI credits per month",
       "Basic inbox management",
       "Standard support",
     ],
@@ -54,7 +54,7 @@ const basePlans = [
     description: "For professionals who need more",
     features: [
       "Personal writing style memory",
-      "100 AI emails per day",
+      "50 AI credits per month",
       "Advanced automation & workflows",
       "Custom rules and sequences",
       "Team or shared inboxes",
@@ -73,7 +73,7 @@ const basePlans = [
     features: [
       "Everything in Pro",
       "Enhanced AI quality",
-      "Unlimited AI assistance",
+      "200 AI credits per month",
       "Voice assistant",
       "Custom AI training",
       "Team collaboration",

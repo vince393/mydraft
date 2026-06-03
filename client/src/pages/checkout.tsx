@@ -148,13 +148,13 @@ const planDetails: Record<string, { name: string; description: string; features:
   pro: {
     name: "Pro",
     description: "For professionals who need more",
-    features: ["Personal writing style memory", "100 AI emails per day", "Advanced automation", "API access"],
+    features: ["Personal writing style memory", "50 AI credits per month", "Advanced automation", "API access"],
     accent: "blue",
   },
   business: {
     name: "Business",
     description: "For teams and power users",
-    features: ["Unlimited AI assistance", "Voice assistant", "Custom AI training", "Dedicated support"],
+    features: ["200 AI credits per month", "Voice assistant", "Custom AI training", "Dedicated support"],
     accent: "amber",
   },
 };
