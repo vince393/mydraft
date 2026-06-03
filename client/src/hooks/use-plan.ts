@@ -23,15 +23,18 @@ export function usePlan() {
   const hasPro = plan === "pro" || plan === "premium";
   const hasPremium = plan === "premium";
 
+  // AI features are no longer gated by plan — every plan can use them and is
+  // metered by credits server-side (a 402 surfaces a "top up" prompt). These
+  // capability flags stay `true` so the UI never shows plan-based lockouts.
   return {
     plan,
     hasPro,
     hasPremium,
     isLoading,
-    canUseTextAI: hasPro,
-    canUseVoiceAI: hasPremium,
-    canUseSummaries: hasPro,
-    canUseDrafting: hasPro,
-    canUseLearning: hasPro,
+    canUseTextAI: true,
+    canUseVoiceAI: true,
+    canUseSummaries: true,
+    canUseDrafting: true,
+    canUseLearning: true,
   };
 }

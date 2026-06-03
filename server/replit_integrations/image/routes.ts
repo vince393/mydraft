@@ -1,37 +1,22 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import type { Express, Request, Response } from "express";
 import { openai } from "./client";
 import { storage } from "../../storage";
 import { getActionCost, spendCredits, refundCredits } from "../../credits";
 
-// Middleware to require Pro plan or higher
-async function requireProPlan(req: Request, res: Response, next: NextFunction) {
-  if (!req.session?.userId) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-  
-  const user = await storage.getUser(req.session.userId);
-  if (!user) {
-    return res.status(401).json({ error: "User not found" });
-  }
-  
-  const allowedPlans = ["pro", "premium", "business"];
-  if (!allowedPlans.includes(user.plan)) {
-    return res.status(403).json({ error: "Pro plan or higher required for AI image generation" });
-  }
-  
-  next();
-}
-
 export function registerImageRoutes(app: Express): void {
-  app.post("/api/generate-image", requireProPlan, async (req: Request, res: Response) => {
+  app.post("/api/generate-image", async (req: Request, res: Response) => {
     try {
+      if (!req.session?.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
       const { prompt, size = "1024x1024" } = req.body;
 
       if (!prompt) {
         return res.status(400).json({ error: "Prompt is required" });
       }
 
-      const userId = req.session!.userId!;
+      const userId = req.session.userId;
 
       // Reserve credits before the AI call; refund if generation fails.
       const cost = getActionCost("image_generate");

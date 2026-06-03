@@ -2671,15 +2671,6 @@ export async function registerRoutes(
 
   app.get("/api/writing-style", requireAuth, async (req, res) => {
     try {
-      const userPlan = await getUserPlan(req.session.userId!);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
-
       const style = await storage.getLearnedWritingStyle(req.session.userId!);
       const sampleCount = await storage.getWritingSampleCount(
         req.session.userId!,
@@ -2698,15 +2689,6 @@ export async function registerRoutes(
   app.post("/api/writing-style/analyze", requireAuth, async (req, res) => {
     let reservation: Reservation | null = null;
     try {
-      const userPlan = await getUserPlan(req.session.userId!);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
-
       const samples = await storage.getWritingSamples(req.session.userId!, 20);
 
       if (samples.length < 3) {
@@ -6475,33 +6457,13 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
     }
   });
 
-  // AI Polish endpoint - improve existing text
-  // Basic polish is free for all, advanced options (longer, shorter, concise) are Pro+
+  // AI Polish endpoint - improve existing text (credit-gated, all plans)
   app.post("/api/drafts/polish", requireAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.session.userId!);
-      const userPlan = user?.plan || "free";
-      const isPro =
-        userPlan === "pro" || userPlan === "premium" || userPlan === "business";
-
       const { content, polishType = "polish", subject } = req.body;
 
       if (!content || !content.trim()) {
         return res.status(400).json({ error: "Content is required" });
-      }
-
-      // Check if user has access to advanced polish options
-      if (
-        (polishType === "longer" ||
-          polishType === "shorter" ||
-          polishType === "concise") &&
-        !isPro
-      ) {
-        return res.status(403).json({
-          error: "Pro plan required for advanced polish options",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
       }
 
       let prompt: string;
@@ -7063,16 +7025,6 @@ Return only the improved text, nothing else.`;
       const { message, voiceId = "vince" } = req.body;
       const userId = req.session.userId!;
 
-      // Plan gating: requires Pro or Premium
-      const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
-
       if (!message || typeof message !== "string") {
         return res.status(400).json({ error: "Message is required" });
       }
@@ -7321,16 +7273,6 @@ RESPONSE STYLE:
     try {
       const userId = req.session.userId!;
 
-      // Plan gating: voice features require Premium
-      const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "premium")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "premium",
-          currentPlan: userPlan,
-        });
-      }
-
       const { audio, mimeType } = req.body;
 
       if (!audio || typeof audio !== "string") {
@@ -7399,16 +7341,6 @@ RESPONSE STYLE:
     try {
       const userId = req.session.userId!;
 
-      // Plan gating: requires Pro or Premium
-      const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
-
       const user = await storage.getUser(userId);
       const emailAccount = await storage.getEmailAccount(userId);
       const styleProfile = await storage.getUserStyleProfile(userId);
@@ -7465,16 +7397,6 @@ RESPONSE STYLE:
   app.post("/api/ai/style-profile", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-
-      // Plan gating: requires Pro or Premium
-      const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
 
       const {
         tone,
@@ -7710,16 +7632,7 @@ RESPONSE STYLE:
   app.post("/api/ai/quick-suggestion", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-
-      // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
 
       const { subject, sender, preview } = req.body;
 
@@ -8021,16 +7934,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.post("/api/ai/review", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-
-      // Plan gating: requires Pro or Premium
       const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
 
       const { draft, improvementType, customInstructions } = req.body;
 
@@ -8101,16 +8005,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.post("/api/ai/confirm-action", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-
-      // Plan gating: requires Pro or Premium
-      const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
 
       const { actionId, modifications } = req.body;
 
@@ -8282,16 +8176,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const userId = req.session.userId!;
 
-      // Plan gating: requires Pro or Premium
-      const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
-
       const { actionId } = req.body;
 
       if (!actionId) {
@@ -8319,16 +8203,6 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.post("/api/ai/feedback", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-
-      // Plan gating: requires Pro or Premium
-      const userPlan = await getUserPlan(userId);
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Plan upgrade required",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
 
       const { assistantMessageId, rating, tags, comment } = req.body;
 
