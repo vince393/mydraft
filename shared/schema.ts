@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, boolean, serial, integer, jsonb, bigint, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, serial, integer, jsonb, bigint, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
@@ -132,7 +132,12 @@ export const cachedEmails = pgTable("cached_emails", {
   avatarColor: text("avatar_color"),
   cachedAt: timestamp("cached_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => ({
-  userNylasUnique: uniqueIndex("cached_emails_user_nylas_unique").on(table.userId, table.nylasId),
+  // Non-unique index for fast (userId, nylasId) lookups during cache upserts.
+  // Intentionally NOT unique: production already holds legacy duplicate rows from
+  // the old wipe-and-insert behavior, which would block a unique index at publish
+  // time. cached_emails is a disposable cache, so de-duplication is enforced in
+  // application code (saveCachedEmails) instead of by the database.
+  userNylasIdx: index("cached_emails_user_nylas_idx").on(table.userId, table.nylasId),
 }));
 
 export type CachedEmail = typeof cachedEmails.$inferSelect;

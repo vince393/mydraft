@@ -1,7 +1,7 @@
 import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, type PasswordResetToken, type RefreshToken, type InsertRefreshToken, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts, aiCostLog, passwordResetTokens, refreshTokens } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc, and, lte, gte, count, sql, ne } from "drizzle-orm";
+import { eq, desc, and, lte, gte, count, sql, ne, inArray } from "drizzle-orm";
 import { encryptEmailContent, decryptEmailContent } from "./encryption";
 
 export interface IStorage {
@@ -2572,47 +2572,79 @@ Business Development`,
       }
     }
 
-    // Upsert (merge) into the durable cache so emails accumulate over time
-    // instead of being wiped on every sync. Keyed on (userId, nylasId).
-    if (emails.length > 0) {
-      const toInsert = emails.map(email => ({
-        nylasId: email.nylasId,
-        userId,
-        sender: email.sender,
-        senderEmail: email.senderEmail,
-        subject: email.subject,
-        preview: encryptEmailContent(email.preview) || "",
-        body: encryptEmailContent(email.body || ""),
-        receivedAt: email.receivedAt ? new Date(email.receivedAt) : new Date(),
-        isRead: email.isRead ?? false,
-        folder: email.folder || "inbox",
-        threadId: email.threadId,
-        avatarColor: email.avatarColor,
-      }));
-      
-      // Insert in batches to avoid query size limits. On conflict, refresh the
-      // mutable fields but preserve any previously-cached body (the list fetch
-      // sends an empty body, so we must not clobber a stored full body).
+    // Merge into the durable cache so emails accumulate over time instead of
+    // being wiped on every sync. This is an application-level upsert keyed on
+    // (userId, nylasId) that does NOT depend on a database unique index:
+    // production holds legacy duplicate rows from the old wipe-and-insert
+    // behavior which would block a unique index at publish time. cached_emails
+    // is a disposable cache rebuilt from the provider, so for the emails in this
+    // sync we delete every existing row (clearing any legacy duplicates) and
+    // re-insert exactly one fresh row per id, all inside a transaction so the
+    // cache is never momentarily missing these emails.
+    // Ids touched by this sync (deduped — providers can return a message more
+    // than once across pages — and with any falsy ids dropped).
+    const incomingIds = Array.from(new Set(emails.map(e => e.nylasId).filter(Boolean)));
+    if (incomingIds.length > 0) {
       const batchSize = 100;
-      for (let i = 0; i < toInsert.length; i += batchSize) {
-        const batch = toInsert.slice(i, i + batchSize);
-        await db.insert(cachedEmails).values(batch)
-          .onConflictDoUpdate({
-            target: [cachedEmails.userId, cachedEmails.nylasId],
-            set: {
-              sender: sql`excluded.sender`,
-              senderEmail: sql`excluded.sender_email`,
-              subject: sql`excluded.subject`,
-              preview: sql`excluded.preview`,
-              receivedAt: sql`excluded.received_at`,
-              isRead: sql`excluded.is_read`,
-              folder: sql`excluded.folder`,
-              threadId: sql`excluded.thread_id`,
-              avatarColor: sql`excluded.avatar_color`,
-              cachedAt: sql`CURRENT_TIMESTAMP`,
-            },
+      await db.transaction(async (tx) => {
+        // Serialize concurrent cache writes for this user. Without a DB unique
+        // index, two overlapping syncs (scheduler + on-demand) could otherwise
+        // interleave their read/delete/insert and re-create duplicate rows or
+        // race on body preservation. The transaction-scoped advisory lock is
+        // released automatically at commit/rollback. (1 = cached_emails namespace.)
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(1, ${userId})`);
+
+        // Preserve any previously-stored full body: the list fetch sends an empty
+        // body, so we must not clobber a body we already cached. Read inside the
+        // lock so the decision is never based on a stale snapshot. Keep the first
+        // non-empty body seen per id (handles pre-existing duplicate rows).
+        const existingRows = await tx
+          .select({ nylasId: cachedEmails.nylasId, body: cachedEmails.body })
+          .from(cachedEmails)
+          .where(and(eq(cachedEmails.userId, userId), inArray(cachedEmails.nylasId, incomingIds)));
+        const existingBodyById = new Map<string, string | null>();
+        for (const row of existingRows) {
+          const prev = existingBodyById.get(row.nylasId);
+          if (prev === undefined || (!prev && row.body)) {
+            existingBodyById.set(row.nylasId, row.body ?? null);
+          }
+        }
+
+        // Build one row per id (last occurrence in this batch wins).
+        const rowById = new Map<string, typeof cachedEmails.$inferInsert>();
+        for (const email of emails) {
+          if (!email.nylasId) continue;
+          const incomingBody = email.body ? encryptEmailContent(email.body) : null;
+          rowById.set(email.nylasId, {
+            nylasId: email.nylasId,
+            userId,
+            sender: email.sender,
+            senderEmail: email.senderEmail,
+            subject: email.subject,
+            preview: encryptEmailContent(email.preview) || "",
+            body: incomingBody ?? existingBodyById.get(email.nylasId) ?? null,
+            receivedAt: email.receivedAt ? new Date(email.receivedAt) : new Date(),
+            isRead: email.isRead ?? false,
+            folder: email.folder || "inbox",
+            threadId: email.threadId,
+            avatarColor: email.avatarColor,
           });
-      }
+        }
+        const toInsert = Array.from(rowById.values());
+
+        // Delete existing rows for only the ids in this sync (clearing any legacy
+        // duplicates), then insert exactly one fresh row per id. Batched to avoid
+        // query size limits.
+        for (let i = 0; i < incomingIds.length; i += batchSize) {
+          const idBatch = incomingIds.slice(i, i + batchSize);
+          await tx
+            .delete(cachedEmails)
+            .where(and(eq(cachedEmails.userId, userId), inArray(cachedEmails.nylasId, idBatch)));
+        }
+        for (let i = 0; i < toInsert.length; i += batchSize) {
+          await tx.insert(cachedEmails).values(toInsert.slice(i, i + batchSize));
+        }
+      });
     }
   }
 
