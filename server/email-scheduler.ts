@@ -2,6 +2,7 @@ import { storage } from "./storage";
 import { gmailProvider } from "./gmail";
 import { microsoftProvider } from "./microsoft";
 import type { IEmailProvider } from "./email-provider";
+import { spendCredits, refundCredits, getBalance, getActionCost } from "./credits";
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 let autoSortInterval: NodeJS.Timeout | null = null;
@@ -60,17 +61,37 @@ async function triggerStyleAnalysis(userId: string) {
     if (samples.length < 3) return;
 
     const sampleTexts = samples.map(s => s.finalContent).join("\n\n---\n\n");
-    
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert at analyzing writing styles. Extract patterns from email samples to help personalize future AI-generated drafts."
-        },
-        {
-          role: "user",
-          content: `Analyze these email samples and extract the user's unique writing style. Return a JSON object with:
+
+    // Background writing-style learning still uses AI — charge a summary credit before
+    // the call (skip silently if the user can't afford it), refund on any failure.
+    const styleCost = getActionCost("ai_summary");
+    let styleSpent = false;
+    if (styleCost > 0) {
+      const r = await spendCredits({ userId, amount: styleCost, action: "ai_summary", reference: "bg-style-analysis" });
+      if (!r.success) {
+        console.log(`[EmailScheduler] Skipping style analysis for user ${userId} — insufficient credits`);
+        return;
+      }
+      styleSpent = true;
+    }
+    const refundStyle = async () => {
+      if (styleSpent) {
+        try { await refundCredits({ userId, amount: styleCost, action: "ai_summary", reference: "bg-style-analysis" }); } catch (e) { console.error("[EmailScheduler] Failed to refund style credits:", e); }
+      }
+    };
+
+    let response;
+    try {
+      response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert at analyzing writing styles. Extract patterns from email samples to help personalize future AI-generated drafts."
+          },
+          {
+            role: "user",
+            content: `Analyze these email samples and extract the user's unique writing style. Return a JSON object with:
 1. "styleAnalysis": A 2-3 sentence description of their overall writing style
 2. "commonPhrases": Array of 5-10 phrases or expressions they commonly use
 3. "greetingPatterns": Array of greetings they typically use
@@ -82,11 +103,15 @@ Email samples:
 ${sampleTexts}
 
 Return ONLY valid JSON, no other text.`
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.3,
-    });
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.3,
+      });
+    } catch (aiErr) {
+      await refundStyle();
+      throw aiErr;
+    }
 
     const responseText = response.choices[0]?.message?.content || "{}";
     
@@ -94,6 +119,7 @@ Return ONLY valid JSON, no other text.`
     try {
       parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
     } catch (parseError) {
+      await refundStyle();
       console.error("[EmailScheduler] Failed to parse style analysis JSON:", parseError);
       return;
     }
@@ -302,6 +328,9 @@ async function autoSortUserEmails(userId: string, folders: { id: number; name: s
     const validFolderIds = new Set(foldersWithAi.map(f => f.id));
     let assignedCount = 0;
 
+    // Background auto-sort is metered like the manual auto-sort: bill 1 credit per email
+    // actually assigned. Reserve 1 before each batch's AI call and settle to the real
+    // count afterward (refund if zero assigned, top up if more). Stop when out of credits.
     for (let i = 0; i < toProcess.length; i += batchSize) {
       const batch = toProcess.slice(i, i + batchSize);
       const emailSummaries = batch.map((e: any) => ({
@@ -311,6 +340,14 @@ async function autoSortUserEmails(userId: string, folders: { id: number; name: s
         subject: e.subject || "(No subject)",
         preview: (e.preview || "").slice(0, 200),
       }));
+
+      // Reserve one credit up front; if the user can't afford even one, stop processing.
+      const reserve = await spendCredits({ userId, amount: 1, action: "ai_auto_sort", reference: `autosort:${userId}` });
+      if (!reserve.success) {
+        console.log(`[AutoSort] Stopping for user ${userId} — insufficient credits`);
+        break;
+      }
+      let batchAssigned = 0;
 
       try {
         const response = await openai.chat.completions.create({
@@ -348,12 +385,28 @@ Return ONLY the JSON array, nothing else.`,
             try {
               await storage.assignEmailToFolder(userId, match.emailId, match.folderId);
               assignedCount++;
+              batchAssigned++;
             } catch {}
           }
         }
 
         for (const e of batch) sorted.add(String(e.id));
+
+        // Settle the 1-credit reservation against the real per-email count.
+        if (batchAssigned === 0) {
+          try { await refundCredits({ userId, amount: 1, action: "ai_auto_sort", reference: `autosort:${userId}` }); } catch (e) { console.error("[AutoSort] Refund failed:", e); }
+        } else if (batchAssigned > 1) {
+          const extra = batchAssigned - 1;
+          const top = await spendCredits({ userId, amount: extra, action: "ai_auto_sort", reference: `autosort:${userId}` });
+          if (!top.success) {
+            // Balance drained concurrently — drain whatever remains so delivered AI is never free.
+            const bal = await getBalance(userId);
+            if (bal > 0) await spendCredits({ userId, amount: bal, action: "ai_auto_sort", reference: `autosort:${userId}` });
+          }
+        }
       } catch (batchErr) {
+        // AI/parse failed — refund the reserved credit (no usable output delivered).
+        try { await refundCredits({ userId, amount: 1, action: "ai_auto_sort", reference: `autosort:${userId}` }); } catch (e) { console.error("[AutoSort] Refund failed:", e); }
         console.error(`[AutoSort] Batch ${Math.floor(i / batchSize) + 1} failed for user ${userId}, will retry next cycle`);
       }
     }

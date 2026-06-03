@@ -93,7 +93,8 @@ async function getEmailContext(userId: string): Promise<string> {
 export function registerAudioRoutes(app: Express) {
   app.post("/api/voice/transcribe", async (req: Request, res: Response) => {
     try {
-      if (!req.session?.userId) {
+      const userId = (req as any).jwtUserId || (req.session as any)?.userId;
+      if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
@@ -103,10 +104,32 @@ export function registerAudioRoutes(app: Express) {
         return res.status(400).json({ error: "Audio data required" });
       }
 
-      const audioBuffer = Buffer.from(audio, "base64");
-      const transcript = await speechToText(audioBuffer, mimeType || "audio/webm");
-      
-      res.json({ transcript });
+      // Reserve credits before the AI call; refund if transcription fails.
+      const cost = getActionCost("ai_chat");
+      let spent = false;
+      if (cost > 0) {
+        const result = await spendCredits({ userId, amount: cost, action: "ai_chat", reference: "voice-transcribe" });
+        if (!result.success) {
+          return res.status(402).json({
+            error: "Not enough credits",
+            code: "INSUFFICIENT_CREDITS",
+            creditsNeeded: cost,
+            balance: result.balanceAfter,
+          });
+        }
+        spent = true;
+      }
+
+      try {
+        const audioBuffer = Buffer.from(audio, "base64");
+        const transcript = await speechToText(audioBuffer, mimeType || "audio/webm");
+        res.json({ transcript });
+      } catch (aiErr) {
+        if (spent) {
+          try { await refundCredits({ userId, amount: cost, action: "ai_chat", reference: "voice-transcribe" }); } catch (e) { console.error("Failed to refund transcribe credits:", e); }
+        }
+        throw aiErr;
+      }
     } catch (error) {
       console.error("Transcription error:", error);
       res.status(500).json({ error: "Failed to transcribe audio" });

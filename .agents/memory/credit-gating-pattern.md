@@ -12,11 +12,18 @@ description: Durable billing-policy decisions for the metered AI credit economy 
 - **Dynamic actions** (auto-sort, inbox-refresh) reserve **1** up front, then settle to the real per-item count afterward. **Bill only delivered/persisted AI output** — exclude free rule-based results; if zero billable, refund the held credit.
 - **Never let delivered AI be free on a billing edge case.** On a top-up shortfall (balance drained concurrently), drain the remaining balance and log a warning rather than silently skipping the charge. `spendCredits` is all-or-nothing on shortfall.
 
-## Intentionally NOT charged
-**Why:** these are passive/background, not deliberate user actions — charging would feel like surprise billing.
-- Auto-firing suggestions that run on every email view.
-- Passive background writing-style learning.
-- Deterministic language detection (no AI cost).
+## Charging vs. not charging
+**Rule (enforced by review gate):** EVERY executable AI call path must be credit-gated — reserve/spend before the AI call, and refund ONLY when no value was delivered. This includes AI sites outside the main routes file: integration routes (audio/voice, image-generation, streaming chat) AND background jobs (scheduler style-analysis + auto-sort). The only exemption is non-AI/deterministic work. When adding any new AI endpoint, grep all AI call sites and confirm each is preceded by a spend.
+**Why:** reviewers repeatedly found "forgotten" AI paths in integration/background code; a single ungated path fails the whole gate.
+- **Streaming/multi-step handlers:** once any token is delivered to the client, a later failure (e.g. DB persist) must NOT refund — track a `delivered` flag and refund only when nothing reached the user. Otherwise a post-delivery error gives free AI.
+- **Background jobs:** spend before the call; on insufficient balance skip silently (no error/422) since the user didn't actively trigger it.
+- **Auto-firing endpoints** (run on email open): charge, but spend atomically and on shortfall return a graceful 200 with `insufficientCredits: true` (NOT 402). Never pre-check-then-reserve — a race can run AI for free.
+- Deterministic language detection is the only genuinely-free path (no AI cost).
+
+## Refunds must never reuse a unique grant reference
+**Rule:** `refundCredits` (a grant) must NOT set the unique grant `reference` column — store the originating reference as a metadata note instead.
+**Why:** a partial unique index on `credit_transactions(reference) WHERE type='grant'` rejects a second refund that reuses the same reference (e.g. a static per-endpoint string), so the second failed AI call stays charged. refundCredits passes no idempotencyKey, so the violation is NOT swallowed — it throws and the (try/catch-wrapped) refund is silently lost.
+**How to apply:** any refund/grant that can legitimately repeat must either omit `reference` or carry a per-event unique `idempotencyKey`; never key it on a shared/static value.
 
 ## Trial & referral
 - Trial uses a **Stripe-managed trial** (`trial_period_days`), not immediate charge — the checkout UI promises "Due today $0.00". Because `invoice.paid` does not fire during a trial, monthly credits are granted on the `subscription.created` webhook when status is `trialing` (idempotent per subscription).

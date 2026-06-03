@@ -2696,6 +2696,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/writing-style/analyze", requireAuth, async (req, res) => {
+    let reservation: Reservation | null = null;
     try {
       const userPlan = await getUserPlan(req.session.userId!);
       if (!hasPlan(userPlan, "pro")) {
@@ -2716,6 +2717,10 @@ export async function registerRoutes(
           required: 3,
         });
       }
+
+      // Charge credits only after the above validation passes, before any AI call.
+      reservation = await reserveCredits(req, res, "ai_summary", "writing-style-analyze");
+      if (!reservation) return;
 
       const sampleTexts = samples
         .map((s) => s.originalContent)
@@ -2757,6 +2762,7 @@ Return ONLY valid JSON, no other text.`;
         );
       } catch (parseError) {
         console.error("Failed to parse style analysis JSON:", parseError);
+        if (reservation) { try { await cancelReservation(reservation); } catch {} reservation = null; }
         return res.status(422).json({
           error: "Failed to analyze writing style",
           message: "AI returned invalid format. Please try again.",
@@ -2776,12 +2782,14 @@ Return ONLY valid JSON, no other text.`;
         },
       );
 
+      reservation = null; // value delivered — commit the charge
       res.json({
         success: true,
         style: learnedStyle,
         message: `Analyzed ${samples.length} emails to learn your writing style`,
       });
     } catch (error) {
+      if (reservation) { try { await cancelReservation(reservation); } catch {} }
       console.error("Error analyzing writing style:", error);
       res.status(500).json({ error: "Failed to analyze writing style" });
     }
@@ -7359,11 +7367,21 @@ RESPONSE STYLE:
         type: safeMimeType,
       });
 
-      const transcription = await openai.audio.transcriptions.create({
-        file: audioFile,
-        model: "gpt-4o-mini-transcribe",
-        response_format: "json",
-      });
+      // Reserve credits before the AI call; refund if transcription fails.
+      const reservation = await reserveCredits(req, res, "ai_chat", "assistant-transcribe");
+      if (!reservation) return;
+
+      let transcription;
+      try {
+        transcription = await openai.audio.transcriptions.create({
+          file: audioFile,
+          model: "gpt-4o-mini-transcribe",
+          response_format: "json",
+        });
+      } catch (aiErr) {
+        try { await cancelReservation(reservation); } catch {}
+        throw aiErr;
+      }
 
       const transcript = (transcription as any).text?.trim() || "";
 
@@ -7731,12 +7749,37 @@ Respond with ONLY a brief suggestion, like:
 - "Politely decline and suggest an alternative date"
 - "Request more details about the project requirements"`;
 
-      const completion = await openai.chat.completions.create({
-        model: getAiModel(userPlan),
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 100,
-        temperature: 0.7,
-      });
+      // This endpoint auto-fires when a user opens an email. Spend atomically so a
+      // race can't run AI for free; on insufficient balance degrade gracefully
+      // (no AI call, graceful 200) instead of a 402 storm.
+      const cost = getActionCost("ai_chat");
+      let spent = false;
+      if (cost > 0) {
+        const spendResult = await spendCredits({ userId, amount: cost, action: "ai_chat", reference: "quick-suggestion" });
+        if (!spendResult.success) {
+          return res.json({
+            suggestion: "Click to draft a response with AI",
+            insufficientCredits: true,
+            balance: spendResult.balanceAfter,
+          });
+        }
+        spent = true;
+      }
+
+      let completion;
+      try {
+        completion = await openai.chat.completions.create({
+          model: getAiModel(userPlan),
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 100,
+          temperature: 0.7,
+        });
+      } catch (aiErr) {
+        if (spent) {
+          try { await refundCredits({ userId, amount: cost, action: "ai_chat", reference: "quick-suggestion" }); } catch {}
+        }
+        throw aiErr;
+      }
 
       const suggestion =
         completion.choices[0]?.message?.content?.trim() ||

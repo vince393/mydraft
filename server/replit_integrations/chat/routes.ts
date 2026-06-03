@@ -61,6 +61,7 @@ export function registerChatRoutes(app: Express): void {
     const userId = (req as any).jwtUserId || (req.session as any)?.userId;
     const chatCost = getActionCost("ai_chat");
     let reserved = false;
+    let delivered = false;
     try {
       const { content } = req.body;
 
@@ -109,6 +110,9 @@ export function registerChatRoutes(app: Express): void {
         const content = chunk.choices[0]?.delta?.content || "";
         if (content) {
           fullResponse += content;
+          // Once AI output has been streamed to the client, the value is delivered —
+          // a later failure (e.g. DB persistence) must NOT refund, or the AI is free.
+          delivered = true;
           res.write(`data: ${JSON.stringify({ content })}\n\n`);
         }
       }
@@ -119,7 +123,9 @@ export function registerChatRoutes(app: Express): void {
       res.end();
     } catch (error) {
       console.error("Error sending message:", error);
-      if (reserved && userId) {
+      // Refund only when nothing was delivered to the user. If AI tokens were already
+      // streamed, the value was delivered even if a later step failed — keep the charge.
+      if (reserved && userId && !delivered) {
         try {
           await refundCredits({ userId, amount: chatCost, action: "ai_chat", reference: String(conversationId) });
         } catch (refundErr) {

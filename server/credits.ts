@@ -34,6 +34,7 @@ export const CREDIT_COSTS = {
   ai_chat: 1,
   read_aloud: 1,
   voice_chat: 2,
+  image_generate: 5,
   language_detect: 0,
 } as const;
 
@@ -411,12 +412,16 @@ export async function refundCredits(params: {
 }): Promise<void> {
   const { userId, amount, action, reference } = params;
   if (amount <= 0) return;
+  // Refunds must NOT set the unique grant `reference` (a partial unique index on
+  // credit_transactions(reference) WHERE type='grant' would reject a second refund
+  // that reused the same reference, leaving a failed AI call charged). Keep the
+  // originating reference as informational metadata instead.
   await grantCredits({
     userId,
     amount,
     source: "refund",
     action: `refund_${action}`,
-    reference,
+    metadata: reference ? { note: `refund:${reference}` } : undefined,
   });
 }
 
