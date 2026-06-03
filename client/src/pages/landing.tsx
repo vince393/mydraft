@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { MarketingNav } from "@/components/marketing-nav";
+import { Seo } from "@/components/seo";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
@@ -51,6 +52,11 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <Seo
+        title="MyDraft — AI Email Assistant for Inbox Management & Reply Drafting"
+        description="Draft replies, summarize, translate, and auto-sort your inbox with AI. Connect Gmail or Outlook and reply in seconds. Free plan, no credit card required."
+        path="/"
+      />
       <MarketingNav />
       <HeroSection getStartedHref={getStartedHref()} isLoggedIn={!!authData?.user} />
       <FeatureShowcase />

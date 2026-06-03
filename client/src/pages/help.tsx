@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { MarketingNav } from "@/components/marketing-nav";
+import { Seo } from "@/components/seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1324,6 +1325,32 @@ export default function HelpPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Seo
+        title="Help Center — Guides & FAQ | MyDraft"
+        description="Find answers about connecting email, AI reply drafting, credits, custom folders, billing, and more in the MyDraft help center."
+        path="/help"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: articles
+              .filter((a) => a.question && a.content?.intro)
+              .map((a) => ({
+                "@type": "Question",
+                name: a.question,
+                acceptedAnswer: { "@type": "Answer", text: a.content.intro },
+              })),
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://mydraft.io/" },
+              { "@type": "ListItem", position: 2, name: "Help Center", item: "https://mydraft.io/help" },
+            ],
+          },
+        ]}
+      />
       <MarketingNav />
 
       <main className="pt-24 pb-20">

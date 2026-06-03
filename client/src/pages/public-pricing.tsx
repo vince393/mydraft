@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MarketingNav } from "@/components/marketing-nav";
+import { Seo } from "@/components/seo";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
@@ -96,6 +97,33 @@ export default function PublicPricingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Seo
+        title="Pricing — Free, Pro & Business Plans | MyDraft"
+        description="Simple credit-based pricing. Start free with 10 AI credits a month. Pro is $4.99/mo for 50 credits, Business $14.99/mo for 200. 3-day free trial, no card to start."
+        path="/pricing"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: "MyDraft AI Email Assistant",
+            description: "AI email assistant that drafts replies, summarizes, translates, and auto-sorts your inbox.",
+            brand: { "@type": "Brand", name: "MyDraft" },
+            offers: [
+              { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD", url: "https://mydraft.io/pricing" },
+              { "@type": "Offer", name: "Pro", price: "4.99", priceCurrency: "USD", url: "https://mydraft.io/pricing" },
+              { "@type": "Offer", name: "Business", price: "14.99", priceCurrency: "USD", url: "https://mydraft.io/pricing" },
+            ],
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://mydraft.io/" },
+              { "@type": "ListItem", position: 2, name: "Pricing", item: "https://mydraft.io/pricing" },
+            ],
+          },
+        ]}
+      />
       <MarketingNav />
 
       <section className="pt-32 pb-16 px-6 relative overflow-hidden">

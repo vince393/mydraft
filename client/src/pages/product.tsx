@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MarketingNav } from "@/components/marketing-nav";
+import { Seo } from "@/components/seo";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Sparkles, 
@@ -37,6 +38,19 @@ export default function ProductPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Seo
+        title="Product — AI Email Features, Reply Drafting & Smart Inbox | MyDraft"
+        description="See how MyDraft uses AI to draft replies, summarize threads, translate messages, and auto-sort your inbox. Works with Gmail, Outlook, and any IMAP account."
+        path="/product"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: "https://mydraft.io/" },
+            { "@type": "ListItem", position: 2, name: "Product", item: "https://mydraft.io/product" },
+          ],
+        }}
+      />
       <MarketingNav />
 
       <section className="pt-32 pb-16 px-6">

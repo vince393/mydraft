@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MarketingNav } from "@/components/marketing-nav";
+import { Seo } from "@/components/seo";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -64,6 +65,19 @@ export default function SecurityPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Seo
+        title="Security & Privacy — Encryption & CASA Compliant | MyDraft"
+        description="MyDraft protects your email with AES-256 encryption, read-only access, audit logging, and Google CASA-approved security. Your data stays private."
+        path="/security"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: "https://mydraft.io/" },
+            { "@type": "ListItem", position: 2, name: "Security", item: "https://mydraft.io/security" },
+          ],
+        }}
+      />
       <MarketingNav />
 
       <section className="pt-32 pb-16 px-6">
