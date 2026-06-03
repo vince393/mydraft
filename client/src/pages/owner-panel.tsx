@@ -2365,8 +2365,8 @@ export default function OwnerPanel() {
                         ) : (
                           <div className="space-y-3">
                             {[
-                              { value: "pro", label: "Pro ($10/mo)", color: "#8B5CF6" },
-                              { value: "premium", label: "Business ($29/mo)", color: "#F59E0B" },
+                              { value: "pro", label: "Pro ($4.99/mo)", color: "#8B5CF6" },
+                              { value: "premium", label: "Business ($14.99/mo)", color: "#F59E0B" },
                               { value: "free", label: "Free", color: "#6B7280" },
                             ].map((plan) => {
                               const amount = financialSummary?.revenueByPlan[plan.value] || 0;

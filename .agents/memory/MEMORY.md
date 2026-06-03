@@ -1,0 +1,2 @@
+- [drizzle-kit push prompts](drizzle-push-interactive-prompt.md) — db:push hangs on interactive select prompts; resolve the blocking constraint via SQL first, then push runs non-interactively.
+- [Credit grant idempotency](credit-grant-idempotency.md) — Stripe retries webhooks; every webhook grantCredits must pass a price/line-specific idempotencyKey or it double-grants.

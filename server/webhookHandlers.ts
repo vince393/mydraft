@@ -1,12 +1,25 @@
 import { getStripeSync, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
 import { sendPlanPurchaseEmail, sendBillingReceiptEmail } from './email';
+import {
+  PLAN_PRICES,
+  grantPlanMonthlyCredits,
+  grantCredits,
+  createCreditAddon,
+  cancelCreditAddon,
+  getAddonBySubscriptionId,
+} from './credits';
 
 const KNOWN_PRICE_AMOUNTS: Record<number, 'pro' | 'premium'> = {
-  1000: 'pro',     // Pro monthly: $10/mo
-  9900: 'pro',     // Pro annual: $99/yr
-  2900: 'premium', // Business monthly: $29/mo
-  29900: 'premium', // Business annual: $299/yr
+  [PLAN_PRICES.pro.monthly]: 'pro',         // Pro monthly: $4.99/mo
+  [PLAN_PRICES.pro.annual]: 'pro',          // Pro annual
+  [PLAN_PRICES.premium.monthly]: 'premium', // Business monthly: $14.99/mo
+  [PLAN_PRICES.premium.annual]: 'premium',  // Business annual
+  // Legacy prices (so existing subs map correctly until migrated)
+  1000: 'pro',
+  9900: 'pro',
+  2900: 'premium',
+  29900: 'premium',
 };
 
 function determinePlanFromAmount(amount: number): 'free' | 'pro' | 'premium' {
@@ -68,11 +81,29 @@ export class WebhookHandlers {
 
         const priceId = subscription.items?.data?.[0]?.price?.id;
         let plan: 'free' | 'pro' | 'premium' = 'free';
-        
+        let priceMeta: any = {};
+
         if (priceId) {
           const stripe = await getUncachableStripeClient();
           const price = await stripe.prices.retrieve(priceId);
+          priceMeta = price.metadata || {};
           plan = determinePlanFromMetadataOrAmount(price.metadata, price.unit_amount || 0);
+        }
+
+        // Recurring credit add-ons are separate subscriptions — never touch the user's plan.
+        if (priceMeta.type === 'addon') {
+          const credits = parseInt(priceMeta.credits || '0', 10);
+          if (type === 'customer.subscription.created' && credits > 0) {
+            const existing = await getAddonBySubscriptionId(subscriptionId);
+            if (!existing) {
+              await createCreditAddon({ userId: user.id, stripeSubscriptionId: subscriptionId, creditsPerMonth: credits });
+              console.log(`[Webhook] Recorded ${credits}/mo add-on for user ${user.id}`);
+            }
+          }
+          if (status === 'canceled' || status === 'incomplete_expired') {
+            await cancelCreditAddon(subscriptionId);
+          }
+          break;
         }
 
         if (status === 'active' || status === 'trialing') {
@@ -113,7 +144,16 @@ export class WebhookHandlers {
       case 'customer.subscription.deleted': {
         const subscription = data.object;
         const customerId = subscription.customer;
-        
+
+        // If this subscription is a recurring credit add-on, just cancel the add-on
+        // and leave the user's plan untouched.
+        const addon = await getAddonBySubscriptionId(subscription.id);
+        if (addon) {
+          await cancelCreditAddon(subscription.id);
+          console.log(`[Webhook] Canceled credit add-on ${subscription.id}`);
+          break;
+        }
+
         const user = await storage.getUserByStripeCustomerId(customerId);
         if (!user) return;
 
@@ -135,17 +175,45 @@ export class WebhookHandlers {
 
       case 'checkout.session.completed': {
         const session = data.object;
-        const userId = session.metadata?.userId;
         const subscriptionId = session.subscription;
         const customerId = session.customer;
-        
+
+        // Resolve the user: prefer explicit metadata, fall back to customer lookup.
+        let userId = session.metadata?.userId as string | undefined;
+        if (!userId && customerId) {
+          const u = await storage.getUserByStripeCustomerId(customerId as string);
+          userId = u?.id;
+        }
+
+        // Link plan subscription to the user (credits granted via invoice.paid).
         if (userId && subscriptionId) {
           const updates: any = { stripeSubscriptionId: subscriptionId };
-          if (customerId) {
-            updates.stripeCustomerId = customerId;
-          }
+          if (customerId) updates.stripeCustomerId = customerId;
           await storage.updateUser(userId, updates);
           console.log(`[Webhook] Linked subscription ${subscriptionId} to user ${userId}`);
+        }
+
+        // One-time credit pack purchase (payment mode → no invoice.paid). Granted
+        // here from session metadata. Add-ons (subscription mode) are recorded by
+        // the subscription.created handler and granted via invoice.paid.
+        if (userId && session.metadata?.type === 'pack' && session.mode === 'payment') {
+          try {
+            const credits = parseInt(session.metadata.credits || '0', 10);
+            if (credits > 0) {
+              await grantCredits({
+                userId,
+                amount: credits,
+                source: 'pack',
+                action: 'pack_purchase',
+                reference: session.id,
+                idempotencyKey: `pack:${session.id}`,
+                metadata: { stripeSessionId: session.id, packCredits: credits, note: session.metadata.sku },
+              });
+              console.log(`[Webhook] Granted ${credits} pack credits to user ${userId}`);
+            }
+          } catch (packErr) {
+            console.error('[Webhook] Failed to grant pack credits:', packErr);
+          }
         }
         break;
       }
@@ -160,14 +228,9 @@ export class WebhookHandlers {
         
         const user = await storage.getUserByStripeCustomerId(customerId);
 
-        if (user) {
-          try {
-            await storage.markReferralSubscribed(user.id);
-          } catch (refErr) {
-            console.error("[Webhook] Error marking referral subscribed:", refErr);
-          }
-        }
-        
+        // Note: referral rewards are granted when the referred user connects an email
+        // account (grantReferralRewardOnConnect), not on subscription payment.
+
         let plan: 'free' | 'pro' | 'premium' = 'free';
         const lines = invoice.lines?.data || [];
         for (const line of lines) {
@@ -190,6 +253,43 @@ export class WebhookHandlers {
         });
         
         console.log(`[Webhook] Recorded revenue: $${(amountPaid / 100).toFixed(2)} from ${user?.email || 'unknown'} (${plan} plan)`);
+
+        // Grant credits for this invoice (covers both initial purchase and renewals).
+        if (user) {
+          for (const line of lines) {
+            const price = line.price;
+            if (!price) continue;
+            const meta = price.metadata || {};
+            const credits = parseInt(meta.credits || '0', 10);
+            try {
+              if (meta.type === 'addon' && credits > 0) {
+                await grantCredits({
+                  userId: user.id,
+                  amount: credits,
+                  source: 'addon',
+                  action: 'addon_grant',
+                  reference: invoiceId,
+                  idempotencyKey: `invoice:${invoiceId}:${price.id}`,
+                  metadata: { stripeInvoiceId: invoiceId, stripeSubscriptionId: invoice.subscription as string },
+                });
+                console.log(`[Webhook] Granted ${credits} add-on credits to user ${user.id}`);
+              } else {
+                const linePlan = determinePlanFromMetadataOrAmount(meta, price.unit_amount || 0);
+                if (linePlan !== 'free') {
+                  await grantPlanMonthlyCredits({
+                    userId: user.id,
+                    plan: linePlan,
+                    stripeInvoiceId: invoiceId,
+                    stripeSubscriptionId: invoice.subscription as string,
+                  });
+                  console.log(`[Webhook] Granted monthly ${linePlan} credits to user ${user.id}`);
+                }
+              }
+            } catch (creditErr) {
+              console.error('[Webhook] Failed to grant credits for invoice line:', creditErr);
+            }
+          }
+        }
 
         if (user && amountPaid > 0) {
           try {

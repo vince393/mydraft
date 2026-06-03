@@ -161,12 +161,12 @@ const planDetails: Record<string, { name: string; description: string; features:
 
 const pricing: Record<string, Record<string, { amount: number; period: string; monthly: number }>> = {
   pro: {
-    monthly: { amount: 10, period: "/month", monthly: 10 },
-    annual: { amount: 99, period: "/year", monthly: 8.25 },
+    monthly: { amount: 4.99, period: "/month", monthly: 4.99 },
+    annual: { amount: 49.9, period: "/year", monthly: 4.16 },
   },
   business: {
-    monthly: { amount: 29, period: "/month", monthly: 29 },
-    annual: { amount: 299, period: "/year", monthly: 24.92 },
+    monthly: { amount: 14.99, period: "/month", monthly: 14.99 },
+    annual: { amount: 149.9, period: "/year", monthly: 12.49 },
   },
 };
 
@@ -311,7 +311,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
           await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
           toast({
             title: "Welcome to MyDraft!",
-            description: "Your 14-day free trial has started.",
+            description: "Your 3-day free trial has started.",
           });
           onSuccess();
         } else if (result.error) {
@@ -528,7 +528,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
         <div className="flex items-center gap-1.5 mt-2">
           <Clock className="w-3 h-3 text-muted-foreground/40" />
           <p className="text-xs text-muted-foreground/50">
-            After 14-day trial: ${priceInfo?.amount}{priceInfo?.period}
+            After 3-day trial: ${priceInfo?.amount}{priceInfo?.period}
           </p>
         </div>
       </div>
@@ -646,7 +646,7 @@ export default function CheckoutPage() {
             <div className="lg:sticky lg:top-10">
               <div className="mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">Start your free trial</h1>
-                <p className="text-muted-foreground/60 text-sm">No charge for 14 days. Cancel anytime with one click.</p>
+                <p className="text-muted-foreground/60 text-sm">No charge for 3 days. Cancel anytime with one click.</p>
               </div>
 
               <div 
@@ -761,7 +761,7 @@ export default function CheckoutPage() {
                     <Clock className="w-3 h-3 text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-emerald-400/80">14-day free trial</p>
+                    <p className="text-sm font-medium text-emerald-400/80">3-day free trial</p>
                     <p className="text-xs text-muted-foreground/40">No charge until trial ends</p>
                   </div>
                 </div>

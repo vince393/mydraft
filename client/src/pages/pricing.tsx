@@ -225,8 +225,8 @@ const basePlans = [
   {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 10,
-    annualPrice: 99,
+    monthlyPrice: 4.99,
+    annualPrice: 49.9,
     annualSavings: 21,
     description: "For professionals who need more",
     icon: Zap,
@@ -240,14 +240,14 @@ const basePlans = [
       "Team or shared inboxes",
       "API access & integrations",
       "Priority support",
-      "14-day free trial",
+      "3-day free trial",
     ],
   },
   {
     id: "business",
     name: "Business",
-    monthlyPrice: 29,
-    annualPrice: 299,
+    monthlyPrice: 14.99,
+    annualPrice: 149.9,
     annualSavings: 49,
     description: "For teams and power users",
     icon: Users,
@@ -261,7 +261,7 @@ const basePlans = [
       "Custom AI training",
       "Team collaboration",
       "Dedicated account manager",
-      "14-day free trial",
+      "3-day free trial",
     ],
   },
 ];
@@ -562,7 +562,7 @@ export default function PricingPage() {
                 data-testid="button-select-recommended"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {recommendedPlanData.id === "free" ? "Get Started Free" : "Start 14-Day Free Trial"}
+                {recommendedPlanData.id === "free" ? "Get Started Free" : "Start 3-Day Free Trial"}
               </Button>
 
               <Button
@@ -580,7 +580,7 @@ export default function PricingPage() {
 
           {recommendedPlanData.id !== "free" && (
             <p className="text-center text-sm text-muted-foreground mt-6">
-              Start with a 14-day free trial. Cancel anytime, no questions asked.
+              Start with a 3-day free trial. Cancel anytime, no questions asked.
             </p>
           )}
         </div>
@@ -751,7 +751,7 @@ export default function PricingPage() {
         )}
 
         <p className="text-center text-sm text-muted-foreground mt-8">
-          Pro and Business plans include a 14-day free trial. Cancel anytime.
+          Pro and Business plans include a 3-day free trial. Cancel anytime.
         </p>
       </div>
     </div>

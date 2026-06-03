@@ -115,7 +115,7 @@ export default function PublicPricingPage() {
             </span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            14-day free trial on Pro & Business. Cancel anytime.
+            3-day free trial on Pro & Business. Cancel anytime.
           </p>
         </div>
       </section>
@@ -180,9 +180,9 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Pro"
               planId="pro"
-              price={billingInterval === "annual" ? "$8.25" : "$10"}
+              price={billingInterval === "annual" ? "$4.16" : "$4.99"}
               period="month"
-              billedAnnually={billingInterval === "annual" ? 99 : undefined}
+              billedAnnually={billingInterval === "annual" ? 49.9 : undefined}
               annualSavings={billingInterval === "annual" ? 21 : undefined}
               description="For professionals who need more"
               features={[
@@ -191,7 +191,7 @@ export default function PublicPricingPage() {
                 { text: "Writing style memory", included: true },
                 { text: "Email scheduling", included: true },
                 { text: "Priority support", included: true },
-                { text: "14-day free trial", included: true },
+                { text: "3-day free trial", included: true },
               ]}
               onSelect={() => handlePlanSelect("pro")}
               buttonText={currentPlan === "pro" ? "Current Plan" : "Start free trial"}
@@ -202,9 +202,9 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Business"
               planId="business"
-              price={billingInterval === "annual" ? "$24.92" : "$29"}
+              price={billingInterval === "annual" ? "$12.49" : "$14.99"}
               period="month"
-              billedAnnually={billingInterval === "annual" ? 299 : undefined}
+              billedAnnually={billingInterval === "annual" ? 149.9 : undefined}
               annualSavings={billingInterval === "annual" ? 49 : undefined}
               description="For teams and power users"
               features={[
@@ -214,7 +214,7 @@ export default function PublicPricingPage() {
                 { text: "Voice assistant", included: true },
                 { text: "Custom AI training", included: true },
                 { text: "Team collaboration", included: true },
-                { text: "14-day free trial", included: true },
+                { text: "3-day free trial", included: true },
               ]}
               onSelect={() => handlePlanSelect("business")}
               buttonText={(currentPlan === "business" || currentPlan === "premium") ? "Current Plan" : "Start free trial"}
@@ -236,7 +236,7 @@ export default function PublicPricingPage() {
             Ready to get started?
           </h2>
           <p className="text-muted-foreground text-lg mb-8">
-            14-day free trial on Pro & Business. Cancel anytime.
+            3-day free trial on Pro & Business. Cancel anytime.
           </p>
           <Link href={getStartedHref()}>
             <Button size="lg" className="gap-2 h-12 px-8 text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all">
@@ -364,7 +364,7 @@ function PricingCard({
 function FeatureComparison() {
   const features = [
     { name: "Email accounts", free: "1", pro: "1", business: "1" },
-    { name: "Free trial", free: "x", pro: "14 days", business: "14 days" },
+    { name: "Free trial", free: "x", pro: "3 days", business: "3 days" },
     { name: "AI replies", free: "5/day", pro: "Unlimited", business: "Unlimited" },
     { name: "Writing style memory", free: "x", pro: "check", business: "check" },
     { name: "AI model", free: "Standard", pro: "Standard", business: "Enhanced" },
@@ -432,7 +432,7 @@ function PricingFAQ() {
     },
     {
       q: "Is there a free trial for Pro?",
-      a: "Yes! Both Pro and Business plans include a 14-day free trial. Just add a card to start - you won't be charged until day 15. Cancel anytime."
+      a: "Yes! Both Pro and Business plans include a 3-day free trial. Just add a card to start - you won't be charged until day 4. Cancel anytime."
     },
     {
       q: "What payment methods do you accept?",

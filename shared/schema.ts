@@ -81,6 +81,7 @@ export const users = pgTable("users", {
   proCreditsUntil: timestamp("pro_credits_until"),
   trialEndsAt: timestamp("trial_ends_at"),
   hasUsedTrial: boolean("has_used_trial").default(false).notNull(),
+  lastMonthlyGrantAt: timestamp("last_monthly_grant_at"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -259,6 +260,63 @@ export const promoCodes = pgTable("promo_codes", {
 });
 
 export type PromoCode = typeof promoCodes.$inferSelect;
+
+// ============================================================
+// Credit-based economy
+// ============================================================
+
+// Credit lots: each issuance of credits with its own 30-day expiry (FIFO spend)
+export const creditLots = pgTable("credit_lots", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  amountInitial: integer("amount_initial").notNull(),
+  amountRemaining: integer("amount_remaining").notNull(),
+  // plan_monthly | pack | addon | referral | trial | admin | promo
+  source: text("source").notNull(),
+  issuedAt: timestamp("issued_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  exhausted: boolean("exhausted").default(false).notNull(),
+  expired: boolean("expired").default(false).notNull(),
+  metadata: jsonb("metadata").$type<{
+    stripeInvoiceId?: string;
+    stripeSessionId?: string;
+    stripeSubscriptionId?: string;
+    packCredits?: number;
+    plan?: string;
+    note?: string;
+  }>(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type CreditLot = typeof creditLots.$inferSelect;
+
+// Credit ledger: every grant / spend / expire / refund
+export const creditTransactions = pgTable("credit_transactions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  type: text("type").notNull(), // grant | spend | expire | refund
+  amount: integer("amount").notNull(), // positive for grant/refund, negative for spend/expire
+  action: text("action").notNull(), // e.g. ai_reply, monthly_grant, pack_purchase, inbox_cleanup
+  lotId: integer("lot_id"),
+  balanceAfter: integer("balance_after").notNull(),
+  reference: text("reference"), // e.g. emailId, stripe id
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+
+// Recurring monthly credit add-on subscriptions
+export const creditAddons = pgTable("credit_addons", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  stripeSubscriptionId: text("stripe_subscription_id").notNull(),
+  creditsPerMonth: integer("credits_per_month").notNull(),
+  status: text("status").default("active").notNull(), // active | canceled
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  canceledAt: timestamp("canceled_at"),
+});
+
+export type CreditAddon = typeof creditAddons.$inferSelect;
 
 // Linked accounts for account switching without re-authentication
 export const linkedAccounts = pgTable("linked_accounts", {

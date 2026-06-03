@@ -85,7 +85,7 @@ const articles: HelpArticle[] = [
       steps: [
         { title: "Visit the homepage", description: "Click \"Get Started\" or \"Sign Up\" to begin." },
         { title: "Enter your details", description: "Type in your email address and create a secure password." },
-        { title: "Choose a plan", description: "Pick Free, Pro, or Business. Pro and Business include a 14-day free trial." },
+        { title: "Choose a plan", description: "Pick Free, Pro, or Business. Pro and Business include a 3-day free trial." },
         { title: "Set AI preferences", description: "Choose your writing tone (professional, casual, friendly) and other preferences." },
         { title: "Connect your email", description: "Link your Gmail or Outlook account through secure OAuth sign-in." },
       ],
@@ -123,17 +123,17 @@ const articles: HelpArticle[] = [
     icon: Clock,
     iconColor: "#3B82F6",
     content: {
-      intro: "Pro and Business plans both come with a 14-day free trial so you can explore everything before you're charged.",
+      intro: "Pro and Business plans both come with a 3-day free trial so you can explore everything before you're charged.",
       paragraphs: [
-        "When you choose Pro or Business during signup, you'll be asked to enter a payment method. This is just to set up your subscription — you won't be charged anything for the first 14 days. During the trial, you get full access to every feature included in your chosen plan.",
-        "If you decide MyDraft isn't for you, simply cancel before the trial ends and you won't be charged at all. You can cancel from Settings > Billing at any time. If you don't cancel, your subscription starts automatically on day 15 at the regular plan price.",
+        "When you choose Pro or Business during signup, you'll be asked to enter a payment method. This is just to set up your subscription — you won't be charged anything for the first 3 days. During the trial, you get full access to every feature included in your chosen plan.",
+        "If you decide MyDraft isn't for you, simply cancel before the trial ends and you won't be charged at all. You can cancel from Settings > Billing at any time. If you don't cancel, your subscription starts automatically on day 4 at the regular plan price.",
         "The Free plan doesn't require a trial — it's free forever with basic features and up to 5 AI-generated replies per day."
       ],
       steps: [
         { title: "Choose Pro or Business", description: "Select your plan during onboarding or from the Pricing page." },
-        { title: "Enter payment details", description: "Add a card to activate your 14-day trial." },
-        { title: "Use all features", description: "Enjoy full access to everything in your plan for 14 days." },
-        { title: "Keep or cancel", description: "Cancel anytime in Settings > Billing. No charge if cancelled before day 15." },
+        { title: "Enter payment details", description: "Add a card to activate your 3-day trial." },
+        { title: "Use all features", description: "Enjoy full access to everything in your plan for 3 days." },
+        { title: "Keep or cancel", description: "Cancel anytime in Settings > Billing. No charge if cancelled before day 4." },
       ],
     }
   },
@@ -409,15 +409,15 @@ const articles: HelpArticle[] = [
     icon: CreditCard,
     iconColor: "#10B981",
     content: {
-      intro: "MyDraft offers three plans to fit different needs: Free, Pro, and Business. Pro and Business include a 14-day free trial.",
+      intro: "MyDraft offers three plans to fit different needs: Free, Pro, and Business. Pro and Business include a 3-day free trial.",
       paragraphs: [
         "The Free plan gives you basic inbox management with up to 5 AI-generated replies per day. It's a great way to try MyDraft and see if it works for you. There's no time limit on the Free plan — it's free forever.",
-        "Pro is $10/month (or $8.25/month billed annually — saving $21/year). It includes writing style memory so the AI learns to write like you, up to 100 AI emails per day, email scheduling, advanced inbox management, and custom folders with AI sorting. Pro is the best value for individuals who use email heavily.",
-        "Business is $29/month (or $24.92/month billed annually — saving $49/year). It includes everything in Pro plus enhanced AI quality for better draft generation, unlimited AI assistance, voice assistant, custom AI training, and team collaboration features. Business is designed for professionals and teams who want the best AI email experience."
+        "Pro is $4.99/month (or $8.25/month billed annually — saving $21/year). It includes writing style memory so the AI learns to write like you, up to 100 AI emails per day, email scheduling, advanced inbox management, and custom folders with AI sorting. Pro is the best value for individuals who use email heavily.",
+        "Business is $14.99/month (or $24.92/month billed annually — saving $49/year). It includes everything in Pro plus enhanced AI quality for better draft generation, unlimited AI assistance, voice assistant, custom AI training, and team collaboration features. Business is designed for professionals and teams who want the best AI email experience."
       ],
       steps: [
         { title: "Compare plans", description: "Visit the Pricing page to see a full feature comparison." },
-        { title: "Start your trial", description: "Pro and Business plans include 14 days free." },
+        { title: "Start your trial", description: "Pro and Business plans include 3 days free." },
         { title: "Choose monthly or annual", description: "Annual billing saves you money — up to $49/year on Business." },
         { title: "Upgrade anytime", description: "Switch plans in Settings > Billing whenever you need to." },
       ],
@@ -433,7 +433,7 @@ const articles: HelpArticle[] = [
     content: {
       intro: "You can change your plan at any time from Settings. Upgrades take effect immediately, and downgrades happen at the end of your billing period.",
       paragraphs: [
-        "To change your plan, go to Settings > Billing. You'll see your current plan and options to upgrade or switch. If you're on Free and want to upgrade to Pro or Business, you'll be taken through a secure checkout to add your payment details and start your 14-day trial.",
+        "To change your plan, go to Settings > Billing. You'll see your current plan and options to upgrade or switch. If you're on Free and want to upgrade to Pro or Business, you'll be taken through a secure checkout to add your payment details and start your 3-day trial.",
         "If you're already on a paid plan and want to switch (Pro to Business, or Business to Pro), MyDraft handles the transition automatically. When upgrading, you'll get the new features immediately and your billing is prorated so you only pay the difference. When downgrading, you keep your current plan until the end of the billing period.",
         "To downgrade to Free, go to Settings > Billing and cancel your subscription. You'll keep your paid features until your current billing period ends, then automatically switch to the Free plan."
       ],
@@ -1012,7 +1012,7 @@ const articles: HelpArticle[] = [
     content: {
       intro: "Annual billing saves you money — up to $49 per year on the Business plan compared to paying monthly.",
       paragraphs: [
-        "Both Pro and Business plans offer monthly and annual billing options. With annual billing, you pay for the whole year upfront at a discounted rate. Pro is $10/month or $8.25/month billed annually at $99/year (saving $21). Business is $29/month or $24.92/month billed annually at $299/year (saving $49).",
+        "Both Pro and Business plans offer monthly and annual billing options. With annual billing, you pay for the whole year upfront at a discounted rate. Pro is $4.99/month or $8.25/month billed annually at $99/year (saving $21). Business is $14.99/month or $24.92/month billed annually at $299/year (saving $49).",
         "Annual billing is the better value if you plan to use MyDraft long-term. You can switch from monthly to annual billing at any time from Settings > Billing. The change takes effect at your next billing cycle. If you're not sure yet, start with monthly and switch to annual once you've decided MyDraft is right for you."
       ],
     }

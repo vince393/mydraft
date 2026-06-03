@@ -48,8 +48,8 @@ const basePlans = [
   {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 10,
-    annualPrice: 99,
+    monthlyPrice: 4.99,
+    annualPrice: 49.9,
     annualSavings: 21,
     description: "For professionals who need more",
     features: [
@@ -60,14 +60,14 @@ const basePlans = [
       "Team or shared inboxes",
       "API access & integrations",
       "Priority support",
-      "14-day free trial — no credit card",
+      "3-day free trial — no credit card",
     ],
   },
   {
     id: "business",
     name: "Business",
-    monthlyPrice: 29,
-    annualPrice: 299,
+    monthlyPrice: 14.99,
+    annualPrice: 149.9,
     annualSavings: 49,
     description: "For teams and power users",
     features: [
@@ -78,7 +78,7 @@ const basePlans = [
       "Custom AI training",
       "Team collaboration",
       "Dedicated account manager",
-      "14-day free trial — no credit card",
+      "3-day free trial — no credit card",
     ],
   },
 ];
@@ -685,7 +685,7 @@ function PlanSelectionStep({
               >
                 {isPlanLoading ? (
                   <><Loader2 className="w-4 h-4 animate-spin mr-2" />Setting up...</>
-                ) : plan.id === "free" ? "Get started free" : "Start 14-day free trial"}
+                ) : plan.id === "free" ? "Get started free" : "Start 3-day free trial"}
               </Button>
               <button
                 type="button"
@@ -751,7 +751,7 @@ function PlanSelectionStep({
                       <Rocket className="w-3.5 h-3.5 text-violet-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">14 days free, no credit card needed</p>
+                      <p className="text-sm font-medium">3 days free, no credit card needed</p>
                       <p className="text-xs text-muted-foreground/50">No commitment, cancel anytime</p>
                     </div>
                   </div>
@@ -872,7 +872,7 @@ function PlanSelectionStep({
       )}
 
       <p className="text-xs text-muted-foreground/30 text-center mt-4">
-        Pro and Business plans include a 14-day free trial. Cancel anytime.
+        Pro and Business plans include a 3-day free trial. Cancel anytime.
       </p>
 
       <div className="mt-4 text-center">

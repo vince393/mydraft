@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
 import { chatStorage } from "./storage";
+import { getActionCost, getBalance, spendCredits } from "../../credits";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -60,6 +61,20 @@ export function registerChatRoutes(app: Express): void {
       const conversationId = parseInt(req.params.id);
       const { content } = req.body;
 
+      const userId = (req as any).jwtUserId || (req.session as any)?.userId;
+      const chatCost = getActionCost("ai_chat");
+      if (userId && chatCost > 0) {
+        const balance = await getBalance(userId);
+        if (balance < chatCost) {
+          return res.status(402).json({
+            error: "Not enough credits",
+            code: "INSUFFICIENT_CREDITS",
+            creditsNeeded: chatCost,
+            balance,
+          });
+        }
+      }
+
       await chatStorage.createMessage(conversationId, "user", content);
 
       const messages = await chatStorage.getMessagesByConversation(conversationId);
@@ -90,6 +105,14 @@ export function registerChatRoutes(app: Express): void {
       }
 
       await chatStorage.createMessage(conversationId, "assistant", fullResponse);
+
+      if (userId && chatCost > 0) {
+        try {
+          await spendCredits({ userId, amount: chatCost, action: "ai_chat", reference: String(conversationId) });
+        } catch (creditErr) {
+          console.error("Failed to charge chat credits:", creditErr);
+        }
+      }
 
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();

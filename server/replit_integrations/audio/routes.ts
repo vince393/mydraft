@@ -6,6 +6,32 @@ import { microsoftProvider } from "../../microsoft";
 import { imapProvider } from "../../imap";
 import { stripEmailNoise } from "../../email-utils";
 import type { IEmailProvider, EmailListItem } from "../../email-provider";
+import { getActionCost, getBalance, spendCredits } from "../../credits";
+
+async function ensureAudioCredits(
+  req: Request,
+  res: Response,
+  action: "voice_chat" | "read_aloud",
+): Promise<{ ok: true; userId: string; cost: number } | { ok: false }> {
+  const userId = (req as any).jwtUserId || (req.session as any)?.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return { ok: false };
+  }
+  const cost = getActionCost(action);
+  if (cost <= 0) return { ok: true, userId, cost: 0 };
+  const balance = await getBalance(userId);
+  if (balance < cost) {
+    res.status(402).json({
+      error: "Not enough credits",
+      code: "INSUFFICIENT_CREDITS",
+      creditsNeeded: cost,
+      balance,
+    });
+    return { ok: false };
+  }
+  return { ok: true, userId, cost };
+}
 
 const ttsCache: Map<string, { audio: string; timestamp: number }> = new Map();
 const TTS_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
@@ -84,11 +110,10 @@ export function registerAudioRoutes(app: Express) {
 
   app.post("/api/voice/chat", async (req: Request, res: Response) => {
     try {
-      if (!req.session?.userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const credit = await ensureAudioCredits(req, res, "voice_chat");
+      if (!credit.ok) return;
 
-      const userId = req.session.userId;
+      const userId = credit.userId;
       const { message, conversationHistory = [] } = req.body;
       
       if (!message || typeof message !== "string") {
@@ -128,11 +153,22 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       const { text, audio } = await voiceChat(messages, message);
 
       await storage.addAssistantMessage(userId, "assistant", text);
-      
+
+      let creditsRemaining: number | undefined;
+      if (credit.cost > 0) {
+        try {
+          const spendResult = await spendCredits({ userId, amount: credit.cost, action: "voice_chat" });
+          creditsRemaining = spendResult.balanceAfter;
+        } catch (creditErr) {
+          console.error("Failed to charge voice chat credits:", creditErr);
+        }
+      }
+
       res.json({ 
         response: text, 
         audio,
         audioFormat: "wav",
+        creditsRemaining,
       });
     } catch (error) {
       console.error("Voice chat error:", error);
@@ -142,7 +178,8 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
 
   app.post("/api/voice/tts", async (req: Request, res: Response) => {
     try {
-      if (!req.session?.userId) {
+      const userId = (req as any).jwtUserId || (req.session as any)?.userId;
+      if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
@@ -156,13 +193,26 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       const selectedVoice = voice && validVoices.includes(voice) ? voice : "nova";
 
       const cacheKey = emailId
-        ? `${req.session.userId}-${emailId}-${selectedVoice}`
-        : `${req.session.userId}-${selectedVoice}-${text.slice(0, 100)}`;
+        ? `${userId}-${emailId}-${selectedVoice}`
+        : `${userId}-${selectedVoice}-${text.slice(0, 100)}`;
 
       const now = Date.now();
       const cached = ttsCache.get(cacheKey);
       if (cached && now - cached.timestamp < TTS_CACHE_TTL_MS) {
         return res.json({ audio: cached.audio, audioFormat: "wav", cached: true });
+      }
+
+      const ttsCost = getActionCost("read_aloud");
+      if (ttsCost > 0) {
+        const balance = await getBalance(userId);
+        if (balance < ttsCost) {
+          return res.status(402).json({
+            error: "Not enough credits",
+            code: "INSUFFICIENT_CREDITS",
+            creditsNeeded: ttsCost,
+            balance,
+          });
+        }
       }
 
       let cleanText = stripEmailNoise(text).slice(0, 2000);
@@ -172,6 +222,7 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       console.log(`[TTS] Request: voice=${selectedVoice}, textLength=${text.length}, cleanLength=${cleanText.length}`);
       const audio = await textToSpeech(cleanText || text.slice(0, 2000), selectedVoice);
 
+      let creditsRemaining: number | undefined;
       if (audio) {
         ttsCache.set(cacheKey, { audio, timestamp: now });
 
@@ -182,9 +233,18 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
           entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE)
             .forEach(([key]) => ttsCache.delete(key));
         }
+
+        if (ttsCost > 0) {
+          try {
+            const spendResult = await spendCredits({ userId, amount: ttsCost, action: "read_aloud", reference: emailId ? String(emailId) : undefined });
+            creditsRemaining = spendResult.balanceAfter;
+          } catch (creditErr) {
+            console.error("Failed to charge TTS credits:", creditErr);
+          }
+        }
       }
       
-      res.json({ audio, audioFormat: "wav" });
+      res.json({ audio, audioFormat: "wav", creditsRemaining });
     } catch (error) {
       console.error("TTS error:", error);
       res.status(500).json({ error: "Failed to generate speech" });
@@ -193,7 +253,8 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
 
   app.post("/api/voice/tts/stream", async (req: Request, res: Response) => {
     try {
-      if (!req.session?.userId) {
+      const userId = (req as any).jwtUserId || (req.session as any)?.userId;
+      if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
@@ -210,8 +271,8 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       const selectedVoice = voice && validVoices.includes(voice) ? voice : "nova";
 
       const cacheKey = emailId
-        ? `${req.session.userId}-${emailId}-${selectedVoice}`
-        : `${req.session.userId}-${selectedVoice}-${text.slice(0, 100)}`;
+        ? `${userId}-${emailId}-${selectedVoice}`
+        : `${userId}-${selectedVoice}-${text.slice(0, 100)}`;
 
       const now = Date.now();
       const cached = ttsCache.get(cacheKey);
@@ -220,6 +281,19 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         const buf = Buffer.from(cached.audio, "base64");
         res.set({ "Content-Type": "audio/wav", "Content-Length": String(buf.length) });
         return res.end(buf);
+      }
+
+      const ttsCost = getActionCost("read_aloud");
+      if (ttsCost > 0) {
+        const balance = await getBalance(userId);
+        if (balance < ttsCost) {
+          return res.status(402).json({
+            error: "Not enough credits",
+            code: "INSUFFICIENT_CREDITS",
+            creditsNeeded: ttsCost,
+            balance,
+          });
+        }
       }
 
       let cleanText = stripEmailNoise(text).slice(0, 2000);
@@ -241,6 +315,14 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
       if (ttsCache.size > TTS_CACHE_MAX_SIZE) {
         const entries = Array.from(ttsCache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
         entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE).forEach(([key]) => ttsCache.delete(key));
+      }
+
+      if (ttsCost > 0) {
+        try {
+          await spendCredits({ userId, amount: ttsCost, action: "read_aloud", reference: emailId ? String(emailId) : undefined });
+        } catch (creditErr) {
+          console.error("Failed to charge TTS stream credits:", creditErr);
+        }
       }
 
       res.set({ "Content-Type": "audio/wav", "Content-Length": String(audioBuffer.length) });

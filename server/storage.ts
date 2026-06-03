@@ -275,7 +275,7 @@ export interface IStorage {
   getUserByReferralCode(code: string): Promise<User | undefined>;
   generateReferralCode(userId: string): Promise<string>;
   createReferral(referrerUserId: string, referredUserId: string): Promise<Referral>;
-  markReferralSubscribed(referredUserId: string): Promise<void>;
+  markReferralConnected(referredUserId: string): Promise<Referral | undefined>;
   getReferralStats(userId: string): Promise<{ total: number; subscribed: number }>;
   getReferrals(userId: string): Promise<Referral[]>;
   applyProCredit(userId: string, months: number): Promise<void>;
@@ -2684,24 +2684,24 @@ Business Development`,
     return referral;
   }
 
-  async markReferralSubscribed(referredUserId: string): Promise<void> {
-    const [existing] = await db.select().from(referrals)
+  async markReferralConnected(referredUserId: string): Promise<Referral | undefined> {
+    // Atomically transition registered -> connected. Returns the row only if it
+    // actually transitioned (idempotent: a second call returns undefined).
+    const [updated] = await db.update(referrals)
+      .set({ status: "connected", connectedAt: new Date() })
       .where(and(
         eq(referrals.referredUserId, referredUserId),
-        eq(referrals.status, "registered")
-      ));
-    if (!existing) return;
-
-    await db.update(referrals)
-      .set({ status: "subscribed", connectedAt: new Date() })
-      .where(eq(referrals.id, existing.id));
+        eq(referrals.status, "registered"),
+      ))
+      .returning();
+    return updated;
   }
 
   async getReferralStats(userId: string): Promise<{ total: number; subscribed: number }> {
     const allReferrals = await db.select().from(referrals)
       .where(eq(referrals.referrerUserId, userId));
     const total = allReferrals.length;
-    const subscribed = allReferrals.filter(r => r.status === "subscribed").length;
+    const subscribed = allReferrals.filter(r => r.status === "connected").length;
     return { total, subscribed };
   }
 

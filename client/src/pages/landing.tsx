@@ -1268,7 +1268,7 @@ function FAQSection() {
     },
     {
       q: "Can I try it before paying?",
-      a: "Yes. The free plan gives you basic inbox access. Pro and Business plans include a 14-day trial with full access, no restrictions."
+      a: "Yes. The free plan gives you basic inbox access. Pro and Business plans include a 3-day trial with full access, no restrictions."
     },
     {
       q: "Can I cancel anytime?",

@@ -1,4 +1,30 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { createElement } from "react";
+import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+
+let lastInsufficientToast = 0;
+function maybeHandleInsufficientCredits(res: Response) {
+  if (res.status !== 402) return;
+  const now = Date.now();
+  if (now - lastInsufficientToast < 3000) return;
+  lastInsufficientToast = now;
+  toast({
+    title: "Not enough credits",
+    description: "Visit Credits to top up and keep using AI features.",
+    variant: "destructive",
+    action: createElement(
+      ToastAction,
+      {
+        altText: "Go to Credits",
+        onClick: () => {
+          window.location.assign("/credits");
+        },
+      },
+      "Top up",
+    ),
+  });
+}
 
 const friendlyMessages: Record<number, string> = {
   400: "Something went wrong with your request. Please check your input and try again.",
@@ -54,6 +80,7 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  maybeHandleInsufficientCredits(res);
   await throwIfResNotOk(res);
   return res;
 }

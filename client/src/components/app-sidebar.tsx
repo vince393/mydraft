@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Menu, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, Megaphone, Settings, LogOut, RefreshCw, Link, Crown, type LucideIcon } from "lucide-react";
+import { Inbox, Send, FileText, Trash2, PenSquare, FolderPlus, ChevronLeft, ChevronRight, Menu, Archive, AlertCircle, User, Lock, Pencil, Sparkles, Folder, Star, Heart, Bookmark, Flag, Tag, Zap, Bell, Mail, MessageSquare, Users, Briefcase, ShoppingCart, DollarSign, Calendar, Clock, Image as ImageIcon, MoreVertical, Megaphone, Settings, LogOut, RefreshCw, Link, Crown, Coins, type LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notification-bell";
 import { AccountSwitcher } from "@/components/account-switcher";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { EmailCategory } from "@/lib/email-categories";
 import { usePlan } from "@/hooks/use-plan";
+import { useCredits } from "@/hooks/use-credits";
 import { UpgradeModal } from "./upgrade-modal";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -180,6 +181,7 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
   const longPressTriggeredRef = useRef(false);
   const justCollapsedRef = useRef(false);
   const { hasPro, hasPremium } = usePlan();
+  const { balance: creditBalance, isLoading: creditsLoading } = useCredits();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -791,6 +793,34 @@ export function AppSidebar({ activeFolder, onFolderChange, unreadCount, unreadCo
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-2">
+        {effectiveShowText ? (
+          <button
+            onClick={() => { setLocation("/credits"); if (isMobile) setOpenMobile(false); }}
+            className="flex items-center gap-2 w-full rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors outline-none"
+            data-testid="button-credits-sidebar"
+          >
+            <Coins className="w-4 h-4 text-primary flex-shrink-0" />
+            <span className="text-sm text-muted-foreground/80 flex-1 text-left">Credits</span>
+            <span className="text-sm font-semibold text-foreground" data-testid="text-credit-balance-sidebar">
+              {creditsLoading ? "—" : creditBalance.toLocaleString()}
+            </span>
+          </button>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={(e) => { e.stopPropagation(); setLocation("/credits"); }}
+                className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted/50 transition-colors outline-none"
+                data-testid="button-credits-sidebar"
+              >
+                <Coins className="w-4 h-4 text-primary" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {creditsLoading ? "Credits" : `${creditBalance.toLocaleString()} credits`}
+            </TooltipContent>
+          </Tooltip>
+        )}
         <div className={`flex items-center gap-2 px-1 py-1 ${!effectiveShowText && !isMobile ? "flex-col" : ""}`}>
           {isMobile ? (
             <>

@@ -59,6 +59,7 @@ import {
   Ticket,
   Volume2,
   Play,
+  Coins,
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Building2 } from "lucide-react";
@@ -999,9 +1000,9 @@ function BillingTab({ settings }: { settings: Settings }) {
 
   const planDetails: Record<string, { name: string; price: string; features: string[] }> = {
     free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "5 emails/day limit", "Standard support"] },
-    pro: { name: "Pro", price: "$10/mo or $8.25/mo billed annually", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
-    premium: { name: "Business", price: "$29/mo or $24.92/mo billed annually", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
-    business: { name: "Business", price: "$29/mo or $24.92/mo billed annually", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
+    pro: { name: "Pro", price: "$4.99/mo or $8.25/mo billed annually", features: ["Unlimited AI replies", "Unlimited emails", "Advanced tone customization", "Email scheduling", "Priority support"] },
+    premium: { name: "Business", price: "$14.99/mo or $24.92/mo billed annually", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
+    business: { name: "Business", price: "$14.99/mo or $24.92/mo billed annually", features: ["Everything in Pro", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
   };
 
   const currentPlan = (settings?.plan && planDetails[settings.plan]) ? planDetails[settings.plan] : planDetails.free;
@@ -1254,6 +1255,15 @@ function BillingTab({ settings }: { settings: Settings }) {
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={() => setLocation("/select-plan?change=true")} data-testid="button-change-plan">
               Change Plan
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/credits")}
+              data-testid="button-buy-credits"
+            >
+              <Coins className="w-4 h-4 mr-2" />
+              Buy Credits
             </Button>
             {settings.plan && settings.plan !== "free" && (
               <Button 

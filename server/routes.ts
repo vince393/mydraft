@@ -32,6 +32,64 @@ import {
   emailSendLimiter,
   fileLimiter,
 } from "./rate-limiter";
+import {
+  spendCredits,
+  refundCredits,
+  getBalance,
+  getCreditSummary,
+  getActionCost,
+  getTransactions,
+  getCreditAnalytics,
+  ensureMonthlyGrant,
+  CREDIT_COSTS,
+  CREDIT_PACKS,
+  CREDIT_ADDONS,
+  PLAN_MONTHLY_CREDITS,
+  PLAN_PRICES,
+  TRIAL_DAYS,
+  REFERRAL_REFERRER_CREDITS,
+  grantCredits,
+  getActiveAddons,
+  getCreditAnalytics,
+  type CreditAction,
+} from "./credits";
+
+// Grant referral rewards when a referred user connects their first email account
+// (anti-abuse gate: requires a verified account + a connected mailbox). Idempotent
+// via storage.markReferralConnected which only transitions registered -> connected once.
+async function grantReferralRewardOnConnect(referredUserId: string): Promise<void> {
+  try {
+    const transitioned = await storage.markReferralConnected(referredUserId);
+    if (!transitioned) return; // already rewarded or no pending referral
+    const { referrerUserId } = transitioned;
+    if (!referrerUserId || referrerUserId === referredUserId) return; // no self-referral
+
+    // Referrer earns bonus credits.
+    await grantCredits({
+      userId: referrerUserId,
+      amount: REFERRAL_REFERRER_CREDITS,
+      source: "referral",
+      action: "referral_reward",
+      reference: referredUserId,
+      metadata: { referredUserId },
+    });
+
+    // Referred user gets 1 month of Pro free.
+    await storage.applyProCredit(referredUserId, 1);
+
+    const referrer = await storage.getUser(referrerUserId);
+    if (referrer) {
+      await storage.createActivityLog(
+        referrer.id,
+        referrer.email,
+        "referral_reward",
+        `Earned ${REFERRAL_REFERRER_CREDITS} credits — a referred user connected their inbox`,
+      );
+    }
+  } catch (err) {
+    console.error("Failed to grant referral reward:", err);
+  }
+}
 
 // Pending registrations waiting for email verification
 const pendingRegistrations: Map<
@@ -140,6 +198,60 @@ function extractJwtIdentity(req: Request, _res: Response, next: NextFunction) {
 
 function getUserId(req: Request): string | undefined {
   return req.jwtUserId || req.session.userId;
+}
+
+// Verify the user can afford an AI action WITHOUT spending. Sends a 402 and returns
+// { ok: false } if the balance is insufficient. Pair with spendCredits after the AI call
+// succeeds so failed calls are never charged.
+async function checkCredits(
+  req: Request,
+  res: Response,
+  action: CreditAction,
+): Promise<{ ok: true; cost: number; userId: string } | { ok: false }> {
+  const userId = getUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return { ok: false };
+  }
+  const cost = getActionCost(action);
+  if (cost <= 0) return { ok: true, cost: 0, userId };
+  const balance = await getBalance(userId);
+  if (balance < cost) {
+    res.status(402).json({
+      error: "Not enough credits",
+      code: "INSUFFICIENT_CREDITS",
+      creditsNeeded: cost,
+      balance,
+    });
+    return { ok: false };
+  }
+  return { ok: true, cost, userId };
+}
+
+// Verify the user can afford a dynamic-cost AI action WITHOUT spending.
+async function checkCreditsAmount(
+  req: Request,
+  res: Response,
+  amount: number,
+): Promise<{ ok: true; cost: number; userId: string } | { ok: false }> {
+  const userId = getUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return { ok: false };
+  }
+  const cost = Math.max(0, Math.round(amount));
+  if (cost <= 0) return { ok: true, cost: 0, userId };
+  const balance = await getBalance(userId);
+  if (balance < cost) {
+    res.status(402).json({
+      error: "Not enough credits",
+      code: "INSUFFICIENT_CREDITS",
+      creditsNeeded: cost,
+      balance,
+    });
+    return { ok: false };
+  }
+  return { ok: true, cost, userId };
 }
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -1826,6 +1938,13 @@ export async function registerRoutes(
       effectivePlan = "free";
     }
 
+    let creditBalance = 0;
+    try {
+      creditBalance = await getBalance(user.id);
+    } catch (balErr) {
+      console.error("Failed to load credit balance for /api/auth/me:", balErr);
+    }
+
     res.json({
       user: {
         id: user.id,
@@ -1846,6 +1965,7 @@ export async function registerRoutes(
         trialDaysRemaining,
         trialEndsAt: user.trialEndsAt,
         hasUsedTrial: user.hasUsedTrial,
+        creditBalance,
       },
     });
   });
@@ -1911,18 +2031,34 @@ export async function registerRoutes(
           });
         }
 
-        const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
         const user = await storage.updateUser(req.session.userId!, {
           plan: plan as any,
           trialEndsAt,
           hasUsedTrial: true,
         });
 
+        // Grant the trial plan's monthly credit allowance up front.
+        try {
+          const trialCredits = PLAN_MONTHLY_CREDITS[plan as "pro" | "premium"] ?? 0;
+          if (trialCredits > 0) {
+            await grantCredits({
+              userId: user!.id,
+              amount: trialCredits,
+              source: "trial",
+              action: "trial_grant",
+              metadata: { plan },
+            });
+          }
+        } catch (creditErr) {
+          console.error("Failed to grant trial credits:", creditErr);
+        }
+
         await storage.createActivityLog(
           user!.id,
           user!.email,
           "trial_started",
-          `Started 14-day free trial of ${plan === "premium" ? "Business" : "Pro"} plan`,
+          `Started ${TRIAL_DAYS}-day free trial of ${plan === "premium" ? "Business" : "Pro"} plan`,
         );
 
         return res.json({
@@ -2677,6 +2813,8 @@ Return ONLY valid JSON, no other text.`;
         await storage.createEmailAccount({ userId, ...accountData });
       }
 
+      await grantReferralRewardOnConnect(userId);
+
       res.json({ connected: true, email, provider: "imap" });
     } catch (error: unknown) {
       console.error("IMAP connect error:", error);
@@ -2907,6 +3045,8 @@ Return ONLY valid JSON, no other text.`;
           const { sendWelcomeEmail } = await import("./email");
           await sendWelcomeEmail(normalizedEmail, currentUser?.email?.split("@")[0] || "");
         } catch (emailErr) { console.error("Failed to send welcome email:", emailErr); }
+
+        await grantReferralRewardOnConnect(userId);
       }
 
       res.redirect("/inbox?connected=true");
@@ -3056,6 +3196,8 @@ Return ONLY valid JSON, no other text.`;
           const { sendWelcomeEmail } = await import("./email");
           await sendWelcomeEmail(normalizedEmail, currentUser?.email?.split("@")[0] || "");
         } catch (emailErr) { console.error("Failed to send welcome email:", emailErr); }
+
+        await grantReferralRewardOnConnect(userId);
       }
 
       res.redirect("/inbox?connected=true");
@@ -4383,6 +4525,10 @@ JSON response only:
           });
         }
 
+        // Dynamic credit cost: 1 credit per item acted on.
+        const credit = await checkCreditsAmount(req, res, approvedSuggestions.length);
+        if (!credit.ok) return;
+
         const results = { executed: 0, failed: 0, errors: [] as string[] };
 
         for (const suggestion of approvedSuggestions) {
@@ -4464,7 +4610,13 @@ JSON response only:
           }
         }
 
-        res.json(results);
+        let creditsRemaining = await getBalance(userId);
+        if (results.executed > 0) {
+          const spendResult = await spendCredits({ userId, amount: results.executed, action: "inbox_cleanup" });
+          creditsRemaining = spendResult.balanceAfter;
+        }
+
+        res.json({ ...results, creditsRemaining });
       } catch (error) {
         console.error("Error executing suggestions:", error);
         res.status(500).json({ error: "Failed to execute suggestions" });
@@ -4544,6 +4696,9 @@ JSON response only:
         return res.json(dbParsed);
       }
 
+      const credit = await checkCredits(req, res, "ai_summary");
+      if (!credit.ok) return;
+
       const cleanBody = stripEmailNoise(body).substring(0, 8000);
 
       const completion = await openai.chat.completions.create({
@@ -4577,6 +4732,8 @@ Rules:
         temperature: 0.3,
         max_tokens: 800,
       });
+
+      await spendCredits({ userId: credit.userId, amount: credit.cost, action: "ai_summary", reference: id });
 
       const responseText = completion.choices[0]?.message?.content || "{}";
       let parsed = { summary: "", keyPoints: [] as string[], actionItems: [] as string[] };
@@ -4820,14 +4977,6 @@ Rules:
   app.post("/api/emails/:id/translate", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
-      const userPlan = user?.plan || "free";
-      if (!hasPlan(userPlan, "pro")) {
-        return res.status(403).json({
-          error: "Pro plan required for email translation",
-          requiredPlan: "pro",
-          currentPlan: userPlan,
-        });
-      }
 
       const id = req.params.id;
       const { subject, body, sourceLanguage, targetLanguage, formality } =
@@ -4861,6 +5010,9 @@ Rules:
         });
       }
 
+      const credit = await checkCredits(req, res, "translate");
+      if (!credit.ok) return;
+
       const cleanBody = stripEmailNoise(body);
       const MAX_BODY_LENGTH = 6000;
       const truncatedBody = cleanBody.length > MAX_BODY_LENGTH
@@ -4888,6 +5040,8 @@ Rules:
         max_tokens: 2000,
         temperature: 0.3,
       });
+
+      await spendCredits({ userId: credit.userId, amount: credit.cost, action: "translate", reference: id });
 
       const responseText = completion.choices[0]?.message?.content || "{}";
 
@@ -5279,21 +5433,8 @@ Rules:
           });
         }
 
-        // Check free plan daily limit
-        const FREE_DAILY_LIMIT = 5;
-        if (userPlan === "free") {
-          const todayUsage = await storage.getAiUsageToday(req.session.userId!);
-          if (todayUsage >= FREE_DAILY_LIMIT) {
-            return res.status(403).json({
-              error: "Daily AI draft limit reached",
-              limitReached: true,
-              used: todayUsage,
-              limit: FREE_DAILY_LIMIT,
-              remaining: 0,
-              currentPlan: userPlan,
-            });
-          }
-        }
+        const credit = await checkCredits(req, res, "ai_reply");
+        if (!credit.ok) return;
 
         const { emailId, tone = "professional", emailContent } = req.body;
 
@@ -5505,10 +5646,7 @@ Reply:`;
           };
         }
 
-        // Increment usage for free plan users
-        if (userPlan === "free") {
-          await storage.incrementAiUsage(req.session.userId!);
-        }
+        await spendCredits({ userId: credit.userId, amount: credit.cost, action: "ai_reply" });
 
         res.json(draft);
       } catch (error: any) {
@@ -5564,21 +5702,8 @@ Reply:`;
           return res.status(400).json({ error: "Text is required" });
         }
 
-        // Advanced polish modes are only for Pro+ users (basic and casual free for all)
-        const advancedModes = [
-          "formal",
-          "concise",
-          "persuasive",
-          "empathetic",
-          "executive",
-        ];
-        if (advancedModes.includes(mode) && userPlan === "free") {
-          return res.status(403).json({
-            error: "Advanced polish modes require Pro or Business plan",
-            currentPlan: userPlan,
-            requiredPlan: "pro",
-          });
-        }
+        const credit = await checkCredits(req, res, "ai_rewrite");
+        if (!credit.ok) return;
 
         const modeInstructions: Record<string, string> = {
           basic:
@@ -5618,6 +5743,8 @@ Reply:`;
           return res.status(422).json({ error: "Unable to polish text" });
         }
 
+        await spendCredits({ userId: credit.userId, amount: credit.cost, action: "ai_rewrite" });
+
         res.json({ polished: polishedText.trim() });
       } catch (error) {
         console.error("Error polishing text:", error);
@@ -5639,6 +5766,9 @@ Reply:`;
       if (!instruction || instruction.trim().length === 0) {
         return res.status(400).json({ error: "Instruction is required" });
       }
+
+      const credit = await checkCredits(req, res, "ai_rewrite");
+      if (!credit.ok) return;
 
       let contextPrompt = "";
       if (originalEmail) {
@@ -5677,6 +5807,8 @@ Please modify the response according to the instruction.`,
         return res.status(422).json({ error: "Unable to refine text" });
       }
 
+      await spendCredits({ userId: credit.userId, amount: credit.cost, action: "ai_rewrite" });
+
       // Capture draft edit as writing sample for personalization
       const wordCount = refinedText
         .split(/\s+/)
@@ -5709,6 +5841,9 @@ Please modify the response according to the instruction.`,
       if (!text || typeof text !== "string" || text.trim().length < 5) {
         return res.status(400).json({ error: "Text must be at least 5 characters" });
       }
+
+      const credit = await checkCredits(req, res, "grammar_check");
+      if (!credit.ok) return;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -5770,6 +5905,8 @@ Rules:
         result.correctedText = text;
       }
 
+      await spendCredits({ userId: credit.userId, amount: credit.cost, action: "grammar_check" });
+
       res.json(result);
     } catch (error) {
       console.error("Grammar check error:", error);
@@ -5788,22 +5925,6 @@ Rules:
         const user = await storage.getUser(req.session.userId!);
         const userPlan = user?.plan || "free";
 
-        // Check free plan daily limit
-        const FREE_DAILY_LIMIT = 5;
-        if (userPlan === "free") {
-          const todayUsage = await storage.getAiUsageToday(req.session.userId!);
-          if (todayUsage >= FREE_DAILY_LIMIT) {
-            return res.status(403).json({
-              error: "Daily AI draft limit reached",
-              limitReached: true,
-              used: todayUsage,
-              limit: FREE_DAILY_LIMIT,
-              remaining: 0,
-              currentPlan: userPlan,
-            });
-          }
-        }
-
         const {
           mode,
           originalEmail,
@@ -5811,6 +5932,13 @@ Rules:
           tone: requestedTone,
           existingBody,
         } = req.body;
+
+        const credit = await checkCredits(
+          req,
+          res,
+          mode === "compose" ? "ai_compose" : "ai_reply",
+        );
+        if (!credit.ok) return;
 
         // Use requested tone or fall back to user's AI preferences
         const aiPrefs = user?.aiPreferences as
@@ -5982,10 +6110,7 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
           });
         }
 
-        // Increment usage for free plan users
-        if (userPlan === "free") {
-          await storage.incrementAiUsage(req.session.userId!);
-        }
+        const spendResult = await spendCredits({ userId: credit.userId, amount: credit.cost, action: mode === "compose" ? "ai_compose" : "ai_reply" });
 
         try {
           const parsed = JSON.parse(content);
@@ -6025,21 +6150,10 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
             body = `${body}\n\n${user.emailSignature}`;
           }
 
-          // Get remaining count for free users
-          const todayUsage =
-            userPlan === "free"
-              ? await storage.getAiUsageToday(req.session.userId!)
-              : 0;
-          const remaining =
-            userPlan === "free" ? Math.max(0, 5 - todayUsage) : null;
-
           res.json({
             subject: parsed.subject || "",
             body,
-            usage:
-              userPlan === "free"
-                ? { used: todayUsage, limit: 5, remaining }
-                : null,
+            creditsRemaining: spendResult.balanceAfter,
           });
         } catch {
           // Append signature even in fallback case
@@ -7386,15 +7500,7 @@ Respond with ONLY a brief suggestion, like:
           });
         }
 
-        // Plan gating: requires Pro or Premium
         const userPlan = await getUserPlan(userId);
-        if (!hasPlan(userPlan, "pro")) {
-          return res.status(403).json({
-            error: "Plan upgrade required",
-            requiredPlan: "pro",
-            currentPlan: userPlan,
-          });
-        }
 
         const { actionType, messageId, instructions, to, cc, bcc, subject } =
           req.body;
@@ -7410,6 +7516,13 @@ Respond with ONLY a brief suggestion, like:
                 "Valid actionType required: compose, reply, reply-all, forward",
             });
         }
+
+        const credit = await checkCredits(
+          req,
+          res,
+          actionType === "compose" ? "ai_compose" : "ai_reply",
+        );
+        if (!credit.ok) return;
 
         const providerResult = await getProviderAndToken(userId);
         const styleProfile = await storage.getUserStyleProfile(userId);
@@ -7554,6 +7667,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           },
         });
 
+        const spendResult = await spendCredits({ userId: credit.userId, amount: credit.cost, action: actionType === "compose" ? "ai_compose" : "ai_reply", reference: messageId });
+
         res.json({
           actionId: action.id,
           actionType,
@@ -7565,6 +7680,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             body: draftBody,
           },
           status: "pending",
+          creditsRemaining: spendResult.balanceAfter,
         });
       } catch (error) {
         console.error("Error generating AI draft:", error);
@@ -8448,6 +8564,17 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error fetching owner stats:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // Credit economy analytics for the owner dashboard.
+  app.get("/api/owner/credits", requireOwner, async (req, res) => {
+    try {
+      const analytics = await getCreditAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching credit analytics:", error);
+      res.status(500).json({ error: "Failed to fetch credit analytics" });
     }
   });
 
@@ -9700,10 +9827,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
         const internalPlan = plan === "business" ? "premium" : plan;
 
-        // Define pricing
+        // Define pricing (new credit-economy prices)
         const pricing: Record<string, Record<string, number>> = {
-          pro: { monthly: 1000, annual: 9900 },
-          business: { monthly: 2900, annual: 29900 },
+          pro: { monthly: PLAN_PRICES.pro.monthly, annual: PLAN_PRICES.pro.annual },
+          business: { monthly: PLAN_PRICES.premium.monthly, annual: PLAN_PRICES.premium.annual },
         };
 
         const amount = pricing[plan][interval];
@@ -9737,7 +9864,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         if (!product) {
           product = await stripe.products.create({
             name: productName,
-            metadata: { plan: internalPlan },
+            metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "pro" | "premium"]) },
           });
         }
 
@@ -9759,7 +9886,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             unit_amount: amount,
             currency: "usd",
             recurring: { interval: recurringInterval },
-            metadata: { plan: internalPlan },
+            metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "pro" | "premium"]) },
           });
         }
 
@@ -9867,15 +9994,15 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
 
-      // Define pricing (in cents)
+      // Define pricing (in cents) — new credit-economy prices
       const pricing: Record<string, Record<string, number>> = {
         pro: {
-          monthly: 1000, // $10.00 in cents
-          annual: 9900, // $99.00 in cents
+          monthly: PLAN_PRICES.pro.monthly,
+          annual: PLAN_PRICES.pro.annual,
         },
         business: {
-          monthly: 2900, // $29.00 in cents
-          annual: 29900, // $299.00 in cents
+          monthly: PLAN_PRICES.premium.monthly,
+          annual: PLAN_PRICES.premium.annual,
         },
       };
 
@@ -9906,9 +10033,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       );
 
       if (!product) {
+        const internalPlan = plan === "business" ? "premium" : plan;
         product = await stripe.products.create({
           name: productName,
-          metadata: { plan: plan === "business" ? "premium" : plan },
+          metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "pro" | "premium"]) },
         });
       }
 
@@ -9925,12 +10053,13 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       );
 
       if (!price) {
+        const internalPlan = plan === "business" ? "premium" : plan;
         price = await stripe.prices.create({
           product: product.id,
           unit_amount: amount,
           currency: "usd",
           recurring: { interval: recurringInterval },
-          metadata: { plan: plan === "business" ? "premium" : plan },
+          metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "pro" | "premium"]) },
         });
       }
 
@@ -9979,6 +10108,191 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           error: "Failed to create checkout session",
           details: error?.message,
         });
+    }
+  });
+
+  // ============================================================
+  // Credit economy endpoints
+  // ============================================================
+
+  // Public credit config (costs, packs, add-ons, plan allowances)
+  app.get("/api/credits/config", async (_req, res) => {
+    // Normalize packs/addons so the frontend has stable { sku, credits, price, label }.
+    const packs = CREDIT_PACKS.map((p) => ({
+      sku: p.id,
+      credits: p.credits,
+      price: p.priceCents / 100,
+      priceCents: p.priceCents,
+      label: p.label,
+    }));
+    const addons = CREDIT_ADDONS.map((a) => ({
+      sku: a.id,
+      credits: a.credits,
+      price: a.priceCents / 100,
+      priceCents: a.priceCents,
+      label: a.label,
+    }));
+    res.json({
+      costs: CREDIT_COSTS,
+      packs,
+      addons,
+      planCredits: PLAN_MONTHLY_CREDITS,
+      planMonthlyCredits: PLAN_MONTHLY_CREDITS,
+      planPrices: PLAN_PRICES,
+      trialDays: TRIAL_DAYS,
+    });
+  });
+
+  // Current user's credit balance + summary
+  app.get("/api/credits", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const summary = await getCreditSummary(userId);
+      const rawAddons = await getActiveAddons(userId);
+      // Tag each active add-on with its config sku (matched by monthly credits)
+      // so the frontend can show an "Active" state on the matching card.
+      const addons = rawAddons.map((a) => ({
+        ...a,
+        sku: CREDIT_ADDONS.find((c) => c.credits === a.creditsPerMonth)?.id ?? null,
+      }));
+      // Surface credits expiring within the next 7 days for low-balance UX.
+      let expiringSoon: { amount: number; date: Date } | null = null;
+      if (summary.nextExpiry) {
+        const days = (new Date(summary.nextExpiry.expiresAt).getTime() - Date.now()) / 86400000;
+        if (days <= 7) {
+          expiringSoon = { amount: summary.nextExpiry.amount, date: summary.nextExpiry.expiresAt };
+        }
+      }
+      res.json({ ...summary, addons, expiringSoon });
+    } catch (error) {
+      console.error("Error fetching credits:", error);
+      res.status(500).json({ error: "Failed to fetch credits" });
+    }
+  });
+
+  // Credit transaction ledger
+  app.get("/api/credits/transactions", requireAuth, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(String(req.query.limit || "50"), 10) || 50, 200);
+      const txns = await getTransactions(req.session.userId!, limit);
+      res.json(txns);
+    } catch (error) {
+      console.error("Error fetching credit transactions:", error);
+      res.status(500).json({ error: "Failed to fetch transactions" });
+    }
+  });
+
+  // Buy a one-time credit pack (Stripe Checkout, payment mode)
+  app.post("/api/credits/buy-pack", requireAuth, async (req, res) => {
+    try {
+      const packId = req.body.packId || req.body.sku;
+      const pack = CREDIT_PACKS.find((p) => p.id === packId);
+      if (!pack) {
+        return res.status(400).json({ error: "Invalid pack" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({ email: user.email, metadata: { userId: user.id } });
+        await storage.updateUser(user.id, { stripeCustomerId: customer.id });
+        customerId = customer.id;
+      }
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              unit_amount: pack.priceCents,
+              product_data: {
+                name: `MyDraft — ${pack.label}`,
+                metadata: { type: "pack", credits: String(pack.credits), sku: pack.id },
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${baseUrl}/credits?purchase=success`,
+        cancel_url: `${baseUrl}/credits?purchase=canceled`,
+        metadata: { userId: String(user.id), type: "pack", credits: String(pack.credits), sku: pack.id },
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Error creating pack checkout:", error?.message || error);
+      res.status(500).json({ error: "Failed to start checkout", details: error?.message });
+    }
+  });
+
+  // Buy a recurring monthly credit add-on (Stripe Checkout, subscription mode)
+  app.post("/api/credits/buy-addon", requireAuth, async (req, res) => {
+    try {
+      const addonId = req.body.addonId || req.body.sku;
+      const addon = CREDIT_ADDONS.find((a) => a.id === addonId);
+      if (!addon) {
+        return res.status(400).json({ error: "Invalid add-on" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({ email: user.email, metadata: { userId: user.id } });
+        await storage.updateUser(user.id, { stripeCustomerId: customer.id });
+        customerId = customer.id;
+      }
+
+      // Find or create product + recurring price tagged as an add-on.
+      const sku = addon.id;
+      let product = (await stripe.products.search({ query: `metadata['mydraft_sku']:'${sku}'` })).data[0];
+      if (!product) {
+        product = await stripe.products.create({
+          name: `MyDraft — ${addon.label}`,
+          metadata: { mydraft_sku: sku, type: "addon", credits: String(addon.credits) },
+        });
+      }
+      const prices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
+      let price = prices.data.find((p) => p.unit_amount === addon.priceCents && p.recurring?.interval === "month");
+      if (!price) {
+        price = await stripe.prices.create({
+          product: product.id,
+          unit_amount: addon.priceCents,
+          currency: "usd",
+          recurring: { interval: "month" },
+          metadata: { type: "addon", credits: String(addon.credits), sku },
+        });
+      }
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: "subscription",
+        line_items: [{ price: price.id, quantity: 1 }],
+        subscription_data: {
+          metadata: { userId: String(user.id), type: "addon", credits: String(addon.credits), sku },
+        },
+        success_url: `${baseUrl}/credits?purchase=success`,
+        cancel_url: `${baseUrl}/credits?purchase=canceled`,
+        metadata: { userId: String(user.id), type: "addon", credits: String(addon.credits), sku },
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Error creating add-on checkout:", error?.message || error);
+      res.status(500).json({ error: "Failed to start checkout", details: error?.message });
     }
   });
 

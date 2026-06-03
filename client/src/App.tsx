@@ -51,6 +51,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { LowCreditBanner } from "@/components/low-credit-banner";
 import { AssistantModal } from "@/components/assistant-modal";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { useScreenSize } from "@/hooks/use-screen-size";
@@ -87,6 +88,7 @@ const TestimonialRewardPage = lazy(() => import("@/pages/testimonial-reward"));
 const CampaignsPage = lazy(() => import("@/pages/campaigns"));
 const CheckoutPage = lazy(() => import("@/pages/checkout"));
 const TrialExpiredPage = lazy(() => import("@/pages/trial-expired"));
+const CreditsPage = lazy(() => import("@/pages/credits"));
 
 function PageLoader() {
   return (
@@ -246,18 +248,21 @@ function AuthenticatedApp() {
           onCompose={handleCompose}
           onDropEmail={handleDropEmail}
         />
-        <SidebarInset className="flex flex-1 min-w-0 overflow-hidden relative">
-          <Inbox 
-            activeFolder={activeFolder} 
-            onFolderChange={setActiveFolder}
-            showComposeDialog={showComposeDialog}
-            setShowComposeDialog={setShowComposeDialog}
-            composeMode={composeMode}
-            setComposeMode={setComposeMode}
-            onOpenAssistant={handleOpenAssistant}
-            onCompose={handleCompose}
-            isAIChatEnabled={isAIChatEnabled}
-          />
+        <SidebarInset className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
+          <LowCreditBanner />
+          <div className="flex flex-1 min-w-0 overflow-hidden relative">
+            <Inbox 
+              activeFolder={activeFolder} 
+              onFolderChange={setActiveFolder}
+              showComposeDialog={showComposeDialog}
+              setShowComposeDialog={setShowComposeDialog}
+              composeMode={composeMode}
+              setComposeMode={setComposeMode}
+              onOpenAssistant={handleOpenAssistant}
+              onCompose={handleCompose}
+              isAIChatEnabled={isAIChatEnabled}
+            />
+          </div>
         </SidebarInset>
       </div>
       
@@ -463,6 +468,11 @@ function AppRoutes() {
       <Route path="/campaigns">
         <ProtectedRoute>
           <CampaignsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/credits">
+        <ProtectedRoute>
+          <CreditsPage />
         </ProtectedRoute>
       </Route>
       <Route path="/">
