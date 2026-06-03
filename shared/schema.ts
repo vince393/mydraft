@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, boolean, serial, integer, jsonb, bigint } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, serial, integer, jsonb, bigint, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
@@ -302,7 +302,15 @@ export const creditTransactions = pgTable("credit_transactions", {
   balanceAfter: integer("balance_after").notNull(),
   reference: text("reference"), // e.g. emailId, stripe id
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
-});
+}, (table) => ({
+  // Hard concurrency guarantee against double-granting on duplicate Stripe webhooks:
+  // two simultaneous deliveries with the same idempotency key (stored as reference)
+  // can't both insert a grant — the second hits this unique violation and is treated
+  // as an idempotent no-op in grantCredits.
+  grantReferenceUnique: uniqueIndex("credit_transactions_grant_reference_unique")
+    .on(table.reference)
+    .where(sql`${table.type} = 'grant' AND ${table.reference} IS NOT NULL`),
+}));
 
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 

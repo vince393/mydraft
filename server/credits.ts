@@ -68,6 +68,22 @@ export function getActionCost(action: CreditAction): number {
 }
 
 // ============================================================
+// Schema safety: indexes not covered by drizzle db:push
+// ============================================================
+
+// Idempotently create the partial unique index that guarantees credit grants are never
+// double-granted on duplicate Stripe webhooks. drizzle-kit db:push prompts interactively
+// for unique-index changes, so we apply it here at startup with raw idempotent SQL instead.
+// Must run before any code relies on `grantCredits` catching the 23505 unique-violation.
+export async function ensureCreditIndexes(): Promise<void> {
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS credit_transactions_grant_reference_unique
+    ON credit_transactions (reference)
+    WHERE type = 'grant' AND reference IS NOT NULL
+  `);
+}
+
+// ============================================================
 // Internal helpers
 // ============================================================
 
@@ -188,7 +204,35 @@ export async function grantCredits(opts: GrantOptions): Promise<CreditLot | null
 
   const txReference = opts.idempotencyKey ?? opts.reference;
 
-  return db.transaction(async (tx) => {
+  // Look up an already-recorded grant for this idempotency key and return its lot (or null
+  // when the prior grant recorded no lot). Used both for the up-front check and to resolve
+  // the result after a unique-violation race.
+  async function existingGrant(): Promise<CreditLot | null> {
+    const [existing] = await db
+      .select()
+      .from(creditTransactions)
+      .where(
+        and(
+          eq(creditTransactions.userId, userId),
+          eq(creditTransactions.type, "grant"),
+          eq(creditTransactions.reference, opts.idempotencyKey!),
+        ),
+      )
+      .limit(1);
+    if (!existing) return null;
+    if (existing.lotId != null) {
+      const [lot] = await db
+        .select()
+        .from(creditLots)
+        .where(eq(creditLots.id, existing.lotId))
+        .limit(1);
+      if (lot) return lot;
+    }
+    return null;
+  }
+
+  try {
+    return await db.transaction(async (tx) => {
     if (opts.idempotencyKey) {
       const [existing] = await tx
         .select()
@@ -248,7 +292,29 @@ export async function grantCredits(opts: GrantOptions): Promise<CreditLot | null
     });
 
     return lot;
-  });
+    });
+  } catch (err) {
+    // Hard concurrency guarantee: if a truly simultaneous webhook delivery already
+    // committed a grant for this idempotency key, the partial unique index on
+    // credit_transactions(reference) WHERE type='grant' rejects our insert with a
+    // 23505 unique-violation. Treat that (and only that specific index) as an
+    // idempotent no-op and return the lot recorded by the winning transaction.
+    if (opts.idempotencyKey && isGrantReferenceViolation(err)) {
+      return existingGrant();
+    }
+    throw err;
+  }
+}
+
+const GRANT_REFERENCE_INDEX = "credit_transactions_grant_reference_unique";
+
+// True only for a 23505 unique-violation raised by our grant-reference partial unique
+// index (as surfaced by the postgres-js driver). Scoped to this constraint so unrelated
+// future unique violations are never silently swallowed.
+function isGrantReferenceViolation(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const e = err as { code?: string; constraint_name?: string };
+  return e.code === "23505" && e.constraint_name === GRANT_REFERENCE_INDEX;
 }
 
 export interface SpendResult {

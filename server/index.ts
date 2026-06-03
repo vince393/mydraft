@@ -8,6 +8,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startEmailScheduler } from "./email-scheduler";
 import { setupEmailSyncWebSocket } from "./ws-email-sync";
+import { ensureCreditIndexes } from "./credits";
 import { runMigrations } from "stripe-replit-sync";
 import { getStripeSync } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
@@ -202,7 +203,15 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize Stripe first
   await initStripe();
-  
+
+  // Ensure DB indexes not covered by drizzle db:push (e.g. the partial unique index
+  // that guarantees credit grants can't be double-granted on duplicate Stripe webhooks).
+  try {
+    await ensureCreditIndexes();
+  } catch (err) {
+    console.error('Failed to ensure credit indexes:', err);
+  }
+
   await registerRoutes(httpServer, app);
   
   startEmailScheduler();
