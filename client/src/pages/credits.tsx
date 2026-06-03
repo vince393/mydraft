@@ -164,15 +164,15 @@ export default function CreditsPage() {
             ) : costEntries.length === 0 ? (
               <p className="text-sm text-muted-foreground/50">No pricing information available.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                 {costEntries.map(([action, cost]) => (
                   <div
                     key={action}
-                    className="flex items-center justify-between rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] px-3 py-2.5"
+                    className="flex items-center justify-between gap-2 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] px-2.5 py-2 sm:px-3 sm:py-2.5"
                     data-testid={`row-cost-${action}`}
                   >
-                    <span className="text-sm text-foreground/80">{humanizeAction(action)}</span>
-                    <Badge variant="secondary" className="gap-1" data-testid={`text-cost-${action}`}>
+                    <span className="text-xs sm:text-sm text-foreground/80 truncate">{humanizeAction(action)}</span>
+                    <Badge variant="secondary" className="gap-1 flex-shrink-0" data-testid={`text-cost-${action}`}>
                       <Coins className="w-3 h-3" />
                       {cost}
                     </Badge>
