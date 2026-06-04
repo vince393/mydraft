@@ -1364,7 +1364,7 @@ export default function OwnerPanel() {
                 ) : (
                   <>
                     <div className="hidden md:block">
-                      <ScrollArea className="h-[500px]">
+                      <div className="max-h-[500px] overflow-auto rounded-md border">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -1374,7 +1374,7 @@ export default function OwnerPanel() {
                               <TableHead>Status</TableHead>
                               <TableHead>Connected Email</TableHead>
                               <TableHead>Joined</TableHead>
-                              <TableHead>Actions</TableHead>
+                              <TableHead className="sticky right-0 z-20 bg-card shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.3)]">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1433,7 +1433,7 @@ export default function OwnerPanel() {
                                     {format(new Date(user.createdAt), "MMM d, yyyy")}
                                   </div>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="sticky right-0 z-10 bg-card shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.3)]">
                                   <div className="flex items-center gap-1">
                                     <Button
                                       size="icon"
@@ -1463,7 +1463,7 @@ export default function OwnerPanel() {
                             ))}
                           </TableBody>
                         </Table>
-                      </ScrollArea>
+                      </div>
                     </div>
 
                     <div className="md:hidden space-y-3 max-h-[500px] overflow-y-auto">

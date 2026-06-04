@@ -1,3 +1,4 @@
 - [Microsoft Graph per-mailbox concurrency](microsoft-graph-mailbox-concurrency.md) — parallel Graph fan-out to one mailbox triggers ErrorTooManyObjectsOpened; route all calls through the per-mailbox gate in server/microsoft.ts.
 - [Radix stuck pointer-events](radix-stuck-pointer-events.md) — "works on touch, dead click on desktop" = Radix left pointer-events:none on body; app-wide MutationObserver guard clears it when no overlay is open.
 - [Credit-gated AI actions](credit-gated-ai-actions.md) — new AI action needs an entry in CREDIT_COSTS (drives the badge) AND a 402 early-return in onError (apiRequest already shows the insufficient-credits toast).
+- [Owner panel wide tables](owner-panel-wide-tables.md) — shadcn ScrollArea has no horizontal bar; wide owner tables hide right-edge row actions on desktop. Use native overflow-auto + sticky right-0 actions column.
