@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Gift, Copy, Users, Trophy, ArrowRight, X, Sparkles, CheckCircle2 } from "lucide-react";
+import { Gift, Copy, Users, Trophy, ArrowRight, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,9 +21,6 @@ import { useToast } from "@/hooks/use-toast";
 interface ReferralData {
   referralCode: string;
   stats: { total: number; subscribed: number };
-  proCreditsUntil: string | null;
-  progressToNextReward: number;
-  subscribedNeeded: number;
 }
 
 export function ReferralBanner({ collapsed }: { collapsed?: boolean }) {
@@ -36,9 +33,6 @@ export function ReferralBanner({ collapsed }: { collapsed?: boolean }) {
   });
 
   if (isDismissed || !data) return null;
-
-  const progress = data.progressToNextReward * 100;
-  const creditsActive = data.proCreditsUntil && new Date(data.proCreditsUntil) > new Date();
 
   const copyLink = () => {
     const link = `https://mydraft.io/login?mode=register&ref=${data.referralCode}`;
@@ -62,7 +56,7 @@ export function ReferralBanner({ collapsed }: { collapsed?: boolean }) {
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>Earn free Pro months</p>
+              <p>Earn 25 credits per friend</p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -70,8 +64,6 @@ export function ReferralBanner({ collapsed }: { collapsed?: boolean }) {
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           data={data}
-          progress={progress}
-          creditsActive={!!creditsActive}
           onCopyLink={copyLink}
         />
       </>
@@ -101,20 +93,14 @@ export function ReferralBanner({ collapsed }: { collapsed?: boolean }) {
           </Button>
           <div className="flex items-center gap-2 mb-1.5">
             <Gift className="w-4 h-4 text-primary flex-shrink-0" />
-            <span className="text-xs font-semibold text-foreground">Free Month</span>
+            <span className="text-xs font-semibold text-foreground">Free Credits</span>
           </div>
           <p className="text-[11px] text-muted-foreground leading-relaxed mb-2.5">
-            Invite a friend who subscribes and get a free month of your plan.
+            Invite a friend — you both get 25 credits when they connect their inbox.
           </p>
-          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden mb-1.5">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-700"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
           <div className="flex items-center justify-between gap-1">
             <span className="text-[10px] text-muted-foreground">
-              {data.progressToNextReward}/1 subscribed
+              {data.stats.subscribed} joined · {data.stats.subscribed * 25} credits earned
             </span>
             <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
               Learn more <ArrowRight className="w-3 h-3" />
@@ -126,8 +112,6 @@ export function ReferralBanner({ collapsed }: { collapsed?: boolean }) {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         data={data}
-        progress={progress}
-        creditsActive={!!creditsActive}
         onCopyLink={copyLink}
       />
     </>
@@ -138,15 +122,11 @@ function ReferralModal({
   open,
   onOpenChange,
   data,
-  progress,
-  creditsActive,
   onCopyLink,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   data: ReferralData;
-  progress: number;
-  creditsActive: boolean;
   onCopyLink: () => void;
 }) {
   const referralLink = `https://mydraft.io/login?mode=register&ref=${data.referralCode}`;
@@ -159,13 +139,13 @@ function ReferralModal({
             <div className="p-2 rounded-lg" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))" }}>
               <Gift className="w-5 h-5 text-primary" />
             </div>
-            Give Pro, Get Pro
+            Give 25, Get 25
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5 pt-2">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Love MyDraft? Share it with people you know. When 1 of your referrals becomes a paying member (past their trial), you'll get a free month of your current plan. No limit on how many you can earn.
+            Love MyDraft? Share it with people you know. When a friend signs up with your link and connects their inbox, you both get 25 credits — automatically. No limit on how many you can earn.
           </p>
 
           <div className="grid grid-cols-3 gap-3">
@@ -176,13 +156,13 @@ function ReferralModal({
             />
             <StepCard
               icon={<Users className="w-4 h-4" />}
-              title="They Join"
-              description="Friends sign up"
+              title="They Connect"
+              description="Friend links inbox"
             />
             <StepCard
               icon={<Trophy className="w-4 h-4" />}
-              title="You Earn"
-              description="Get free Pro"
+              title="You Both Earn"
+              description="25 credits each"
             />
           </div>
 
@@ -208,40 +188,16 @@ function ReferralModal({
 
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Progress</span>
-              <Badge variant="secondary">
-                {data.progressToNextReward} / 1
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Credits Earned</span>
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                {data.stats.subscribed * 25}
               </Badge>
             </div>
-            <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${progress}%`,
-                  background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
-                }}
-              />
-            </div>
-            {data.subscribedNeeded > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                1 friend needs to subscribe and make a payment to earn a reward.
-              </p>
-            ) : (
-              <p className="text-xs text-primary font-medium flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                Reward earned! Keep inviting for more free months.
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              You've earned {data.stats.subscribed * 25} credits from referrals. Keep inviting — there's no limit.
+            </p>
           </div>
-
-          {creditsActive && (
-            <div className="p-3 rounded-lg border border-primary/20" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--primary) / 0.03))" }}>
-              <p className="text-sm font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-primary" />
-                Pro credit active until {new Date(data.proCreditsUntil!).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
-              </p>
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 rounded-lg bg-muted/50 text-center">
@@ -250,12 +206,12 @@ function ReferralModal({
             </div>
             <div className="p-3 rounded-lg bg-muted/50 text-center">
               <p className="text-xl font-bold" data-testid="text-subscribed-referrals-modal">{data.stats.subscribed}</p>
-              <p className="text-xs text-muted-foreground">Became Members</p>
+              <p className="text-xs text-muted-foreground">Connected Inbox</p>
             </div>
           </div>
 
           <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-            Referrals count when your friend signs up with your link, subscribes, and makes their first payment past the trial. Free trials alone don't count.
+            Credits are added automatically when your friend signs up with your link and connects their inbox. One reward per new friend.
           </p>
         </div>
       </DialogContent>

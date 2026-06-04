@@ -491,19 +491,19 @@ const articles: HelpArticle[] = [
     icon: Gift,
     iconColor: "#10B981",
     content: {
-      intro: "Earn free Pro time by referring friends and colleagues to MyDraft. For every 2 people who sign up and subscribe, you get 1 free month of Pro.",
+      intro: "Earn free credits by referring friends and colleagues to MyDraft. When a friend signs up with your link and connects their inbox, you both get 25 credits.",
       paragraphs: [
         "The referral program is available to all MyDraft users. Go to Settings > Referrals to find your unique referral link. Share it with friends, colleagues, or anyone who might benefit from MyDraft. When they sign up using your link, the referral is tracked automatically.",
-        "Here's how the reward works: for every 2 people who sign up through your link AND subscribe to a paid plan (the trial doesn't count — they need to make an actual payment), you earn 1 free month of Pro. There's no limit to how many months you can earn.",
-        "You can track your referral progress in Settings > Referrals. It shows how many people have signed up, how many have subscribed, and how close you are to your next reward. A progress bar shows you exactly where you stand (for example, 1 out of 2 needed for your next free month)."
+        "Here's how the reward works: when a friend signs up through your link and connects their email inbox, you get 25 credits and they get 25 credits too. The credits are added to both accounts automatically — there's nothing to claim. There's no limit to how many friends you can refer.",
+        "You can track your referrals in Settings > Referrals. It shows how many friends have signed up, how many have connected their inbox, and how many credits you've earned."
       ],
       steps: [
         { title: "Get your referral link", description: "Go to Settings > Referrals and copy your unique link." },
         { title: "Share with others", description: "Send the link to friends, colleagues, or share on social media." },
-        { title: "They sign up and subscribe", description: "When 2 people subscribe to a paid plan through your link, you earn a reward." },
-        { title: "Claim your reward", description: "A free month of Pro is applied to your account automatically." },
+        { title: "They sign up and connect", description: "Your friend creates an account through your link and connects their email inbox." },
+        { title: "You both get credits", description: "25 credits are added to both your account and your friend's automatically." },
       ],
-      tip: "The referral only counts when they make their first actual payment — trial signups don't qualify."
+      tip: "The reward only counts once your friend actually connects an email inbox — a signup alone doesn't qualify."
     }
   },
   {
@@ -993,7 +993,7 @@ const articles: HelpArticle[] = [
       intro: "If you have a promo code, you can apply it during checkout or in your billing settings to get a discount on your subscription.",
       paragraphs: [
         "Promo codes can be applied when you're subscribing to a paid plan. During the checkout process, look for a \"Promo Code\" or \"Discount Code\" field. Enter your code there and the discount will be applied to your subscription. You'll see the updated price before confirming your payment.",
-        "Promo codes earned through the referral program work the same way. Each code is single-use and has an expiration date. If you have a code, we recommend applying it as soon as possible. Some codes give you a percentage off, while others (like referral rewards) give you a free month of Pro."
+        "Each promo code is single-use and has an expiration date, so we recommend applying it as soon as possible. Some codes give you a percentage off, while others give you a free month of Pro. (Note: the referral program rewards you with credits automatically, not promo codes — see the referral FAQ for details.)"
       ],
       steps: [
         { title: "Start checkout", description: "Choose a plan and go to the payment page." },

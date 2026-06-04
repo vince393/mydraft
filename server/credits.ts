@@ -64,6 +64,7 @@ export const PLAN_PRICES = {
 
 export const TRIAL_DAYS = 3;
 export const REFERRAL_REFERRER_CREDITS = 25;
+export const REFERRAL_REFERRED_CREDITS = 25;
 
 export function getActionCost(action: CreditAction): number {
   return CREDIT_COSTS[action] ?? 0;

@@ -276,6 +276,7 @@ export interface IStorage {
   generateReferralCode(userId: string): Promise<string>;
   createReferral(referrerUserId: string, referredUserId: string): Promise<Referral>;
   markReferralConnected(referredUserId: string): Promise<Referral | undefined>;
+  revertReferralToRegistered(referredUserId: string): Promise<void>;
   getReferralStats(userId: string): Promise<{ total: number; subscribed: number }>;
   getReferrals(userId: string): Promise<Referral[]>;
   applyProCredit(userId: string, months: number): Promise<void>;
@@ -2742,6 +2743,17 @@ Business Development`,
       ))
       .returning();
     return updated;
+  }
+
+  async revertReferralToRegistered(referredUserId: string): Promise<void> {
+    // Roll a referral back to "registered" if reward granting failed after the
+    // connected transition, so a later connect attempt can retry the rewards.
+    await db.update(referrals)
+      .set({ status: "registered", connectedAt: null })
+      .where(and(
+        eq(referrals.referredUserId, referredUserId),
+        eq(referrals.status, "connected"),
+      ));
   }
 
   async getReferralStats(userId: string): Promise<{ total: number; subscribed: number }> {

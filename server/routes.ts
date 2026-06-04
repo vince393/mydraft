@@ -48,6 +48,7 @@ import {
   PLAN_PRICES,
   TRIAL_DAYS,
   REFERRAL_REFERRER_CREDITS,
+  REFERRAL_REFERRED_CREDITS,
   grantCredits,
   getActiveAddons,
   type CreditAction,
@@ -57,13 +58,20 @@ import {
 // (anti-abuse gate: requires a verified account + a connected mailbox). Idempotent
 // via storage.markReferralConnected which only transitions registered -> connected once.
 async function grantReferralRewardOnConnect(referredUserId: string): Promise<void> {
+  let transitioned: Awaited<ReturnType<typeof storage.markReferralConnected>>;
   try {
-    const transitioned = await storage.markReferralConnected(referredUserId);
-    if (!transitioned) return; // already rewarded or no pending referral
-    const { referrerUserId } = transitioned;
-    if (!referrerUserId || referrerUserId === referredUserId) return; // no self-referral
+    transitioned = await storage.markReferralConnected(referredUserId);
+  } catch (err) {
+    console.error("Failed to mark referral connected:", err);
+    return;
+  }
+  if (!transitioned) return; // already rewarded or no pending referral
+  const { referrerUserId } = transitioned;
+  if (!referrerUserId || referrerUserId === referredUserId) return; // no self-referral
 
-    // Referrer earns bonus credits.
+  try {
+    // Both the referrer and the referred user earn bonus credits. Grants are
+    // idempotent (idempotencyKey), so a retry never double-pays.
     await grantCredits({
       userId: referrerUserId,
       amount: REFERRAL_REFERRER_CREDITS,
@@ -74,18 +82,15 @@ async function grantReferralRewardOnConnect(referredUserId: string): Promise<voi
       metadata: { referredUserId },
     });
 
-    // Referred user gets 1 month of Pro free: Pro-level access (enforced via
-    // proCreditsUntil in getEffectivePlan) plus the Pro monthly credit allowance.
-    // Runs once — markReferralConnected only transitions a pending referral a single time.
-    await storage.applyProCredit(referredUserId, 1);
+    // Referred user also earns bonus credits for connecting their inbox.
     await grantCredits({
       userId: referredUserId,
-      amount: PLAN_MONTHLY_CREDITS.pro,
+      amount: REFERRAL_REFERRED_CREDITS,
       source: "referral",
-      action: "referral_pro_month",
+      action: "referral_welcome",
       reference: referredUserId,
-      idempotencyKey: `referral:promonth:${referredUserId}`,
-      metadata: { note: "referred_pro_free_month" },
+      idempotencyKey: `referral:referred:${referredUserId}`,
+      metadata: { note: "referred_welcome_credits" },
     });
 
     const referrer = await storage.getUser(referrerUserId);
@@ -98,7 +103,12 @@ async function grantReferralRewardOnConnect(referredUserId: string): Promise<voi
       );
     }
   } catch (err) {
-    console.error("Failed to grant referral reward:", err);
+    // A grant failed after the connected transition. Roll the referral back to
+    // "registered" so a later connect attempt retries both rewards cleanly.
+    console.error("Failed to grant referral reward, reverting referral:", err);
+    await storage.revertReferralToRegistered(referredUserId).catch((revertErr) => {
+      console.error("Failed to revert referral after reward error:", revertErr);
+    });
   }
 }
 
@@ -9857,24 +9867,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       const stats = await storage.getReferralStats(userId);
       const referralsList = await storage.getReferrals(userId);
-      const canClaimReward = await storage.getUnclaimedReferralReward(userId);
-      const claimedCodes = await storage.getPromoCodesByOwner(userId);
 
       res.json({
         referralCode,
         stats,
         referrals: referralsList,
-        proCreditsUntil: user.proCreditsUntil,
-        progressToNextReward: canClaimReward ? 1 : 0,
-        subscribedNeeded: canClaimReward ? 0 : 1,
-        canClaimReward,
-        claimedCodes: claimedCodes.map(c => ({
-          code: c.code,
-          redeemed: c.redeemed,
-          creditMonths: c.creditMonths,
-          expiresAt: c.expiresAt,
-          createdAt: c.createdAt,
-        })),
       });
     } catch (error) {
       console.error("Error getting referral stats:", error);
@@ -9893,24 +9890,12 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     }
   });
 
-  app.post("/api/referrals/claim-reward", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const canClaim = await storage.getUnclaimedReferralReward(userId);
-      if (!canClaim) {
-        return res.status(400).json({ error: "No unclaimed reward available. You need 1 subscribed referral per reward." });
-      }
-      const promoCode = await storage.createPromoCode(userId, "referral_reward", 1);
-      res.json({
-        success: true,
-        promoCode: promoCode.code,
-        creditMonths: promoCode.creditMonths,
-        expiresAt: promoCode.expiresAt,
-      });
-    } catch (error) {
-      console.error("Error claiming referral reward:", error);
-      res.status(500).json({ error: "Failed to claim reward" });
-    }
+  // Legacy endpoint — the referral program now grants 25 credits automatically to
+  // both users when the referred user connects their inbox. Nothing to claim.
+  app.post("/api/referrals/claim-reward", requireAuth, async (_req, res) => {
+    res.status(410).json({
+      error: "Referral rewards are now granted automatically as credits when your friend connects their inbox — there's nothing to claim.",
+    });
   });
 
   app.get("/api/referrals/my-codes", requireAuth, async (req, res) => {

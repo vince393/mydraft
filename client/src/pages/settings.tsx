@@ -56,7 +56,6 @@ import {
   Gift,
   Trophy,
   ArrowRight,
-  Ticket,
   Volume2,
   Play,
   Coins,
@@ -104,7 +103,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "ai", label: "AI Preferences", description: "Tone, language, permissions", icon: Sparkles, group: "Email" },
   { id: "email", label: "Email", description: "Signature and connections", icon: Mail, group: "Email" },
   { id: "billing", label: "Billing", description: "Plan and payments", icon: CreditCard, group: "Billing" },
-  { id: "referrals", label: "Referrals", description: "Earn free Pro", icon: Gift, group: "Billing" },
+  { id: "referrals", label: "Referrals", description: "Earn free credits", icon: Gift, group: "Billing" },
   { id: "feedback", label: "Feedback", description: "Send us feedback", icon: MessageSquare, group: "Support" },
 ];
 
@@ -2367,31 +2366,8 @@ function ReferralTab() {
   const { data, isLoading } = useQuery<{
     referralCode: string;
     stats: { total: number; subscribed: number };
-    proCreditsUntil: string | null;
-    progressToNextReward: number;
-    subscribedNeeded: number;
-    canClaimReward: boolean;
-    claimedCodes: { code: string; redeemed: boolean; creditMonths: number; expiresAt: string | null; createdAt: string }[];
   }>({
     queryKey: ["/api/referrals/stats"],
-  });
-
-  const claimRewardMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/referrals/claim-reward");
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to claim reward");
-      }
-      return response.json();
-    },
-    onSuccess: (result) => {
-      toast({ title: "Reward claimed!", description: `Your promo code is ${result.promoCode}. Use it at checkout or apply it in billing.` });
-      queryClient.invalidateQueries({ queryKey: ["/api/referrals/stats"] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Cannot claim reward", description: error.message, variant: "destructive" });
-    },
   });
 
   const referralLink = data?.referralCode
@@ -2411,11 +2387,9 @@ function ReferralTab() {
     );
   }
 
-  const progress = data ? data.progressToNextReward * 100 : 0;
   const subscribedCount = data?.stats.subscribed ?? 0;
   const totalReferred = data?.stats.total ?? 0;
-  const creditsActive = data?.proCreditsUntil && new Date(data.proCreditsUntil) > new Date();
-  const unredeemedCodes = data?.claimedCodes?.filter(c => !c.redeemed) ?? [];
+  const creditsEarned = subscribedCount * 25;
 
   return (
     <div className="space-y-5">
@@ -2426,9 +2400,9 @@ function ReferralTab() {
         <div className="inline-flex items-center justify-center p-3 rounded-xl mb-4" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.08))" }}>
           <Gift className="w-7 h-7 text-primary" />
         </div>
-        <h2 className="text-xl sm:text-2xl font-bold mb-2">Give Pro, Get Pro</h2>
+        <h2 className="text-xl sm:text-2xl font-bold mb-2">Give 25, Get 25</h2>
         <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-          Share MyDraft with friends. When 1 of them becomes a paying member (past their trial), press the claim button to get a promo code for 1 free month of your current plan.
+          Share MyDraft with friends. When a friend signs up with your link and connects their inbox, you both get 25 credits — automatically. No limit on how many you can earn.
         </p>
       </div>
 
@@ -2440,13 +2414,13 @@ function ReferralTab() {
         />
         <ReferralStepCard
           icon={<Users className="w-5 h-5" />}
-          title="They Subscribe"
-          description="Your friend creates an account, subscribes, and makes their first payment."
+          title="They Connect"
+          description="Your friend creates an account and connects their email inbox."
         />
         <ReferralStepCard
-          icon={<Ticket className="w-5 h-5" />}
-          title="Claim Code"
-          description="Press the claim button to get a unique promo code for 1 free month."
+          icon={<Sparkles className="w-5 h-5" />}
+          title="You Both Earn"
+          description="25 credits land in both accounts automatically. No claiming needed."
         />
       </div>
 
@@ -2472,95 +2446,15 @@ function ReferralTab() {
       </SettingsPanel>
 
       <SettingsPanel>
-        <SectionHeader icon={Trophy} title="Progress to Next Reward" description="Earn a code for every subscribed referral" />
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-muted-foreground/60">Subscribed referrals</span>
-            <Badge variant="secondary">
-              {data?.progressToNextReward ?? 0} / 1
-            </Badge>
-          </div>
-          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700 ease-out"
-              style={{
-                width: `${Math.max(progress, 2)}%`,
-                background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
-              }}
-            />
-          </div>
-          {data?.canClaimReward ? (
-            <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-primary/20" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--primary) / 0.03))" }}>
-              <p className="text-sm font-medium text-primary flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
-                You have a reward ready to claim!
-              </p>
-              <Button
-                size="sm"
-                onClick={() => claimRewardMutation.mutate()}
-                disabled={claimRewardMutation.isPending}
-                data-testid="button-claim-reward"
-              >
-                {claimRewardMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Gift className="w-4 h-4 mr-1" />}
-                Claim
-              </Button>
-            </div>
-          ) : data && data.subscribedNeeded > 0 ? (
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <ArrowRight className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-              1 friend needs to subscribe and make a payment to earn a reward.
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-              All rewards claimed. Keep inviting for more!
-            </p>
-          )}
+        <SectionHeader icon={Trophy} title="Credits Earned" description="25 credits for every friend who connects their inbox" />
+        <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-primary/20" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--primary) / 0.03))" }}>
+          <p className="text-sm font-medium text-primary flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+            {creditsEarned} credits earned from referrals
+          </p>
+          <Badge variant="secondary">+{creditsEarned}</Badge>
         </div>
       </SettingsPanel>
-
-      {unredeemedCodes.length > 0 && (
-        <SettingsPanel>
-          <SectionHeader icon={Ticket} title="Your Promo Codes" description="Use these at checkout or apply in billing" />
-          <div className="space-y-2">
-            {unredeemedCodes.map((code) => (
-              <div key={code.code} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Ticket className="w-4 h-4 text-primary flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-mono font-medium truncate" data-testid={`text-promo-code-${code.code}`}>{code.code}</p>
-                    <p className="text-[11px] text-muted-foreground/50">
-                      {code.creditMonths} month free
-                      {code.expiresAt && ` · Expires ${new Date(code.expiresAt).toLocaleDateString()}`}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(code.code, "Code")}
-                  data-testid={`button-copy-promo-${code.code}`}
-                >
-                  <Copy className="w-3.5 h-3.5 mr-1.5" />
-                  Copy
-                </Button>
-              </div>
-            ))}
-          </div>
-        </SettingsPanel>
-      )}
-
-      {creditsActive && (
-        <div
-          className="p-4 rounded-lg border border-primary/20"
-          style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--primary) / 0.03))" }}
-        >
-          <p className="text-sm font-medium flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-            Your Pro credit is active until {new Date(data!.proCreditsUntil!).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
-          </p>
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <SettingsPanel className="text-center">
@@ -2569,12 +2463,12 @@ function ReferralTab() {
         </SettingsPanel>
         <SettingsPanel className="text-center">
           <p className="text-3xl font-bold" data-testid="text-subscribed-referrals">{subscribedCount}</p>
-          <p className="text-sm text-muted-foreground/50 mt-1">Became Members</p>
+          <p className="text-sm text-muted-foreground/50 mt-1">Connected Inbox</p>
         </SettingsPanel>
       </div>
 
       <p className="text-xs text-muted-foreground/60 leading-relaxed text-center">
-        Only active paid subscriptions past the trial period qualify. Promo codes are one-time use and expire after 6 months.
+        Credits are added automatically when your friend signs up with your link and connects their inbox. One reward per new friend.
       </p>
     </div>
   );
