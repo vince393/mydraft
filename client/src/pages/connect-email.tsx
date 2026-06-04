@@ -22,6 +22,22 @@ export default function ConnectEmailPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [detectedProvider, setDetectedProvider] = useState<string | null>(null);
   const [imapError, setImapError] = useState<string | null>(null);
+  const [oauthError, setOauthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("error");
+    if (err === "email_in_use") {
+      setOauthError("This email is already connected to another MyDraft account. Each email can only be linked to one account.");
+    } else if (err === "auth_failed") {
+      setOauthError("We couldn't connect that account. Please try again.");
+    }
+    if (err) {
+      params.delete("error");
+      const newSearch = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (newSearch ? `?${newSearch}` : ""));
+    }
+  }, []);
 
   const { data: emailStatus, isLoading: statusLoading } = useQuery<{ connected: boolean; email?: string; provider?: string }>({
     queryKey: ["/api/email/status"],
@@ -160,6 +176,12 @@ export default function ConnectEmailPage() {
               </div>
             ) : (
               <div className="space-y-3">
+                {oauthError && (
+                  <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-xs" data-testid="text-oauth-error">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>{oauthError}</span>
+                  </div>
+                )}
                 <Button
                   variant="outline"
                   className="w-full h-12 gap-3"

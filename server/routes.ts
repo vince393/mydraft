@@ -2887,6 +2887,13 @@ Return ONLY valid JSON, no other text.`;
         return res.status(400).json({ error: "Email and password are required" });
       }
 
+      const userId = req.session.userId!;
+      const normalizedEmail = email.toLowerCase().trim();
+      const conflictingAccount = await storage.getEmailAccountByEmail(normalizedEmail);
+      if (conflictingAccount && conflictingAccount.userId !== userId) {
+        return res.status(409).json({ error: "This email is already connected to another MyDraft account." });
+      }
+
       let finalImapHost = imapHost;
       let finalImapPort = imapPort || 993;
       let finalSmtpHost = smtpHost;
@@ -2932,14 +2939,13 @@ Return ONLY valid JSON, no other text.`;
         return res.status(400).json({ error: `SMTP connection failed: ${smtpTest.error}` });
       }
 
-      const userId = req.session.userId!;
       const existingAccount = await storage.getEmailAccount(userId);
 
       const encryptedConfig = encryptImapConfig(config);
 
       const accountData = {
         provider: "imap" as const,
-        email,
+        email: normalizedEmail,
         accessToken: encryptedConfig,
         refreshToken: "imap",
         tokenExpiresAt: null,
@@ -3155,6 +3161,11 @@ Return ONLY valid JSON, no other text.`;
 
       const normalizedEmail = tokenData.email.toLowerCase().trim();
 
+      const conflictingAccount = await storage.getEmailAccountByEmail(normalizedEmail);
+      if (conflictingAccount && conflictingAccount.userId !== userId) {
+        return res.redirect("/connect-email?error=email_in_use");
+      }
+
       const existingAccount = await storage.getEmailAccount(userId);
       const currentUser = await storage.getUser(userId);
 
@@ -3305,6 +3316,11 @@ Return ONLY valid JSON, no other text.`;
       const tokenData = await microsoftProvider.exchangeCode(code, redirectUri);
 
       const normalizedEmail = tokenData.email.toLowerCase().trim();
+
+      const conflictingAccount = await storage.getEmailAccountByEmail(normalizedEmail);
+      if (conflictingAccount && conflictingAccount.userId !== userId) {
+        return res.redirect("/connect-email?error=email_in_use");
+      }
 
       const existingAccount = await storage.getEmailAccount(userId);
       const currentUser = await storage.getUser(userId);
