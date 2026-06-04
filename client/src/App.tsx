@@ -19,6 +19,10 @@ function usePageTracking() {
   useEffect(() => {
     if (location === lastTracked.current) return;
     lastTracked.current = location;
+    const clarity = (window as any).clarity;
+    if (typeof clarity === "function") {
+      clarity("set", "page", location);
+    }
     const sessionId = getOrCreateSessionId();
     fetch("/api/analytics/track", {
       method: "POST",
