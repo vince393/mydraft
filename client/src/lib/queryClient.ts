@@ -1,4 +1,4 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction, MutationCache } from "@tanstack/react-query";
 import { createElement } from "react";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -108,6 +108,16 @@ export const getQueryFn: <T>(options: {
   };
 
 export const queryClient = new QueryClient({
+  // Any successful mutation may have spent credits server-side (AI reply,
+  // summarize, translate, chat, inbox scan, etc.). Refresh the balance and
+  // ledger centrally so the displayed credits always reflect reality without
+  // every call site having to invalidate them itself.
+  mutationCache: new MutationCache({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/credits"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/credits/transactions"] });
+    },
+  }),
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
