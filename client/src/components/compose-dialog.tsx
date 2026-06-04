@@ -33,7 +33,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2, Image, FileImage, Loader2, Paperclip, File, PenLine, SpellCheck, Check, AlertCircle } from "lucide-react";
+import { Send, X, ChevronDown, ChevronUp, Undo2, Sparkles, Clock, Calendar as CalendarIcon, Mail, User, Users, Forward, Wand2, ArrowUpRight, ArrowDownRight, FileText, Lock, MessageSquare, Settings2, Image, FileImage, Loader2, Paperclip, File, PenLine, SpellCheck, Check, AlertCircle, Search } from "lucide-react";
+import { SiGoogledrive } from "react-icons/si";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import {
   Select,
@@ -72,7 +73,17 @@ interface UserData {
     };
     emailSignature?: string | null;
     signatureEnabled?: boolean;
+    connectedProvider?: string | null;
   };
+}
+
+interface DriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number | null;
+  iconLink?: string;
+  modifiedTime?: string;
 }
 
 export function ComposeDialog({ 
@@ -137,6 +148,35 @@ export function ComposeDialog({
   const userPlan = userData?.user?.plan || "free";
   const isPro = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
   const canScheduleSend = isPro;
+  const isGoogleConnected = userData?.user?.connectedProvider === "google";
+
+  // Google Drive attachment picker state
+  const [showDrivePicker, setShowDrivePicker] = useState(false);
+  const [driveSearch, setDriveSearch] = useState("");
+  const [debouncedDriveSearch, setDebouncedDriveSearch] = useState("");
+  const [downloadingDriveId, setDownloadingDriveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedDriveSearch(driveSearch), 350);
+    return () => clearTimeout(t);
+  }, [driveSearch]);
+
+  const {
+    data: driveData,
+    isLoading: isLoadingDrive,
+    error: driveError,
+  } = useQuery<{ files: DriveFile[] }>({
+    queryKey: ["/api/drive/files", debouncedDriveSearch],
+    queryFn: async () => {
+      const url = debouncedDriveSearch.trim()
+        ? `/api/drive/files?q=${encodeURIComponent(debouncedDriveSearch.trim())}`
+        : "/api/drive/files";
+      const res = await apiRequest("GET", url);
+      return res.json();
+    },
+    enabled: showDrivePicker && isGoogleConnected,
+    retry: false,
+  });
   
   const userSignature = userData?.user?.emailSignature || "";
   const signatureEnabled = userData?.user?.signatureEnabled || false;
@@ -535,6 +575,51 @@ export function ComposeDialog({
   
   const removeFileAttachment = (index: number) => {
     setFileAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddDriveFile = async (file: DriveFile) => {
+    const maxTotalSize = 50 * 1024 * 1024; // 50MB total
+    const currentTotalSize = fileAttachments.reduce((sum, f) => sum + f.size, 0);
+    if (file.size && currentTotalSize + file.size > maxTotalSize) {
+      toast({
+        title: "Total size exceeded",
+        description: `Cannot add ${file.name} - would exceed 50MB total`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDownloadingDriveId(file.id);
+    try {
+      const res = await apiRequest("GET", `/api/drive/files/${file.id}/download`);
+      const data: { filename: string; contentType: string; base64: string; size: number } = await res.json();
+
+      if (currentTotalSize + data.size > maxTotalSize) {
+        toast({
+          title: "Total size exceeded",
+          description: `Cannot add ${data.filename} - would exceed 50MB total`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setFileAttachments(prev => [...prev, {
+        name: data.filename,
+        size: data.size,
+        type: data.contentType || "application/octet-stream",
+        data: data.base64,
+      }]);
+      toast({ title: "Added from Drive", description: data.filename });
+    } catch (err: any) {
+      let description = "Could not attach that file. Please try again.";
+      try {
+        const parsed = JSON.parse(err?.message?.replace(/^\d+:\s*/, "") || "{}");
+        if (parsed?.message) description = parsed.message;
+      } catch {}
+      toast({ title: "Drive error", description, variant: "destructive" });
+    } finally {
+      setDownloadingDriveId(null);
+    }
   };
   
   const formatFileSize = (bytes: number) => {
@@ -1406,6 +1491,19 @@ export function ComposeDialog({
               >
                 <Paperclip className={`${screen.isMobile ? 'w-[22px] h-[22px]' : 'w-4 h-4'}`} />
               </button>
+
+              {isGoogleConnected && (
+                <button
+                  type="button"
+                  onClick={() => setShowDrivePicker(true)}
+                  disabled={sendMutation.isPending}
+                  className={`${screen.isMobile ? 'w-11 h-11' : 'w-8 h-8'} rounded-full flex items-center justify-center text-foreground/40 hover:text-foreground/60 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30`}
+                  data-testid="button-attach-drive"
+                  title="Attach from Google Drive"
+                >
+                  <SiGoogledrive className={`${screen.isMobile ? 'w-[20px] h-[20px]' : 'w-[15px] h-[15px]'}`} />
+                </button>
+              )}
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1776,6 +1874,83 @@ export function ComposeDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <Dialog open={showDrivePicker} onOpenChange={setShowDrivePicker}>
+      <DialogContent className="max-w-[480px] p-0 gap-0 rounded-2xl overflow-hidden border-black/10 dark:border-white/10 backdrop-blur-2xl" style={{ background: "rgba(var(--background-rgb, 10,10,12), 0.97)" }}>
+        <DialogHeader className="px-5 pt-5 pb-3">
+          <DialogTitle className="flex items-center gap-2.5 text-base font-semibold">
+            <SiGoogledrive className="w-4 h-4 text-[#1FA463]" />
+            Attach from Google Drive
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="px-5 pb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/30" />
+            <Input
+              value={driveSearch}
+              onChange={(e) => setDriveSearch(e.target.value)}
+              placeholder="Search your Drive…"
+              className="pl-9 rounded-xl"
+              data-testid="input-drive-search"
+            />
+          </div>
+        </div>
+
+        <div className="max-h-[360px] overflow-y-auto px-2 pb-3">
+          {isLoadingDrive ? (
+            <div className="flex flex-col items-center justify-center py-12 text-foreground/40">
+              <Loader2 className="w-5 h-5 animate-spin mb-2" />
+              <span className="text-sm">Loading your files…</span>
+            </div>
+          ) : driveError ? (
+            <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+              <AlertCircle className="w-6 h-6 text-rose-400/70 mb-2" />
+              <p className="text-sm text-foreground/60">
+                Couldn't access your Drive. You may need to reconnect your Google account to grant Drive permission.
+              </p>
+            </div>
+          ) : !driveData?.files?.length ? (
+            <div className="flex flex-col items-center justify-center py-12 text-foreground/40">
+              <SiGoogledrive className="w-6 h-6 mb-2 opacity-40" />
+              <span className="text-sm">{debouncedDriveSearch ? "No matching files" : "No files found"}</span>
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {driveData.files.map((file) => (
+                <button
+                  key={file.id}
+                  type="button"
+                  onClick={() => handleAddDriveFile(file)}
+                  disabled={downloadingDriveId !== null}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
+                  data-testid={`drive-file-${file.id}`}
+                >
+                  {file.iconLink ? (
+                    <img src={file.iconLink} alt="" className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <File className="w-4 h-4 flex-shrink-0 text-foreground/40" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-foreground/80 truncate">{file.name}</div>
+                    {file.size ? (
+                      <div className="text-[11px] text-foreground/30">{formatFileSize(file.size)}</div>
+                    ) : (
+                      <div className="text-[11px] text-foreground/30">Google file · exports as document</div>
+                    )}
+                  </div>
+                  {downloadingDriveId === file.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />
+                  ) : (
+                    <Paperclip className="w-3.5 h-3.5 text-foreground/0 group-hover:text-foreground/40 transition-colors flex-shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

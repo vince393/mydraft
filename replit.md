@@ -72,7 +72,8 @@ Preferred communication style: Simple, everyday language.
 ### Email Provider Integration
 - **Providers**: Google Gmail API and Microsoft Graph API.
 - **Authentication**: OAuth 2.0 with automatic token refresh.
-- **Scopes**: Read-only + send (no modify). Gmail: `gmail.readonly`, `gmail.send`. Microsoft: `Mail.Read`, `Mail.Send`.
+- **Scopes**: Read-only + send (no modify). Gmail: `gmail.readonly`, `gmail.send`, `drive.readonly` (for attaching Google Drive files to outgoing emails). Microsoft: `Mail.Read`, `Mail.Send`.
+- **Google Drive Attachments**: Google-connected users can attach Drive files in the composer. Endpoints: `GET /api/drive/files?q=` (list/search) and `GET /api/drive/files/:id/download` (returns base64). Google-native docs are exported (Docs→PDF, Sheets→xlsx, Slides→pptx, Drawings→png). 25MB/file cap. Requires the Drive API enabled in the Google Cloud project, and existing users must reconnect Google to grant the new scope (handled gracefully with a reconnect prompt).
 - **Local-only actions**: Read/unread, star, archive, trash, delete are stored in `local_email_states` table only — never modify the user's real mailbox in their provider.
 - **Architecture**: Unified `IEmailProvider` interface with specific implementations for Google (`server/gmail.ts`) and Microsoft (`server/microsoft.ts`).
 
