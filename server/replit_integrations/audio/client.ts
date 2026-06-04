@@ -5,6 +5,36 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+// The audio modality returns WAV data with a streaming header where the RIFF
+// and "data" chunk sizes are left as 0xFFFFFFFF (unknown length). Strict audio
+// decoders (notably iOS Safari and some Chrome builds) refuse to play such a
+// file, which breaks Read Aloud on every platform. Rewrite the size fields to
+// the real byte lengths so the WAV is a valid, fully-specified file.
+function normalizeWavHeader(buf: Buffer): Buffer {
+  if (buf.length < 44) return buf;
+  if (buf.toString("latin1", 0, 4) !== "RIFF" || buf.toString("latin1", 8, 12) !== "WAVE") {
+    return buf;
+  }
+  const out = Buffer.from(buf);
+  out.writeUInt32LE(out.length - 8, 4);
+
+  let offset = 12;
+  while (offset + 8 <= out.length) {
+    const id = out.toString("latin1", offset, offset + 4);
+    const size = out.readUInt32LE(offset + 4) >>> 0;
+    if (id === "data") {
+      const remaining = out.length - (offset + 8);
+      if (size === 0xffffffff || size === 0 || size > remaining) {
+        out.writeUInt32LE(remaining, offset + 4);
+      }
+      break;
+    }
+    if (size === 0xffffffff || offset + 8 + size > out.length) break;
+    offset += 8 + size + (size % 2);
+  }
+  return out;
+}
+
 export async function speechToText(audioBuffer: Buffer, mimeType: string = "audio/webm"): Promise<string> {
   const audioFile = new File([audioBuffer], "audio.webm", { type: mimeType });
   
@@ -77,8 +107,13 @@ export async function textToSpeech(text: string, voice: string = "nova"): Promis
     const choice = response.choices[0];
     const audioData = (choice?.message as { audio?: { data?: string } })?.audio;
     const base64Audio = audioData?.data || "";
-    console.log(`[TTS] Result: audioDataLength=${base64Audio.length}, hasAudio=${!!base64Audio}`);
-    return base64Audio;
+    if (!base64Audio) {
+      console.log(`[TTS] Result: audioDataLength=0, hasAudio=false`);
+      return "";
+    }
+    const fixed = normalizeWavHeader(Buffer.from(base64Audio, "base64")).toString("base64");
+    console.log(`[TTS] Result: audioDataLength=${fixed.length}, hasAudio=true`);
+    return fixed;
   } catch (error: any) {
     console.error("[TTS] Error:", error?.message || error);
     return "";

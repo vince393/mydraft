@@ -59,6 +59,13 @@ import { EmailIframeRenderer } from "@/components/email-iframe-renderer";
 import { CreditCostBadge, useActionCost } from "@/components/credit-cost-badge";
 import type { Email, Draft } from "@shared/schema";
 
+// A tiny silent WAV used to "unlock" the audio element inside the click handler.
+// iOS Safari (and some mobile Chrome builds) only allow playback on an element
+// that received a play() call during a user gesture; the real audio arrives
+// after an async fetch, so we prime the element synchronously here first.
+const SILENT_WAV_DATA_URI =
+  "data:audio/wav;base64,UklGRiQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
+
 interface EmailAttachment {
   id: string;
   filename: string;
@@ -422,11 +429,23 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     const abortController = new AbortController();
     readAloudAbortRef.current = abortController;
 
+    // Create and unlock the audio element synchronously inside the user gesture
+    // so playback is allowed later (after the async fetch) on mobile browsers.
+    const audio = new Audio();
+    audio.preload = "auto";
+    readAloudAudioRef.current = audio;
+    try {
+      audio.src = SILENT_WAV_DATA_URI;
+      const unlock = audio.play();
+      if (unlock && typeof unlock.then === "function") unlock.catch(() => {});
+    } catch {}
+
     const playAudioBlob = async (blob: Blob): Promise<void> => {
       const audioUrl = URL.createObjectURL(blob);
       readAloudUrlRef.current = audioUrl;
 
-      const audio = new Audio();
+      // Reuse the element that was unlocked during the click gesture.
+      const audio = readAloudAudioRef.current ?? new Audio();
       audio.preload = "auto";
       readAloudAudioRef.current = audio;
 
