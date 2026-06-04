@@ -54,7 +54,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Seo
         title="MyDraft — AI Email Assistant for Inbox Management & Reply Drafting"
-        description="Draft replies, summarize, translate, and auto-sort your inbox with AI. Connect Gmail or Outlook and reply in seconds. Free plan, no credit card required."
+        description="Draft replies, summarize, translate, and auto-sort your inbox with AI. Connect Gmail or Outlook and reply in seconds. Free plan available."
         path="/"
       />
       <MarketingNav />
@@ -152,7 +152,7 @@ function HeroSection({ getStartedHref, isLoggedIn }: { getStartedHref: string; i
                 transitionDelay: '600ms'
               }}
             >
-              No credit card needed. Connect in under 2 minutes.
+              Free plan available. Connect in under 2 minutes.
             </p>
           </div>
           
