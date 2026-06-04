@@ -8,6 +8,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from "@/components/ui/alert-dialog";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -86,6 +94,7 @@ export function ComposeDialog({
   const [bcc, setBcc] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   
   // Schedule send state (Pro/Business only)
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
@@ -440,6 +449,7 @@ export function ComposeDialog({
     setGrammarSuggestions(null);
     setDismissedSuggestions(new Set());
     setIsCheckingGrammar(false);
+    setShowCloseConfirm(false);
     initializedRef.current = false;
     lastEmailIdRef.current = undefined;
   };
@@ -936,6 +946,73 @@ export function ComposeDialog({
     resetForm();
   };
 
+  // True when the user has entered anything worth keeping.
+  const hasUnsavedContent = () => {
+    if (to.trim() || cc.trim() || bcc.trim() || subject.trim()) return true;
+    if (fileAttachments.length > 0 || attachedImages.length > 0) return true;
+    return hasUserContent();
+  };
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async () => {
+      const toRecipients = to.split(",").map(e => e.trim()).filter(Boolean);
+      const recipientEmail =
+        toRecipients[0] || originalEmail?.fromEmail || "(no recipient)";
+      const recipientName = originalEmail?.from || recipientEmail;
+      const draftSubject = subject.trim() || originalEmail?.subject || "(no subject)";
+      const content = body && stripHtmlTags(body).trim() ? body : draftSubject;
+
+      // drafts.emailId is an integer column; provider IDs are often non-numeric,
+      // so only include it when it's a valid integer.
+      const rawEmailId = originalEmail?.id;
+      const numericEmailId =
+        rawEmailId !== undefined && Number.isInteger(Number(rawEmailId))
+          ? Number(rawEmailId)
+          : undefined;
+
+      const response = await apiRequest("POST", "/api/drafts", {
+        recipientEmail,
+        recipientName,
+        subject: draftSubject,
+        content,
+        emailId: numericEmailId,
+        isAiGenerated: false,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+      toast({
+        title: "Draft saved",
+        description: "You can find it in your Drafts.",
+      });
+      setShowCloseConfirm(false);
+      handleClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Couldn't save draft",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Intercept close requests (X button, Escape, click outside).
+  const requestClose = (nextOpen: boolean) => {
+    if (nextOpen) return;
+    if (hasUnsavedContent()) {
+      setShowCloseConfirm(true);
+      return;
+    }
+    handleClose();
+  };
+
+  const handleDiscardDraft = () => {
+    setShowCloseConfirm(false);
+    handleClose();
+  };
+
   const getModeIcon = () => {
     const iconSize = screen.isMobile ? "w-5 h-5" : "w-4 h-4";
     switch (mode) {
@@ -956,7 +1033,8 @@ export function ComposeDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <>
+    <Dialog open={open} onOpenChange={requestClose}>
       <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'w-[92vw] max-w-[860px] h-[82vh] max-h-[820px] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-black/10 dark:border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
         {/* Header */}
         <DialogHeader className={`flex-shrink-0 ${screen.isMobile ? 'px-5 py-4' : 'px-5 py-3.5'} border-b border-black/[0.06] dark:border-white/[0.06]`}>
@@ -1650,5 +1728,54 @@ export function ComposeDialog({
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+      <AlertDialogContent className="max-w-[420px] rounded-2xl border-black/10 dark:border-white/10 backdrop-blur-2xl" style={{ background: "rgba(var(--background-rgb, 10,10,12), 0.97)" }}>
+        <AlertDialogHeader>
+          <div className="mx-auto mb-1 w-12 h-12 rounded-xl flex items-center justify-center border border-primary/20" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.1))" }}>
+            <FileText className="w-5 h-5 text-primary" />
+          </div>
+          <AlertDialogTitle className="text-center text-base font-semibold">Save this draft?</AlertDialogTitle>
+          <AlertDialogDescription className="text-center text-sm leading-relaxed">
+            You have an unfinished message. Save it to your drafts so you can pick up where you left off, or discard it.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-col sm:flex-col gap-2 mt-1">
+          <Button
+            onClick={() => saveDraftMutation.mutate()}
+            disabled={saveDraftMutation.isPending}
+            className="w-full"
+            data-testid="button-save-draft-confirm"
+          >
+            {saveDraftMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4 mr-2" />
+            )}
+            Save to drafts
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={handleDiscardDraft}
+            disabled={saveDraftMutation.isPending}
+            className="w-full text-rose-500 hover:text-rose-500 hover:bg-rose-500/10"
+            data-testid="button-discard-draft-confirm"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Discard draft
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setShowCloseConfirm(false)}
+            disabled={saveDraftMutation.isPending}
+            className="w-full text-muted-foreground"
+            data-testid="button-keep-editing"
+          >
+            Keep editing
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

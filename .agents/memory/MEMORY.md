@@ -3,3 +3,4 @@
 - [Credit-gated AI actions](credit-gated-ai-actions.md) — new AI action needs an entry in CREDIT_COSTS (drives the badge) AND a 402 early-return in onError (apiRequest already shows the insufficient-credits toast).
 - [Owner panel wide tables](owner-panel-wide-tables.md) — shadcn ScrollArea has no horizontal bar; wide owner tables hide right-edge row actions on desktop. Use native overflow-auto + sticky right-0 actions column.
 - [Credit balance UI staleness](credit-balance-ui-staleness.md) — "AI doesn't take my credits" is usually stale UI, not missing charge; verify spends in PROD db, refresh balance via global MutationCache onSuccess.
+- [drafts.emailId is an integer](drafts-emailid-integer.md) — never pass a non-numeric provider id into POST /api/drafts emailId; guard with Number.isInteger or it 500s.
