@@ -1,1 +1,2 @@
 - [Microsoft Graph per-mailbox concurrency](microsoft-graph-mailbox-concurrency.md) — parallel Graph fan-out to one mailbox triggers ErrorTooManyObjectsOpened; route all calls through the per-mailbox gate in server/microsoft.ts.
+- [Radix stuck pointer-events](radix-stuck-pointer-events.md) — "works on touch, dead click on desktop" = Radix left pointer-events:none on body; app-wide MutationObserver guard clears it when no overlay is open.
