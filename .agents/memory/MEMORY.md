@@ -1,6 +1,1 @@
-- [drizzle-kit push prompts](drizzle-push-interactive-prompt.md) — db:push hangs on interactive select prompts; resolve the blocking constraint via SQL first, then push runs non-interactively.
-- [Credit grant idempotency](credit-grant-idempotency.md) — Stripe retries webhooks; every webhook grantCredits must pass a price/line-specific idempotencyKey or it double-grants.
-- [SEO meta strategy](seo-meta-strategy.md) — static OG/JSON-LD in index.html (for non-JS social scrapers) + runtime <Seo> head manager for per-page tags; keep robots directives in sync between both.
-- [Stripe customer id staleness](stripe-customer-staleness.md) — stored stripeCustomerId can vanish across Stripe key/mode switches; validate-or-recreate via ensureStripeCustomer before any customer-bound call.
-- [On-site Stripe checkout](onsite-stripe-checkout.md) — packs use PaymentIntent+confirmCardPayment, addons/plans use SetupIntent+subscription; same idempotencyKey across confirm-endpoint & webhook; guard subscription creates against duplicates.
-- [Credit gating pattern](credit-gating-pattern.md) — metered AI billing policy: flat reserve vs dynamic reserve-1-then-settle, what stays free, Stripe trial grant, referral entitlement, grant idempotencyKey vs global unique reference index.
+- [Microsoft Graph per-mailbox concurrency](microsoft-graph-mailbox-concurrency.md) — parallel Graph fan-out to one mailbox triggers ErrorTooManyObjectsOpened; route all calls through the per-mailbox gate in server/microsoft.ts.

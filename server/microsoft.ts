@@ -18,7 +18,62 @@ const SCOPES = [
 const GRAPH_URL = "https://graph.microsoft.com/v1.0";
 const AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0";
 
+// Microsoft Graph caps how many connections may be open against a single
+// mailbox at once; exceeding it returns "ErrorTooManyObjectsOpened" ("Too many
+// concurrent connections opened"). Several endpoints fan out across folders in
+// parallel (e.g. /api/emails fetches 5 folders, /api/emails/unread-counts
+// fetches 3) and the inbox triggers both at the same time, which can briefly
+// open many connections to one mailbox. We gate Graph requests per access token
+// so a single mailbox never has more than a few requests in flight at once; the
+// rest queue and run as slots free up.
+const MAX_CONCURRENT_PER_MAILBOX = 3;
+
+interface MailboxGate {
+  active: number;
+  queue: Array<() => void>;
+}
+const mailboxGates = new Map<string, MailboxGate>();
+
+function acquireMailboxSlot(key: string): Promise<() => void> {
+  let gate = mailboxGates.get(key);
+  if (!gate) {
+    gate = { active: 0, queue: [] };
+    mailboxGates.set(key, gate);
+  }
+  const g = gate;
+  return new Promise((resolve) => {
+    const grant = () => {
+      g.active++;
+      let released = false;
+      resolve(() => {
+        if (released) return;
+        released = true;
+        g.active--;
+        const next = g.queue.shift();
+        if (next) next();
+        else if (g.active === 0 && g.queue.length === 0) mailboxGates.delete(key);
+      });
+    };
+    if (g.active < MAX_CONCURRENT_PER_MAILBOX) grant();
+    else g.queue.push(grant);
+  });
+}
+
+function isTooManyObjectsError(text: string | null): boolean {
+  if (!text) return false;
+  return text.includes("ErrorTooManyObjectsOpened") || text.includes("Too many concurrent connections");
+}
+
 async function graphRequest(accessToken: string, path: string, options: RequestInit = {}): Promise<Response> {
+  const releaseSlot = await acquireMailboxSlot(accessToken);
+  try {
+    return await graphRequestWithRetry(accessToken, path, options);
+  } finally {
+    releaseSlot();
+  }
+}
+
+async function graphRequestWithRetry(accessToken: string, path: string, options: RequestInit = {}): Promise<Response> {
   const maxRetries = 3;
   let lastResponse: Response | null = null;
 
@@ -32,13 +87,21 @@ async function graphRequest(accessToken: string, path: string, options: RequestI
       },
     });
 
-    if (response.status === 429 || response.status === 503 || response.status === 504) {
+    // "ErrorTooManyObjectsOpened" comes back as a 5xx with the code in the body;
+    // treat it like throttling so we back off and retry instead of erroring out.
+    let tooManyObjects = false;
+    if (response.status >= 500) {
+      const peek = await response.clone().text().catch(() => null);
+      tooManyObjects = isTooManyObjectsError(peek);
+    }
+
+    if (response.status === 429 || response.status === 503 || response.status === 504 || tooManyObjects) {
       lastResponse = response;
       if (attempt >= maxRetries) break;
       const retryAfterRaw = response.headers.get("Retry-After");
       const retryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : NaN;
       const delayMs = !isNaN(retryAfterSec) && retryAfterSec > 0 ? retryAfterSec * 1000 : Math.min(1000 * Math.pow(2, attempt), 8000);
-      console.warn(`[Microsoft] ${response.status} on ${path}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+      console.warn(`[Microsoft] ${response.status}${tooManyObjects ? " (ErrorTooManyObjectsOpened)" : ""} on ${path}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
       await new Promise(resolve => setTimeout(resolve, delayMs));
       continue;
     }
