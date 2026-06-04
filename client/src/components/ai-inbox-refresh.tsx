@@ -5,6 +5,7 @@ import { Sparkles, Wand2, Loader2, Check, X, Archive, Trash2, Star, Mail, Folder
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { CreditCostBadge } from "@/components/credit-cost-badge";
 
 interface AiSuggestion {
   id: number;
@@ -59,7 +60,8 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
         toast({ title: "Inbox looks clean", description: "No actions needed right now." });
       }
     },
-    onError: () => {
+    onError: (err: any) => {
+      if (err?.status === 402) return;
       toast({ title: "Analysis failed", description: "Please try again.", variant: "destructive" });
     },
   });
@@ -87,7 +89,8 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
       onRefreshComplete?.();
       setIsOpen(false);
     },
-    onError: () => {
+    onError: (err: any) => {
+      if (err?.status === 402) return;
       toast({ title: "Error", description: "Failed to apply actions.", variant: "destructive" });
     },
   });
@@ -226,6 +229,7 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                   >
                     <Wand2 className="w-3.5 h-3.5" />
                     Scan inbox
+                    <CreditCostBadge action="inbox_refresh" className="ml-0.5" />
                   </button>
                 </div>
               ) : (
@@ -297,7 +301,10 @@ export function AiInboxRefreshButton({ onRefreshComplete, compact = false, asMen
                       style={{ border: "1px solid rgba(var(--overlay-rgb), 0.06)" }}
                       data-testid="button-rescan-inbox"
                     >
-                      Rescan
+                      <span className="inline-flex items-center gap-1.5">
+                        Rescan
+                        <CreditCostBadge action="inbox_refresh" />
+                      </span>
                     </button>
                     <button
                       onClick={() => executeMutation.mutate(selectedIds)}

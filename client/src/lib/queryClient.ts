@@ -64,7 +64,11 @@ function cleanErrorMessage(status: number, raw: string): string {
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(cleanErrorMessage(res.status, text));
+    const error = new Error(cleanErrorMessage(res.status, text)) as Error & {
+      status?: number;
+    };
+    error.status = res.status;
+    throw error;
   }
 }
 

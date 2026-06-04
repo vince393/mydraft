@@ -35,6 +35,7 @@ export const CREDIT_COSTS = {
   read_aloud: 1,
   voice_chat: 2,
   image_generate: 5,
+  inbox_refresh: 1,
   language_detect: 0,
 } as const;
 
