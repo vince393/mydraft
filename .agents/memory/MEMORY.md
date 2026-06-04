@@ -6,4 +6,4 @@
 - [drafts.emailId is an integer](drafts-emailid-integer.md) — never pass a non-numeric provider id into POST /api/drafts emailId; guard with Number.isInteger or it 500s.
 - [TTS / Read Aloud playback](tts-read-aloud.md) — AI WAV has 0xFFFFFFFF chunk sizes (breaks strict decoders); fix header server-side + unlock audio in the click gesture for mobile.
 - [Referral system status](referral-system.md) — feature works end-to-end; rewards pay ONLY on inbox-connect (intentional); don't change trigger without asking.
-- [Email-account uniqueness](email-account-uniqueness.md) — one mailbox = one account (anti-credit-farming); app-level check only, no DB unique constraint (race-prone); store normalized email.
+- [Email-account uniqueness](email-account-uniqueness.md) — one mailbox = one account; app check + advisory-lock create (NO unique index, would deadlock prod publish); owner dedup tool for existing dups.

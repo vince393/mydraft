@@ -35,6 +35,8 @@ export interface IStorage {
   getEmailAccount(userId: string): Promise<EmailAccount | undefined>;
   getEmailAccountByEmail(email: string): Promise<EmailAccount | undefined>;
   createEmailAccount(account: InsertEmailAccount): Promise<EmailAccount>;
+  upsertEmailAccountExclusive(userId: string, account: Omit<InsertEmailAccount, "userId">): Promise<{ ok: true; account: EmailAccount; created: boolean } | { ok: false }>;
+  deduplicateEmailAccounts(): Promise<{ removed: number; details: { email: string; keptUserId: string; removedUserIds: string[] }[] }>;
   updateEmailAccount(userId: string, updates: Partial<EmailAccount>): Promise<EmailAccount | undefined>;
   deleteEmailAccount(userId: string): Promise<boolean>;
 
@@ -892,6 +894,89 @@ Business Development`,
   async createEmailAccount(account: InsertEmailAccount): Promise<EmailAccount> {
     const [created] = await db.insert(emailAccounts).values(account).returning();
     return created;
+  }
+
+  // Atomic, race-safe connect (create OR reconnect): serializes concurrent
+  // connects of the same email via a Postgres transaction-level advisory lock so
+  // the same mailbox can never be linked to two different accounts
+  // (anti-credit-farming). The conflict check uses lower(trim(email)) so legacy
+  // un-normalized rows are also caught. Returns `created` so callers can fire
+  // welcome/referral side effects only on a genuine new connection.
+  async upsertEmailAccountExclusive(
+    userId: string,
+    account: Omit<InsertEmailAccount, "userId">,
+  ): Promise<{ ok: true; account: EmailAccount; created: boolean } | { ok: false }> {
+    const normalizedEmail = account.email.toLowerCase().trim();
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${normalizedEmail}, 0))`);
+      const [conflict] = await tx
+        .select()
+        .from(emailAccounts)
+        .where(
+          and(
+            sql`lower(trim(${emailAccounts.email})) = ${normalizedEmail}`,
+            ne(emailAccounts.userId, userId),
+          ),
+        )
+        .limit(1);
+      if (conflict) {
+        return { ok: false as const };
+      }
+      const [own] = await tx
+        .select()
+        .from(emailAccounts)
+        .where(eq(emailAccounts.userId, userId))
+        .limit(1);
+      if (own) {
+        const [updated] = await tx
+          .update(emailAccounts)
+          .set({ ...account, email: normalizedEmail, updatedAt: new Date() })
+          .where(eq(emailAccounts.userId, userId))
+          .returning();
+        return { ok: true as const, account: updated, created: false };
+      }
+      const [created] = await tx
+        .insert(emailAccounts)
+        .values({ userId, ...account, email: normalizedEmail })
+        .returning();
+      return { ok: true as const, account: created, created: true };
+    });
+  }
+
+  // One-time owner maintenance: removes duplicate email_accounts rows that share
+  // the same normalized email, keeping the earliest-connected account.
+  async deduplicateEmailAccounts(): Promise<{ removed: number; details: { email: string; keptUserId: string; removedUserIds: string[] }[] }> {
+    const all = await db.select().from(emailAccounts);
+    const byEmail = new Map<string, EmailAccount[]>();
+    for (const acc of all) {
+      const key = acc.email.toLowerCase().trim();
+      const arr = byEmail.get(key) || [];
+      arr.push(acc);
+      byEmail.set(key, arr);
+    }
+    let removed = 0;
+    const details: { email: string; keptUserId: string; removedUserIds: string[] }[] = [];
+    for (const [email, accounts] of Array.from(byEmail.entries())) {
+      if (accounts.length <= 1) {
+        const only = accounts[0];
+        if (only.email !== email) {
+          await db.update(emailAccounts).set({ email }).where(eq(emailAccounts.id, only.id));
+        }
+        continue;
+      }
+      accounts.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      const keep = accounts[0];
+      const toRemove = accounts.slice(1);
+      for (const acc of toRemove) {
+        await db.delete(emailAccounts).where(eq(emailAccounts.id, acc.id));
+        removed++;
+      }
+      if (keep.email !== email) {
+        await db.update(emailAccounts).set({ email }).where(eq(emailAccounts.id, keep.id));
+      }
+      details.push({ email, keptUserId: keep.userId, removedUserIds: toRemove.map((a) => a.userId) });
+    }
+    return { removed, details };
   }
 
   async updateEmailAccount(userId: string, updates: Partial<EmailAccount>): Promise<EmailAccount | undefined> {

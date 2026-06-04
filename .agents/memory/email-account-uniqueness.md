@@ -1,12 +1,12 @@
 ---
 name: Email-account connection uniqueness
-description: One email address may connect to only one MyDraft user; how it's enforced and its gaps.
+description: One email address may connect to only one MyDraft user; how it's enforced and why no UNIQUE index.
 ---
 
-A given mailbox (Gmail/Microsoft/IMAP) must map to ONE MyDraft account, to stop credit farming (reconnecting the same inbox on a new account to re-trigger referral + monthly credit grants).
+A given mailbox (Gmail/Microsoft/IMAP) must map to exactly ONE MyDraft account, to stop credit farming (reconnecting the same inbox on a fresh account to re-trigger referral + monthly credit grants).
 
-**Enforcement:** app-level only. Each connect path (IMAP route, Google + Microsoft OAuth callbacks) calls `getEmailAccountByEmail` and rejects when an existing row has a different `user_id` (IMAP -> 409 JSON; OAuth -> redirect `/connect-email?error=email_in_use`, banner shown). Self-reconnect (same user) is allowed. Always persist the email normalized (`lower().trim()`) — `getEmailAccountByEmail` normalizes the lookup input, so an un-normalized stored value would be missed.
+**Invariant & enforcement:** every connect path (create AND reconnect, all providers) writes through ONE atomic storage method that takes a Postgres transaction-level advisory lock on the normalized email, re-checks ownership with a `lower(trim(email))` comparison (so legacy un-normalized rows are caught), then inserts or updates. It returns whether the row was newly created so callers fire welcome/referral/activity side effects only on a genuine first connect. Emails are always stored normalized (lower+trim). The earlier bug class: protecting only the create branch left the reconnect/update branch race-vulnerable — both branches must share the locked path.
 
-**Why:** `email_accounts.email` has NO DB unique constraint. So the guard is check-then-write and is race-vulnerable, and historically prod already had a real duplicate (one gmail on two accounts) created before the guard existed.
+**Why an advisory lock and NOT a UNIQUE index on the email column:** a UNIQUE index is applied to production by the publish-time schema diff, which FAILS if a duplicate already exists in prod (it did once). The same publish also ships the cleanup tool that would remove the duplicate — so the index step failing blocks the very tool that fixes it (deadlock). The advisory lock gives the same DB-enforced guarantee with no schema diff and no prod-migration risk.
 
-**How to apply:** if hardening to a DB-level guarantee, first dedupe existing rows (destructive — pick which account keeps the email, needs user consent), THEN add a unique index on `lower(trim(email))` and map unique-violation errors to the same friendly 409 / email_in_use message. Don't add the unique index blindly or the prod migration fails on existing duplicates.
+**Existing-duplicate cleanup:** the agent cannot write production data (prod is read-only to the agent). So pre-existing duplicates are cleared by an owner-only action (dedup keeps the earliest `created_at`, deletes the rest, and normalizes the surviving row's email). Owner runs it once on the live site after publish.

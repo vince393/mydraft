@@ -751,6 +751,26 @@ export default function OwnerPanel() {
     },
   });
 
+  const cleanupDuplicateEmailsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/owner/cleanup-duplicate-emails", {});
+      return res.json() as Promise<{ removed: number; details: { email: string }[] }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/owner/users"] });
+      toast({
+        title: data.removed > 0 ? "Duplicate connections removed" : "No duplicates found",
+        description:
+          data.removed > 0
+            ? `Removed ${data.removed} duplicate email connection${data.removed === 1 ? "" : "s"} (kept the earliest account).`
+            : "Every connected email is linked to only one account.",
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to clean up duplicate connections", variant: "destructive" });
+    },
+  });
+
   const [creditUser, setCreditUser] = useState<UserData | null>(null);
   const [creditAmount, setCreditAmount] = useState("");
 
@@ -1329,8 +1349,21 @@ export default function OwnerPanel() {
           <TabsContent value="users">
             <Card>
               <CardHeader>
-                <CardTitle>All Users</CardTitle>
-                <CardDescription>View and manage all registered users</CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <CardTitle>All Users</CardTitle>
+                    <CardDescription>View and manage all registered users</CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => cleanupDuplicateEmailsMutation.mutate()}
+                    disabled={cleanupDuplicateEmailsMutation.isPending}
+                    data-testid="button-cleanup-duplicate-emails"
+                  >
+                    {cleanupDuplicateEmailsMutation.isPending ? "Cleaning up..." : "Fix duplicate email connections"}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4">

@@ -2939,8 +2939,6 @@ Return ONLY valid JSON, no other text.`;
         return res.status(400).json({ error: `SMTP connection failed: ${smtpTest.error}` });
       }
 
-      const existingAccount = await storage.getEmailAccount(userId);
-
       const encryptedConfig = encryptImapConfig(config);
 
       const accountData = {
@@ -2955,10 +2953,9 @@ Return ONLY valid JSON, no other text.`;
         smtpPort: finalSmtpPort,
       };
 
-      if (existingAccount) {
-        await storage.updateEmailAccount(userId, accountData);
-      } else {
-        await storage.createEmailAccount({ userId, ...accountData });
+      const result = await storage.upsertEmailAccountExclusive(userId, accountData);
+      if (!result.ok) {
+        return res.status(409).json({ error: "This email is already connected to another MyDraft account." });
       }
 
       await grantReferralRewardOnConnect(userId);
@@ -3166,27 +3163,20 @@ Return ONLY valid JSON, no other text.`;
         return res.redirect("/connect-email?error=email_in_use");
       }
 
-      const existingAccount = await storage.getEmailAccount(userId);
       const currentUser = await storage.getUser(userId);
 
-      if (existingAccount) {
-        await storage.updateEmailAccount(userId, {
-          provider,
-          email: normalizedEmail,
-          accessToken: tokenData.accessToken,
-          refreshToken: tokenData.refreshToken,
-          tokenExpiresAt: tokenData.expiresAt,
-        });
-      } else {
-        await storage.createEmailAccount({
-          userId,
-          provider,
-          email: normalizedEmail,
-          accessToken: tokenData.accessToken,
-          refreshToken: tokenData.refreshToken,
-          tokenExpiresAt: tokenData.expiresAt,
-        });
+      const result = await storage.upsertEmailAccountExclusive(userId, {
+        provider,
+        email: normalizedEmail,
+        accessToken: tokenData.accessToken,
+        refreshToken: tokenData.refreshToken,
+        tokenExpiresAt: tokenData.expiresAt,
+      });
+      if (!result.ok) {
+        return res.redirect("/connect-email?error=email_in_use");
+      }
 
+      if (result.created) {
         await storage.createActivityLog(
           userId,
           currentUser?.email || normalizedEmail,
@@ -3322,27 +3312,20 @@ Return ONLY valid JSON, no other text.`;
         return res.redirect("/connect-email?error=email_in_use");
       }
 
-      const existingAccount = await storage.getEmailAccount(userId);
       const currentUser = await storage.getUser(userId);
 
-      if (existingAccount) {
-        await storage.updateEmailAccount(userId, {
-          provider,
-          email: normalizedEmail,
-          accessToken: tokenData.accessToken,
-          refreshToken: tokenData.refreshToken,
-          tokenExpiresAt: tokenData.expiresAt,
-        });
-      } else {
-        await storage.createEmailAccount({
-          userId,
-          provider,
-          email: normalizedEmail,
-          accessToken: tokenData.accessToken,
-          refreshToken: tokenData.refreshToken,
-          tokenExpiresAt: tokenData.expiresAt,
-        });
+      const result = await storage.upsertEmailAccountExclusive(userId, {
+        provider,
+        email: normalizedEmail,
+        accessToken: tokenData.accessToken,
+        refreshToken: tokenData.refreshToken,
+        tokenExpiresAt: tokenData.expiresAt,
+      });
+      if (!result.ok) {
+        return res.redirect("/connect-email?error=email_in_use");
+      }
 
+      if (result.created) {
         await storage.createActivityLog(
           userId,
           currentUser?.email || normalizedEmail,
@@ -9111,6 +9094,17 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // One-time cleanup: remove duplicate email connections (keep earliest-connected account)
+  app.post("/api/owner/cleanup-duplicate-emails", requireOwner, async (req, res) => {
+    try {
+      const result = await storage.deduplicateEmailAccounts();
+      res.json(result);
+    } catch (error) {
+      console.error("Error cleaning up duplicate emails:", error);
+      res.status(500).json({ error: "Failed to clean up duplicate email connections" });
     }
   });
 
