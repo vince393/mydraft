@@ -46,10 +46,10 @@ export function CreditCostBadge({ action, className }: CreditCostBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ring-1",
+        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none",
         canAfford
-          ? "bg-amber-500/10 text-amber-500 ring-amber-500/20"
-          : "bg-rose-500/10 text-rose-400 ring-rose-500/20",
+          ? "text-muted-foreground"
+          : "bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/20",
         className,
       )}
       title={
