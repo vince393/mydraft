@@ -9,9 +9,6 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.send",
-  "https://www.googleapis.com/auth/drive.readonly",
-  "https://www.googleapis.com/auth/userinfo.email",
-  "openid",
 ];
 
 function createOAuth2Client(redirectUri?: string) {
@@ -22,97 +19,6 @@ function getGmail(accessToken: string) {
   const auth = createOAuth2Client();
   auth.setCredentials({ access_token: accessToken });
   return google.gmail({ version: "v1", auth });
-}
-
-function getDrive(accessToken: string) {
-  const auth = createOAuth2Client();
-  auth.setCredentials({ access_token: accessToken });
-  return google.drive({ version: "v3", auth });
-}
-
-export interface DriveFileItem {
-  id: string;
-  name: string;
-  mimeType: string;
-  size: number | null;
-  iconLink?: string;
-  modifiedTime?: string;
-}
-
-const MAX_DRIVE_FILE_BYTES = 25 * 1024 * 1024;
-
-// Google Workspace native files must be exported to a downloadable format.
-const GOOGLE_EXPORT_MAP: Record<string, { mimeType: string; ext: string }> = {
-  "application/vnd.google-apps.document": { mimeType: "application/pdf", ext: ".pdf" },
-  "application/vnd.google-apps.spreadsheet": {
-    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ext: ".xlsx",
-  },
-  "application/vnd.google-apps.presentation": {
-    mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ext: ".pptx",
-  },
-  "application/vnd.google-apps.drawing": { mimeType: "image/png", ext: ".png" },
-};
-
-export async function listDriveFiles(accessToken: string, search?: string): Promise<DriveFileItem[]> {
-  const drive = getDrive(accessToken);
-  let q = "trashed = false and mimeType != 'application/vnd.google-apps.folder'";
-  if (search && search.trim()) {
-    const safe = search.trim().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-    q += ` and name contains '${safe}'`;
-  }
-  const res = await drive.files.list({
-    q,
-    pageSize: 50,
-    orderBy: "modifiedTime desc",
-    fields: "files(id, name, mimeType, size, iconLink, modifiedTime)",
-    spaces: "drive",
-  });
-  return (res.data.files || []).map((f) => ({
-    id: f.id!,
-    name: f.name || "Untitled",
-    mimeType: f.mimeType || "application/octet-stream",
-    size: f.size ? Number(f.size) : null,
-    iconLink: f.iconLink || undefined,
-    modifiedTime: f.modifiedTime || undefined,
-  }));
-}
-
-export async function downloadDriveFile(
-  accessToken: string,
-  fileId: string,
-): Promise<{ filename: string; contentType: string; base64: string; size: number }> {
-  const drive = getDrive(accessToken);
-  const meta = await drive.files.get({ fileId, fields: "id, name, mimeType, size" });
-  const name = meta.data.name || "file";
-  const mimeType = meta.data.mimeType || "application/octet-stream";
-
-  let buffer: Buffer;
-  let contentType: string;
-  let filename: string;
-
-  if (mimeType.startsWith("application/vnd.google-apps")) {
-    const exportInfo = GOOGLE_EXPORT_MAP[mimeType] || { mimeType: "application/pdf", ext: ".pdf" };
-    const res = await drive.files.export(
-      { fileId, mimeType: exportInfo.mimeType },
-      { responseType: "arraybuffer" },
-    );
-    buffer = Buffer.from(res.data as ArrayBuffer);
-    contentType = exportInfo.mimeType;
-    filename = name.toLowerCase().endsWith(exportInfo.ext) ? name : `${name}${exportInfo.ext}`;
-  } else {
-    const sizeNum = meta.data.size ? Number(meta.data.size) : 0;
-    if (sizeNum > MAX_DRIVE_FILE_BYTES) throw new Error("FILE_TOO_LARGE");
-    const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "arraybuffer" });
-    buffer = Buffer.from(res.data as ArrayBuffer);
-    contentType = mimeType;
-    filename = name;
-  }
-
-  if (buffer.length > MAX_DRIVE_FILE_BYTES) throw new Error("FILE_TOO_LARGE");
-
-  return { filename, contentType, base64: buffer.toString("base64"), size: buffer.length };
 }
 
 const FOLDER_LABEL_MAP: Record<string, string> = {
@@ -212,8 +118,8 @@ export const gmailProvider: IEmailProvider = {
       const { tokens } = await oauth2Client.getToken(code);
 
       oauth2Client.setCredentials(tokens);
-      const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
-      const { data: userInfo } = await oauth2.userinfo.get();
+      const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+      const { data: profile } = await gmail.users.getProfile({ userId: "me" });
 
       await logApiHealth("google", "oauth/token", 200);
 
@@ -221,7 +127,7 @@ export const gmailProvider: IEmailProvider = {
         accessToken: tokens.access_token!,
         refreshToken: tokens.refresh_token!,
         expiresAt: new Date(tokens.expiry_date || Date.now() + 3600 * 1000),
-        email: userInfo.email || "",
+        email: profile.emailAddress || "",
       };
     } catch (error: any) {
       await logApiHealth("google", "oauth/token", error.code || 500, error.message, "error");

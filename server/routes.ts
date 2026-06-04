@@ -7,7 +7,7 @@ import { ownerNotes, pageViews, revenue, expenses, type EmailAccount } from "@sh
 import OpenAI from "openai";
 import { wrapOpenAIWithTracking } from "./ai-cost-tracker";
 
-import { gmailProvider, listDriveFiles, downloadDriveFile } from "./gmail";
+import { gmailProvider } from "./gmail";
 import { microsoftProvider } from "./microsoft";
 import { imapProvider, testImapConnection, testSmtpConnection, detectProvider, encryptImapConfig, validateHost } from "./imap";
 import type { IEmailProvider, EmailListItem, EmailDetail, GetMessagesOptions } from "./email-provider";
@@ -5368,48 +5368,6 @@ Rules:
     } catch (error) {
       console.error("Error getting cultural etiquette:", error);
       res.status(500).json({ error: "Failed to get cultural etiquette tips" });
-    }
-  });
-
-  // List files from the user's connected Google Drive (for email attachments).
-  app.get("/api/drive/files", requireAuth, async (req, res) => {
-    try {
-      const userId = getUserId(req)!;
-      const result = await getProviderAndToken(userId);
-      if (!result || result.account.provider !== "google") {
-        return res.status(400).json({ error: "NOT_GOOGLE", message: "Connect a Google account to use Google Drive." });
-      }
-      const search = typeof req.query.q === "string" ? req.query.q : undefined;
-      const files = await listDriveFiles(result.accessToken, search);
-      res.json({ files });
-    } catch (error: any) {
-      if (error?.code === 403 || /insufficient|insufficientPermissions|forbidden/i.test(error?.message || "")) {
-        return res.status(403).json({ error: "DRIVE_PERMISSION", message: "Reconnect your Google account to grant Drive access." });
-      }
-      console.error("Drive list error:", error?.message || error);
-      res.status(500).json({ error: "Failed to load Google Drive files" });
-    }
-  });
-
-  // Download a single Drive file as base64 so it can be attached to an email.
-  app.get("/api/drive/files/:id/download", requireAuth, async (req, res) => {
-    try {
-      const userId = getUserId(req)!;
-      const result = await getProviderAndToken(userId);
-      if (!result || result.account.provider !== "google") {
-        return res.status(400).json({ error: "NOT_GOOGLE", message: "Connect a Google account to use Google Drive." });
-      }
-      const file = await downloadDriveFile(result.accessToken, req.params.id);
-      res.json(file);
-    } catch (error: any) {
-      if (error?.message === "FILE_TOO_LARGE") {
-        return res.status(413).json({ error: "FILE_TOO_LARGE", message: "That file is larger than the 25MB limit." });
-      }
-      if (error?.code === 403 || /insufficient|insufficientPermissions|forbidden/i.test(error?.message || "")) {
-        return res.status(403).json({ error: "DRIVE_PERMISSION", message: "Reconnect your Google account to grant Drive access." });
-      }
-      console.error("Drive download error:", error?.message || error);
-      res.status(500).json({ error: "Failed to download Google Drive file" });
     }
   });
 
