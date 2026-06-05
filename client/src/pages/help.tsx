@@ -80,13 +80,13 @@ const articles: HelpArticle[] = [
       intro: "Creating your MyDraft account takes less than a minute. Here's how to get started and set up your email inbox.",
       paragraphs: [
         "MyDraft is designed to get you up and running quickly. When you visit the homepage, you'll see a \"Get Started\" button that takes you straight to the registration page. All you need is an email address and a password to create your account.",
-        "After signing up, you'll go through a quick onboarding process. This is where you pick a plan that works for you (Free, Pro, or Business), set your AI preferences like your preferred writing tone, and tell us a bit about how you use email. This helps our AI write better replies for you from day one.",
+        "After signing up, you'll go through a quick onboarding process. This is where you pick a plan that works for you (Free, Personal, Pro, or Business), set your AI preferences like your preferred writing tone, and tell us a bit about how you use email. This helps our AI write better replies for you from day one.",
         "Once onboarding is done, you'll be asked to connect your email account — either Gmail or Microsoft Outlook. After that, your inbox loads and you're ready to go."
       ],
       steps: [
         { title: "Visit the homepage", description: "Click \"Get Started\" or \"Sign Up\" to begin." },
         { title: "Enter your details", description: "Type in your email address and create a secure password." },
-        { title: "Choose a plan", description: "Pick Free, Pro, or Business. Pro and Business include a 3-day free trial." },
+        { title: "Choose a plan", description: "Pick Free, Personal, Pro, or Business. Pro and Business include a 3-day free trial." },
         { title: "Set AI preferences", description: "Choose your writing tone (professional, casual, friendly) and other preferences." },
         { title: "Connect your email", description: "Link your Gmail or Outlook account through secure OAuth sign-in." },
       ],
@@ -410,16 +410,17 @@ const articles: HelpArticle[] = [
     icon: CreditCard,
     iconColor: "#10B981",
     content: {
-      intro: "MyDraft offers three plans to fit different needs: Free, Pro, and Business. Pro and Business include a 3-day free trial.",
+      intro: "MyDraft offers four plans to fit different needs: Free, Personal, Pro, and Business. Pro and Business include a 3-day free trial.",
       paragraphs: [
         "The Free plan gives you basic inbox management with 10 AI credits per month. It's a great way to try MyDraft and see if it works for you. There's no time limit on the Free plan — it's free forever.",
-        "Pro is $4.99/month (or $4.16/month billed annually — saving $21/year). It includes writing style memory so the AI learns to write like you, 50 AI credits per month, email scheduling, advanced inbox management, and custom folders with AI sorting. Pro is the best value for individuals who use email heavily.",
-        "Business is $14.99/month (or $12.49/month billed annually — saving $49/year). It includes everything in Pro plus enhanced AI quality for better draft generation, 200 AI credits per month, voice assistant, custom AI training, and team collaboration features. Business is designed for professionals and teams who want the best AI email experience."
+        "Personal is $2.99/month (or $2.39/month billed annually — saving $7/year). It includes writing style memory so the AI learns to write like you, 50 AI credits per month, email scheduling, advanced inbox management, and priority support. Personal is great for everyday personal email.",
+        "Pro is $7.99/month (or $6.39/month billed annually — saving $19/year). It includes everything in Personal plus an enhanced AI model (GPT-4o) for higher-quality drafts, 200 AI credits per month, and background auto-sort. Pro is the best value for individuals who use email heavily.",
+        "Business is $19.99/month (or $15.99/month billed annually — saving $48/year). It includes everything in Pro plus 500 AI credits per month, voice assistant, custom AI training, team collaboration for up to 5 members, and dedicated support. Business is designed for professionals and teams who want the best AI email experience."
       ],
       steps: [
         { title: "Compare plans", description: "Visit the Pricing page to see a full feature comparison." },
         { title: "Start your trial", description: "Pro and Business plans include 3 days free." },
-        { title: "Choose monthly or annual", description: "Annual billing saves you money — up to $49/year on Business." },
+        { title: "Choose monthly or annual", description: "Annual billing saves you money — up to $48/year on Business." },
         { title: "Upgrade anytime", description: "Switch plans in Settings > Billing whenever you need to." },
       ],
     }
@@ -1011,9 +1012,9 @@ const articles: HelpArticle[] = [
     icon: CreditCard,
     iconColor: "#10B981",
     content: {
-      intro: "Annual billing saves you money — up to $49 per year on the Business plan compared to paying monthly.",
+      intro: "Annual billing saves you money — up to $48 per year on the Business plan compared to paying monthly.",
       paragraphs: [
-        "Both Pro and Business plans offer monthly and annual billing options. With annual billing, you pay for the whole year upfront at a discounted rate. Pro is $4.99/month or $8.25/month billed annually at $99/year (saving $21). Business is $14.99/month or $24.92/month billed annually at $299/year (saving $49).",
+        "Personal, Pro, and Business plans all offer monthly and annual billing options. With annual billing, you pay for the whole year upfront at a discounted rate. Personal is $2.99/month or $2.39/month billed annually at $28.70/year (saving $7). Pro is $7.99/month or $6.39/month billed annually at $76.70/year (saving $19). Business is $19.99/month or $15.99/month billed annually at $191.90/year (saving $48).",
         "Annual billing is the better value if you plan to use MyDraft long-term. You can switch from monthly to annual billing at any time from Settings > Billing. The change takes effect at your next billing cycle. If you're not sure yet, start with monthly and switch to annual once you've decided MyDraft is right for you."
       ],
     }

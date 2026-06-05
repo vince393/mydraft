@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-export type Plan = "free" | "pro" | "premium";
+export type Plan = "free" | "personal" | "pro" | "premium";
 
 interface User {
   id: string;

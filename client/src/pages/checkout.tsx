@@ -145,28 +145,38 @@ interface AuthResponse {
 }
 
 const planDetails: Record<string, { name: string; description: string; features: string[]; accent: string }> = {
+  personal: {
+    name: "Personal",
+    description: "For everyday personal email",
+    features: ["50 AI credits per month", "Writing style memory", "Advanced inbox management", "Email scheduling"],
+    accent: "emerald",
+  },
   pro: {
     name: "Pro",
     description: "For professionals who need more",
-    features: ["Personal writing style memory", "50 AI credits per month", "Advanced automation", "API access"],
+    features: ["200 AI credits per month", "Enhanced AI model (GPT-4o)", "Background auto-sort", "Priority support"],
     accent: "blue",
   },
   business: {
     name: "Business",
     description: "For teams and power users",
-    features: ["200 AI credits per month", "Voice assistant", "Custom AI training", "Dedicated support"],
+    features: ["500 AI credits per month", "Voice assistant", "Custom AI training", "Dedicated support"],
     accent: "amber",
   },
 };
 
 const pricing: Record<string, Record<string, { amount: number; period: string; monthly: number }>> = {
+  personal: {
+    monthly: { amount: 2.99, period: "/month", monthly: 2.99 },
+    annual: { amount: 28.7, period: "/year", monthly: 2.39 },
+  },
   pro: {
-    monthly: { amount: 4.99, period: "/month", monthly: 4.99 },
-    annual: { amount: 49.9, period: "/year", monthly: 4.16 },
+    monthly: { amount: 7.99, period: "/month", monthly: 7.99 },
+    annual: { amount: 76.7, period: "/year", monthly: 6.39 },
   },
   business: {
-    monthly: { amount: 14.99, period: "/month", monthly: 14.99 },
-    annual: { amount: 149.9, period: "/year", monthly: 12.49 },
+    monthly: { amount: 19.99, period: "/month", monthly: 19.99 },
+    annual: { amount: 191.9, period: "/year", monthly: 15.99 },
   },
 };
 
@@ -311,7 +321,9 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
           await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
           toast({
             title: "Welcome to MyDraft!",
-            description: "Your 3-day free trial has started.",
+            description: plan === "personal"
+              ? "Your Personal plan is now active."
+              : "Your 3-day free trial has started.",
           });
           onSuccess();
         } else if (result.error) {
@@ -341,6 +353,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
 
   const planInfo = planDetails[plan];
   const priceInfo = pricing[plan]?.[interval];
+  const isTrialPlan = plan !== "personal";
 
   const stripeElementStyle = {
     base: {
@@ -522,15 +535,19 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Due today</span>
           <div className="text-right">
-            <span className="text-xl font-bold text-emerald-400">$0.00</span>
+            <span className="text-xl font-bold text-emerald-400">
+              {isTrialPlan ? "$0.00" : `$${priceInfo?.amount}`}
+            </span>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 mt-2">
-          <Clock className="w-3 h-3 text-muted-foreground/40" />
-          <p className="text-xs text-muted-foreground/50">
-            After 3-day trial: ${priceInfo?.amount}{priceInfo?.period}
-          </p>
-        </div>
+        {isTrialPlan && (
+          <div className="flex items-center gap-1.5 mt-2">
+            <Clock className="w-3 h-3 text-muted-foreground/40" />
+            <p className="text-xs text-muted-foreground/50">
+              After 3-day trial: ${priceInfo?.amount}{priceInfo?.period}
+            </p>
+          </div>
+        )}
       </div>
 
       <Button
@@ -547,7 +564,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
         ) : (
           <>
             <Lock className="w-4 h-4 mr-2" />
-            Start free trial
+            {isTrialPlan ? "Start free trial" : "Subscribe"}
           </>
         )}
       </Button>
@@ -557,7 +574,9 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
         <a href="/terms" target="_blank" className="underline hover:text-muted-foreground/60 transition-colors">Terms of Service</a>,{" "}
         <a href="/privacy" target="_blank" className="underline hover:text-muted-foreground/60 transition-colors">Privacy Policy</a>, and{" "}
         <a href="/refund-policy" target="_blank" className="underline hover:text-muted-foreground/60 transition-colors">Refund Policy</a>.
-        Your card will be charged ${priceInfo?.amount}{priceInfo?.period} after the trial period unless you cancel.
+        {isTrialPlan
+          ? ` Your card will be charged $${priceInfo?.amount}${priceInfo?.period} after the trial period unless you cancel.`
+          : ` Your card will be charged $${priceInfo?.amount}${priceInfo?.period} today, recurring until you cancel.`}
       </p>
     </form>
   );
@@ -600,6 +619,7 @@ export default function CheckoutPage() {
 
   const planInfo = planDetails[plan];
   const priceInfo = pricing[plan]?.[interval];
+  const isTrialPlan = plan !== "personal";
 
   if (authLoading) {
     return (
@@ -645,8 +665,8 @@ export default function CheckoutPage() {
           <div className="lg:col-span-3 order-2 lg:order-1">
             <div className="lg:sticky lg:top-10">
               <div className="mb-8">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">Start your free trial</h1>
-                <p className="text-muted-foreground/60 text-sm">No charge for 3 days. Cancel anytime with one click.</p>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{isTrialPlan ? "Start your free trial" : "Complete your subscription"}</h1>
+                <p className="text-muted-foreground/60 text-sm">{isTrialPlan ? "No charge for 3 days. Cancel anytime with one click." : "Activate your Personal plan. Cancel anytime with one click."}</p>
               </div>
 
               <div 
@@ -761,8 +781,8 @@ export default function CheckoutPage() {
                     <Clock className="w-3 h-3 text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-emerald-400/80">3-day free trial</p>
-                    <p className="text-xs text-muted-foreground/40">No charge until trial ends</p>
+                    <p className="text-sm font-medium text-emerald-400/80">{isTrialPlan ? "3-day free trial" : "Cancel anytime"}</p>
+                    <p className="text-xs text-muted-foreground/40">{isTrialPlan ? "No charge until trial ends" : "Manage your plan from settings"}</p>
                   </div>
                 </div>
               </div>

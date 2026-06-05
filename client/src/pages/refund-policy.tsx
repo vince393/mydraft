@@ -31,8 +31,9 @@ export default function RefundPolicyPage() {
               <p>MyDraft offers the following subscription tiers:</p>
               <ul className="list-disc pl-6 space-y-2 mt-2">
                 <li><strong>Free:</strong> $0 — Basic email management features with limited AI capabilities</li>
-                <li><strong>Pro:</strong> $4.99/month or $8.25/month billed annually ($99/year) — Advanced AI features for individual professionals</li>
-                <li><strong>Business:</strong> $14.99/month or $24.92/month billed annually ($299/year) — Enterprise-grade features for teams and businesses</li>
+                <li><strong>Personal:</strong> $2.99/month or $2.39/month billed annually ($28.70/year) — Everyday AI email features for individuals</li>
+                <li><strong>Pro:</strong> $7.99/month or $6.39/month billed annually ($76.70/year) — Advanced AI features for individual professionals</li>
+                <li><strong>Business:</strong> $19.99/month or $15.99/month billed annually ($191.90/year) — Enterprise-grade features for teams and businesses</li>
               </ul>
             </section>
             

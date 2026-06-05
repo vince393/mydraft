@@ -423,14 +423,14 @@ function getEffectivePlan(user: any): string {
   }
   const base = user.plan || "free";
   if (proCreditActive) {
-    const hierarchy: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+    const hierarchy: Record<string, number> = { free: 0, personal: 1, pro: 2, premium: 3 };
     // Don't downgrade a paying Business/premium user; only lift free up to pro.
     if ((hierarchy[base] || 0) < hierarchy.pro) return "pro";
   }
   return base;
 }
 
-async function requirePlan(minPlan: "pro" | "premium") {
+async function requirePlan(minPlan: "personal" | "pro" | "premium") {
   return async (req: Request, res: Response, next: NextFunction) => {
     const userId = getUserId(req);
     if (!userId) {
@@ -446,8 +446,9 @@ async function requirePlan(minPlan: "pro" | "premium") {
 
     const planHierarchy: Record<string, number> = {
       free: 0,
-      pro: 1,
-      premium: 2,
+      personal: 1,
+      pro: 2,
+      premium: 3,
     };
     const userPlanLevel = planHierarchy[effectivePlan] || 0;
     const requiredLevel = planHierarchy[minPlan];
@@ -471,13 +472,13 @@ async function getUserPlan(userId: string): Promise<string> {
 }
 
 // Check if user has at least the specified plan
-function hasPlan(userPlan: string, minPlan: "pro" | "premium"): boolean {
-  const planHierarchy: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+function hasPlan(userPlan: string, minPlan: "personal" | "pro" | "premium"): boolean {
+  const planHierarchy: Record<string, number> = { free: 0, personal: 1, pro: 2, premium: 3 };
   return (planHierarchy[userPlan] || 0) >= planHierarchy[minPlan];
 }
 
 function getAiModel(userPlan: string): string {
-  return userPlan === "premium" ? "gpt-4o" : "gpt-4o-mini";
+  return hasPlan(userPlan, "pro") ? "gpt-4o" : "gpt-4o-mini";
 }
 
 function getEmailRedirectUri(req: any, provider: string): string {
@@ -2165,7 +2166,7 @@ export async function registerRoutes(
   app.post("/api/user/plan", requireAuth, async (req, res) => {
     try {
       const { plan, startTrial } = req.body;
-      if (!plan || !["free", "pro", "premium"].includes(plan)) {
+      if (!plan || !["free", "personal", "pro", "premium"].includes(plan)) {
         return res.status(400).json({ error: "Invalid plan" });
       }
 
@@ -4367,7 +4368,7 @@ If truly nothing matches, return: []`,
       // Get user's learned writing style and preferences for context (Pro+ only)
       const user = await storage.getUser(userId);
       const refreshUserPlan = user?.plan || "free";
-      const learnedStyle = hasPlan(refreshUserPlan, "pro")
+      const learnedStyle = hasPlan(refreshUserPlan, "personal")
         ? await storage.getLearnedWritingStyle(userId)
         : null;
 
@@ -5423,13 +5424,14 @@ Rules:
         const user = await storage.getUser(req.session.userId!);
         if (
           !user ||
-          (user.plan !== "pro" &&
+          (user.plan !== "personal" &&
+            user.plan !== "pro" &&
             user.plan !== "premium" &&
             user.plan !== "business")
         ) {
           return res
             .status(403)
-            .json({ error: "Schedule send is a Pro/Business feature" });
+            .json({ error: "Schedule send is a paid plan feature" });
         }
       }
 
@@ -5727,7 +5729,7 @@ Rules:
         let learnedStyle: any = null;
         let styleContext = "";
 
-        if (hasPlan(userPlan, "pro")) {
+        if (hasPlan(userPlan, "personal")) {
           learnedStyle = await storage.getLearnedWritingStyle(
             req.session.userId!,
           );
@@ -6206,7 +6208,7 @@ Rules:
 
         let learnedStyle: any = null;
         let styleHint = "";
-        if (hasPlan(userPlan, "pro")) {
+        if (hasPlan(userPlan, "personal")) {
           learnedStyle = await storage.getLearnedWritingStyle(req.session.userId!);
           if (learnedStyle && learnedStyle.samplesAnalyzed > 0) {
             styleHint = ` Match the user's writing style: ${learnedStyle.toneDescription || tone} tone, ${learnedStyle.avgSentenceLength || "medium"} sentences.`;
@@ -9210,11 +9212,11 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const { userId } = req.params;
       const { plan } = req.body;
 
-      if (!plan || !["free", "pro", "premium", "business"].includes(plan)) {
+      if (!plan || !["free", "personal", "pro", "premium", "business"].includes(plan)) {
         return res
           .status(400)
           .json({
-            error: "Invalid plan. Must be free, pro, premium, or business",
+            error: "Invalid plan. Must be free, personal, pro, premium, or business",
           });
       }
 
@@ -9343,7 +9345,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
   app.get("/api/owner/users/by-plan/:plan", requireOwner, async (req, res) => {
     try {
       const plan = req.params.plan;
-      if (!["free", "pro", "premium"].includes(plan)) {
+      if (!["free", "personal", "pro", "premium"].includes(plan)) {
         return res.status(400).json({ error: "Invalid plan" });
       }
 
@@ -10042,7 +10044,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const { plan, interval } = req.body;
 
-      if (!plan || !["pro", "business"].includes(plan)) {
+      if (!plan || !["personal", "pro", "business"].includes(plan)) {
         return res.status(400).json({ error: "Valid plan is required" });
       }
 
@@ -10090,7 +10092,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       try {
         const { plan, interval, paymentMethodId } = req.body;
 
-        if (!plan || !["pro", "business"].includes(plan)) {
+        if (!plan || !["personal", "pro", "business"].includes(plan)) {
           return res.status(400).json({ error: "Valid plan is required" });
         }
 
@@ -10114,13 +10116,14 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
         // Define pricing (new credit-economy prices)
         const pricing: Record<string, Record<string, number>> = {
+          personal: { monthly: PLAN_PRICES.personal.monthly, annual: PLAN_PRICES.personal.annual },
           pro: { monthly: PLAN_PRICES.pro.monthly, annual: PLAN_PRICES.pro.annual },
           business: { monthly: PLAN_PRICES.premium.monthly, annual: PLAN_PRICES.premium.annual },
         };
 
         const amount = pricing[plan][interval];
         const recurringInterval = interval === "annual" ? "year" : "month";
-        const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
+        const productName = plan === "personal" ? "MyDraft Personal" : plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
 
         // Attach payment method to customer
         try {
@@ -10149,7 +10152,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         if (!product) {
           product = await stripe.products.create({
             name: productName,
-            metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "pro" | "premium"]) },
+            metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "personal" | "pro" | "premium"]) },
           });
         }
 
@@ -10171,7 +10174,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             unit_amount: amount,
             currency: "usd",
             recurring: { interval: recurringInterval },
-            metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "pro" | "premium"]) },
+            metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "personal" | "pro" | "premium"]) },
           });
         }
 
@@ -10232,7 +10235,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         // is not charged today (matches the checkout UI's "Due today $0.00");
         // plan + credits are granted on trial start by the subscription.created
         // webhook, otherwise on invoice.paid for an immediately-active sub.
-        const eligibleForTrial = !user.hasUsedTrial;
+        const eligibleForTrial = !user.hasUsedTrial && internalPlan !== "personal";
         const subscription = await stripe.subscriptions.create({
           customer: user.stripeCustomerId,
           items: [{ price: price.id }],
@@ -10268,10 +10271,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const { plan, interval } = req.body;
 
-      if (!plan || !["pro", "business"].includes(plan)) {
+      if (!plan || !["personal", "pro", "business"].includes(plan)) {
         return res
           .status(400)
-          .json({ error: "Valid plan (pro or business) is required" });
+          .json({ error: "Valid plan (personal, pro, or business) is required" });
       }
 
       if (!interval || !["annual", "monthly"].includes(interval)) {
@@ -10290,6 +10293,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       // Define pricing (in cents) — new credit-economy prices
       const pricing: Record<string, Record<string, number>> = {
+        personal: {
+          monthly: PLAN_PRICES.personal.monthly,
+          annual: PLAN_PRICES.personal.annual,
+        },
         pro: {
           monthly: PLAN_PRICES.pro.monthly,
           annual: PLAN_PRICES.pro.annual,
@@ -10303,6 +10310,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const amount = pricing[plan][interval];
       const recurringInterval = interval === "annual" ? "year" : "month";
       const productNames: Record<string, string> = {
+        personal: "MyDraft Personal",
         pro: "MyDraft Pro",
         business: "MyDraft Business",
       };
@@ -10322,7 +10330,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         const internalPlan = plan === "business" ? "premium" : plan;
         product = await stripe.products.create({
           name: productName,
-          metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "pro" | "premium"]) },
+          metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "personal" | "pro" | "premium"]) },
         });
       }
 
@@ -10345,7 +10353,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           unit_amount: amount,
           currency: "usd",
           recurring: { interval: recurringInterval },
-          metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "pro" | "premium"]) },
+          metadata: { plan: internalPlan, type: "plan", credits: String(PLAN_MONTHLY_CREDITS[internalPlan as "personal" | "pro" | "premium"]) },
         });
       }
 
@@ -10971,10 +10979,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     try {
       const { plan, interval } = req.body;
 
-      if (!plan || !["pro", "business"].includes(plan)) {
+      if (!plan || !["personal", "pro", "business"].includes(plan)) {
         return res
           .status(400)
-          .json({ error: "Valid plan (pro or business) is required" });
+          .json({ error: "Valid plan (personal, pro, or business) is required" });
       }
 
       if (!interval || !["annual", "monthly"].includes(interval)) {
@@ -11016,13 +11024,14 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
       // Pricing — canonical credit-economy prices (single source: PLAN_PRICES).
       const pricing: Record<string, Record<string, number>> = {
+        personal: { monthly: PLAN_PRICES.personal.monthly, annual: PLAN_PRICES.personal.annual },
         pro: { monthly: PLAN_PRICES.pro.monthly, annual: PLAN_PRICES.pro.annual },
         business: { monthly: PLAN_PRICES.premium.monthly, annual: PLAN_PRICES.premium.annual },
       };
 
       const amount = pricing[plan][interval];
       const recurringInterval = interval === "annual" ? "year" : "month";
-      const productName = plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
+      const productName = plan === "personal" ? "MyDraft Personal" : plan === "pro" ? "MyDraft Pro" : "MyDraft Business";
       const internalPlan = plan === "business" ? "premium" : plan;
 
       // Find or create product

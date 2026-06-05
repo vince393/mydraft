@@ -137,7 +137,7 @@ export function ComposeDialog({
   });
   const userPlan = userData?.user?.plan || "free";
   const isPro = userPlan === "pro" || userPlan === "premium" || userPlan === "business";
-  const canScheduleSend = isPro;
+  const canScheduleSend = userPlan === "personal" || isPro;
   const isGoogleConnected = userData?.user?.connectedProvider === "google";
 
   const userSignature = userData?.user?.emailSignature || "";

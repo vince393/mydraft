@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Check, Clock, Sparkles, Shield, Crown } from "lucide-react";
+import { Loader2, Check, Clock, Sparkles, Shield, Crown, Mail } from "lucide-react";
 import logoPath from "@assets/mydraft_logo.png";
 
 const plans = [
@@ -25,20 +25,36 @@ const plans = [
     color: "text-muted-foreground",
   },
   {
+    id: "personal",
+    internalId: "personal",
+    name: "Personal",
+    monthlyPrice: 2.99,
+    annualPrice: 28.7,
+    annualSavings: 7,
+    description: "For everyday personal email",
+    features: [
+      "50 AI credits per month",
+      "Personal writing style memory",
+      "Advanced inbox management",
+      "Email scheduling",
+      "Priority support",
+    ],
+    icon: Mail,
+    color: "text-emerald-400",
+  },
+  {
     id: "pro",
     internalId: "pro",
     name: "Pro",
-    monthlyPrice: 10,
-    annualPrice: 99,
-    annualSavings: 21,
+    monthlyPrice: 7.99,
+    annualPrice: 76.7,
+    annualSavings: 19,
     description: "For professionals who need more",
     features: [
-      "Personal writing style memory",
-      "50 AI credits per month",
-      "Advanced automation & workflows",
-      "Custom rules and sequences",
-      "Team or shared inboxes",
-      "API access & integrations",
+      "Everything in Personal",
+      "200 AI credits per month",
+      "Enhanced AI model (GPT-4o)",
+      "Background auto-sort",
       "Priority support",
     ],
     icon: Sparkles,
@@ -48,18 +64,17 @@ const plans = [
     id: "business",
     internalId: "premium",
     name: "Business",
-    monthlyPrice: 29,
-    annualPrice: 299,
-    annualSavings: 49,
+    monthlyPrice: 19.99,
+    annualPrice: 191.9,
+    annualSavings: 48,
     description: "For teams and power users",
     features: [
       "Everything in Pro",
-      "Enhanced AI quality",
-      "200 AI credits per month",
+      "500 AI credits per month",
       "Voice assistant",
       "Custom AI training",
-      "Team collaboration",
-      "Dedicated account manager",
+      "Team collaboration (up to 5)",
+      "Dedicated support",
     ],
     icon: Crown,
     color: "text-violet-400",
@@ -160,7 +175,7 @@ export default function TrialExpiredPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {plans.map((plan) => {
               const Icon = plan.icon;
               const displayPrice = plan.id === "free"

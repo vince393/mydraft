@@ -19,8 +19,9 @@ export const CREDIT_EXPIRY_DAYS = 30;
 // Monthly credit allowance per plan
 export const PLAN_MONTHLY_CREDITS: Record<Plan, number> = {
   free: 10,
-  pro: 50,
-  premium: 200, // Business
+  personal: 50,
+  pro: 200,
+  premium: 500, // Business
 };
 
 // Per-action credit costs. language_detect is free (deterministic franc).
@@ -56,10 +57,11 @@ export const CREDIT_ADDONS = [
   { id: "addon_500", credits: 500, priceCents: 2999, label: "500 credits / month" },
 ] as const;
 
-// Plan subscription prices (cents). New lower prices.
+// Plan subscription prices (cents).
 export const PLAN_PRICES = {
-  pro: { monthly: 499, annual: 4990 },
-  premium: { monthly: 1499, annual: 14990 },
+  personal: { monthly: 299, annual: 2870 },
+  pro: { monthly: 799, annual: 7670 },
+  premium: { monthly: 1999, annual: 19190 },
 } as const;
 
 export const TRIAL_DAYS = 3;

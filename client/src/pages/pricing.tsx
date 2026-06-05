@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Loader2, Star, ExternalLink, Sparkles, Zap, Users, ChevronDown } from "lucide-react";
+import { Check, Loader2, Star, ExternalLink, Sparkles, Zap, Users, ChevronDown, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AIPreferences {
@@ -34,6 +34,7 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
   
   // Score-based recommendation for more accuracy
   let freeScore = 0;
+  let personalScore = 0;
   let proScore = 0;
   let businessScore = 0;
   
@@ -46,8 +47,10 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
     proScore += 3;
   } else if (emailVolume === "medium") {
     proScore += 3;
+    personalScore += 2;
   } else if (emailVolume === "low") {
     freeScore += 3;
+    personalScore += 2;
   }
   
   // Automation level scoring
@@ -56,8 +59,10 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
     proScore += 2;
   } else if (automationLevel === "medium") {
     proScore += 2;
+    personalScore += 1;
   } else if (automationLevel === "low") {
     freeScore += 2;
+    personalScore += 1;
   }
   
   // Primary use scoring
@@ -66,8 +71,10 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
     proScore += 2;
   } else if (primaryUse === "personal") {
     freeScore += 2;
+    personalScore += 3;
   } else if (primaryUse === "both") {
     proScore += 2;
+    personalScore += 1;
   }
   
   // AI features scoring - more features = higher plan
@@ -77,8 +84,10 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
     proScore += 1;
   } else if (featureCount >= 2) {
     proScore += 2;
+    personalScore += 1;
   } else if (featureCount === 1) {
     freeScore += 1;
+    personalScore += 1;
   }
   
   // Check for specific high-end features
@@ -89,6 +98,7 @@ function getRecommendedPlan(aiPreferences: AIPreferences | null | undefined): st
   // Find the plan with highest score
   const scores = [
     { plan: "free", score: freeScore },
+    { plan: "personal", score: personalScore },
     { plan: "pro", score: proScore },
     { plan: "business", score: businessScore },
   ];
@@ -129,6 +139,35 @@ function getRecommendationReasons(planId: string, aiPreferences: AIPreferences |
         "Core inbox management features",
         "Upgrade anytime when you need more"
       ]
+    };
+  }
+
+  if (planId === "personal") {
+    const reasons: string[] = [];
+    const benefits: string[] = [];
+
+    if (primaryUse === "personal") {
+      reasons.push("Ideal for staying on top of your personal email");
+    } else if (emailVolume === "low" || emailVolume === "medium") {
+      reasons.push("A great fit for your everyday email volume");
+    }
+
+    if (automationLevel === "low" || automationLevel === "medium") {
+      reasons.push("Just enough AI help without the extras you don't need");
+    }
+
+    if (replyTone) {
+      benefits.push(`The AI learns your ${replyTone === "professional" ? "professional" : replyTone === "casual" ? "casual" : "personal"} writing style`);
+    }
+
+    benefits.push("50 AI credits every month");
+    benefits.push("Email scheduling and advanced inbox management");
+    benefits.push("Priority support when you need help");
+
+    return {
+      title: "Great value for everyday email",
+      reasons: reasons.length > 0 ? reasons : ["A simple step up from Free"],
+      benefits
     };
   }
 
@@ -223,22 +262,38 @@ const basePlans = [
     ],
   },
   {
+    id: "personal",
+    name: "Personal",
+    monthlyPrice: 2.99,
+    annualPrice: 28.7,
+    annualSavings: 7,
+    description: "For everyday personal email",
+    icon: Mail,
+    color: "text-emerald-500",
+    stripeName: "MyDraft Personal",
+    features: [
+      "50 AI credits per month",
+      "Personal writing style memory",
+      "Advanced inbox management",
+      "Email scheduling",
+      "Priority support",
+    ],
+  },
+  {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 4.99,
-    annualPrice: 49.9,
-    annualSavings: 21,
+    monthlyPrice: 7.99,
+    annualPrice: 76.7,
+    annualSavings: 19,
     description: "For professionals who need more",
     icon: Zap,
     color: "text-primary",
     stripeName: "MyDraft Pro",
     features: [
-      "Personal writing style memory",
-      "50 AI credits per month",
-      "Advanced automation & workflows",
-      "Custom rules and sequences",
-      "Team or shared inboxes",
-      "API access & integrations",
+      "Everything in Personal",
+      "200 AI credits per month",
+      "Enhanced AI model (GPT-4o)",
+      "Background auto-sort",
       "Priority support",
       "3-day free trial",
     ],
@@ -246,21 +301,20 @@ const basePlans = [
   {
     id: "business",
     name: "Business",
-    monthlyPrice: 14.99,
-    annualPrice: 149.9,
-    annualSavings: 49,
+    monthlyPrice: 19.99,
+    annualPrice: 191.9,
+    annualSavings: 48,
     description: "For teams and power users",
     icon: Users,
     color: "text-amber-500",
     stripeName: "MyDraft Business",
     features: [
       "Everything in Pro",
-      "Enhanced AI quality",
-      "200 AI credits per month",
+      "500 AI credits per month",
       "Voice assistant",
       "Custom AI training",
-      "Team collaboration",
-      "Dedicated account manager",
+      "Team collaboration (up to 5)",
+      "Dedicated support",
       "3-day free trial",
     ],
   },
@@ -629,7 +683,7 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 max-w-6xl mx-auto">
           {basePlans.map((plan) => {
             const isRecommended = plan.id === recommendedPlan;
             const isCurrentPlan = plan.id === currentPlan || (plan.id === "business" && currentPlan === "premium");
@@ -720,8 +774,8 @@ export default function PricingPage() {
                         if (plan.id === "free") {
                           return hasActiveSubscription ? "Downgrade to Free" : "Get Started";
                         }
-                        if (!hasActiveSubscription) return "Start Free Trial";
-                        const planRank: Record<string, number> = { free: 0, pro: 1, premium: 2, business: 2 };
+                        if (!hasActiveSubscription) return plan.id === "personal" ? "Choose Personal" : "Start Free Trial";
+                        const planRank: Record<string, number> = { free: 0, personal: 1, pro: 2, premium: 3, business: 3 };
                         const targetRank = planRank[plan.id] || 0;
                         const currentRank = planRank[currentPlan] || 0;
                         if (targetRank > currentRank) return "Upgrade";

@@ -11,10 +11,12 @@ import {
   getActiveAddons,
 } from './credits';
 
-const KNOWN_PRICE_AMOUNTS: Record<number, 'pro' | 'premium'> = {
-  [PLAN_PRICES.pro.monthly]: 'pro',         // Pro monthly: $4.99/mo
+const KNOWN_PRICE_AMOUNTS: Record<number, 'personal' | 'pro' | 'premium'> = {
+  [PLAN_PRICES.personal.monthly]: 'personal', // Personal monthly
+  [PLAN_PRICES.personal.annual]: 'personal',  // Personal annual
+  [PLAN_PRICES.pro.monthly]: 'pro',         // Pro monthly
   [PLAN_PRICES.pro.annual]: 'pro',          // Pro annual
-  [PLAN_PRICES.premium.monthly]: 'premium', // Business monthly: $14.99/mo
+  [PLAN_PRICES.premium.monthly]: 'premium', // Business monthly
   [PLAN_PRICES.premium.annual]: 'premium',  // Business annual
   // Legacy prices (so existing subs map correctly until migrated)
   1000: 'pro',
@@ -23,12 +25,13 @@ const KNOWN_PRICE_AMOUNTS: Record<number, 'pro' | 'premium'> = {
   29900: 'premium',
 };
 
-function determinePlanFromAmount(amount: number): 'free' | 'pro' | 'premium' {
+function determinePlanFromAmount(amount: number): 'free' | 'personal' | 'pro' | 'premium' {
   return KNOWN_PRICE_AMOUNTS[amount] || 'free';
 }
 
-function determinePlanFromMetadataOrAmount(metadata: any, amount: number): 'free' | 'pro' | 'premium' {
+function determinePlanFromMetadataOrAmount(metadata: any, amount: number): 'free' | 'personal' | 'pro' | 'premium' {
   const planFromMetadata = metadata?.plan;
+  if (planFromMetadata === 'personal') return 'personal';
   if (planFromMetadata === 'pro') return 'pro';
   if (planFromMetadata === 'premium' || planFromMetadata === 'business') return 'premium';
   return determinePlanFromAmount(amount);
@@ -81,7 +84,7 @@ export class WebhookHandlers {
         }
 
         const priceId = subscription.items?.data?.[0]?.price?.id;
-        let plan: 'free' | 'pro' | 'premium' = 'free';
+        let plan: 'free' | 'personal' | 'pro' | 'premium' = 'free';
         let priceMeta: any = {};
 
         if (priceId) {
@@ -117,7 +120,7 @@ export class WebhookHandlers {
 
           if (type === 'customer.subscription.created' && plan !== 'free') {
             try {
-              const planLabel = plan === 'premium' ? 'Business' : 'Pro';
+              const planLabel = plan === 'premium' ? 'Business' : plan === 'personal' ? 'Personal' : 'Pro';
               const price = subscription.items?.data?.[0]?.price;
               const amt = price?.unit_amount ? `$${(price.unit_amount / 100).toFixed(2)}` : '';
               const interval = price?.recurring?.interval === 'year' ? 'annually' : 'monthly';
@@ -321,7 +324,7 @@ export class WebhookHandlers {
         // Note: referral rewards are granted when the referred user connects an email
         // account (grantReferralRewardOnConnect), not on subscription payment.
 
-        let plan: 'free' | 'pro' | 'premium' = 'free';
+        let plan: 'free' | 'personal' | 'pro' | 'premium' = 'free';
         const lines = invoice.lines?.data || [];
         for (const line of lines) {
           const price = line.price;
@@ -383,7 +386,7 @@ export class WebhookHandlers {
 
         if (user && amountPaid > 0) {
           try {
-            const planLabel = plan === 'premium' ? 'Business' : plan === 'pro' ? 'Pro' : 'Free';
+            const planLabel = plan === 'premium' ? 'Business' : plan === 'pro' ? 'Pro' : plan === 'personal' ? 'Personal' : 'Free';
             const amtStr = `$${(amountPaid / 100).toFixed(2)}`;
             const dateStr = new Date((invoice.created || Date.now() / 1000) * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
             await sendBillingReceiptEmail(user.email, planLabel, amtStr, dateStr, invoice.number || invoiceId);

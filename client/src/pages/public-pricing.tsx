@@ -98,8 +98,8 @@ export default function PublicPricingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Seo
-        title="Pricing — Free, Pro & Business Plans | MyDraft"
-        description="Simple credit-based pricing. Start free with 10 AI credits a month. Pro is $4.99/mo for 50 credits, Business $14.99/mo for 200. 3-day free trial, no card to start."
+        title="Pricing — Free, Personal, Pro & Business Plans | MyDraft"
+        description="Simple credit-based pricing. Start free with 10 AI credits a month. Personal is $2.99/mo for 50 credits, Pro $7.99/mo for 200, Business $19.99/mo for 500. 3-day free trial on Pro & Business."
         path="/pricing"
         jsonLd={[
           {
@@ -110,8 +110,9 @@ export default function PublicPricingPage() {
             brand: { "@type": "Brand", name: "MyDraft" },
             offers: [
               { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD", url: "https://mydraft.io/pricing" },
-              { "@type": "Offer", name: "Pro", price: "4.99", priceCurrency: "USD", url: "https://mydraft.io/pricing" },
-              { "@type": "Offer", name: "Business", price: "14.99", priceCurrency: "USD", url: "https://mydraft.io/pricing" },
+              { "@type": "Offer", name: "Personal", price: "2.99", priceCurrency: "USD", url: "https://mydraft.io/pricing" },
+              { "@type": "Offer", name: "Pro", price: "7.99", priceCurrency: "USD", url: "https://mydraft.io/pricing" },
+              { "@type": "Offer", name: "Business", price: "19.99", priceCurrency: "USD", url: "https://mydraft.io/pricing" },
             ],
           },
           {
@@ -149,7 +150,7 @@ export default function PublicPricingPage() {
       </section>
 
       <section className="pb-24 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="flex justify-center mb-10">
             <div className="inline-flex items-center bg-black/[0.04] dark:bg-white/[0.04] rounded-full p-1 border border-black/[0.08] dark:border-white/[0.08]" data-testid="billing-toggle">
               <button
@@ -185,7 +186,7 @@ export default function PublicPricingPage() {
             </div>
           )}
 
-          <div className="grid md:grid-cols-3 gap-6 mb-20">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
             <PricingCard
               name="Free"
               planId="free"
@@ -206,19 +207,39 @@ export default function PublicPricingPage() {
               isLoading={selectingPlan === "free" && isLoading}
             />
             <PricingCard
-              name="Pro"
-              planId="pro"
-              price={billingInterval === "annual" ? "$4.16" : "$4.99"}
+              name="Personal"
+              planId="personal"
+              price={billingInterval === "annual" ? "$2.39" : "$2.99"}
               period="month"
-              billedAnnually={billingInterval === "annual" ? 49.9 : undefined}
-              annualSavings={billingInterval === "annual" ? 21 : undefined}
-              description="For professionals who need more"
+              billedAnnually={billingInterval === "annual" ? 28.7 : undefined}
+              annualSavings={billingInterval === "annual" ? 7 : undefined}
+              description="For everyday personal email"
               features={[
                 { text: "Connect 1 email account", included: true },
                 { text: "50 AI credits per month", included: true },
                 { text: "Writing style memory", included: true },
+                { text: "Advanced inbox management", included: true },
                 { text: "Email scheduling", included: true },
                 { text: "Priority support", included: true },
+              ]}
+              onSelect={() => handlePlanSelect("personal")}
+              buttonText={currentPlan === "personal" ? "Current Plan" : "Choose Personal"}
+              isCurrentPlan={currentPlan === "personal"}
+              isLoading={selectingPlan === "personal" && isLoading}
+            />
+            <PricingCard
+              name="Pro"
+              planId="pro"
+              price={billingInterval === "annual" ? "$6.39" : "$7.99"}
+              period="month"
+              billedAnnually={billingInterval === "annual" ? 76.7 : undefined}
+              annualSavings={billingInterval === "annual" ? 19 : undefined}
+              description="For professionals who need more"
+              features={[
+                { text: "200 AI credits per month", included: true },
+                { text: "Enhanced AI model (GPT-4o)", included: true },
+                { text: "Background auto-sort", included: true },
+                { text: "Everything in Personal", included: true },
                 { text: "3-day free trial", included: true },
               ]}
               onSelect={() => handlePlanSelect("pro")}
@@ -230,18 +251,17 @@ export default function PublicPricingPage() {
             <PricingCard
               name="Business"
               planId="business"
-              price={billingInterval === "annual" ? "$12.49" : "$14.99"}
+              price={billingInterval === "annual" ? "$15.99" : "$19.99"}
               period="month"
-              billedAnnually={billingInterval === "annual" ? 149.9 : undefined}
-              annualSavings={billingInterval === "annual" ? 49 : undefined}
+              billedAnnually={billingInterval === "annual" ? 191.9 : undefined}
+              annualSavings={billingInterval === "annual" ? 48 : undefined}
               description="For teams and power users"
               features={[
-                { text: "Connect 1 email account", included: true },
-                { text: "Enhanced AI quality", included: true },
-                { text: "200 AI credits per month", included: true },
+                { text: "500 AI credits per month", included: true },
                 { text: "Voice assistant", included: true },
                 { text: "Custom AI training", included: true },
-                { text: "Team collaboration", included: true },
+                { text: "Team collaboration (up to 5)", included: true },
+                { text: "Everything in Pro", included: true },
                 { text: "3-day free trial", included: true },
               ]}
               onSelect={() => handlePlanSelect("business")}
@@ -391,17 +411,18 @@ function PricingCard({
 
 function FeatureComparison() {
   const features = [
-    { name: "Email accounts", free: "1", pro: "1", business: "1" },
-    { name: "Free trial", free: "x", pro: "3 days", business: "3 days" },
-    { name: "AI credits / month", free: "10", pro: "50", business: "200" },
-    { name: "Writing style memory", free: "x", pro: "check", business: "check" },
-    { name: "AI model", free: "Standard", pro: "Standard", business: "Enhanced" },
-    { name: "Inbox management", free: "Basic", pro: "Advanced", business: "Advanced" },
-    { name: "Email scheduling", free: "x", pro: "check", business: "check" },
-    { name: "Voice assistant", free: "x", pro: "x", business: "check" },
-    { name: "Custom AI training", free: "x", pro: "x", business: "check" },
-    { name: "Team collaboration", free: "x", pro: "x", business: "check" },
-    { name: "Support", free: "Standard", pro: "Priority", business: "Dedicated" },
+    { name: "Email accounts", free: "1", personal: "1", pro: "1", business: "1" },
+    { name: "Free trial", free: "x", personal: "x", pro: "3 days", business: "3 days" },
+    { name: "AI credits / month", free: "10", personal: "50", pro: "200", business: "500" },
+    { name: "Writing style memory", free: "x", personal: "check", pro: "check", business: "check" },
+    { name: "AI model", free: "Standard", personal: "Standard", pro: "Enhanced", business: "Enhanced" },
+    { name: "Inbox management", free: "Basic", personal: "Advanced", pro: "Advanced", business: "Advanced" },
+    { name: "Email scheduling", free: "x", personal: "check", pro: "check", business: "check" },
+    { name: "Background auto-sort", free: "x", personal: "x", pro: "check", business: "check" },
+    { name: "Voice assistant", free: "x", personal: "x", pro: "x", business: "check" },
+    { name: "Custom AI training", free: "x", personal: "x", pro: "x", business: "check" },
+    { name: "Team collaboration", free: "x", personal: "x", pro: "x", business: "check" },
+    { name: "Support", free: "Standard", personal: "Priority", pro: "Priority", business: "Dedicated" },
   ];
 
   return (
@@ -416,6 +437,7 @@ function FeatureComparison() {
             <tr className="border-b border-black/[0.06] dark:border-white/[0.06]">
               <th className="text-left p-5 font-medium text-muted-foreground/70">Features</th>
               <th className="text-center p-5 font-medium text-muted-foreground/70 w-28">Free</th>
+              <th className="text-center p-5 font-medium text-muted-foreground/70 w-28">Personal</th>
               <th className="text-center p-5 font-medium text-primary w-28 bg-primary/[0.03]">Pro</th>
               <th className="text-center p-5 font-medium text-muted-foreground/70 w-28">Business</th>
             </tr>
@@ -426,6 +448,9 @@ function FeatureComparison() {
                 <td className="p-5 text-sm">{feature.name}</td>
                 <td className="p-5 text-center text-sm">
                   <FeatureValue value={feature.free} />
+                </td>
+                <td className="p-5 text-center text-sm">
+                  <FeatureValue value={feature.personal} />
                 </td>
                 <td className="p-5 text-center text-sm bg-primary/[0.03]">
                   <FeatureValue value={feature.pro} highlight />

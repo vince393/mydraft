@@ -325,10 +325,12 @@ function AccountTab({ settings }: { settings: Settings }) {
     ? "Business"
     : settings.plan === "pro"
       ? "Pro"
-      : settings.plan === "free"
-        ? "Free"
-        : null;
-  const isPaidPlan = settings.plan === "pro" || settings.plan === "premium";
+      : settings.plan === "personal"
+        ? "Personal"
+        : settings.plan === "free"
+          ? "Free"
+          : null;
+  const isPaidPlan = settings.plan === "personal" || settings.plan === "pro" || settings.plan === "premium";
   const isOnTrial = !!settings.trialActive;
   const hasActiveSubscription = !!settings.hasActiveSubscription;
 
@@ -999,9 +1001,10 @@ function BillingTab({ settings }: { settings: Settings }) {
 
   const planDetails: Record<string, { name: string; price: string; features: string[] }> = {
     free: { name: "Free", price: "$0/month", features: ["Basic inbox management", "10 AI credits per month", "Standard support"] },
-    pro: { name: "Pro", price: "$4.99/mo or $4.16/mo billed annually", features: ["50 AI credits per month", "Advanced tone customization", "Email scheduling", "Priority support"] },
-    premium: { name: "Business", price: "$14.99/mo or $12.49/mo billed annually", features: ["200 AI credits per month", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
-    business: { name: "Business", price: "$14.99/mo or $12.49/mo billed annually", features: ["200 AI credits per month", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
+    personal: { name: "Personal", price: "$2.99/mo or $2.39/mo billed annually", features: ["50 AI credits per month", "Writing style memory", "Advanced inbox management", "Email scheduling", "Priority support"] },
+    pro: { name: "Pro", price: "$7.99/mo or $6.39/mo billed annually", features: ["200 AI credits per month", "Enhanced AI model (GPT-4o)", "Background auto-sort", "Email scheduling", "Priority support"] },
+    premium: { name: "Business", price: "$19.99/mo or $15.99/mo billed annually", features: ["500 AI credits per month", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
+    business: { name: "Business", price: "$19.99/mo or $15.99/mo billed annually", features: ["500 AI credits per month", "Voice assistant", "Custom AI training", "Team collaboration", "Dedicated support"] },
   };
 
   const currentPlan = (settings?.plan && planDetails[settings.plan]) ? planDetails[settings.plan] : planDetails.free;

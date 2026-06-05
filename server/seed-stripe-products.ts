@@ -68,6 +68,14 @@ async function seedProducts() {
   const specs: SeedSpec[] = [
     // Subscription plans
     {
+      sku: 'plan_personal',
+      name: 'MyDraft Personal',
+      description: `Personal plan — ${PLAN_MONTHLY_CREDITS.personal} AI credits per month`,
+      amount: PLAN_PRICES.personal.monthly,
+      interval: 'month',
+      metadata: { type: 'plan', plan: 'personal', credits: String(PLAN_MONTHLY_CREDITS.personal) },
+    },
+    {
       sku: 'plan_pro',
       name: 'MyDraft Pro',
       description: `Pro plan — ${PLAN_MONTHLY_CREDITS.pro} AI credits per month`,
