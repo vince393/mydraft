@@ -8378,14 +8378,14 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           });
       }
 
-      // Check team member limit (max 1 member = 2 total including owner)
+      // Check team member limit (max 4 members = 5 total including owner)
       const memberCount = await storage.getTeamMemberCount(userId);
-      if (memberCount >= 1) {
+      if (memberCount >= 4) {
         return res
           .status(400)
           .json({
             error:
-              "Team limit reached. Business plan allows 1 additional team member.",
+              "Team limit reached. Business plan allows up to 4 additional team members.",
           });
       }
 
@@ -8394,10 +8394,10 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
       const pendingCount = sentInvites.filter(
         (i) => i.status === "pending",
       ).length;
-      if (pendingCount + memberCount >= 1) {
+      if (pendingCount + memberCount >= 4) {
         return res
           .status(400)
-          .json({ error: "You already have a pending invite or team member." });
+          .json({ error: "You've reached the team limit including pending invites." });
       }
 
       // Find the invitee user

@@ -1880,9 +1880,10 @@ function TeamTab() {
     }
   };
 
+  const MAX_TEAM_MEMBERS = 4;
   const pendingInvites = sentInvites.filter(i => i.status === "pending");
-  const hasTeamMember = teamMembers.length > 0;
-  const canInvite = !hasTeamMember && pendingInvites.length === 0;
+  const usedSeats = teamMembers.length + pendingInvites.length;
+  const canInvite = usedSeats < MAX_TEAM_MEMBERS;
 
   return (
     <div className="space-y-6">
@@ -1893,7 +1894,7 @@ function TeamTab() {
             Team Management
           </CardTitle>
           <CardDescription>
-            Invite team members to collaborate on your inbox. Business plan allows 1 additional team member.
+            Invite team members to collaborate on your inbox. Business plan allows up to 4 additional team members.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -1934,9 +1935,9 @@ function TeamTab() {
           ) : (
             <div className="p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground">
-                {hasTeamMember 
-                  ? "You have reached the maximum team size (1 member). Remove the current member to invite someone else."
-                  : "You have a pending invite. Wait for a response or the invite will expire."}
+                {teamMembers.length >= MAX_TEAM_MEMBERS
+                  ? "You have reached the maximum team size (4 additional members). Remove a member to invite someone else."
+                  : "You've used all your team seats (members plus pending invites). Wait for a response or remove a member to invite someone else."}
               </p>
             </div>
           )}
