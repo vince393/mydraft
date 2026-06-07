@@ -29,7 +29,7 @@ Preferred communication style: Simple, everyday language.
 ### AI Integration
 - **Provider**: OpenAI via Replit AI Integrations.
 - **Models**: `gpt-4o-mini-transcribe` for speech-to-text, `gpt-audio-mini` for voice chat AND TTS (using chat completions with audio modality — the `tts-1` speech API is NOT supported by Replit AI Integrations). GPT-4o for Business/Pro users, GPT-4o-mini for others and background tasks.
-- **Features**: Email reply drafting, inbox sorting, translation, summarization, chatbot, Read Aloud (AI TTS via `gpt-audio-mini` with customizable voice — 10 voices: alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer; default: nova; voice preference stored in `aiPreferences.readAloudVoice`), writing style learning (Pro+), grammar & style check in composer, **background auto-sort** (every 5min for Pro+ users with AI-described custom folders — in-memory dedup, batched 50/call, max 100/cycle, stale user cleanup).
+- **Features**: Email reply drafting, inbox sorting, translation, summarization, chatbot, Read Aloud (AI TTS via `gpt-audio-mini` with customizable voice — 10 voices: alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer; default: nova; voice preference stored in `aiPreferences.readAloudVoice`), writing style learning (Personal+), grammar & style check in composer, **background auto-sort** (every 5min for Pro+ users with AI-described custom folders — in-memory dedup, batched 50/call, max 100/cycle, stale user cleanup).
 - **Cost Optimizations**: Deterministic language detection (`franc` — zero AI cost), email noise stripping (`server/email-utils.ts` — strips quoted replies, signatures, disclaimers before AI calls), persisted email summaries (DB-backed `message_summary_cache` table with upsert — summaries survive restarts), TTS audio caching (in-memory, 2hr TTL, max 30 entries, keyed by userId-emailId when available).
 - **Global Inbox**: Supports multilingual features with region, preferred language, and formality level settings. Provides culturally-aware translation and etiquette suggestions.
 
@@ -37,6 +37,14 @@ Preferred communication style: Simple, everyday language.
 - `client/`: React frontend (components, pages, hooks, lib).
 - `server/`: Express backend (routes, storage, index, replit_integrations).
 - `shared/`: Shared types and schemas.
+
+### Plans & Pricing (credit economy)
+- **Tiers** (internal name in parens): Free, Personal, Pro, Business (`premium`). Frontend sends `free`/`personal`/`pro`/`business`; backend maps `business`→`premium`. Hierarchy: `{free:0, personal:1, pro:2, premium:3}`.
+- **Monthly credits**: Free 10, Personal 50, Pro 200, Business 500 (in `server/credits.ts` `PLAN_MONTHLY_CREDITS`). Credit amounts apply to ALL users.
+- **Prices** (`PLAN_PRICES`, cents): Personal $2.99/mo · $28.70/yr; Pro $7.99/mo · $76.70/yr; Business $19.99/mo · $191.90/yr. Stripe has both monthly AND annual prices seeded per plan (`server/seed-stripe-products.ts`). Checkout also lazily find-or-creates a price if missing.
+- **Feature ladder (cumulative)**: Free = standard; Personal = + writing-style memory, advanced inbox, email scheduling, priority support; Pro = + GPT-4o model, background auto-sort; Business = + voice assistant, custom AI training, team (5 seats), dedicated support.
+- **Trial**: Pro/Business only — Personal has NO trial (charges immediately; onboarding routes Personal via `/checkout?plan=personal`).
+- **Migration**: `server/migrate-existing-subscriptions.ts` is interval-aware (preserves monthly/annual), moves existing Pro/Business subs onto new prices (no grandfathering), skips Personal. Run seed first, then dry-run, then `--apply`.
 
 ### Key Data Models
 - **Users**: Authentication, plan selection, AI preferences.

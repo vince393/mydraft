@@ -14,7 +14,7 @@ type SeedSpec = {
   name: string;
   description: string;
   amount: number; // cents
-  interval: 'month' | null; // null = one-time
+  interval: 'month' | 'year' | null; // null = one-time
   metadata: Record<string, string>;
 };
 
@@ -66,13 +66,22 @@ async function seedProducts() {
   const stripe = await getUncachableStripeClient();
 
   const specs: SeedSpec[] = [
-    // Subscription plans
+    // Subscription plans — each plan gets a monthly AND an annual price so
+    // checkout and the migration script both have pre-seeded prices to target.
     {
       sku: 'plan_personal',
       name: 'MyDraft Personal',
       description: `Personal plan — ${PLAN_MONTHLY_CREDITS.personal} AI credits per month`,
       amount: PLAN_PRICES.personal.monthly,
       interval: 'month',
+      metadata: { type: 'plan', plan: 'personal', credits: String(PLAN_MONTHLY_CREDITS.personal) },
+    },
+    {
+      sku: 'plan_personal',
+      name: 'MyDraft Personal',
+      description: `Personal plan — ${PLAN_MONTHLY_CREDITS.personal} AI credits per month`,
+      amount: PLAN_PRICES.personal.annual,
+      interval: 'year',
       metadata: { type: 'plan', plan: 'personal', credits: String(PLAN_MONTHLY_CREDITS.personal) },
     },
     {
@@ -84,11 +93,27 @@ async function seedProducts() {
       metadata: { type: 'plan', plan: 'pro', credits: String(PLAN_MONTHLY_CREDITS.pro) },
     },
     {
+      sku: 'plan_pro',
+      name: 'MyDraft Pro',
+      description: `Pro plan — ${PLAN_MONTHLY_CREDITS.pro} AI credits per month`,
+      amount: PLAN_PRICES.pro.annual,
+      interval: 'year',
+      metadata: { type: 'plan', plan: 'pro', credits: String(PLAN_MONTHLY_CREDITS.pro) },
+    },
+    {
       sku: 'plan_premium',
       name: 'MyDraft Business',
       description: `Business plan — ${PLAN_MONTHLY_CREDITS.premium} AI credits per month`,
       amount: PLAN_PRICES.premium.monthly,
       interval: 'month',
+      metadata: { type: 'plan', plan: 'premium', credits: String(PLAN_MONTHLY_CREDITS.premium) },
+    },
+    {
+      sku: 'plan_premium',
+      name: 'MyDraft Business',
+      description: `Business plan — ${PLAN_MONTHLY_CREDITS.premium} AI credits per month`,
+      amount: PLAN_PRICES.premium.annual,
+      interval: 'year',
       metadata: { type: 'plan', plan: 'premium', credits: String(PLAN_MONTHLY_CREDITS.premium) },
     },
     // One-time credit packs

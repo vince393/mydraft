@@ -121,7 +121,7 @@ function getRecommendationReasons(planId: string, aiPreferences: AIPreferences |
     return {
       title: "Perfect for most users",
       reasons: ["Balances features and value"],
-      benefits: ["Unlimited AI-powered replies", "Advanced customization options"]
+      benefits: ["Plenty of AI credits every month", "Advanced customization options"]
     };
   }
 
@@ -195,7 +195,7 @@ function getRecommendationReasons(planId: string, aiPreferences: AIPreferences |
       benefits.push(`Customize AI to match your ${replyTone === "professional" ? "professional" : replyTone === "casual" ? "casual" : "unique"} communication style`);
     }
 
-    benefits.push("Unlimited AI-powered email replies");
+    benefits.push("200 AI credits every month");
     benefits.push("Smart scheduling to send at the perfect time");
     benefits.push("Priority support when you need help");
 
@@ -616,7 +616,11 @@ export default function PricingPage() {
                 data-testid="button-select-recommended"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {recommendedPlanData.id === "free" ? "Get Started Free" : "Start 3-Day Free Trial"}
+                {recommendedPlanData.id === "free"
+                  ? "Get Started Free"
+                  : recommendedPlanData.id === "personal"
+                    ? "Get Personal"
+                    : "Start 3-Day Free Trial"}
               </Button>
 
               <Button
@@ -632,9 +636,14 @@ export default function PricingPage() {
             </CardFooter>
           </Card>
 
-          {recommendedPlanData.id !== "free" && (
+          {recommendedPlanData.id !== "free" && recommendedPlanData.id !== "personal" && (
             <p className="text-center text-sm text-muted-foreground mt-6">
               Start with a 3-day free trial. Cancel anytime, no questions asked.
+            </p>
+          )}
+          {recommendedPlanData.id === "personal" && (
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              Billed right away. Cancel anytime, no questions asked.
             </p>
           )}
         </div>
