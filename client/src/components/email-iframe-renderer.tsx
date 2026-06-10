@@ -234,11 +234,12 @@ export function EmailIframeRenderer({
   #email-content-wrap {
     max-width: 100%;
     margin: 0 auto;
-    padding: ${isRich ? '0' : '16px 20px'};
+    padding: ${isRich ? '0' : '16px 24px'};
     background: ${contentBg};
     min-height: 100%;
     box-sizing: border-box;
   }
+  ${isRich ? `
   @media (min-width: 768px) {
     #email-content-wrap {
       max-width: 680px;
@@ -253,7 +254,7 @@ export function EmailIframeRenderer({
     #email-content-wrap {
       max-width: 860px;
     }
-  }
+  }` : ''}
   #email-content-wrap > * {
     max-width: 100% !important;
     box-sizing: border-box;
