@@ -1,10 +1,9 @@
 import type { Express, Request, Response } from "express";
-import { speechToText, voiceChat, textToSpeech, textToSpeechStream } from "./client";
+import { speechToText, voiceChat } from "./client";
 import { storage } from "../../storage";
 import { gmailProvider } from "../../gmail";
 import { microsoftProvider } from "../../microsoft";
 import { imapProvider } from "../../imap";
-import { stripEmailNoise } from "../../email-utils";
 import type { IEmailProvider, EmailListItem } from "../../email-provider";
 import { getActionCost, getBalance, spendCredits, refundCredits } from "../../credits";
 
@@ -15,7 +14,7 @@ import { getActionCost, getBalance, spendCredits, refundCredits } from "../../cr
 async function reserveAudioCredits(
   req: Request,
   res: Response,
-  action: "voice_chat" | "read_aloud",
+  action: "voice_chat",
   reference?: string,
 ): Promise<{ ok: true; userId: string; cost: number; balanceAfter: number } | { ok: false }> {
   const userId = (req as any).jwtUserId || (req.session as any)?.userId;
@@ -37,10 +36,6 @@ async function reserveAudioCredits(
   }
   return { ok: true, userId, cost, balanceAfter: result.balanceAfter };
 }
-
-const ttsCache: Map<string, { audio: string; timestamp: number }> = new Map();
-const TTS_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
-const TTS_CACHE_MAX_SIZE = 30;
 
 function getProviderForAccount(account: { provider: string }): IEmailProvider {
   if (account.provider === "google") return gmailProvider;
@@ -199,160 +194,6 @@ ${emailContext ? `RECENT EMAILS:\n${emailContext}` : "No email account connected
         }
       }
       res.status(500).json({ error: "Failed to process voice chat" });
-    }
-  });
-
-  app.post("/api/voice/tts", async (req: Request, res: Response) => {
-    try {
-      const userId = (req as any).jwtUserId || (req.session as any)?.userId;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const { text, emailId, voice } = req.body;
-      
-      if (!text || typeof text !== "string") {
-        return res.status(400).json({ error: "Text required" });
-      }
-
-      const validVoices = ["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"];
-      const selectedVoice = voice && validVoices.includes(voice) ? voice : "nova";
-
-      const cacheKey = emailId
-        ? `${userId}-${emailId}-${selectedVoice}`
-        : `${userId}-${selectedVoice}-${text.slice(0, 100)}`;
-
-      const now = Date.now();
-      const cached = ttsCache.get(cacheKey);
-      if (cached && now - cached.timestamp < TTS_CACHE_TTL_MS) {
-        return res.json({ audio: cached.audio, audioFormat: "wav", cached: true });
-      }
-
-      let cleanText = stripEmailNoise(text).slice(0, 2000);
-      if (!cleanText.trim()) {
-        cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 2000);
-      }
-      console.log(`[TTS] Request: voice=${selectedVoice}, textLength=${text.length}, cleanLength=${cleanText.length}`);
-
-      // Reserve credits atomically right before the AI call; refund below if no audio.
-      const reservation = await reserveAudioCredits(req, res, "read_aloud", emailId ? String(emailId) : undefined);
-      if (!reservation.ok) return;
-
-      let audio: string | undefined;
-      try {
-        audio = await textToSpeech(cleanText || text.slice(0, 2000), selectedVoice);
-      } catch (aiErr) {
-        if (reservation.cost > 0) {
-          try { await refundCredits({ userId, amount: reservation.cost, action: "read_aloud", reference: emailId ? String(emailId) : undefined }); } catch (e) { console.error("Failed to refund TTS credits:", e); }
-        }
-        throw aiErr;
-      }
-
-      let creditsRemaining: number | undefined;
-      if (audio) {
-        ttsCache.set(cacheKey, { audio, timestamp: now });
-
-        if (ttsCache.size > TTS_CACHE_MAX_SIZE) {
-          const entries = Array.from(ttsCache.entries()).sort(
-            (a, b) => a[1].timestamp - b[1].timestamp,
-          );
-          entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE)
-            .forEach(([key]) => ttsCache.delete(key));
-        }
-
-        creditsRemaining = reservation.cost > 0 ? reservation.balanceAfter : undefined;
-      } else if (reservation.cost > 0) {
-        // No usable audio produced — refund the reservation.
-        try { await refundCredits({ userId, amount: reservation.cost, action: "read_aloud", reference: emailId ? String(emailId) : undefined }); } catch (e) { console.error("Failed to refund TTS credits:", e); }
-      }
-      
-      res.json({ audio, audioFormat: "wav", creditsRemaining });
-    } catch (error) {
-      console.error("TTS error:", error);
-      res.status(500).json({ error: "Failed to generate speech" });
-    }
-  });
-
-  app.post("/api/voice/tts/stream", async (req: Request, res: Response) => {
-    try {
-      const userId = (req as any).jwtUserId || (req.session as any)?.userId;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const { text, emailId, voice } = req.body;
-
-      if (!text || typeof text !== "string") {
-        console.log("[TTS Stream] No text provided");
-        return res.status(400).json({ error: "Text required" });
-      }
-
-      console.log(`[TTS Stream] Request: voice=${voice}, emailId=${emailId}, textLength=${text.length}`);
-
-      const validVoices = ["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"];
-      const selectedVoice = voice && validVoices.includes(voice) ? voice : "nova";
-
-      const cacheKey = emailId
-        ? `${userId}-${emailId}-${selectedVoice}`
-        : `${userId}-${selectedVoice}-${text.slice(0, 100)}`;
-
-      const now = Date.now();
-      const cached = ttsCache.get(cacheKey);
-      if (cached && now - cached.timestamp < TTS_CACHE_TTL_MS) {
-        console.log("[TTS Stream] Serving from cache");
-        const buf = Buffer.from(cached.audio, "base64");
-        res.set({ "Content-Type": "audio/wav", "Content-Length": String(buf.length) });
-        return res.end(buf);
-      }
-
-      let cleanText = stripEmailNoise(text).slice(0, 2000);
-      if (!cleanText.trim()) {
-        cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 2000);
-      }
-      if (!cleanText.trim()) {
-        console.log("[TTS Stream] No readable text after cleaning");
-        return res.status(400).json({ error: "No readable text found" });
-      }
-      console.log(`[TTS Stream] Clean text length: ${cleanText.length}`);
-
-      // Reserve credits atomically right before the AI call; refund if no audio.
-      const reservation = await reserveAudioCredits(req, res, "read_aloud", emailId ? String(emailId) : undefined);
-      if (!reservation.ok) return;
-
-      const refundReservation = async () => {
-        if (reservation.cost > 0) {
-          try {
-            await refundCredits({ userId, amount: reservation.cost, action: "read_aloud", reference: emailId ? String(emailId) : undefined });
-          } catch (e) {
-            console.error("Failed to refund TTS stream credits:", e);
-          }
-        }
-      };
-
-      let audioBuffer: Buffer | null | undefined;
-      try {
-        audioBuffer = await textToSpeechStream(cleanText, selectedVoice);
-      } catch (aiErr) {
-        await refundReservation();
-        throw aiErr;
-      }
-
-      if (!audioBuffer) {
-        await refundReservation();
-        return res.status(500).json({ error: "Failed to generate speech" });
-      }
-
-      ttsCache.set(cacheKey, { audio: audioBuffer.toString("base64"), timestamp: Date.now() });
-      if (ttsCache.size > TTS_CACHE_MAX_SIZE) {
-        const entries = Array.from(ttsCache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp);
-        entries.slice(0, ttsCache.size - TTS_CACHE_MAX_SIZE).forEach(([key]) => ttsCache.delete(key));
-      }
-
-      res.set({ "Content-Type": "audio/wav", "Content-Length": String(audioBuffer.length) });
-      res.end(audioBuffer);
-    } catch (error) {
-      console.error("TTS stream error:", error);
-      if (!res.headersSent) res.status(500).json({ error: "Failed to generate speech" });
     }
   });
 }

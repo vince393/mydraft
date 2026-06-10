@@ -33,7 +33,6 @@ export const CREDIT_COSTS = {
   grammar_check: 1,
   translate: 1,
   ai_chat: 1,
-  read_aloud: 1,
   voice_chat: 2,
   image_generate: 5,
   inbox_refresh: 1,

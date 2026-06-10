@@ -144,8 +144,7 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<boolea
         <p style="margin:0 0 12px; font-size:13px; font-weight:600; color:#d4d4d8; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Here's what you can do:</p>
         <p style="margin:0 0 8px; font-size:13px; color:#a1a1aa; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">&#8226; Generate AI-powered reply drafts</p>
         <p style="margin:0 0 8px; font-size:13px; color:#a1a1aa; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">&#8226; Translate emails in 50+ languages</p>
-        <p style="margin:0 0 8px; font-size:13px; color:#a1a1aa; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">&#8226; Get instant email summaries</p>
-        <p style="margin:0; font-size:13px; color:#a1a1aa; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">&#8226; Listen to emails with Read Aloud</p>
+        <p style="margin:0; font-size:13px; color:#a1a1aa; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">&#8226; Get instant email summaries</p>
       </div>
       <p style="margin:0; font-size:12px; color:#52525b; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
         If you have any questions, just reply to this email.

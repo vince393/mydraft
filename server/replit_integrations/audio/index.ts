@@ -1,2 +1,2 @@
 export { registerAudioRoutes } from "./routes";
-export { speechToText, voiceChat, textToSpeech } from "./client";
+export { speechToText, voiceChat } from "./client";

@@ -34,9 +34,6 @@ export type PreferredLanguage = z.infer<typeof preferredLanguageSchema>;
 export const formalityLevelSchema = z.enum(["formal", "neutral", "casual", "auto"]);
 export type FormalityLevel = z.infer<typeof formalityLevelSchema>;
 
-export const readAloudVoiceSchema = z.enum(["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"]);
-export type ReadAloudVoice = z.infer<typeof readAloudVoiceSchema>;
-
 export const aiPreferencesSchema = z.object({
   primaryUse: z.enum(["work", "personal", "both"]).optional(),
   emailVolume: z.enum(["low", "medium", "high", "very-high"]).optional(),
@@ -49,7 +46,6 @@ export const aiPreferencesSchema = z.object({
   region: regionSchema.optional(),
   preferredLanguage: preferredLanguageSchema.optional(),
   formalityLevel: formalityLevelSchema.optional(),
-  readAloudVoice: readAloudVoiceSchema.optional(),
 });
 
 export type AiPreferences = z.infer<typeof aiPreferencesSchema>;

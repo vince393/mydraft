@@ -19,17 +19,12 @@ import {
   Loader2,
   StickyNote,
   FileText,
-  Circle,
   ArrowRight,
   Paperclip,
   Download,
   Image as ImageIcon,
   File,
   Send,
-  Volume2,
-  Square,
-  Pause,
-  Play
 } from "lucide-react";
 import { EmailNotePanel } from "./email-note";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -54,17 +49,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { SmartAvatar } from "@/components/smart-avatar";
-import { isHtmlContent, stripHtmlToPlainText } from "@/lib/email-formatter";
+import { isHtmlContent } from "@/lib/email-formatter";
 import { EmailIframeRenderer } from "@/components/email-iframe-renderer";
 import { CreditCostBadge, useActionCost } from "@/components/credit-cost-badge";
 import type { Email, Draft } from "@shared/schema";
-
-// A tiny silent WAV used to "unlock" the audio element inside the click handler.
-// iOS Safari (and some mobile Chrome builds) only allow playback on an element
-// that received a play() call during a user gesture; the real audio arrives
-// after an async fetch, so we prime the element synchronously here first.
-const SILENT_WAV_DATA_URI =
-  "data:audio/wav;base64,UklGRiQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
 
 interface EmailAttachment {
   id: string;
@@ -217,54 +205,12 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
   const [showSummary, setShowSummary] = useState(false);
   const [displayedSummary, setDisplayedSummary] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [readAloudState, setReadAloudState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
-  const readAloudAudioRef = useRef<HTMLAudioElement | null>(null);
-  const readAloudUrlRef = useRef<string | null>(null);
-  const readAloudAbortRef = useRef<AbortController | null>(null);
-  const readAloudStoppedRef = useRef(false);
   const { toast } = useToast();
 
   const { canAfford: canAffordSummary } = useActionCost("ai_summary");
-  const { canAfford: canAffordReadAloud } = useActionCost("read_aloud");
   const { canAfford: canAffordTranslate } = useActionCost("translate");
 
   const emailId = email ? ((email as any).nylasId || email.id) : null;
-
-  const { data: userSettings } = useQuery<{ aiPreferences?: { readAloudVoice?: string; [key: string]: any } }>({
-    queryKey: ["/api/settings"],
-  });
-
-  const currentVoice = userSettings?.aiPreferences?.readAloudVoice || "nova";
-
-  const changeVoiceMutation = useMutation({
-    mutationFn: async (voice: string) => {
-      const currentPrefs = userSettings?.aiPreferences || {};
-      const response = await apiRequest("PUT", "/api/settings/ai-preferences", {
-        aiPreferences: { ...currentPrefs, readAloudVoice: voice },
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-      toast({ title: "Voice updated" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update voice", variant: "destructive" });
-    },
-  });
-
-  const VOICES = [
-    { id: "nova", label: "Nova" },
-    { id: "alloy", label: "Alloy" },
-    { id: "echo", label: "Echo" },
-    { id: "fable", label: "Fable" },
-    { id: "onyx", label: "Onyx" },
-    { id: "shimmer", label: "Shimmer" },
-    { id: "ash", label: "Ash" },
-    { id: "ballad", label: "Ballad" },
-    { id: "coral", label: "Coral" },
-    { id: "sage", label: "Sage" },
-  ];
 
   const summaryMutation = useMutation({
     mutationFn: async ({ id, subject, body }: { id: string | number; subject: string; body: string }) => {
@@ -329,233 +275,6 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
     onAiDraft?.();
   };
 
-  const extractReadableText = (body: string): string => {
-    if (!body) return "";
-    if (!isHtmlContent(body)) return body.trim();
-
-    const parsed = new DOMParser().parseFromString(body, "text/html");
-    const temp = parsed.body;
-
-    temp.querySelectorAll("style, script, head, title, meta, link, noscript").forEach((el) => el.remove());
-
-    temp.querySelectorAll("img, picture, svg, video, audio, canvas, figure > img, figure > picture").forEach((el) => el.remove());
-
-    temp.querySelectorAll("br").forEach((br) => {
-      br.replaceWith(document.createTextNode("\n"));
-    });
-
-    temp.querySelectorAll("p, div, tr, li, h1, h2, h3, h4, h5, h6").forEach((block) => {
-      block.prepend(document.createTextNode("\n"));
-      block.append(document.createTextNode("\n"));
-    });
-
-    const text = (temp.textContent || temp.innerText || "")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\n\s*\n/g, "\n\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-
-    return text;
-  };
-
-  const stopReadAloud = () => {
-    readAloudStoppedRef.current = true;
-    if (readAloudAbortRef.current) {
-      readAloudAbortRef.current.abort();
-      readAloudAbortRef.current = null;
-    }
-    if (readAloudAudioRef.current) {
-      readAloudAudioRef.current.pause();
-      readAloudAudioRef.current.src = "";
-      readAloudAudioRef.current = null;
-    }
-    if (readAloudUrlRef.current) {
-      URL.revokeObjectURL(readAloudUrlRef.current);
-      readAloudUrlRef.current = null;
-    }
-    setReadAloudState("idle");
-  };
-
-  const togglePauseResume = () => {
-    if (readAloudState === "playing" && readAloudAudioRef.current) {
-      readAloudAudioRef.current.pause();
-      setReadAloudState("paused");
-    } else if (readAloudState === "paused" && readAloudAudioRef.current) {
-      readAloudAudioRef.current.play();
-      setReadAloudState("playing");
-    }
-  };
-
-  const handleReadAloud = async () => {
-    if (readAloudState === "playing" || readAloudState === "paused" || readAloudState === "loading") {
-      stopReadAloud();
-      return;
-    }
-    if (!email) return;
-
-    let bodyText = "";
-    try {
-      bodyText = extractReadableText(email.body || "");
-    } catch {
-      bodyText = "";
-    }
-
-    if (!bodyText && email.preview) {
-      bodyText = email.preview.trim();
-    }
-
-    if (!bodyText) {
-      try {
-        bodyText = stripHtmlToPlainText(email.body || "").trim();
-      } catch {
-        bodyText = "";
-      }
-    }
-
-    const subjectText = email.subject?.trim() || "";
-    const senderText = email.sender ? `From ${email.sender}.` : "";
-
-    if (!bodyText && !subjectText) {
-      toast({ title: "Nothing to read", description: "This email has no readable text content.", variant: "destructive" });
-      return;
-    }
-
-    const parts = [senderText, subjectText, bodyText].filter(Boolean);
-    const fullText = parts.join(". ");
-    const voice = currentVoice;
-
-    readAloudStoppedRef.current = false;
-    setReadAloudState("loading");
-    const abortController = new AbortController();
-    readAloudAbortRef.current = abortController;
-
-    // Create and unlock the audio element synchronously inside the user gesture
-    // so playback is allowed later (after the async fetch) on mobile browsers.
-    const audio = new Audio();
-    audio.preload = "auto";
-    readAloudAudioRef.current = audio;
-    try {
-      audio.src = SILENT_WAV_DATA_URI;
-      const unlock = audio.play();
-      if (unlock && typeof unlock.then === "function") unlock.catch(() => {});
-    } catch {}
-
-    const playAudioBlob = async (blob: Blob): Promise<void> => {
-      const audioUrl = URL.createObjectURL(blob);
-      readAloudUrlRef.current = audioUrl;
-
-      // Reuse the element that was unlocked during the click gesture.
-      const audio = readAloudAudioRef.current ?? new Audio();
-      audio.preload = "auto";
-      readAloudAudioRef.current = audio;
-
-      audio.onended = () => stopReadAloud();
-      audio.onerror = () => {
-        if (readAloudStoppedRef.current) return;
-        stopReadAloud();
-        toast({ title: "Read Aloud failed", description: "Could not play the audio.", variant: "destructive" });
-      };
-
-      audio.src = audioUrl;
-
-      await new Promise<void>((resolve, reject) => {
-        audio.oncanplaythrough = () => resolve();
-        audio.onerror = () => reject(new Error("Audio decode failed"));
-        setTimeout(() => resolve(), 3000);
-      });
-
-      if (readAloudStoppedRef.current) {
-        URL.revokeObjectURL(audioUrl);
-        return;
-      }
-
-      await audio.play();
-      setReadAloudState("playing");
-    };
-
-    const base64ToBlob = (b64: string, format: string): Blob => {
-      const mimeType = format === "wav" ? "audio/wav" : "audio/mpeg";
-      const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return new Blob([bytes], { type: mimeType });
-    };
-
-    try {
-      const streamResponse = await fetch("/api/voice/tts/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ text: fullText, emailId, voice }),
-        signal: abortController.signal,
-      });
-
-      if (!streamResponse.ok) {
-        throw new Error(`TTS stream returned ${streamResponse.status}`);
-      }
-
-      const contentType = streamResponse.headers.get("content-type") || "";
-
-      if (contentType.includes("audio")) {
-        const blob = await streamResponse.blob();
-        if (blob.size < 100) throw new Error("Audio too small");
-        await playAudioBlob(blob);
-      } else {
-        const data = await streamResponse.json();
-        if (data.audio && data.audio.length > 100) {
-          const blob = base64ToBlob(data.audio, data.audioFormat || "wav");
-          await playAudioBlob(blob);
-        } else {
-          throw new Error("No audio data in stream response");
-        }
-      }
-    } catch (err: any) {
-      if (err?.name === "AbortError" || readAloudStoppedRef.current) return;
-
-      try {
-        const fallbackRes = await fetch("/api/voice/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ text: fullText, emailId, voice }),
-        });
-        if (fallbackRes.ok) {
-          const data = await fallbackRes.json();
-          if (data.audio && data.audio.length > 100) {
-            const blob = base64ToBlob(data.audio, data.audioFormat || "wav");
-            await playAudioBlob(blob);
-            return;
-          }
-        }
-      } catch {}
-
-      if (!readAloudStoppedRef.current) {
-        setReadAloudState("idle");
-        toast({ title: "Read Aloud failed", description: "Could not generate speech. Please try again.", variant: "destructive" });
-      }
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (readAloudAbortRef.current) {
-        readAloudAbortRef.current.abort();
-        readAloudAbortRef.current = null;
-      }
-      if (readAloudAudioRef.current) {
-        readAloudAudioRef.current.pause();
-        readAloudAudioRef.current.src = "";
-      }
-      if (readAloudUrlRef.current) {
-        URL.revokeObjectURL(readAloudUrlRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    stopReadAloud();
-  }, [emailId]);
-  
   // Get the selected email's ID for highlighting
   const selectedEmailId = email ? ((email as any).nylasId || email.id) : null;
   
@@ -992,53 +711,6 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   </span>
                 )}
               </Button>
-              <div className="flex items-center">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs px-3 rounded-r-none"
-                  onClick={handleReadAloud}
-                  disabled={!canAffordReadAloud && readAloudState !== "playing" && readAloudState !== "paused" && readAloudState !== "loading"}
-                  data-testid="button-read-aloud-top"
-                >
-                  {readAloudState === "loading" ? (
-                    <Loader2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 animate-spin" />
-                  ) : readAloudState === "playing" || readAloudState === "paused" ? (
-                    <Square className="w-3.5 h-3.5 sm:w-3 sm:h-3 fill-current" />
-                  ) : (
-                    <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                  )}
-                  {readAloudState === "loading" ? "Loading..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
-                  {readAloudState === "idle" && <CreditCostBadge action="read_aloud" />}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-10 sm:h-8 px-1.5 rounded-l-none border-l border-border/30"
-                      data-testid="button-voice-picker"
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Voice</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {VOICES.map((v) => (
-                      <DropdownMenuItem
-                        key={v.id}
-                        onClick={() => changeVoiceMutation.mutate(v.id)}
-                        className="text-xs gap-2"
-                        data-testid={`voice-pick-${v.id}`}
-                      >
-                        <span className={currentVoice === v.id ? "text-primary font-medium" : ""}>{v.label}</span>
-                        {currentVoice === v.id && <Circle className="w-2 h-2 fill-primary text-primary ml-auto" />}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
             </div>
           </div>
 
@@ -1122,99 +794,9 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                       </span>
                     )}
                   </Button>
-                  <div className="flex items-center">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-10 sm:h-8 gap-1.5 text-[13px] sm:text-xs rounded-full rounded-r-none px-3"
-                      onClick={handleReadAloud}
-                      disabled={!canAffordReadAloud && readAloudState !== "playing" && readAloudState !== "paused" && readAloudState !== "loading"}
-                      data-testid="button-read-aloud"
-                    >
-                      {readAloudState === "loading" ? (
-                        <Loader2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 animate-spin" />
-                      ) : readAloudState === "playing" || readAloudState === "paused" ? (
-                        <Square className="w-3.5 h-3.5 sm:w-3 sm:h-3 fill-current" />
-                      ) : (
-                        <Volume2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                      )}
-                      {readAloudState === "loading" ? "Loading..." : readAloudState === "playing" || readAloudState === "paused" ? "Stop" : "Read Aloud"}
-                      {readAloudState === "idle" && <CreditCostBadge action="read_aloud" />}
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-10 sm:h-8 px-1.5 rounded-full rounded-l-none border-l border-border/30"
-                          data-testid="button-voice-picker-bottom"
-                        >
-                          <ChevronDown className="w-3 h-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60">Voice</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {VOICES.map((v) => (
-                          <DropdownMenuItem
-                            key={v.id}
-                            onClick={() => changeVoiceMutation.mutate(v.id)}
-                            className="text-xs gap-2"
-                            data-testid={`voice-pick-bottom-${v.id}`}
-                          >
-                            <span className={currentVoice === v.id ? "text-primary font-medium" : ""}>{v.label}</span>
-                            {currentVoice === v.id && <Circle className="w-2 h-2 fill-primary text-primary ml-auto" />}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
                 </>
               )}
             </div>
-
-            {(readAloudState === "playing" || readAloudState === "paused" || readAloudState === "loading") && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-foreground/[0.03] border border-border/30">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-10 w-10 sm:h-8 sm:w-8 rounded-full"
-                  onClick={togglePauseResume}
-                  data-testid="button-read-aloud-pause"
-                >
-                  {readAloudState === "loading" ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : readAloudState === "playing" ? (
-                    <Pause className="w-3.5 h-3.5" />
-                  ) : (
-                    <Play className="w-3.5 h-3.5" />
-                  )}
-                </Button>
-                <div className="flex-1 flex items-center gap-2">
-                  <Volume2 className="w-3.5 h-3.5 text-foreground/40" />
-                  <span className="text-xs text-foreground/70">
-                    {readAloudState === "loading" ? "Generating voice..." : readAloudState === "playing" ? "Reading aloud..." : "Paused"}
-                  </span>
-                  {readAloudState === "playing" && (
-                    <div className="flex items-center gap-0.5">
-                      <span className="w-0.5 h-3 bg-foreground/30 rounded-full animate-pulse" />
-                      <span className="w-0.5 h-4 bg-foreground/30 rounded-full animate-pulse" style={{ animationDelay: "0.15s" }} />
-                      <span className="w-0.5 h-2.5 bg-foreground/30 rounded-full animate-pulse" style={{ animationDelay: "0.3s" }} />
-                      <span className="w-0.5 h-3.5 bg-foreground/30 rounded-full animate-pulse" style={{ animationDelay: "0.45s" }} />
-                    </div>
-                  )}
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-10 w-10 sm:h-8 sm:w-8 rounded-full"
-                  onClick={stopReadAloud}
-                  data-testid="button-read-aloud-stop"
-                >
-                  <Square className="w-3 h-3 fill-current" />
-                </Button>
-              </div>
-            )}
 
             {/* Summary content - expands with smooth animation */}
             <div 

@@ -919,7 +919,7 @@ const articles: HelpArticle[] = [
       intro: "Every AI action uses credits. Here's how many credits each plan includes and what different actions cost.",
       paragraphs: [
         "Free users get 10 AI credits per month, Pro users get 50, and Business users get 200. Your monthly credits refresh each billing cycle, and credits expire 30 days after they're added. If you run out, you can still compose and send emails manually — only the AI features pause until you have credits again.",
-        "Different AI actions cost different amounts. An AI reply or compose costs 2 credits, while a summary, rewrite, grammar check, translation, AI chat message, or read-aloud costs 1 credit each. Language detection is free. You can always see your balance in the sidebar and on the Credits page.",
+        "Different AI actions cost different amounts. An AI reply or compose costs 2 credits, while a summary, rewrite, grammar check, translation, or AI chat message costs 1 credit each. Language detection is free. You can always see your balance in the sidebar and on the Credits page.",
         "Need more? You can buy one-time credit packs (50 credits for $4.99 up to 1,500 for $99.99) or add a recurring monthly top-up to your plan. Referring a friend earns you 25 bonus credits when they connect an email account."
       ],
     }

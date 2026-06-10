@@ -8,8 +8,8 @@ const openai = new OpenAI({
 // The audio modality returns WAV data with a streaming header where the RIFF
 // and "data" chunk sizes are left as 0xFFFFFFFF (unknown length). Strict audio
 // decoders (notably iOS Safari and some Chrome builds) refuse to play such a
-// file, which breaks Read Aloud on every platform. Rewrite the size fields to
-// the real byte lengths so the WAV is a valid, fully-specified file.
+// file, which breaks voice assistant playback on every platform. Rewrite the
+// size fields to the real byte lengths so the WAV is a valid, fully-specified file.
 function normalizeWavHeader(buf: Buffer): Buffer {
   if (buf.length < 44) return buf;
   if (buf.toString("latin1", 0, 4) !== "RIFF" || buf.toString("latin1", 8, 12) !== "WAVE") {
@@ -82,7 +82,7 @@ export async function voiceChat(
   return { text, audio };
 }
 
-export async function textToSpeech(text: string, voice: string = "nova"): Promise<string> {
+async function textToSpeech(text: string, voice: string = "nova"): Promise<string> {
   try {
     console.log(`[TTS] Starting text-to-speech: voice=${voice}, textLength=${text.length}`);
     const response = await openai.chat.completions.create({
@@ -117,17 +117,6 @@ export async function textToSpeech(text: string, voice: string = "nova"): Promis
   } catch (error: any) {
     console.error("[TTS] Error:", error?.message || error);
     return "";
-  }
-}
-
-export async function textToSpeechStream(text: string, voice: string = "nova"): Promise<Buffer | null> {
-  try {
-    const audio = await textToSpeech(text, voice);
-    if (!audio) return null;
-    return Buffer.from(audio, "base64");
-  } catch (error) {
-    console.error("TTS stream error:", error);
-    return null;
   }
 }
 
