@@ -159,8 +159,6 @@ export function EmailIframeRenderer({
     return () => window.removeEventListener("resize", calcMax);
   }, [fillAvailable]);
 
-  const isDark = document.documentElement.classList.contains("dark");
-
   const buildIframeContent = useCallback((rawHtml: string, dark: boolean) => {
     const hasFullHtml = /<html/i.test(rawHtml);
     const hasBody = /<body/i.test(rawHtml);
@@ -327,172 +325,11 @@ export function EmailIframeRenderer({
     max-width: 100%;
   }`;
 
-    const darkBgOverrides = dark ? `
-  body[bgcolor], body[style*="background"] {
-    background-color: ${outerBg} !important;
-    background: ${outerBg} !important;
-  }
-  ${isRich ? `
-  div[style*="background-color: #ffffff"], div[style*="background-color:#ffffff"],
-  div[style*="background-color: #fff"], div[style*="background-color:#fff"],
-  div[style*="background-color: white"], div[style*="background-color:white"],
-  div[style*="background: #ffffff"], div[style*="background:#ffffff"],
-  div[style*="background: white"], div[style*="background:white"],
-  table[bgcolor="#ffffff"], table[bgcolor="#fff"], table[bgcolor="white"],
-  td[bgcolor="#ffffff"], td[bgcolor="#fff"], td[bgcolor="white"],
-  td[style*="background-color: #ffffff"], td[style*="background-color:#ffffff"],
-  td[style*="background-color: #fff"], td[style*="background-color:#fff"],
-  td[style*="background-color: white"], td[style*="background-color:white"],
-  tr[bgcolor="#ffffff"], tr[bgcolor="#fff"], tr[bgcolor="white"] {
-    background-color: ${contentBg} !important;
-    background: ${contentBg} !important;
-  }
-  ` : `
-  div[style*="background-color: #f"], div[style*="background-color:#f"],
-  div[style*="background-color: #e"], div[style*="background-color:#e"],
-  div[style*="background-color: #d"], div[style*="background-color:#d"],
-  div[style*="background-color: #c"], div[style*="background-color:#c"],
-  div[style*="background-color: #F"], div[style*="background-color:#F"],
-  div[style*="background-color: #E"], div[style*="background-color:#E"],
-  div[style*="background-color: #D"], div[style*="background-color:#D"],
-  div[style*="background-color: #C"], div[style*="background-color:#C"],
-  div[style*="background-color: rgb(2"], div[style*="background-color:rgb(2"],
-  div[style*="background: #f"], div[style*="background:#f"],
-  div[style*="background: #e"], div[style*="background:#e"],
-  div[style*="background: #F"], div[style*="background:#F"],
-  div[style*="background: #E"], div[style*="background:#E"],
-  table[bgcolor^="#f"], table[bgcolor^="#F"],
-  table[bgcolor^="#e"], table[bgcolor^="#E"],
-  table[bgcolor^="#d"], table[bgcolor^="#D"],
-  table[bgcolor^="#c"], table[bgcolor^="#C"],
-  td[bgcolor^="#f"], td[bgcolor^="#F"],
-  td[bgcolor^="#e"], td[bgcolor^="#E"],
-  td[bgcolor^="#d"], td[bgcolor^="#D"],
-  td[bgcolor^="#c"], td[bgcolor^="#C"],
-  td[style*="background-color: #f"], td[style*="background-color:#f"],
-  td[style*="background-color: #e"], td[style*="background-color:#e"],
-  td[style*="background-color: #d"], td[style*="background-color:#d"],
-  td[style*="background-color: #c"], td[style*="background-color:#c"],
-  td[style*="background-color: #F"], td[style*="background-color:#F"],
-  td[style*="background-color: #E"], td[style*="background-color:#E"],
-  td[style*="background-color: #D"], td[style*="background-color:#D"],
-  td[style*="background-color: #C"], td[style*="background-color:#C"],
-  td[style*="background-color: rgb(2"], td[style*="background-color:rgb(2"],
-  tr[bgcolor^="#f"], tr[bgcolor^="#F"],
-  tr[bgcolor^="#e"], tr[bgcolor^="#E"],
-  tr[bgcolor^="#d"], tr[bgcolor^="#D"],
-  tr[bgcolor^="#c"], tr[bgcolor^="#C"] {
-    background-color: ${contentBg} !important;
-    background: ${contentBg} !important;
-  }
-  `}
-  body[text], 
-  td[style*="color: #0"], td[style*="color:#0"],
-  td[style*="color: #1"], td[style*="color:#1"],
-  td[style*="color: #2"], td[style*="color:#2"],
-  td[style*="color: #3"], td[style*="color:#3"],
-  td[style*="color: #4"], td[style*="color:#4"],
-  td[style*="color: #5"], td[style*="color:#5"],
-  td[style*="color: black"], td[style*="color:black"],
-  span[style*="color: #0"], span[style*="color:#0"],
-  span[style*="color: #1"], span[style*="color:#1"],
-  span[style*="color: #2"], span[style*="color:#2"],
-  span[style*="color: #3"], span[style*="color:#3"],
-  span[style*="color: #4"], span[style*="color:#4"],
-  span[style*="color: #5"], span[style*="color:#5"],
-  span[style*="color: black"], span[style*="color:black"],
-  font[color="#000000"], font[color="#000"], font[color="black"],
-  font[color^="#0"], font[color^="#1"], font[color^="#2"],
-  font[color^="#3"], font[color^="#4"], font[color^="#5"],
-  p[style*="color: #0"], p[style*="color:#0"],
-  p[style*="color: #1"], p[style*="color:#1"],
-  p[style*="color: #2"], p[style*="color:#2"],
-  p[style*="color: #3"], p[style*="color:#3"],
-  p[style*="color: #4"], p[style*="color:#4"],
-  p[style*="color: #5"], p[style*="color:#5"],
-  div[style*="color: #0"], div[style*="color:#0"],
-  div[style*="color: #1"], div[style*="color:#1"],
-  div[style*="color: #2"], div[style*="color:#2"],
-  div[style*="color: #3"], div[style*="color:#3"],
-  div[style*="color: #4"], div[style*="color:#4"],
-  div[style*="color: #5"], div[style*="color:#5"],
-  h1[style*="color: #"], h2[style*="color: #"], h3[style*="color: #"],
-  h4[style*="color: #"], h5[style*="color: #"], h6[style*="color: #"],
-  li[style*="color: #0"], li[style*="color: #1"],
-  li[style*="color: #2"], li[style*="color: #3"],
-  li[style*="color: #4"], li[style*="color: #5"] {
-    color: ${textColor} !important;
-  }
-  span[style*="color: #6"], span[style*="color:#6"],
-  span[style*="color: #7"], span[style*="color:#7"],
-  span[style*="color: #8"], span[style*="color:#8"],
-  span[style*="color: #9"], span[style*="color:#9"],
-  span[style*="color: #a"], span[style*="color:#a"],
-  span[style*="color: #b"], span[style*="color:#b"],
-  span[style*="color: #A"], span[style*="color:#A"],
-  span[style*="color: #B"], span[style*="color:#B"],
-  td[style*="color: #6"], td[style*="color:#6"],
-  td[style*="color: #7"], td[style*="color:#7"],
-  td[style*="color: #8"], td[style*="color:#8"],
-  td[style*="color: #9"], td[style*="color:#9"],
-  p[style*="color: #6"], p[style*="color:#6"],
-  p[style*="color: #7"], p[style*="color:#7"],
-  p[style*="color: #8"], p[style*="color:#8"],
-  p[style*="color: #9"], p[style*="color:#9"],
-  div[style*="color: #6"], div[style*="color:#6"],
-  div[style*="color: #7"], div[style*="color:#7"],
-  div[style*="color: #8"], div[style*="color:#8"],
-  div[style*="color: #9"], div[style*="color:#9"],
-  font[color^="#6"], font[color^="#7"], font[color^="#8"], font[color^="#9"],
-  font[color^="#a"], font[color^="#A"], font[color^="#b"], font[color^="#B"] {
-    color: #9aa0a6 !important;
-  }` : '';
-
-    const lightTextOverrides = !dark ? `
-  span[style*="color: #c"], span[style*="color:#c"],
-  span[style*="color: #d"], span[style*="color:#d"],
-  span[style*="color: #e"], span[style*="color:#e"],
-  span[style*="color: #f"], span[style*="color:#f"],
-  span[style*="color: #C"], span[style*="color:#C"],
-  span[style*="color: #D"], span[style*="color:#D"],
-  span[style*="color: #E"], span[style*="color:#E"],
-  span[style*="color: #F"], span[style*="color:#F"],
-  span[style*="color: rgb(2"], span[style*="color:rgb(2"],
-  p[style*="color: #c"], p[style*="color:#c"],
-  p[style*="color: #d"], p[style*="color:#d"],
-  p[style*="color: #e"], p[style*="color:#e"],
-  p[style*="color: #f"], p[style*="color:#f"],
-  p[style*="color: #C"], p[style*="color:#C"],
-  p[style*="color: #D"], p[style*="color:#D"],
-  p[style*="color: #E"], p[style*="color:#E"],
-  p[style*="color: #F"], p[style*="color:#F"],
-  p[style*="color: rgb(2"], p[style*="color:rgb(2"],
-  div[style*="color: #c"], div[style*="color:#c"],
-  div[style*="color: #d"], div[style*="color:#d"],
-  div[style*="color: #e"], div[style*="color:#e"],
-  div[style*="color: #f"], div[style*="color:#f"],
-  div[style*="color: #C"], div[style*="color:#C"],
-  div[style*="color: #D"], div[style*="color:#D"],
-  div[style*="color: #E"], div[style*="color:#E"],
-  div[style*="color: #F"], div[style*="color:#F"],
-  div[style*="color: rgb(2"], div[style*="color:rgb(2"],
-  td[style*="color: #c"], td[style*="color:#c"],
-  td[style*="color: #d"], td[style*="color:#d"],
-  td[style*="color: #e"], td[style*="color:#e"],
-  td[style*="color: #f"], td[style*="color:#f"],
-  td[style*="color: #C"], td[style*="color:#C"],
-  td[style*="color: #D"], td[style*="color:#D"],
-  td[style*="color: #E"], td[style*="color:#E"],
-  td[style*="color: #F"], td[style*="color:#F"],
-  td[style*="color: rgb(2"], td[style*="color:rgb(2"],
-  font[color^="#c"], font[color^="#d"], font[color^="#e"], font[color^="#f"],
-  font[color^="#C"], font[color^="#D"], font[color^="#E"], font[color^="#F"],
-  font[style*="color: #c"], font[style*="color:#c"],
-  font[style*="color: #d"], font[style*="color:#d"],
-  font[style*="color: #e"], font[style*="color:#e"],
-  font[style*="color: #f"], font[style*="color:#f"] {
-    color: #555555 !important;
-  }` : '';
+    // Emails are authored for a white canvas. We preserve the sender's original
+    // colors exactly (no theme recoloring) so newsletters, formatting, and text
+    // appear as the sender intended.
+    const darkBgOverrides = '';
+    const lightTextOverrides = '';
 
     return `<!DOCTYPE html>
 <html>
@@ -526,7 +363,7 @@ ${headContent}
       }
       writeAttemptRef.current = 0;
 
-      const fullHtml = buildIframeContent(html, isDark);
+      const fullHtml = buildIframeContent(html, false);
       try {
         doc.open();
         doc.write(fullHtml);
@@ -622,33 +459,6 @@ ${headContent}
         link.setAttribute("rel", "noopener noreferrer");
       });
 
-      if (isDark && doc.body) {
-        const enforceDarkMode = () => {
-          const parseColor = (c: string) => {
-            if (!c || c === "transparent" || c === "rgba(0, 0, 0, 0)") return null;
-            const m = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-            return m ? [+m[1], +m[2], +m[3]] as const : null;
-          };
-          const isLightBg = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 > 180;
-          const isDarkText = (r: number, g: number, b: number) => (r * 299 + g * 587 + b * 114) / 1000 < 80;
-          const els = doc.querySelectorAll("*");
-          els.forEach((el) => {
-            const s = doc.defaultView?.getComputedStyle(el);
-            if (!s) return;
-            const bg = parseColor(s.backgroundColor);
-            if (bg && isLightBg(bg[0], bg[1], bg[2])) {
-              (el as HTMLElement).style.setProperty("background-color", "#1a1a1e", "important");
-            }
-            const fg = parseColor(s.color);
-            if (fg && isDarkText(fg[0], fg[1], fg[2])) {
-              (el as HTMLElement).style.setProperty("color", "#e0e0e4", "important");
-            }
-          });
-        };
-        setTimeout(enforceDarkMode, 50);
-        setTimeout(enforceDarkMode, 300);
-      }
-
       handleLoad();
     };
 
@@ -659,7 +469,7 @@ ${headContent}
         resizeObserverRef.current.disconnect();
       }
     };
-  }, [html, isDark, buildIframeContent, maxHeight]);
+  }, [html, buildIframeContent, maxHeight]);
 
   const effectiveHeight = fillAvailable ? Math.min(height, maxHeight) : height;
   const scaledHeight = scale < 1 ? effectiveHeight * scale : effectiveHeight;
@@ -684,7 +494,7 @@ ${headContent}
           height: `${height}px`,
           border: "none",
           display: "block",
-          background: isDark ? "#1a1a1e" : "#ffffff",
+          background: "#ffffff",
           ...(scale < 1
             ? {
                 transform: `scale(${scale})`,
