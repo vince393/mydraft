@@ -571,21 +571,31 @@ function SecurityTab({ settings }: { settings: Settings }) {
   const [showLogoutAllDialog, setShowLogoutAllDialog] = useState(false);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
-  const [verificationAction, setVerificationAction] = useState<"disable2fa" | "logoutAll" | null>(null);
+  const [verificationAction, setVerificationAction] = useState<"disable2fa" | "logoutAll" | "changePassword" | null>(null);
 
   const changePasswordMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (code?: string) => {
       const response = await apiRequest("PUT", "/api/settings/password", { 
         currentPassword, 
-        newPassword 
+        newPassword,
+        code,
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data.requiresVerification) {
+        setVerificationAction("changePassword");
+        setShowVerificationDialog(true);
+        toast({ title: "Verification required", description: "A code has been sent to your email" });
+        return;
+      }
       toast({ title: "Password changed successfully" });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
+      setShowVerificationDialog(false);
+      setVerificationCode("");
+      setVerificationAction(null);
     },
     onError: (error: Error) => {
       toast({ title: "Failed to change password", description: error.message, variant: "destructive" });
@@ -597,11 +607,11 @@ function SecurityTab({ settings }: { settings: Settings }) {
       toast({ title: "Passwords do not match", variant: "destructive" });
       return;
     }
-    if (newPassword.length < 6) {
-      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+    if (newPassword.length < 8) {
+      toast({ title: "Password must be at least 8 characters", variant: "destructive" });
       return;
     }
-    changePasswordMutation.mutate();
+    changePasswordMutation.mutate(undefined);
   };
 
   const { data: securitySettings, isLoading: isLoadingSecurity, error: securityError } = useQuery<SecuritySettings>({
@@ -672,6 +682,8 @@ function SecurityTab({ settings }: { settings: Settings }) {
       toggle2FAMutation.mutate({ enable: false, code: verificationCode });
     } else if (verificationAction === "logoutAll") {
       logoutAllDevicesMutation.mutate(verificationCode);
+    } else if (verificationAction === "changePassword") {
+      changePasswordMutation.mutate(verificationCode);
     }
   };
 
@@ -947,10 +959,10 @@ function SecurityTab({ settings }: { settings: Settings }) {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleVerificationSubmit}
-              disabled={verificationCode.length !== 6 || toggle2FAMutation.isPending || logoutAllDevicesMutation.isPending}
+              disabled={verificationCode.length !== 6 || toggle2FAMutation.isPending || logoutAllDevicesMutation.isPending || changePasswordMutation.isPending}
               data-testid="button-confirm-verification"
             >
-              {(toggle2FAMutation.isPending || logoutAllDevicesMutation.isPending) && (
+              {(toggle2FAMutation.isPending || logoutAllDevicesMutation.isPending || changePasswordMutation.isPending) && (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
               Verify
@@ -1566,6 +1578,7 @@ function EmailSettingsTab({ settings }: { settings: Settings }) {
     onSuccess: () => {
       toast({ title: "Email settings updated" });
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     },
     onError: (error: Error) => {
       toast({ title: "Failed to update settings", description: error.message, variant: "destructive" });

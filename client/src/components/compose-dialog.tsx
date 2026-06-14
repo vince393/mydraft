@@ -175,9 +175,9 @@ export function ComposeDialog({
   const initializedRef = useRef(false);
   const lastEmailIdRef = useRef<string | undefined>(undefined);
 
-  const signatureBlock = hasSignature ? `\n\n--\n${userSignature}` : "";
-  const signatureHtmlBlock = hasSignature ? `<br><br><div style="color:#666;">--<br>${userSignature.replace(/\n/g, '<br>')}</div>` : "";
-  const bodyContainsSignature = hasSignature && (body.includes(`--\n${userSignature.trim()}`) || body.includes(`--<br>${userSignature.trim().replace(/\n/g, '<br>')}`));
+  const signatureBlock = hasSignature ? `\n\n${userSignature}` : "";
+  const signatureHtmlBlock = hasSignature ? `<br><br><div data-signature="1">${userSignature.replace(/\n/g, '<br>')}</div>` : "";
+  const bodyContainsSignature = hasSignature && body.includes('data-signature="1"');
 
   // Reset form when dialog opens with new content
   useEffect(() => {
@@ -220,7 +220,7 @@ export function ComposeDialog({
       setCc("");
       setSubject(originalEmail.subject.startsWith("Re:") ? originalEmail.subject : `Re: ${originalEmail.subject}`);
       const date = new Date(originalEmail.date).toLocaleString();
-      const sigHtml = hasSignature ? `<br><br><div style="color:#666;">--<br>${userSignature.replace(/\n/g, '<br>')}</div>` : "";
+      const sigHtml = signatureHtmlBlock;
       const quotedHtml = `<br><br><blockquote data-quote="original" style="border-left:2px solid #ccc;padding-left:12px;margin:0;color:#555;"><div style="font-size:12px;color:#777;margin-bottom:8px;">On ${date}, ${originalEmail.from} &lt;${originalEmail.fromEmail}&gt; wrote:</div>${originalEmail.body}</blockquote>`;
       setBody(sigHtml + quotedHtml);
     } else if (mode === "replyAll") {
@@ -234,7 +234,7 @@ export function ComposeDialog({
       setCc(uniqueCc.join(", "));
       setSubject(originalEmail.subject.startsWith("Re:") ? originalEmail.subject : `Re: ${originalEmail.subject}`);
       const date = new Date(originalEmail.date).toLocaleString();
-      const sigHtml = hasSignature ? `<br><br><div style="color:#666;">--<br>${userSignature.replace(/\n/g, '<br>')}</div>` : "";
+      const sigHtml = signatureHtmlBlock;
       const quotedHtml = `<br><br><blockquote data-quote="original" style="border-left:2px solid #ccc;padding-left:12px;margin:0;color:#555;"><div style="font-size:12px;color:#777;margin-bottom:8px;">On ${date}, ${originalEmail.from} &lt;${originalEmail.fromEmail}&gt; wrote:</div>${originalEmail.body}</blockquote>`;
       setBody(sigHtml + quotedHtml);
     } else if (mode === "forward") {
@@ -242,7 +242,7 @@ export function ComposeDialog({
       setCc("");
       setSubject(originalEmail.subject.startsWith("Fwd:") ? originalEmail.subject : `Fwd: ${originalEmail.subject}`);
       const date = new Date(originalEmail.date).toLocaleString();
-      const sigHtml = hasSignature ? `<br><br><div style="color:#666;">--<br>${userSignature.replace(/\n/g, '<br>')}</div>` : "";
+      const sigHtml = signatureHtmlBlock;
       const quotedHtml = `<br><br><blockquote data-quote="original" style="border-left:2px solid #ccc;padding-left:12px;margin:0;color:#555;"><div style="font-size:12px;color:#777;margin-bottom:8px;">---------- Forwarded message ----------<br>From: ${originalEmail.from} &lt;${originalEmail.fromEmail}&gt;<br>Date: ${date}<br>Subject: ${originalEmail.subject}</div>${originalEmail.body}</blockquote>`;
       setBody(sigHtml + quotedHtml);
     }
@@ -580,20 +580,30 @@ export function ComposeDialog({
   };
 
   const getUserContent = () => {
-    const quoteIdx = body.indexOf('data-quote="original"');
+    let content = body;
+    const quoteIdx = content.indexOf('data-quote="original"');
     if (quoteIdx !== -1) {
-      const tagStart = body.lastIndexOf("<blockquote", quoteIdx);
-      if (tagStart > 0) {
-        return body.substring(0, tagStart).replace(/<br\s*\/?>\s*$/gi, "").trim();
+      const tagStart = content.lastIndexOf("<blockquote", quoteIdx);
+      if (tagStart > 0) content = content.substring(0, tagStart);
+    } else if (content.includes("---------- Original message ----------")) {
+      content = content.substring(0, content.indexOf("---------- Original message ----------") - 2);
+    } else if (content.includes("---------- Forwarded message ----------")) {
+      content = content.substring(0, content.indexOf("---------- Forwarded message ----------") - 2);
+    }
+    // Strip the auto-inserted signature block so AI/validation only sees what the user wrote.
+    const sigIdx = content.indexOf('data-signature="1"');
+    if (sigIdx !== -1) {
+      const sigStart = content.lastIndexOf("<div", sigIdx);
+      if (sigStart >= 0) content = content.substring(0, sigStart);
+    } else {
+      // Backward-compat: strip the old "--" delimited signature block, if present.
+      const legacyIdx = content.indexOf(">--<br>");
+      if (legacyIdx !== -1) {
+        const legacyStart = content.lastIndexOf("<div", legacyIdx);
+        if (legacyStart >= 0) content = content.substring(0, legacyStart);
       }
     }
-    if (body.includes("---------- Original message ----------")) {
-      return body.substring(0, body.indexOf("---------- Original message ----------") - 2).trim();
-    }
-    if (body.includes("---------- Forwarded message ----------")) {
-      return body.substring(0, body.indexOf("---------- Forwarded message ----------") - 2).trim();
-    }
-    return body.trim();
+    return content.replace(/(<br\s*\/?>\s*)+$/gi, "").trim();
   };
 
   const hasUserContent = () => {
@@ -635,19 +645,8 @@ export function ComposeDialog({
       
       if (data.body) {
         const draftHtml = data.body.replace(/\n/g, '<br>');
-        const quoteMarker = previousBody.indexOf("border-left:2px solid #ccc");
-        let originalQuote = "";
-        if (quoteMarker !== -1) {
-          const divStart = previousBody.lastIndexOf("<div", quoteMarker);
-          if (divStart > 0) {
-            originalQuote = previousBody.substring(divStart);
-          }
-        } else if (previousBody.includes("---------- Original message ----------")) {
-          originalQuote = previousBody.substring(previousBody.indexOf("---------- Original message ----------") - 2);
-        } else if (previousBody.includes("---------- Forwarded message ----------")) {
-          originalQuote = previousBody.substring(previousBody.indexOf("---------- Forwarded message ----------") - 2);
-        }
-        setBody(draftHtml + (originalQuote ? "<br><br>" + originalQuote : ""));
+        const originalQuote = getOriginalQuote(previousBody);
+        setBody(draftHtml + signatureHtmlBlock + originalQuote);
         
         // Set the AI-generated subject in the subject field
         if (data.subject) {
@@ -722,7 +721,7 @@ export function ComposeDialog({
       if (data.content) {
         const polishedHtml = data.content.replace(/\n/g, '<br>');
         const originalQuote = getOriginalQuote(previousBody);
-        setBody(polishedHtml + originalQuote);
+        setBody(polishedHtml + signatureHtmlBlock + originalQuote);
         
         toast({
           title: "Text polished",
@@ -774,7 +773,7 @@ export function ComposeDialog({
       if (data.refined) {
         const refinedHtml = data.refined.replace(/\n/g, '<br>');
         const originalQuote = getOriginalQuote(previousBody);
-        setBody(refinedHtml + originalQuote);
+        setBody(refinedHtml + signatureHtmlBlock + originalQuote);
         
         toast({
           title: "Draft updated",
@@ -1142,17 +1141,7 @@ export function ComposeDialog({
                   variant="ghost"
                   className="text-xs text-indigo-400"
                   onClick={() => {
-                    const quoteMarker = body.indexOf("border-left:2px solid #ccc");
-                    if (quoteMarker !== -1) {
-                      const divStart = body.lastIndexOf("<div", quoteMarker);
-                      if (divStart > 0) {
-                        setBody(body.slice(0, divStart) + signatureHtmlBlock + body.slice(divStart));
-                      } else {
-                        setBody(body + signatureHtmlBlock);
-                      }
-                    } else {
-                      setBody(prev => prev + signatureHtmlBlock);
-                    }
+                    setBody(getUserContent() + signatureHtmlBlock + getOriginalQuote(body));
                     setSignatureSuggestionDismissed(true);
                   }}
                   data-testid="button-add-signature"

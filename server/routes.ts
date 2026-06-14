@@ -2579,7 +2579,7 @@ export async function registerRoutes(
     passwordResetLimiter,
     async (req, res) => {
       try {
-        const { currentPassword, newPassword } = req.body;
+        const { currentPassword, newPassword, code } = req.body;
         if (!currentPassword || !newPassword) {
           return res
             .status(400)
@@ -2600,6 +2600,35 @@ export async function registerRoutes(
             .status(400)
             .json({ error: "Current password is incorrect" });
         }
+
+        // Always require an email verification code (2FA) to change the password.
+        if (!code) {
+          const verificationCode = await storage.createVerificationCode(
+            user.email,
+            "action",
+          );
+          await sendVerificationEmail(
+            user.email,
+            verificationCode.code,
+            "action",
+          );
+          return res.json({
+            requiresVerification: true,
+            message: "Verification code sent",
+          });
+        }
+        const verificationCode = await storage.getVerificationCode(
+          user.email,
+          code,
+          "action",
+        );
+        if (!verificationCode) {
+          return res
+            .status(400)
+            .json({ error: "Invalid or expired verification code" });
+        }
+        await storage.markVerificationCodeUsed(verificationCode.id);
+
         const hashedPassword = await hashPassword(newPassword);
         await storage.updateUser(req.session.userId!, {
           password: hashedPassword,
@@ -6400,23 +6429,13 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
               .replace(/^[\s\n:,-]+/, "");
           }
 
-          // Append email signature if enabled
-          if (user?.signatureEnabled && user?.emailSignature) {
-            body = `${body}\n\n${user.emailSignature}`;
-          }
-
           res.json({
             subject: parsed.subject || "",
             body,
             creditsRemaining: spendResult.balanceAfter,
           });
         } catch {
-          // Append signature even in fallback case
-          let fallbackBody = content;
-          if (user?.signatureEnabled && user?.emailSignature) {
-            fallbackBody = `${fallbackBody}\n\n${user.emailSignature}`;
-          }
-          res.json({ subject: "", body: fallbackBody });
+          res.json({ subject: "", body: content });
         }
       } catch (error: any) {
         console.error("Error generating quick draft:", error);
