@@ -212,19 +212,19 @@ export function EmailIframeRenderer({
     const emailType = detectEmailType(rawHtml);
     const isRich = emailType === "rich";
 
-    // Rich/designed emails (newsletters) are authored for a white canvas, so we
-    // never theme them — recoloring would mangle the sender's design. Simple /
-    // plain-text emails have no design to break, so we render them in true dark
-    // mode when the app is dark (no jarring white slab).
-    const useDark = dark && !isRich;
-
-    const contentBg = useDark ? "#1a1a1e" : "#ffffff";
-    const outerBg = contentBg;
-    const textColor = useDark ? "#e0e0e4" : "#1f1f1f";
-    const linkColor = useDark ? "#6fa8ff" : "#1a73e8";
-    const quoteColor = useDark ? "rgba(255,255,255, 0.15)" : "#dadce0";
-    const quoteFg = useDark ? "#9aa0a6" : "#5f6368";
-    const hrColor = useDark ? "rgba(255,255,255, 0.08)" : "#dadce0";
+    // Emails are authored for a white canvas, so we always render them with their
+    // natural light palette and the sender's own colors. For dark mode we apply a
+    // single "smart invert" filter to the whole email (see darkModeStyles below)
+    // instead of rewriting individual colors. That darkens white newsletters AND
+    // plain emails alike, keeps images/logos looking correct, and never mangles
+    // the sender's design the way per-element recoloring did.
+    const contentBg = "#ffffff";
+    const outerBg = "#ffffff";
+    const textColor = "#1f1f1f";
+    const linkColor = "#1a73e8";
+    const quoteColor = "#dadce0";
+    const quoteFg = "#5f6368";
+    const hrColor = "#dadce0";
 
     const baseStyles = `
   html {
@@ -289,7 +289,7 @@ export function EmailIframeRenderer({
   pre, code {
     font-family: 'Roboto Mono', monospace;
     font-size: 13px;
-    background: ${useDark ? 'rgba(255,255,255, 0.05)' : '#f8f9fa'};
+    background: #f8f9fa;
     border-radius: 4px;
     padding: 2px 4px;
     white-space: pre-wrap;
@@ -343,11 +343,30 @@ export function EmailIframeRenderer({
     max-width: 100%;
   }`;
 
-    // Emails are authored for a white canvas. We preserve the sender's original
-    // colors exactly (no theme recoloring) so newsletters, formatting, and text
-    // appear as the sender intended.
-    const darkBgOverrides = '';
-    const lightTextOverrides = '';
+    // Dark mode via a single "smart invert": white backgrounds become dark and
+    // dark text becomes light, while images/logos/photos are inverted back so
+    // they keep their real colors. This is applied to the whole email at once,
+    // so newsletters and plain emails both follow the app theme without any
+    // per-element color rewriting.
+    const darkModeStyles = dark ? `
+  html, body { background: #1a1a1e !important; }
+  #email-content-wrap {
+    filter: invert(1) hue-rotate(180deg);
+    background: #ffffff;
+  }
+  #email-content-wrap img,
+  #email-content-wrap picture,
+  #email-content-wrap video,
+  #email-content-wrap svg {
+    filter: invert(1) hue-rotate(180deg);
+  }` : '';
+
+    // Some senders force the document to fill the viewport (height:100% or
+    // min-height:100vh full-bleed layouts). Inside our auto-sized iframe that
+    // leaves blank space below the real content, so neutralise it. Placed in a
+    // <style> AFTER the sender's own <head> styles so this override wins.
+    const heightReset = `
+  html, body { height: auto !important; min-height: 0 !important; }`;
 
     return `<!DOCTYPE html>
 <html>
@@ -357,10 +376,12 @@ export function EmailIframeRenderer({
 <style>
 ${baseStyles}
 ${richStyles}
-${darkBgOverrides}
-${lightTextOverrides}
 </style>
 ${headContent}
+<style>
+${heightReset}
+${darkModeStyles}
+</style>
 </head>
 <body${bodyAttrs}><div id="email-content-wrap">${sanitized}</div></body>
 </html>`;
@@ -399,9 +420,16 @@ ${headContent}
 
       const updateHeight = () => {
         if (!doc.body) return;
-        const scrollH =
-          doc.documentElement?.scrollHeight || doc.body.scrollHeight;
-        const rawHeight = Math.max(scrollH + 8, 80);
+        // Measure the content wrapper / body — NOT documentElement. The root
+        // element's scrollHeight is clamped to at least the iframe's own viewport
+        // height, so once the iframe is sized it can never shrink back to fit
+        // shorter content. That ratchet is what left blank space under emails.
+        const wrap = doc.getElementById("email-content-wrap");
+        const measured = Math.max(
+          doc.body.scrollHeight,
+          wrap ? wrap.scrollHeight : 0
+        );
+        const rawHeight = Math.max(measured + 8, 40);
         if (Math.abs(rawHeight - lastHeight) > 1) {
           lastHeight = rawHeight;
           setHeight(rawHeight);
