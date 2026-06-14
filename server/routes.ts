@@ -6033,6 +6033,11 @@ Reply:`;
         return res.status(400).json({ error: "Instruction is required" });
       }
 
+      const refineUser = await storage.getUser(req.session.userId!);
+      const refineSignOffRule = refineUser?.signatureEnabled && refineUser?.emailSignature
+        ? ` Do NOT add any sign-off, closing, or name (no "Best regards", "[Your Name]", etc.); the user's email signature is added automatically.`
+        : ` Do NOT use placeholder names such as "[Your Name]".`;
+
       const reservation = await reserveCredits(req, res, "ai_rewrite");
       if (!reservation) return;
 
@@ -6054,7 +6059,7 @@ ${originalEmail.body || originalEmail.preview || ""}
         messages: [
           {
             role: "system",
-            content: `You are an email writing assistant. Modify the given email response based on the user's instruction. Return ONLY the modified text without explanations.${contextPrompt}`,
+            content: `You are an email writing assistant. Modify the given email response based on the user's instruction. Return ONLY the modified text without explanations.${refineSignOffRule}${contextPrompt}`,
           },
           {
             role: "user",
@@ -6235,6 +6240,11 @@ Rules:
         const toneDesc =
           toneDescriptions[tone] || toneDescriptions.professional;
 
+        const hasSig = !!(user?.signatureEnabled && user?.emailSignature);
+        const signOffRule = hasSig
+          ? ` IMPORTANT: Do NOT end with any sign-off, closing, valediction, or name (no "Best regards", "Sincerely", "Thanks,", "[Your Name]", etc.). End immediately after the final sentence of the message body — the user's email signature is appended automatically.`
+          : ` Do NOT use placeholder names such as "[Your Name]" in any closing.`;
+
         let learnedStyle: any = null;
         let styleHint = "";
         if (hasPlan(userPlan, "personal")) {
@@ -6365,6 +6375,8 @@ Write a brief, customizable email template that:
 Respond with JSON only: {"subject": "Your subject here", "body": "Your email body here..."}`;
           }
         }
+
+        systemMessage += signOffRule;
 
         let response;
         try {
@@ -6497,6 +6509,11 @@ Respond with JSON only: {"subject": "Your subject here", "body": "Your email bod
         return res.status(400).json({ error: "Content is required" });
       }
 
+      const polishUser = await storage.getUser(req.session.userId!);
+      const polishSignOffRule = polishUser?.signatureEnabled && polishUser?.emailSignature
+        ? ` Do NOT add any sign-off, closing, or name (no "Best regards", "[Your Name]", etc.); the user's email signature is added automatically.`
+        : ` Do NOT use placeholder names such as "[Your Name]".`;
+
       let prompt: string;
       let systemMessage: string;
 
@@ -6552,6 +6569,8 @@ ${subject ? `Context - Email subject: ${subject}` : ""}
 
 Return only the improved text, nothing else.`;
       }
+
+      systemMessage += polishSignOffRule;
 
       const reservation = await reserveCredits(req, res, "ai_rewrite");
       if (!reservation) return;
@@ -7851,7 +7870,7 @@ STYLE REQUIREMENTS:
 - Tone: ${toneGuide[profile.tone as keyof typeof toneGuide] || toneGuide.professional}
 - Length: ${lengthGuide[profile.length as keyof typeof lengthGuide] || lengthGuide.medium}
 - Greeting: ${greetingGuide[profile.greetingStyle as keyof typeof greetingGuide] || greetingGuide.hi}
-- Sign-off: End with "${profile.signOff}"
+${user?.signatureEnabled && user?.emailSignature ? "- Do NOT add any sign-off, closing, or name — the user's email signature is added automatically" : `- Sign-off: End with "${profile.signOff}"`}
 - Format: ${profile.formattingPreference === "bullets" ? "Use bullet points where appropriate" : profile.formattingPreference === "mixed" ? "Mix paragraphs and bullet points as needed" : "Use flowing paragraphs"}
 
 RULES:
