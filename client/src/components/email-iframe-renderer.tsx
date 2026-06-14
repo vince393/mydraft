@@ -138,6 +138,9 @@ export function EmailIframeRenderer({
   const [height, setHeight] = useState(200);
   const [scale, setScale] = useState(1);
   const [maxHeight, setMaxHeight] = useState(10000);
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const writeAttemptRef = useRef(0);
@@ -158,6 +161,17 @@ export function EmailIframeRenderer({
     window.addEventListener("resize", calcMax);
     return () => window.removeEventListener("resize", calcMax);
   }, [fillAvailable]);
+
+  // Track the app's light/dark theme (toggled via the `dark` class on <html>)
+  // so the email view can follow it without forcing colors on designed emails.
+  useEffect(() => {
+    const root = document.documentElement;
+    const update = () => setIsDark(root.classList.contains("dark"));
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   const buildIframeContent = useCallback((rawHtml: string, dark: boolean) => {
     const hasFullHtml = /<html/i.test(rawHtml);
@@ -196,16 +210,21 @@ export function EmailIframeRenderer({
 
     const sanitized = sanitizeForIframe(bodyContent);
     const emailType = detectEmailType(rawHtml);
-
-    const outerBg = dark ? "#111114" : "#f4f4f5";
-    const contentBg = dark ? "#1a1a1e" : "#ffffff";
-    const textColor = dark ? "#e0e0e4" : "#1f1f1f";
-    const linkColor = dark ? "#6fa8ff" : "#1a73e8";
-    const quoteColor = dark ? "rgba(255,255,255, 0.15)" : "#dadce0";
-    const quoteFg = dark ? "#9aa0a6" : "#5f6368";
-    const hrColor = dark ? "rgba(255,255,255, 0.08)" : "#dadce0";
-
     const isRich = emailType === "rich";
+
+    // Rich/designed emails (newsletters) are authored for a white canvas, so we
+    // never theme them — recoloring would mangle the sender's design. Simple /
+    // plain-text emails have no design to break, so we render them in true dark
+    // mode when the app is dark (no jarring white slab).
+    const useDark = dark && !isRich;
+
+    const contentBg = useDark ? "#1a1a1e" : "#ffffff";
+    const outerBg = contentBg;
+    const textColor = useDark ? "#e0e0e4" : "#1f1f1f";
+    const linkColor = useDark ? "#6fa8ff" : "#1a73e8";
+    const quoteColor = useDark ? "rgba(255,255,255, 0.15)" : "#dadce0";
+    const quoteFg = useDark ? "#9aa0a6" : "#5f6368";
+    const hrColor = useDark ? "rgba(255,255,255, 0.08)" : "#dadce0";
 
     const baseStyles = `
   html {
@@ -235,7 +254,6 @@ export function EmailIframeRenderer({
     margin: 0;
     padding: ${isRich ? '0' : '16px 24px'};
     background: ${contentBg};
-    min-height: 100%;
     box-sizing: border-box;
   }
   #email-content-wrap > * {
@@ -271,7 +289,7 @@ export function EmailIframeRenderer({
   pre, code {
     font-family: 'Roboto Mono', monospace;
     font-size: 13px;
-    background: ${dark ? 'rgba(255,255,255, 0.05)' : '#f8f9fa'};
+    background: ${useDark ? 'rgba(255,255,255, 0.05)' : '#f8f9fa'};
     border-radius: 4px;
     padding: 2px 4px;
     white-space: pre-wrap;
@@ -363,7 +381,7 @@ ${headContent}
       }
       writeAttemptRef.current = 0;
 
-      const fullHtml = buildIframeContent(html, false);
+      const fullHtml = buildIframeContent(html, isDark);
       try {
         doc.open();
         doc.write(fullHtml);
@@ -469,7 +487,7 @@ ${headContent}
         resizeObserverRef.current.disconnect();
       }
     };
-  }, [html, buildIframeContent, maxHeight]);
+  }, [html, isDark, buildIframeContent, maxHeight]);
 
   const effectiveHeight = fillAvailable ? Math.min(height, maxHeight) : height;
   const scaledHeight = scale < 1 ? effectiveHeight * scale : effectiveHeight;
@@ -494,7 +512,7 @@ ${headContent}
           height: `${height}px`,
           border: "none",
           display: "block",
-          background: "#ffffff",
+          background: isDark ? "#1a1a1e" : "#ffffff",
           ...(scale < 1
             ? {
                 transform: `scale(${scale})`,
