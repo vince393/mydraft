@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { COUNTRIES, STATE_MAP } from "@/lib/countries";
+import { WalletPaymentButton, type PaymentRequestPaymentMethodEvent } from "@/components/wallet-payment-button";
 import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap, Ticket, X, CheckCircle2 } from "lucide-react";
 
 function TypeaheadInput({ 
@@ -270,6 +271,72 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
     setupIntentMutation.mutate();
   };
 
+  const handleWalletConfirm = async (ev: PaymentRequestPaymentMethodEvent) => {
+    if (!stripe) {
+      ev.complete("fail");
+      return;
+    }
+    const clientSecret = setupIntentMutation.data?.clientSecret;
+    if (!clientSecret) {
+      ev.complete("fail");
+      setCardError("Payment not initialized. Please refresh and try again.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setCardError(null);
+
+    try {
+      const { error, setupIntent } = await stripe.confirmCardSetup(
+        clientSecret,
+        { payment_method: ev.paymentMethod.id },
+        { handleActions: false },
+      );
+
+      if (error) {
+        ev.complete("fail");
+        setCardError(error.message || "Payment failed");
+        setIsProcessing(false);
+        return;
+      }
+
+      ev.complete("success");
+
+      let confirmed = setupIntent;
+      if (confirmed?.status === "requires_action") {
+        const next = await stripe.confirmCardSetup(clientSecret);
+        if (next.error) {
+          setCardError(next.error.message || "Authentication failed");
+          setIsProcessing(false);
+          return;
+        }
+        confirmed = next.setupIntent;
+      }
+
+      if (confirmed?.payment_method) {
+        const result = await confirmSubscriptionMutation.mutateAsync(
+          confirmed.payment_method as string,
+        );
+        if (result.success) {
+          await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+          toast({
+            title: "Welcome to MyDraft!",
+            description: plan === "personal"
+              ? "Your Personal plan is now active."
+              : "Your 3-day free trial has started.",
+          });
+          onSuccess();
+        } else if (result.error) {
+          setCardError(result.error);
+        }
+      }
+    } catch (err: any) {
+      setCardError(err.message || "Something went wrong");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -375,6 +442,12 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <WalletPaymentButton
+        amountCents={Math.round((priceInfo?.amount || 0) * 100)}
+        label={isTrialPlan ? `MyDraft ${planInfo?.name} (after trial)` : `MyDraft ${planInfo?.name}`}
+        onWalletConfirm={handleWalletConfirm}
+      />
+
       <div className="space-y-3.5">
         <label className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider block">Contact</label>
         <div className="space-y-3">

@@ -853,6 +853,34 @@ export async function registerRoutes(
     });
   });
 
+  // Apple Pay domain verification. Stripe hosts a single association file that
+  // is the same for every Stripe account; we proxy it (cached) so Apple/Stripe
+  // see a 200 at the exact non-trailing-slash path they require.
+  let applePayAssociationCache: string | null = null;
+  app.get(
+    "/.well-known/apple-developer-merchantid-domain-association",
+    async (_req, res) => {
+      try {
+        if (!applePayAssociationCache) {
+          const resp = await fetch(
+            "https://stripe.com/files/apple-pay/apple-developer-merchantid-domain-association",
+          );
+          if (!resp.ok) {
+            throw new Error(`Stripe association file fetch failed: ${resp.status}`);
+          }
+          applePayAssociationCache = await resp.text();
+        }
+        res.type("application/octet-stream").send(applePayAssociationCache);
+      } catch (error: any) {
+        console.error(
+          "Apple Pay association file error:",
+          error?.message || error,
+        );
+        res.status(502).send("");
+      }
+    },
+  );
+
   // Step 1: Initiate registration - sends verification email
   app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {

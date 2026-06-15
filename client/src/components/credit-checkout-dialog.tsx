@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { WalletPaymentButton, type PaymentRequestPaymentMethodEvent } from "@/components/wallet-payment-button";
 import { Loader2, Lock, Coins, CreditCard } from "lucide-react";
 
 export interface CreditCheckoutItem {
@@ -102,6 +103,104 @@ function CreditCheckoutForm({
     initIntent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.sku, item.type]);
+
+  const handleWalletConfirm = async (ev: PaymentRequestPaymentMethodEvent) => {
+    if (!stripe || !clientSecret) {
+      ev.complete("fail");
+      return;
+    }
+
+    setIsProcessing(true);
+    setCardError(null);
+
+    try {
+      if (isAddon) {
+        const { error, setupIntent } = await stripe.confirmCardSetup(
+          clientSecret,
+          { payment_method: ev.paymentMethod.id },
+          { handleActions: false },
+        );
+        if (error) {
+          ev.complete("fail");
+          setCardError(error.message || "Payment failed");
+          setIsProcessing(false);
+          return;
+        }
+        ev.complete("success");
+        let si = setupIntent;
+        if (si?.status === "requires_action") {
+          const next = await stripe.confirmCardSetup(clientSecret);
+          if (next.error) {
+            setCardError(next.error.message || "Authentication failed");
+            setIsProcessing(false);
+            return;
+          }
+          si = next.setupIntent;
+        }
+        if (si?.payment_method) {
+          const res = await apiRequest("POST", "/api/credits/confirm-addon", {
+            sku: item.sku,
+            paymentMethodId: si.payment_method as string,
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || "Failed to start add-on");
+          }
+        }
+        toast({
+          title: "Add-on active",
+          description: `${item.credits.toLocaleString()} credits will be added every month.`,
+        });
+      } else {
+        const { error, paymentIntent } = await stripe.confirmCardPayment(
+          clientSecret,
+          { payment_method: ev.paymentMethod.id },
+          { handleActions: false },
+        );
+        if (error) {
+          ev.complete("fail");
+          setCardError(error.message || "Payment failed");
+          setIsProcessing(false);
+          return;
+        }
+        ev.complete("success");
+        let pi = paymentIntent;
+        if (pi?.status === "requires_action") {
+          const next = await stripe.confirmCardPayment(clientSecret);
+          if (next.error) {
+            setCardError(next.error.message || "Authentication failed");
+            setIsProcessing(false);
+            return;
+          }
+          pi = next.paymentIntent;
+        }
+        if (pi?.status === "succeeded") {
+          const res = await apiRequest("POST", "/api/credits/confirm-pack", {
+            paymentIntentId: pi.id,
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || "Failed to confirm purchase");
+          }
+        }
+        toast({
+          title: "Credits added",
+          description: `${item.credits.toLocaleString()} credits added to your balance.`,
+        });
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/credits"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/credits/transactions"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }),
+      ]);
+      onSuccess();
+    } catch (err: any) {
+      setCardError(err.message || "Something went wrong");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,6 +301,12 @@ function CreditCheckoutForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      <WalletPaymentButton
+        amountCents={Math.round((item.price || 0) * 100)}
+        label={isAddon ? `MyDraft — ${item.credits.toLocaleString()} credits/mo` : `MyDraft — ${item.credits.toLocaleString()} credits`}
+        onWalletConfirm={handleWalletConfirm}
+      />
+
       <div>
         <Label htmlFor="credit-card-name" className="text-xs text-muted-foreground/60 mb-1.5 block">
           Name on card

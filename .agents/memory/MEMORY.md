@@ -7,3 +7,4 @@
 - [TTS / Read Aloud playback](tts-read-aloud.md) — AI WAV has 0xFFFFFFFF chunk sizes (breaks strict decoders); fix header server-side + unlock audio in the click gesture for mobile.
 - [Referral system status](referral-system.md) — feature works end-to-end; rewards pay ONLY on inbox-connect (intentional); don't change trigger without asking.
 - [Email-account uniqueness](email-account-uniqueness.md) — one mailbox = one account; app check + advisory-lock create (NO unique index, would deadlock prod publish); owner dedup tool for existing dups.
+- [Stripe wallet payments](stripe-wallet-payments.md) — Apple/Google Pay via Payment Request API on our own checkout; gate on canMakePayment(), $0 rejected, ev.complete once, serve well-known file at 200.

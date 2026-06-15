@@ -10,7 +10,7 @@ import { startEmailScheduler } from "./email-scheduler";
 import { setupEmailSyncWebSocket } from "./ws-email-sync";
 import { ensureCreditIndexes } from "./credits";
 import { runMigrations } from "stripe-replit-sync";
-import { getStripeSync } from "./stripeClient";
+import { getStripeSync, getUncachableStripeClient } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 import { validateEncryptionKey } from "./encryption";
 
@@ -61,8 +61,49 @@ async function initStripe() {
     stripeSync.syncBackfill()
       .then(() => console.log('Stripe data synced'))
       .catch((err: Error) => console.error('Error syncing Stripe data:', err));
+
+    // Register our domain(s) with Stripe so Apple Pay / Google Pay buttons
+    // render in Elements. Best-effort + idempotent: Stripe verifies the file
+    // served at /.well-known/apple-developer-merchantid-domain-association.
+    registerWalletDomains().catch(() => {});
   } catch (error) {
     console.error('Failed to initialize Stripe:', error);
+  }
+}
+
+async function registerWalletDomains() {
+  const domains = (process.env.REPLIT_DOMAINS || "")
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean);
+  if (domains.length === 0) return;
+
+  try {
+    const stripe = await getUncachableStripeClient();
+    for (const domain of domains) {
+      try {
+        const existing = await stripe.paymentMethodDomains.list({
+          domain_name: domain,
+          limit: 1,
+        });
+        if (existing.data.length > 0) {
+          // Re-validate in case the verification file became reachable later.
+          await stripe.paymentMethodDomains
+            .validate(existing.data[0].id)
+            .catch(() => {});
+        } else {
+          await stripe.paymentMethodDomains.create({ domain_name: domain });
+          console.log(`Registered wallet payment method domain: ${domain}`);
+        }
+      } catch (e: any) {
+        console.log(
+          `Wallet domain registration skipped for ${domain}:`,
+          e?.message || e,
+        );
+      }
+    }
+  } catch (e: any) {
+    console.log("Wallet domain registration unavailable:", e?.message || e);
   }
 }
 
