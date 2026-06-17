@@ -110,6 +110,57 @@ function addressListToEmails(addrList: Array<{address?: string}> | null | undefi
   return result;
 }
 
+// Canonicalize a message-id so the same id keys identically no matter where it
+// came from: ImapFlow's envelope returns bare ids ("id@host") while the
+// References header and mailparser return bracketed ids ("<id@host>"). Strip
+// surrounding angle brackets, trim, and lowercase so all paths converge.
+function normalizeMessageId(id: string): string {
+  return id
+    .trim()
+    .replace(/^<+/, "")
+    .replace(/>+$/, "")
+    .trim()
+    .toLowerCase();
+}
+
+// Extract RFC 5322 message-id tokens (e.g. "<abc@host>") from a References /
+// In-Reply-To header value. Falls back to whitespace tokens if no angle
+// brackets are present (some clients omit them). All returned ids are
+// normalized via normalizeMessageId().
+function parseMessageIds(input?: string | string[] | null): string[] {
+  if (!input) return [];
+  const text = Array.isArray(input) ? input.join(" ") : input;
+  const bracketed = text.match(/<[^>]+>/g);
+  if (bracketed && bracketed.length > 0) {
+    return bracketed.map((s) => normalizeMessageId(s)).filter(Boolean);
+  }
+  return text
+    .split(/\s+/)
+    .map((s) => normalizeMessageId(s))
+    .filter(Boolean);
+}
+
+// Derive a stable conversation key for an IMAP message so replies group with
+// their original, the way Gmail/Outlook conversation IDs do. IMAP has no native
+// thread id, so we use the thread root: the first id in References (the original
+// message), else the In-Reply-To target, else the message's own id.
+function deriveImapThreadId(opts: {
+  references?: string | string[] | null;
+  inReplyTo?: string | null;
+  messageId?: string | null;
+  fallback: string;
+}): string {
+  const refs = parseMessageIds(opts.references);
+  if (refs.length > 0) return refs[0];
+  const irt = parseMessageIds(opts.inReplyTo)[0];
+  if (irt) return irt;
+  if (opts.messageId) {
+    const normalized = normalizeMessageId(opts.messageId);
+    if (normalized) return normalized;
+  }
+  return opts.fallback;
+}
+
 async function createImapConnection(config: ImapSmtpConfig): Promise<ImapFlow> {
   const client = new ImapFlow({
     host: config.imapHost,
@@ -229,9 +280,11 @@ export const imapProvider: IEmailProvider = {
           envelope: true,
           flags: true,
           uid: true,
+          headers: ["references"],
         })) {
           const from = parseAddress(msg.envelope?.from);
           const flags = msg.flags || new Set();
+          const referencesHeader = msg.headers ? msg.headers.toString() : "";
 
           messages.push({
             id: encodeImapId(mailboxPath, msg.uid),
@@ -242,7 +295,12 @@ export const imapProvider: IEmailProvider = {
             date: msg.envelope?.date || new Date(),
             isRead: flags.has("\\Seen"),
             isStarred: flags.has("\\Flagged"),
-            threadId: msg.envelope?.messageId || String(msg.uid),
+            threadId: deriveImapThreadId({
+              references: referencesHeader,
+              inReplyTo: msg.envelope?.inReplyTo,
+              messageId: msg.envelope?.messageId,
+              fallback: String(msg.uid),
+            }),
             avatarColor: getAvatarColor(from.email),
           });
         }
@@ -284,6 +342,7 @@ export const imapProvider: IEmailProvider = {
             subject?: string;
             date?: Date;
             messageId?: string;
+            inReplyTo?: string;
           };
           flags?: Set<string>;
           source?: Buffer;
@@ -309,12 +368,18 @@ export const imapProvider: IEmailProvider = {
         const ccAddrs = addressListToEmails(msgData.envelope?.cc);
 
         let body = "";
+        let parsedReferences: string | string[] | undefined;
+        let parsedInReplyTo: string | undefined;
+        let parsedMessageId: string | undefined;
         const attachments: { id: string; filename: string; contentType: string; size: number; isInline: boolean }[] = [];
 
         if (msgData.source) {
           const { simpleParser } = await import("mailparser");
           const parsed = await simpleParser(msgData.source);
           body = parsed.html || parsed.textAsHtml || parsed.text || "";
+          parsedReferences = parsed.references;
+          parsedInReplyTo = parsed.inReplyTo;
+          parsedMessageId = parsed.messageId;
 
           if (parsed.attachments) {
             for (const att of parsed.attachments) {
@@ -346,7 +411,12 @@ export const imapProvider: IEmailProvider = {
           cc: ccAddrs.length > 0 ? ccAddrs : undefined,
           body,
           date: msgData.envelope?.date || new Date(),
-          threadId: msgData.envelope?.messageId || String(msgData.uid),
+          threadId: deriveImapThreadId({
+            references: parsedReferences,
+            inReplyTo: parsedInReplyTo ?? msgData.envelope?.inReplyTo,
+            messageId: parsedMessageId ?? msgData.envelope?.messageId,
+            fallback: String(msgData.uid),
+          }),
           isRead: flags.has("\\Seen"),
           isStarred: flags.has("\\Flagged"),
           attachments: nonInlineAttachments.length > 0 ? nonInlineAttachments : undefined,
