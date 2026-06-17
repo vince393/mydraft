@@ -368,6 +368,21 @@ export function EmailIframeRenderer({
     const heightReset = `
   html, body { height: auto !important; min-height: 0 !important; }`;
 
+    // The iframe is a separate document, so the app's global scrollbar styling
+    // doesn't reach it — without this the iframe shows a default white scrollbar
+    // even in dark mode. Match the app theme. The scrollbar lives on html/body,
+    // outside the inverted #email-content-wrap, so the dark-mode invert filter
+    // never touches it.
+    const thumb = dark ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.22)";
+    const thumbHover = dark ? "rgba(255,255,255,0.38)" : "rgba(0,0,0,0.38)";
+    const scrollbarStyles = `
+  html { color-scheme: ${dark ? "dark" : "light"}; }
+  * { scrollbar-width: thin; scrollbar-color: ${thumb} transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background-color: ${thumb}; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background-color: ${thumbHover}; }`;
+
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -381,6 +396,7 @@ ${headContent}
 <style>
 ${heightReset}
 ${darkModeStyles}
+${scrollbarStyles}
 </style>
 </head>
 <body${bodyAttrs}><div id="email-content-wrap">${sanitized}</div></body>

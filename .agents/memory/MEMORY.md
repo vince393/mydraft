@@ -8,4 +8,5 @@
 - [Referral system status](referral-system.md) — feature works end-to-end; rewards pay ONLY on inbox-connect (intentional); don't change trigger without asking.
 - [Email-account uniqueness](email-account-uniqueness.md) — one mailbox = one account; app check + advisory-lock create (NO unique index, would deadlock prod publish); owner dedup tool for existing dups.
 - [IMAP email threading](imap-threading.md) — IMAP has no native thread id; derive from References/In-Reply-To root and ALWAYS normalize message-ids (envelope=bare, headers=bracketed) or threads split.
+- [Email body iframe rendering](email-iframe-rendering.md) — body renders in a sandboxed iframe: global scrollbar CSS can't reach it (style inside), and `fillAvailable` makes a nested scroll "box" (omit it; outer ScrollArea scrolls).
 - [Stripe wallet payments](stripe-wallet-payments.md) — Apple/Google Pay via Payment Request API on our own checkout; gate on canMakePayment(), $0 rejected, ev.complete once, serve well-known file at 200.
