@@ -53,6 +53,11 @@ export default function CreditsPage() {
 
   const { data: transactions = [], isLoading: txLoading } = useQuery<CreditTransaction[]>({
     queryKey: ["/api/credits/transactions"],
+    // The ledger must always reflect the latest spends/grants when the page is
+    // opened. The global default is staleTime:Infinity, which would otherwise
+    // serve a cached (stale) list and make new losses/gains look "missing".
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const warningLevel: "urgent" | "strong" | "subtle" | null =
@@ -291,29 +296,37 @@ export default function CreditsPage() {
               <p className="text-sm text-muted-foreground/50">No transactions yet.</p>
             ) : (
               <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04] -my-1">
-                {transactions.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="flex items-center justify-between gap-3 py-3"
-                    data-testid={`row-transaction-${tx.id}`}
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {humanizeAction(tx.action || tx.source)}
-                      </p>
-                      <p className="text-xs text-muted-foreground/60 mt-0.5">{formatDate(tx.createdAt)}</p>
-                    </div>
-                    <span
-                      className={`text-sm font-semibold tabular-nums flex-shrink-0 ${
-                        tx.amount >= 0 ? "text-emerald-400" : "text-destructive"
-                      }`}
-                      data-testid={`text-amount-${tx.id}`}
+                {transactions.map((tx) => {
+                  // Coerce defensively: the API may serialise `amount` as a
+                  // number or a numeric string, and we never want a bad value to
+                  // blank out (or crash) the row — always render a real number.
+                  const raw = Number(tx.amount);
+                  const amount = Number.isFinite(raw) ? raw : 0;
+                  const isGain = amount >= 0;
+                  return (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between gap-3 py-3"
+                      data-testid={`row-transaction-${tx.id}`}
                     >
-                      {tx.amount >= 0 ? "+" : ""}
-                      {tx.amount.toLocaleString()}
-                    </span>
-                  </div>
-                ))}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {humanizeAction(tx.action || tx.source)}
+                        </p>
+                        <p className="text-xs text-muted-foreground/60 mt-0.5">{formatDate(tx.createdAt)}</p>
+                      </div>
+                      <span
+                        className={`text-sm font-semibold tabular-nums flex-shrink-0 ${
+                          isGain ? "text-emerald-400" : "text-destructive"
+                        }`}
+                        data-testid={`text-amount-${tx.id}`}
+                      >
+                        {isGain ? "+" : "−"}
+                        {Math.abs(amount).toLocaleString()}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>
