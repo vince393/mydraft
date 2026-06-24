@@ -29,3 +29,15 @@ id = "6gj1EVpbccccPH2mABpr-"
 uri = "file://.local/swipe-email-prompt.md"
 type = "text"
 title = "Swipe Email Item — Full Implementation Prompt"
+
+[[outputs]]
+id = "lqDtlkXb9CZi7WGj2Pzja"
+uri = "file://attached_assets/logo_no_bg.png"
+type = "image"
+title = "MyDraft Logo — transparent background (use this for the animation)"
+
+[[outputs]]
+id = "dM4FApJvu4MGBMnSrO6Ho"
+uri = "file://attached_assets/mydraft_logo.png"
+type = "image"
+title = "MyDraft Logo — standard"
