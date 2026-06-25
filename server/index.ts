@@ -25,6 +25,33 @@ if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
+// Canonical-domain redirect: forward the built-in *.replit.app address to the
+// custom domain so visitors and search engines only ever see the branded
+// domain. Server-to-server paths (Stripe webhooks under /api, the Apple Pay
+// domain-association file under /.well-known) are excluded so integrations
+// registered against the replit.app host keep working.
+const canonicalHost = (() => {
+  try {
+    return process.env.APP_BASE_URL
+      ? new URL(process.env.APP_BASE_URL).host
+      : "mydraft.io";
+  } catch {
+    return "mydraft.io";
+  }
+})();
+app.use((req, res, next) => {
+  const host = (req.headers.host || "").toLowerCase().split(":")[0];
+  if (
+    host.endsWith(".replit.app") &&
+    host !== canonicalHost &&
+    !req.path.startsWith("/api/") &&
+    !req.path.startsWith("/.well-known/")
+  ) {
+    return res.redirect(301, `https://${canonicalHost}${req.originalUrl}`);
+  }
+  next();
+});
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
