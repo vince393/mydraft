@@ -46,6 +46,9 @@ integrations = ["javascript_openai_ai_integrations:2.0.0", "javascript_gemini_ai
 [userenv.shared]
 MOBILE_APP_ORIGINS = "https://mydraftapp.replit.app"
 
+[userenv.production]
+APP_BASE_URL = "https://mydraft.io"
+
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000

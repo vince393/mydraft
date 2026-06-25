@@ -257,9 +257,10 @@ async function runDailyChecks() {
             if (!existing) {
               const { generateTestimonialToken } = await import("./email");
               const token = generateTestimonialToken(user.id);
-              const baseUrl = process.env.REPLIT_DOMAINS
-                ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-                : "https://mydraft.io";
+              const baseUrl = process.env.APP_BASE_URL
+                || (process.env.REPLIT_DOMAINS
+                  ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+                  : "https://mydraft.io");
               const activateUrl = `${baseUrl}/testimonial-reward?token=${token}`;
               await sendTestimonialRequestEmail(user.email, activateUrl);
               console.log(`[EmailScheduler] Sent testimonial request to ${user.email}`);
