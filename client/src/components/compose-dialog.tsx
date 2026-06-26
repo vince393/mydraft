@@ -1035,7 +1035,7 @@ export function ComposeDialog({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={requestClose}>
+    <Dialog open={open} onOpenChange={requestClose} modal={!showCloseConfirm}>
       <DialogContent className={`${screen.isMobile ? 'w-full h-[100dvh] max-w-full max-h-full rounded-none !left-0 !top-0 !translate-x-0 !translate-y-0 mobile-slide-up' : 'w-[92vw] max-w-[860px] h-[82vh] max-h-[820px] rounded-2xl'} flex flex-col p-0 gap-0 overflow-hidden border-black/10 dark:border-white/10 backdrop-blur-2xl`} style={{ background: screen.isMobile ? "rgba(var(--background-rgb, 10,10,12), 1)" : "rgba(var(--background-rgb, 10,10,12), 0.95)" }}>
         {/* Header */}
         <DialogHeader className={`flex-shrink-0 ${screen.isMobile ? 'px-5 py-4' : 'px-5 py-3.5'} border-b border-black/[0.06] dark:border-white/[0.06]`}>
