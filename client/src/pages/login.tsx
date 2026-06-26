@@ -549,7 +549,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
-            className="bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.07] dark:border-white/[0.07] focus:border-black/[0.15] dark:focus:border-white/[0.15] text-white placeholder:text-black/15 dark:text-white/15 h-11"
+            className="bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.07] dark:border-white/[0.07] focus:border-black/[0.15] dark:focus:border-white/[0.15] text-white placeholder:text-black/15 dark:placeholder:text-white/15 h-11"
             data-testid={isRegister ? "input-register-email" : "input-login-email"}
           />
           {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
@@ -566,7 +566,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={isRegister ? "new-password" : "current-password"}
               autoFocus={!!switchEmail}
-              className="pr-10 bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.07] dark:border-white/[0.07] focus:border-black/[0.15] dark:focus:border-white/[0.15] text-white placeholder:text-black/15 dark:text-white/15 h-11"
+              className="pr-10 bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.07] dark:border-white/[0.07] focus:border-black/[0.15] dark:focus:border-white/[0.15] text-white placeholder:text-black/15 dark:placeholder:text-white/15 h-11"
               data-testid={isRegister ? "input-register-password" : "input-login-password"}
             />
             <button
@@ -592,7 +592,7 @@ export default function LoginPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
-                className="pr-10 bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.07] dark:border-white/[0.07] focus:border-black/[0.15] dark:focus:border-white/[0.15] text-white placeholder:text-black/15 dark:text-white/15 h-11"
+                className="pr-10 bg-black/[0.03] dark:bg-white/[0.03] border-black/[0.07] dark:border-white/[0.07] focus:border-black/[0.15] dark:focus:border-white/[0.15] text-white placeholder:text-black/15 dark:placeholder:text-white/15 h-11"
                 data-testid="input-register-confirm-password"
               />
               <button
