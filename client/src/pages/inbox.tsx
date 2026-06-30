@@ -165,7 +165,12 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     }
   };
 
-  // Fetch full email details when an email is selected
+  // Fetch full email details when an email is selected.
+  // The inbox list (cached query) already holds each email's full body, so we
+  // seed the detail view from that cache for an INSTANT open instead of showing
+  // a "Loading email..." spinner while the live provider round-trip runs. The
+  // background fetch still completes to fill in attachments/to/cc and the latest
+  // body, swapping in seamlessly once it returns.
   const { data: selectedEmail, isLoading: isLoadingEmail } = useQuery<EmailWithNylasId>({
     queryKey: ["/api/emails", selectedEmailId],
     queryFn: async () => {
@@ -175,6 +180,23 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
       return response.json();
     },
     enabled: !!selectedEmailId,
+    staleTime: 5 * 60 * 1000,
+    placeholderData: () => {
+      if (!selectedEmailId) return undefined;
+      const cached = queryClient.getQueryData<EmailWithNylasId[]>(["/api/emails", "cached"]);
+      const fresh = queryClient.getQueryData<EmailWithNylasId[]>(["/api/emails", "fresh"]);
+      const cachedMatch = cached?.find((e) => getEmailId(e) === selectedEmailId);
+      const freshMatch = fresh?.find((e) => getEmailId(e) === selectedEmailId);
+      // Prefer a candidate that already carries the body so the email renders
+      // fully on open; fall back to any match so we at least show the header
+      // shell instantly rather than a blank spinner.
+      return (
+        (cachedMatch?.body ? cachedMatch : undefined) ||
+        (freshMatch?.body ? freshMatch : undefined) ||
+        cachedMatch ||
+        freshMatch
+      );
+    },
   });
 
   const logoutMutation = useMutation({
