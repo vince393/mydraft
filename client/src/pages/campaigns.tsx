@@ -46,12 +46,45 @@ import {
   Zap,
   Eye,
   FlaskConical,
+  Paperclip,
+  X,
+  FileText,
 } from "lucide-react";
 import type { EmailCampaign, CampaignRecipient } from "@shared/schema";
 import { CAMPAIGN_WIZARD_SKIP_INTRO_KEY } from "@/components/campaign-wizard-dialog";
 
+interface CampaignAttachmentMeta {
+  id: number;
+  campaignId: number;
+  filename: string;
+  contentType: string;
+  size: number;
+  createdAt?: string;
+}
+
 interface CampaignWithRecipients extends EmailCampaign {
   recipients?: CampaignRecipient[];
+  attachments?: CampaignAttachmentMeta[];
+}
+
+export function formatFileSize(bytes: number): string {
+  if (!bytes) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.includes(",") ? result.split(",")[1] : result;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 const PERSONALIZATION_VARS = [
@@ -133,6 +166,12 @@ export default function CampaignsPage() {
   const [newRecipients, setNewRecipients] = useState("");
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  // Pending attachments collected in the create dialog (uploaded after the campaign is created)
+  const [pendingAttachments, setPendingAttachments] = useState<
+    { filename: string; size: number; content: string; contentType: string }[]
+  >([]);
+  const createAttachRef = useRef<HTMLInputElement | null>(null);
+  const editAttachRef = useRef<HTMLInputElement | null>(null);
   const [introSkipped, setIntroSkipped] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(CAMPAIGN_WIZARD_SKIP_INTRO_KEY) === "1";
@@ -148,16 +187,65 @@ export default function CampaignsPage() {
   const createMutation = useMutation({
     mutationFn: async (data: { name: string; subject: string; body: string }) => {
       const res = await apiRequest("POST", "/api/campaigns", data);
-      return res.json();
+      const campaign = await res.json();
+      // Upload any pending attachments now that the campaign exists
+      for (const att of pendingAttachments) {
+        await apiRequest("POST", `/api/campaigns/${campaign.id}/attachments`, {
+          filename: att.filename,
+          content: att.content,
+          contentType: att.contentType,
+        });
+      }
+      return campaign;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       setShowCreateDialog(false);
       setNewCampaign({ name: "", subject: "", body: "" });
+      setPendingAttachments([]);
       toast({ title: "Campaign created successfully" });
     },
     onError: (error: any) => {
       toast({ title: "Failed to create campaign", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const addAttachmentMutation = useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const content = await fileToBase64(file);
+      const res = await apiRequest("POST", `/api/campaigns/${id}/attachments`, {
+        filename: file.name,
+        content,
+        contentType: file.type || "application/octet-stream",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      if (selectedCampaign) {
+        fetchCampaignDetails(selectedCampaign.id).then((details) => setSelectedCampaign(details));
+      }
+      toast({ title: "Attachment added" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Couldn't add attachment", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: async ({ id, attachmentId }: { id: number; attachmentId: number }) => {
+      const res = await apiRequest("DELETE", `/api/campaigns/${id}/attachments/${attachmentId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      if (selectedCampaign) {
+        fetchCampaignDetails(selectedCampaign.id).then((details) => setSelectedCampaign(details));
+      }
+      toast({ title: "Attachment removed" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Couldn't remove attachment", description: error.message, variant: "destructive" });
     },
   });
 
@@ -555,10 +643,16 @@ export default function CampaignsPage() {
                     {campaign.status === "draft" && (
                       <>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             setSelectedCampaign(campaign);
                             setShowEditDialog(true);
                             setShowPreview(false);
+                            try {
+                              const details = await fetchCampaignDetails(campaign.id);
+                              setSelectedCampaign(details);
+                            } catch {
+                              // keep list data if detail fetch fails
+                            }
                           }}
                           className="w-7 h-7 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground/70 transition-all cursor-pointer"
                           data-testid={`button-edit-campaign-${campaign.id}`}
@@ -671,9 +765,72 @@ export default function CampaignsPage() {
                   />
                 </div>
               </div>
+
+              {/* Attachments */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground/70 mb-1.5 block">Attachments</label>
+                <p className="text-[10px] text-muted-foreground/40 mb-2">Sent to every recipient · max 10MB each, 25MB total</p>
+                {pendingAttachments.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    {pendingAttachments.map((att, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 rounded-lg border border-black/[0.06] dark:border-white/[0.06] px-2.5 py-1.5"
+                        style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
+                        data-testid={`create-attachment-${i}`}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-foreground/40 flex-shrink-0" />
+                        <span className="text-xs truncate flex-1" data-testid={`create-attachment-name-${i}`}>{att.filename}</span>
+                        <span className="text-[10px] text-foreground/30 tabular-nums">{formatFileSize(att.size)}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPendingAttachments((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="text-foreground/30 hover:text-red-400 transition-colors cursor-pointer"
+                          data-testid={`button-remove-create-attachment-${i}`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={() => createAttachRef.current?.click()}
+                  className="text-xs gap-1.5"
+                  data-testid="button-add-create-attachment"
+                >
+                  <Paperclip className="w-3.5 h-3.5" />
+                  Add file
+                </Button>
+                <input
+                  ref={createAttachRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    e.target.value = "";
+                    for (const file of files) {
+                      if (file.size > 10 * 1024 * 1024) {
+                        toast({ title: `"${file.name}" is too large`, description: "Max 10MB per file", variant: "destructive" });
+                        continue;
+                      }
+                      const content = await fileToBase64(file);
+                      setPendingAttachments((prev) => [
+                        ...prev,
+                        { filename: file.name, size: file.size, content, contentType: file.type || "application/octet-stream" },
+                      ]);
+                    }
+                  }}
+                  data-testid="input-create-attachment-file"
+                />
+              </div>
             </div>
             <DialogFooter className="pt-2">
-              <Button variant="ghost" onClick={() => setShowCreateDialog(false)} className="text-xs" data-testid="button-cancel-create">
+              <Button variant="ghost" onClick={() => { setShowCreateDialog(false); setPendingAttachments([]); }} className="text-xs" data-testid="button-cancel-create">
                 Cancel
               </Button>
               <Button
@@ -747,6 +904,69 @@ export default function CampaignsPage() {
                   </button>
                 </div>
 
+                {/* Attachments */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground/70 mb-1.5 block">Attachments</label>
+                  <p className="text-[10px] text-muted-foreground/40 mb-2">Sent to every recipient · max 10MB each, 25MB total</p>
+                  {(selectedCampaign.attachments?.length ?? 0) > 0 && (
+                    <div className="space-y-1.5 mb-2">
+                      {selectedCampaign.attachments!.map((att) => (
+                        <div
+                          key={att.id}
+                          className="flex items-center gap-2 rounded-lg border border-black/[0.06] dark:border-white/[0.06] px-2.5 py-1.5"
+                          style={{ background: "rgba(var(--overlay-rgb), 0.02)" }}
+                          data-testid={`edit-attachment-${att.id}`}
+                        >
+                          <FileText className="w-3.5 h-3.5 text-foreground/40 flex-shrink-0" />
+                          <span className="text-xs truncate flex-1" data-testid={`edit-attachment-name-${att.id}`}>{att.filename}</span>
+                          <span className="text-[10px] text-foreground/30 tabular-nums">{formatFileSize(att.size)}</span>
+                          <button
+                            type="button"
+                            onClick={() => deleteAttachmentMutation.mutate({ id: selectedCampaign.id, attachmentId: att.id })}
+                            disabled={deleteAttachmentMutation.isPending}
+                            className="text-foreground/30 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-30"
+                            data-testid={`button-remove-edit-attachment-${att.id}`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={() => editAttachRef.current?.click()}
+                    disabled={addAttachmentMutation.isPending}
+                    className="text-xs gap-1.5"
+                    data-testid="button-add-edit-attachment"
+                  >
+                    {addAttachmentMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paperclip className="w-3.5 h-3.5" />}
+                    Add file
+                  </Button>
+                  <input
+                    ref={editAttachRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={async (e) => {
+                      const files = Array.from(e.target.files || []);
+                      e.target.value = "";
+                      if (!selectedCampaign) return;
+                      for (const file of files) {
+                        if (file.size > 10 * 1024 * 1024) {
+                          toast({ title: `"${file.name}" is too large`, description: "Max 10MB per file", variant: "destructive" });
+                          continue;
+                        }
+                        await addAttachmentMutation.mutateAsync({ id: selectedCampaign.id, file });
+                      }
+                    }}
+                    data-testid="input-edit-attachment-file"
+                  />
+                </div>
+
+                {/* Preview toggle moved above; preview panel */}
                 {showPreview && (
                   <div
                     className="rounded-xl border border-black/[0.06] dark:border-white/[0.06] backdrop-blur-sm p-4 space-y-3"

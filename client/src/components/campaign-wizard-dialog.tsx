@@ -26,7 +26,29 @@ import {
   Loader2,
   Sparkles,
   CheckCircle2,
+  Paperclip,
+  FileText,
+  X,
 } from "lucide-react";
+
+function formatFileSize(bytes: number): string {
+  if (!bytes) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.includes(",") ? result.split(",")[1] : result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export const CAMPAIGN_WIZARD_SKIP_INTRO_KEY = "mydraft:campaignWizardSkipIntro";
 
@@ -58,8 +80,13 @@ export function CampaignWizardDialog({ open, onOpenChange }: CampaignWizardDialo
 
   const [campaignId, setCampaignId] = useState<number | null>(null);
 
+  const [attachments, setAttachments] = useState<
+    { filename: string; size: number; content: string; contentType: string; uploaded: boolean; serverId?: number }[]
+  >([]);
+
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const attachRef = useRef<HTMLInputElement | null>(null);
 
   // Reset everything when the wizard is (re)opened. Skip the intro if the user
   // previously opted out — they jump straight to the details step.
@@ -75,7 +102,29 @@ export function CampaignWizardDialog({ open, onOpenChange }: CampaignWizardDialo
     setRecipientCount(0);
     setTestSent(false);
     setCampaignId(null);
+    setAttachments([]);
   }, [open]);
+
+  // Upload any not-yet-uploaded attachments to the given campaign.
+  const uploadPendingAttachments = async (id: number) => {
+    for (let i = 0; i < attachments.length; i++) {
+      const att = attachments[i];
+      if (att.uploaded) continue;
+      try {
+        const res = await apiRequest("POST", `/api/campaigns/${id}/attachments`, {
+          filename: att.filename,
+          content: att.content,
+          contentType: att.contentType,
+        });
+        const created = await res.json();
+        setAttachments((prev) =>
+          prev.map((a, idx) => (idx === i ? { ...a, uploaded: true, serverId: created?.id } : a)),
+        );
+      } catch (error: any) {
+        toast({ title: `Couldn't attach "${att.filename}"`, description: error.message, variant: "destructive" });
+      }
+    }
+  };
 
   const saveCampaignMutation = useMutation({
     mutationFn: async () => {
@@ -203,7 +252,9 @@ export function CampaignWizardDialog({ open, onOpenChange }: CampaignWizardDialo
         return;
       }
       try {
-        await saveCampaignMutation.mutateAsync();
+        const campaign = await saveCampaignMutation.mutateAsync();
+        const id = campaign?.id ?? campaignId;
+        if (id) await uploadPendingAttachments(id);
         setStep("recipients");
       } catch (error: any) {
         toast({ title: "Couldn't save campaign", description: error.message, variant: "destructive" });
@@ -342,6 +393,81 @@ export function CampaignWizardDialog({ open, onOpenChange }: CampaignWizardDialo
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-foreground/50 mb-1.5 block">Attachments (optional)</label>
+                {attachments.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    {attachments.map((att, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 rounded-lg border border-foreground/10 px-2.5 py-1.5 bg-foreground/[0.02]"
+                        data-testid={`wizard-attachment-${i}`}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-foreground/40 flex-shrink-0" />
+                        <span className="text-xs truncate flex-1" data-testid={`wizard-attachment-name-${i}`}>{att.filename}</span>
+                        <span className="text-[10px] text-foreground/30 tabular-nums">{formatFileSize(att.size)}</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            // If already uploaded to the server, delete it there too
+                            // so a "removed" file is never actually sent.
+                            if (att.uploaded && att.serverId && campaignId) {
+                              try {
+                                await apiRequest(
+                                  "DELETE",
+                                  `/api/campaigns/${campaignId}/attachments/${att.serverId}`,
+                                );
+                              } catch (error: any) {
+                                toast({ title: `Couldn't remove "${att.filename}"`, description: error.message, variant: "destructive" });
+                                return;
+                              }
+                            }
+                            setAttachments((prev) => prev.filter((_, idx) => idx !== i));
+                          }}
+                          className="text-foreground/30 hover:text-red-400 transition-colors cursor-pointer"
+                          data-testid={`button-remove-wizard-attachment-${i}`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={() => attachRef.current?.click()}
+                  data-testid="button-add-wizard-attachment"
+                >
+                  <Paperclip className="w-3.5 h-3.5" />
+                  Add file
+                </Button>
+                <p className="text-[10px] text-foreground/30 mt-1.5">Sent to every recipient · max 10MB each, 25MB total</p>
+                <input
+                  ref={attachRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    e.target.value = "";
+                    for (const file of files) {
+                      if (file.size > 10 * 1024 * 1024) {
+                        toast({ title: `"${file.name}" is too large`, description: "Max 10MB per file", variant: "destructive" });
+                        continue;
+                      }
+                      const content = await fileToBase64(file);
+                      setAttachments((prev) => [
+                        ...prev,
+                        { filename: file.name, size: file.size, content, contentType: file.type || "application/octet-stream", uploaded: false },
+                      ]);
+                    }
+                  }}
+                  data-testid="input-wizard-attachment-file"
+                />
               </div>
             </div>
           )}

@@ -1118,6 +1118,27 @@ export const insertCampaignRecipientSchema = createInsertSchema(campaignRecipien
 export type CampaignRecipient = typeof campaignRecipients.$inferSelect;
 export type InsertCampaignRecipient = z.infer<typeof insertCampaignRecipientSchema>;
 
+// Campaign Attachments - files attached to a campaign, delivered to every recipient.
+// `content` holds base64 file data encrypted at rest (AES-256-GCM), consistent with
+// how email content is encrypted.
+export const campaignAttachments = pgTable("campaign_attachments", {
+  id: serial("id").primaryKey(),
+  campaignId: integer("campaign_id").notNull(),
+  filename: text("filename").notNull(),
+  contentType: text("content_type").notNull(),
+  size: integer("size").notNull(),
+  content: text("content").notNull(), // encrypted base64 file data
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertCampaignAttachmentSchema = createInsertSchema(campaignAttachments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CampaignAttachment = typeof campaignAttachments.$inferSelect;
+export type InsertCampaignAttachment = z.infer<typeof insertCampaignAttachmentSchema>;
+
 // Owner Notes - personal notes for the owner panel
 export const ownerNotes = pgTable("owner_notes", {
   id: serial("id").primaryKey(),

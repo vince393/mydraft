@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, type PasswordResetToken, type RefreshToken, type InsertRefreshToken, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts, aiCostLog, passwordResetTokens, refreshTokens } from "@shared/schema";
+import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type CampaignAttachment, type InsertCampaignAttachment, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, type PasswordResetToken, type RefreshToken, type InsertRefreshToken, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, campaignAttachments, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts, aiCostLog, passwordResetTokens, refreshTokens } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, desc, and, lte, gte, count, sql, ne, inArray } from "drizzle-orm";
@@ -261,6 +261,10 @@ export interface IStorage {
   updateCampaignRecipientStatus(id: number, status: string, errorMessage?: string): Promise<CampaignRecipient | undefined>;
   deleteCampaignRecipient(id: number): Promise<boolean>;
   clearCampaignRecipients(campaignId: number): Promise<boolean>;
+  addCampaignAttachment(attachment: InsertCampaignAttachment): Promise<CampaignAttachment>;
+  getCampaignAttachments(campaignId: number): Promise<CampaignAttachment[]>;
+  getCampaignAttachment(id: number): Promise<CampaignAttachment | undefined>;
+  deleteCampaignAttachment(id: number): Promise<boolean>;
 
   // Cached emails methods for instant loading
   getCachedEmails(userId: number): Promise<any[]>;
@@ -2522,8 +2526,9 @@ Business Development`,
   }
 
   async deleteCampaign(id: number): Promise<boolean> {
-    // First delete all recipients
+    // First delete all recipients and attachments
     await db.delete(campaignRecipients).where(eq(campaignRecipients.campaignId, id));
+    await db.delete(campaignAttachments).where(eq(campaignAttachments.campaignId, id));
     // Then delete the campaign
     const result = await db.delete(emailCampaigns).where(eq(emailCampaigns.id, id));
     return (result.rowCount ?? 0) > 0;
@@ -2578,6 +2583,38 @@ Business Development`,
       .set({ totalRecipients: 0 })
       .where(eq(emailCampaigns.id, campaignId));
     return true;
+  }
+
+  async addCampaignAttachment(attachment: InsertCampaignAttachment): Promise<CampaignAttachment> {
+    // Encrypt the base64 file content at rest (consistent with email content encryption).
+    const encrypted = encryptEmailContent(attachment.content) ?? attachment.content;
+    const [created] = await db.insert(campaignAttachments)
+      .values({ ...attachment, content: encrypted })
+      .returning();
+    return created;
+  }
+
+  async getCampaignAttachments(campaignId: number): Promise<CampaignAttachment[]> {
+    const rows = await db.select().from(campaignAttachments)
+      .where(eq(campaignAttachments.campaignId, campaignId))
+      .orderBy(campaignAttachments.createdAt);
+    // Decrypt content back to base64 for callers (send paths). UI list callers can ignore it.
+    return rows.map((row) => ({
+      ...row,
+      content: decryptEmailContent(row.content) ?? row.content,
+    }));
+  }
+
+  async getCampaignAttachment(id: number): Promise<CampaignAttachment | undefined> {
+    const [row] = await db.select().from(campaignAttachments)
+      .where(eq(campaignAttachments.id, id));
+    if (!row) return undefined;
+    return { ...row, content: decryptEmailContent(row.content) ?? row.content };
+  }
+
+  async deleteCampaignAttachment(id: number): Promise<boolean> {
+    const result = await db.delete(campaignAttachments).where(eq(campaignAttachments.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Cached emails methods for instant loading

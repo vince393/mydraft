@@ -11262,7 +11262,15 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
         }
 
         const recipients = await storage.getCampaignRecipients(id);
-        res.json({ ...campaign, recipients });
+        const attachments = (await storage.getCampaignAttachments(id)).map((a) => ({
+          id: a.id,
+          campaignId: a.campaignId,
+          filename: a.filename,
+          contentType: a.contentType,
+          size: a.size,
+          createdAt: a.createdAt,
+        }));
+        res.json({ ...campaign, recipients, attachments });
       } catch (error) {
         console.error("Error fetching campaign:", error);
         res.status(500).json({ error: "Failed to fetch campaign" });
@@ -11513,6 +11521,202 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
     },
   );
 
+  // Campaign attachment limits
+  const CAMPAIGN_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10MB per file
+  const CAMPAIGN_MAX_TOTAL_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25MB total per campaign
+  const CAMPAIGN_MAX_ATTACHMENTS = 10;
+
+  // List attachments for a campaign (metadata only, no file content)
+  app.get(
+    "/api/campaigns/:id/attachments",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        const attachments = await storage.getCampaignAttachments(id);
+        res.json(
+          attachments.map((a) => ({
+            id: a.id,
+            campaignId: a.campaignId,
+            filename: a.filename,
+            contentType: a.contentType,
+            size: a.size,
+            createdAt: a.createdAt,
+          })),
+        );
+      } catch (error) {
+        console.error("Error fetching campaign attachments:", error);
+        res.status(500).json({ error: "Failed to fetch attachments" });
+      }
+    },
+  );
+
+  // Add an attachment to a campaign
+  app.post(
+    "/api/campaigns/:id/attachments",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        if (campaign.status !== "draft") {
+          return res
+            .status(400)
+            .json({ error: "Can only add attachments to draft campaigns" });
+        }
+
+        let { filename, content, contentType } = req.body as {
+          filename?: string;
+          content?: string;
+          contentType?: string;
+        };
+
+        if (!filename || !content) {
+          return res
+            .status(400)
+            .json({ error: "filename and content are required" });
+        }
+
+        contentType = contentType || "application/octet-stream";
+
+        // Compute size from base64 content
+        let buffer: Buffer;
+        try {
+          buffer = Buffer.from(content, "base64");
+        } catch {
+          return res.status(400).json({ error: "Invalid file content" });
+        }
+        const size = buffer.length;
+
+        if (size === 0) {
+          return res.status(400).json({ error: "File is empty" });
+        }
+
+        if (size > CAMPAIGN_MAX_ATTACHMENT_BYTES) {
+          return res.status(400).json({
+            error: `"${filename}" is too large. Max ${Math.round(CAMPAIGN_MAX_ATTACHMENT_BYTES / (1024 * 1024))}MB per file.`,
+          });
+        }
+
+        // Enforce per-campaign count and total size limits
+        const existing = await storage.getCampaignAttachments(id);
+        if (existing.length >= CAMPAIGN_MAX_ATTACHMENTS) {
+          return res.status(400).json({
+            error: `You can attach at most ${CAMPAIGN_MAX_ATTACHMENTS} files per campaign.`,
+          });
+        }
+        const existingTotal = existing.reduce((sum, a) => sum + (a.size || 0), 0);
+        if (existingTotal + size > CAMPAIGN_MAX_TOTAL_ATTACHMENT_BYTES) {
+          return res.status(400).json({
+            error: `Attachments exceed the ${Math.round(CAMPAIGN_MAX_TOTAL_ATTACHMENT_BYTES / (1024 * 1024))}MB total limit for a campaign.`,
+          });
+        }
+
+        // Scan for malware / blocked types (reuse existing attachment checks)
+        const scanResult = await scanFile(content, filename, contentType, true);
+        if (!scanResult.isClean) {
+          console.warn(
+            `Blocked malicious campaign attachment: ${filename} - ${scanResult.malwareName}`,
+          );
+          return res.status(403).json({
+            error: `Attachment "${filename}" blocked for security reasons`,
+            reason: scanResult.malwareName,
+          });
+        }
+
+        // Sanitize SVGs (CASA Q40 - defense in depth)
+        let finalContent = content;
+        const isSvg =
+          filename.toLowerCase().endsWith(".svg") ||
+          contentType.includes("svg");
+        if (isSvg) {
+          try {
+            const { buffer: sanitizedBuffer, wasModified } = sanitizeSVGBuffer(
+              buffer,
+              filename,
+              contentType,
+            );
+            if (wasModified) {
+              finalContent = sanitizedBuffer.toString("base64");
+            }
+          } catch (err) {
+            console.warn(`Failed to sanitize SVG attachment: ${filename}`, err);
+          }
+        }
+
+        const created = await storage.addCampaignAttachment({
+          campaignId: id,
+          filename,
+          contentType,
+          size,
+          content: finalContent,
+        });
+
+        res.json({
+          id: created.id,
+          campaignId: created.campaignId,
+          filename: created.filename,
+          contentType: created.contentType,
+          size: created.size,
+          createdAt: created.createdAt,
+        });
+      } catch (error) {
+        console.error("Error adding campaign attachment:", error);
+        res.status(500).json({ error: "Failed to add attachment" });
+      }
+    },
+  );
+
+  // Delete a campaign attachment
+  app.delete(
+    "/api/campaigns/:id/attachments/:attachmentId",
+    requireAuth,
+    requireBusinessPlan,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        const attachmentId = parseInt(req.params.attachmentId);
+        const campaign = await storage.getCampaign(id);
+
+        if (!campaign || campaign.userId !== req.session.userId) {
+          return res.status(404).json({ error: "Campaign not found" });
+        }
+
+        if (campaign.status !== "draft") {
+          return res
+            .status(400)
+            .json({ error: "Can only remove attachments from draft campaigns" });
+        }
+
+        // Ensure the attachment actually belongs to this (owned) campaign
+        // before deleting, to prevent cross-campaign deletion by id guessing.
+        const attachment = await storage.getCampaignAttachment(attachmentId);
+        if (!attachment || attachment.campaignId !== id) {
+          return res.status(404).json({ error: "Attachment not found" });
+        }
+
+        await storage.deleteCampaignAttachment(attachmentId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting campaign attachment:", error);
+        res.status(500).json({ error: "Failed to delete attachment" });
+      }
+    },
+  );
+
   // Helper: replace personalization variables in text
   function replaceVariables(
     text: string,
@@ -11572,10 +11776,18 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
 
         const testSubject = `[TEST] ${personalizedSubject}`;
 
+        const attachmentRecords = await storage.getCampaignAttachments(id);
+        const sendAttachments = attachmentRecords.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType,
+        }));
+
         await providerResult.provider.sendMessage(providerResult.accessToken, {
           to: [user.email],
           subject: testSubject,
           body: personalizedBody,
+          attachments: sendAttachments.length > 0 ? sendAttachments : undefined,
         });
 
         res.json({ message: "Test email sent to your inbox" });
@@ -11653,6 +11865,13 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
             .json({ error: "Please connect your email account first" });
         }
 
+        const attachmentRecords = await storage.getCampaignAttachments(id);
+        const sendAttachments = attachmentRecords.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType,
+        }));
+
         await storage.updateCampaign(id, {
           status: "sending",
           startedAt: new Date(),
@@ -11677,6 +11896,8 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
                 to: [recipient.email],
                 subject: personalizedSubject,
                 body: personalizedBody,
+                attachments:
+                  sendAttachments.length > 0 ? sendAttachments : undefined,
               });
 
               storage
