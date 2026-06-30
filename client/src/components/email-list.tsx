@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useMemo, useEffect, type ReactNode } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare, ArrowDown, Plus, Shield, Inbox } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare, ArrowDown, Plus, Shield, Inbox, Megaphone } from "lucide-react";
 import { useScreenSize } from "@/hooks/use-screen-size";
+import { useLongPress } from "@/hooks/use-long-press";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ interface EmailListProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   onCompose?: () => void;
+  onCampaign?: () => void;
   onOpenAssistant?: () => void;
   mobileNavLeft?: ReactNode;
 }
@@ -148,7 +150,11 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onOpenAssistant, mobileNavLeft }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onCampaign, onOpenAssistant, mobileNavLeft }: EmailListProps) {
+  const composeHandlers = useLongPress({
+    onClick: () => onCompose?.(),
+    onLongPress: () => onCampaign?.(),
+  });
   const screen = useScreenSize();
   const isTrashFolder = activeFolder.toLowerCase() === "trash";
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -963,14 +969,24 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
       ) : (
         <div className="absolute bottom-4 right-4">
           <button 
-            className="group rounded-full w-16 h-16 flex items-center justify-center backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.03] border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 hover:border-black/15 dark:hover:border-white/15 hover:scale-110 active:scale-95 active:bg-black/8 dark:active:bg-white/8 transition-all duration-150 cursor-pointer"
+            className="group relative rounded-full w-16 h-16 flex items-center justify-center select-none touch-manipulation backdrop-blur-sm bg-black/[0.03] dark:bg-white/[0.03] border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 hover:border-black/15 dark:hover:border-white/15 hover:scale-110 active:scale-95 active:bg-black/8 dark:active:bg-white/8 transition-all duration-150 cursor-pointer"
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(var(--overlay-rgb), 0.15), 0 2px 8px rgba(0,0,0,0.1)"
             }}
-            onClick={onCompose}
+            title="Tap to compose · Hold to start a campaign"
+            aria-label="Compose. Press and hold to start an email campaign."
+            {...composeHandlers}
             data-testid="button-compose"
           >
             <PenSquare className="w-6 h-6 text-foreground/60 group-hover:text-foreground/80 transition-colors" />
+            {onCampaign && (
+              <span
+                className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center bg-primary/90 border border-background shadow-sm opacity-80 group-hover:opacity-100 transition-opacity"
+                data-testid="hint-campaign"
+              >
+                <Megaphone className="w-2.5 h-2.5 text-primary-foreground" />
+              </span>
+            )}
           </button>
         </div>
       )}

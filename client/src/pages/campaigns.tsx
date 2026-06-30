@@ -48,6 +48,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import type { EmailCampaign, CampaignRecipient } from "@shared/schema";
+import { CAMPAIGN_WIZARD_SKIP_INTRO_KEY } from "@/components/campaign-wizard-dialog";
 
 interface CampaignWithRecipients extends EmailCampaign {
   recipients?: CampaignRecipient[];
@@ -132,6 +133,10 @@ export default function CampaignsPage() {
   const [newRecipients, setNewRecipients] = useState("");
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [introSkipped, setIntroSkipped] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(CAMPAIGN_WIZARD_SKIP_INTRO_KEY) === "1";
+  });
 
   const createBodyRef = useRef<HTMLTextAreaElement | null>(null);
   const editBodyRef = useRef<HTMLTextAreaElement | null>(null);
@@ -329,15 +334,30 @@ export default function CampaignsPage() {
               <p className="text-foreground/40 text-xs mt-0.5">Bulk email outreach</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowCreateDialog(true)}
-            className="h-9 px-4 rounded-full text-xs font-medium border border-primary/25 text-white transition-all cursor-pointer flex items-center gap-2"
-            style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(147,51,234,0.3))" }}
-            data-testid="button-create-campaign"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New Campaign
-          </button>
+          <div className="flex items-center gap-2">
+            {introSkipped && (
+              <button
+                onClick={() => {
+                  localStorage.removeItem(CAMPAIGN_WIZARD_SKIP_INTRO_KEY);
+                  setIntroSkipped(false);
+                }}
+                className="h-9 px-3 rounded-full text-xs font-medium border border-border/60 text-foreground/60 hover:text-foreground/90 hover:bg-foreground/5 transition-all cursor-pointer"
+                data-testid="button-reenable-guided-setup"
+                title="Show the guided campaign setup again when you press and hold compose"
+              >
+                Show guided setup
+              </button>
+            )}
+            <button
+              onClick={() => setShowCreateDialog(true)}
+              className="h-9 px-4 rounded-full text-xs font-medium border border-primary/25 text-white transition-all cursor-pointer flex items-center gap-2"
+              style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(147,51,234,0.3))" }}
+              data-testid="button-create-campaign"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Campaign
+            </button>
+          </div>
         </div>
 
         {/* Stats row */}

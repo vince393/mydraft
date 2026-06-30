@@ -80,6 +80,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { CampaignWizardDialog } from "@/components/campaign-wizard-dialog";
 import { LowCreditBanner } from "@/components/low-credit-banner";
 import { AssistantModal } from "@/components/assistant-modal";
 import { UpgradeModal } from "@/components/upgrade-modal";
@@ -179,8 +180,10 @@ function AuthenticatedApp() {
   const [composeMode, setComposeMode] = useState<"new" | "reply" | "replyAll" | "forward">("new");
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showCampaignWizard, setShowCampaignWizard] = useState(false);
+  const [showCampaignUpgrade, setShowCampaignUpgrade] = useState(false);
   const screen = useScreenSize();
-  const { hasPro } = usePlan();
+  const { hasPro, hasPremium } = usePlan();
 
   const { data: emails = [] } = useQuery<Email[]>({
     queryKey: ["/api/emails"],
@@ -219,6 +222,14 @@ function AuthenticatedApp() {
   const handleCompose = () => {
     setComposeMode("new");
     setShowComposeDialog(true);
+  };
+
+  const handleOpenCampaign = () => {
+    if (hasPremium) {
+      setShowCampaignWizard(true);
+    } else {
+      setShowCampaignUpgrade(true);
+    }
   };
 
   const handleOpenAssistant = () => {
@@ -289,6 +300,7 @@ function AuthenticatedApp() {
               setComposeMode={setComposeMode}
               onOpenAssistant={handleOpenAssistant}
               onCompose={handleCompose}
+              onCampaign={handleOpenCampaign}
               isAIChatEnabled={isAIChatEnabled}
             />
           </div>
@@ -302,6 +314,18 @@ function AuthenticatedApp() {
         onOpenChange={setShowUpgradeModal}
         feature="AI Assistant"
         requiredPlan="pro"
+      />
+
+      <UpgradeModal
+        open={showCampaignUpgrade}
+        onOpenChange={setShowCampaignUpgrade}
+        feature="Email campaigns"
+        requiredPlan="premium"
+      />
+
+      <CampaignWizardDialog
+        open={showCampaignWizard}
+        onOpenChange={setShowCampaignWizard}
       />
     </SidebarProvider>
   );
