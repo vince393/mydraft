@@ -94,6 +94,36 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
 
   const getEmailId = (e: Email): string | number => (e as any).nylasId || e.id;
 
+  // A saved draft only exists for emails with a genuine integer local id (the
+  // generate endpoint persists/dedupes drafts keyed by the numeric emailId).
+  // Only accept a real number so we never coerce a provider string id into a
+  // local draft key and reuse the wrong draft.
+  const getNumericEmailId = (e: Email): number | null => {
+    const id = e.id as unknown;
+    return typeof id === "number" && Number.isInteger(id) ? id : null;
+  };
+
+  // Try to reuse a previously generated draft for this email so reopening the
+  // dialog doesn't spend another credit. Returns true if an existing draft was
+  // loaded.
+  const tryLoadExistingDraft = async (e: Email): Promise<boolean> => {
+    const numericId = getNumericEmailId(e);
+    if (numericId === null) return false;
+    try {
+      const response = await apiRequest("GET", `/api/drafts/${numericId}`);
+      const existing = await response.json();
+      if (existing && existing.content) {
+        setGeneratedDraft(existing);
+        setDraftContent(existing.content);
+        setGenerateError(null);
+        return true;
+      }
+    } catch {
+      // Fall through to generating a fresh draft.
+    }
+    return false;
+  };
+
   useEffect(() => {
     if (open && email) {
       setDraftContent("");
@@ -101,9 +131,13 @@ export function AIDraftDialog({ email, open, onOpenChange, onDraftAccepted }: AI
       setAiInstructions("");
       setGeneratedDraft(null);
       setGenerateError(null);
-      if (canAffordReply) {
-        generateMutation.mutate({ emailId: getEmailId(email), tone: selectedTone });
-      }
+      const currentEmail = email;
+      (async () => {
+        const reused = await tryLoadExistingDraft(currentEmail);
+        if (!reused && canAffordReply) {
+          generateMutation.mutate({ emailId: getEmailId(currentEmail), tone: selectedTone });
+        }
+      })();
     }
   }, [open, email?.id]);
 

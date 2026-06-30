@@ -1,6 +1,19 @@
 import { Coins } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useCredits, useCreditsConfig } from "@/hooks/use-credits";
 import { cn } from "@/lib/utils";
+
+/**
+ * Whether the user wants credit-amount badges shown next to action buttons.
+ * Reads the preference from the cached current-user payload and defaults to
+ * `true` (shown) when unset.
+ */
+export function useShowCreditCosts(): boolean {
+  const { data } = useQuery<{
+    user?: { aiPreferences?: { showCreditCosts?: boolean } | null } | null;
+  }>({ queryKey: ["/api/auth/me"] });
+  return data?.user?.aiPreferences?.showCreditCosts !== false;
+}
 
 export interface ActionCostInfo {
   cost: number;
@@ -40,8 +53,9 @@ interface CreditCostBadgeProps {
  */
 export function CreditCostBadge({ action, className }: CreditCostBadgeProps) {
   const { cost, canAfford } = useActionCost(action);
+  const showCreditCosts = useShowCreditCosts();
 
-  if (cost <= 0) return null;
+  if (cost <= 0 || !showCreditCosts) return null;
 
   return (
     <span

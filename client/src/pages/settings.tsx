@@ -74,6 +74,7 @@ interface Settings {
     region?: string;
     preferredLanguage?: string;
     formalityLevel?: string;
+    showCreditCosts?: boolean;
   } | null;
   emailSignature: string | null;
   signatureEnabled: boolean;
@@ -208,7 +209,7 @@ function SettingsContent({ section, settings }: { section: SettingsSection; sett
   switch (section) {
     case "account": return <AccountTab settings={settings} />;
     case "security": return <SecurityTab settings={settings} />;
-    case "appearance": return <AppearanceTab />;
+    case "appearance": return <AppearanceTab settings={settings} />;
     case "ai": return <AIPreferencesTab settings={settings} />;
     case "email": return <EmailSettingsTab settings={settings} />;
     case "billing": return <BillingTab settings={settings} />;
@@ -2013,8 +2014,33 @@ function TeamTab() {
   );
 }
 
-function AppearanceTab() {
+function AppearanceTab({ settings }: { settings: Settings }) {
   const { toast } = useToast();
+  const [showCreditCosts, setShowCreditCosts] = useState<boolean>(
+    settings.aiPreferences?.showCreditCosts !== false,
+  );
+
+  const creditCostsMutation = useMutation({
+    mutationFn: async (value: boolean) => {
+      const response = await apiRequest("PUT", "/api/settings/ai-preferences", {
+        aiPreferences: { ...(settings.aiPreferences ?? {}), showCreditCosts: value },
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleCreditCostsToggle = (value: boolean) => {
+    setShowCreditCosts(value);
+    creditCostsMutation.mutate(value);
+  };
+
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("theme");
@@ -2044,6 +2070,23 @@ function AppearanceTab() {
 
   return (
     <div className="space-y-5">
+      <SettingsPanel>
+        <SectionHeader icon={Coins} title="Credit Costs" description="Show how many credits each AI action uses" />
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-black/[0.04] dark:border-white/[0.04] bg-black/[0.01] dark:bg-white/[0.01] p-4">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-foreground/90">Show credit amounts</p>
+            <p className="text-[11px] text-muted-foreground/50">
+              Display the coin badge and number next to action buttons
+            </p>
+          </div>
+          <Switch
+            checked={showCreditCosts}
+            onCheckedChange={handleCreditCostsToggle}
+            data-testid="switch-show-credit-costs"
+          />
+        </div>
+      </SettingsPanel>
+
       <SettingsPanel>
         <SectionHeader icon={Palette} title="Theme" description="Customize how MyDraft looks" />
         <RadioGroup

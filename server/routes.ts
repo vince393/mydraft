@@ -5682,7 +5682,7 @@ Rules:
   app.get("/api/drafts/:emailId", requireAuth, async (req, res) => {
     try {
       const emailId = parseInt(req.params.emailId);
-      const draft = await storage.getDraftByEmailId(emailId);
+      const draft = await storage.getDraftByEmailId(req.session.userId!, emailId);
       res.json(draft || null);
     } catch (error) {
       console.error("Error fetching draft:", error);
@@ -5901,7 +5901,7 @@ Reply:`;
         const numericEmailId = parseInt(emailId);
         let draft = null;
         if (!isNaN(numericEmailId)) {
-          const existingDraft = await storage.getDraftByEmailId(numericEmailId);
+          const existingDraft = await storage.getDraftByEmailId(req.session.userId!, numericEmailId);
           if (existingDraft) {
             await storage.deleteDraft(existingDraft.id);
           }

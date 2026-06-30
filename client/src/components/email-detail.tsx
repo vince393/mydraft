@@ -705,6 +705,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
               >
                 <Sparkles className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                 Draft Reply
+                <CreditCostBadge action="ai_reply" />
                 {!hasPro && (
                   <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
                     Pro
@@ -788,6 +789,7 @@ export function EmailDetail({ email, threadEmails = [], currentUserEmail = "", g
                   >
                     <Sparkles className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                     Draft Reply
+                    <CreditCostBadge action="ai_reply" />
                     {!hasPro && (
                       <span className="text-[9px] px-1 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 font-medium ml-0.5">
                         Pro

@@ -18,7 +18,7 @@ export interface IStorage {
   updateEmail(id: number, updates: Partial<Email>): Promise<Email | undefined>;
   deleteEmail(id: number): Promise<boolean>;
   
-  getDraftByEmailId(emailId: number): Promise<Draft | undefined>;
+  getDraftByEmailId(userId: string, emailId: number): Promise<Draft | undefined>;
   getDraft(id: number): Promise<Draft | undefined>;
   createDraft(draft: InsertDraft): Promise<Draft>;
   updateDraft(id: number, updates: Partial<Draft>): Promise<Draft | undefined>;
@@ -802,8 +802,10 @@ Business Development`,
     return this.emails.delete(id);
   }
 
-  async getDraftByEmailId(emailId: number): Promise<Draft | undefined> {
-    return Array.from(this.drafts.values()).find((d) => d.emailId === emailId);
+  async getDraftByEmailId(userId: string, emailId: number): Promise<Draft | undefined> {
+    return Array.from(this.drafts.values()).find(
+      (d) => d.emailId === emailId && d.userId === userId,
+    );
   }
 
   async getDraft(id: number): Promise<Draft | undefined> {

@@ -46,6 +46,7 @@ export const aiPreferencesSchema = z.object({
   region: regionSchema.optional(),
   preferredLanguage: preferredLanguageSchema.optional(),
   formalityLevel: formalityLevelSchema.optional(),
+  showCreditCosts: z.boolean().optional(),
 });
 
 export type AiPreferences = z.infer<typeof aiPreferencesSchema>;
