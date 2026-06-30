@@ -463,6 +463,19 @@ export function CampaignWizardDialog({ open, onOpenChange }: CampaignWizardDialo
               >
                 View campaign dashboard
               </Button>
+              <label className="flex items-center gap-2 text-xs text-foreground/50 cursor-pointer pt-1">
+                <Checkbox
+                  checked={dontShowIntro}
+                  onCheckedChange={(v) => {
+                    const skip = v === true;
+                    setDontShowIntro(skip);
+                    if (skip) localStorage.setItem(CAMPAIGN_WIZARD_SKIP_INTRO_KEY, "1");
+                    else localStorage.removeItem(CAMPAIGN_WIZARD_SKIP_INTRO_KEY);
+                  }}
+                  data-testid="checkbox-dont-show-intro-done"
+                />
+                Skip this walkthrough next time
+              </label>
             </div>
           )}
         </div>

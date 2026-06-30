@@ -21,6 +21,7 @@ export function useLongPress({
 }: UseLongPressOptions) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggeredRef = useRef(false);
+  const cancelledRef = useRef(false);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const clear = useCallback(() => {
@@ -38,6 +39,7 @@ export function useLongPress({
       // right/middle clicks so desktop context menus behave normally.
       if (e.button !== undefined && e.button !== 0) return;
       triggeredRef.current = false;
+      cancelledRef.current = false;
       startPosRef.current = { x: e.clientX, y: e.clientY };
       clear();
       timerRef.current = setTimeout(() => {
@@ -53,7 +55,12 @@ export function useLongPress({
       if (!startPosRef.current || !timerRef.current) return;
       const dx = Math.abs(e.clientX - startPosRef.current.x);
       const dy = Math.abs(e.clientY - startPosRef.current.y);
-      if (dx > moveTolerance || dy > moveTolerance) clear();
+      if (dx > moveTolerance || dy > moveTolerance) {
+        // Treat the drag/scroll as a cancellation: stop the long-press AND
+        // suppress the trailing click so we don't accidentally open compose.
+        cancelledRef.current = true;
+        clear();
+      }
     },
     [clear, moveTolerance],
   );
@@ -66,12 +73,22 @@ export function useLongPress({
     clear();
   }, [clear]);
 
+  const handlePointerCancel = useCallback(() => {
+    // System interruption (incoming call, gesture cancel): drop the gesture
+    // entirely and suppress any trailing click.
+    cancelledRef.current = true;
+    clear();
+  }, [clear]);
+
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
-      if (triggeredRef.current) {
+      // Suppress the click if a long-press already fired OR the gesture was
+      // cancelled by a drag/scroll/interruption — either way, no normal tap.
+      if (triggeredRef.current || cancelledRef.current) {
         e.preventDefault();
         e.stopPropagation();
         triggeredRef.current = false;
+        cancelledRef.current = false;
         return;
       }
       onClick?.();
@@ -88,7 +105,7 @@ export function useLongPress({
     onPointerMove: handlePointerMove,
     onPointerUp: handlePointerUp,
     onPointerLeave: handlePointerLeave,
-    onPointerCancel: handlePointerUp,
+    onPointerCancel: handlePointerCancel,
     onClick: handleClick,
     onContextMenu: handleContextMenu,
   };
