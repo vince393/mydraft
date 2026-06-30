@@ -41,3 +41,9 @@ id = "dM4FApJvu4MGBMnSrO6Ho"
 uri = "file://attached_assets/mydraft_logo.png"
 type = "image"
 title = "MyDraft Logo — standard"
+
+[[outputs]]
+id = "eGzAbUq-KddbXYWKP9k94"
+uri = "file://campaign-press-and-hold-mobile-prompt.md"
+type = "text"
+title = "Mobile App Prompt — Press-and-Hold Compose → Campaign"
