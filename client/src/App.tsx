@@ -89,7 +89,7 @@ import { usePlan } from "@/hooks/use-plan";
 import Inbox from "@/pages/inbox";
 import type { Email, User } from "@shared/schema";
 import { getCategoryCounts, type EmailCategory } from "@/lib/email-categories";
-import { Loader2 } from "lucide-react";
+import { LogoLoader } from "@/components/logo-loader";
 import { useMemo, Component, type ReactNode, type ErrorInfo } from "react";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -115,7 +115,6 @@ const DataProcessingAgreementPage = lazy(() => import("@/pages/data-processing-a
 const AIUsePolicyPage = lazy(() => import("@/pages/ai-use-policy"));
 const RefundPolicyPage = lazy(() => import("@/pages/refund-policy"));
 const DMCAPolicyPage = lazy(() => import("@/pages/dmca-policy"));
-const LoaderPreviewPage = lazy(() => import("@/pages/loader-preview"));
 const TestimonialRewardPage = lazy(() => import("@/pages/testimonial-reward"));
 const CampaignsPage = lazy(() => import("@/pages/campaigns"));
 const CheckoutPage = lazy(() => import("@/pages/checkout"));
@@ -125,7 +124,7 @@ const CreditsPage = lazy(() => import("@/pages/credits"));
 function PageLoader() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <LogoLoader size={56} />
     </div>
   );
 }
@@ -358,7 +357,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <LogoLoader size={56} />
       </div>
     );
   }
@@ -398,7 +397,7 @@ function PublicRoute({ children, redirectIfAuthenticated = true }: { children: R
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <LogoLoader size={56} />
       </div>
     );
   }
@@ -473,9 +472,6 @@ function AppRoutes() {
       </Route>
       <Route path="/dmca">
         <DMCAPolicyPage />
-      </Route>
-      <Route path="/loader-preview">
-        <LoaderPreviewPage />
       </Route>
       <Route path="/testimonial-reward">
         <TestimonialRewardPage />
