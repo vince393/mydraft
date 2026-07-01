@@ -89,7 +89,7 @@ import { usePlan } from "@/hooks/use-plan";
 import Inbox from "@/pages/inbox";
 import type { Email, User } from "@shared/schema";
 import { getCategoryCounts, type EmailCategory } from "@/lib/email-categories";
-import { LogoLoader } from "@/components/logo-loader";
+import { Loader2 } from "lucide-react";
 import { useMemo, Component, type ReactNode, type ErrorInfo } from "react";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -124,7 +124,7 @@ const CreditsPage = lazy(() => import("@/pages/credits"));
 function PageLoader() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <LogoLoader size={56} />
+      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
     </div>
   );
 }
@@ -357,7 +357,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <LogoLoader size={56} />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -397,7 +397,7 @@ function PublicRoute({ children, redirectIfAuthenticated = true }: { children: R
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <LogoLoader size={56} />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
