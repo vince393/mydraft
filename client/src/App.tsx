@@ -115,6 +115,7 @@ const DataProcessingAgreementPage = lazy(() => import("@/pages/data-processing-a
 const AIUsePolicyPage = lazy(() => import("@/pages/ai-use-policy"));
 const RefundPolicyPage = lazy(() => import("@/pages/refund-policy"));
 const DMCAPolicyPage = lazy(() => import("@/pages/dmca-policy"));
+const LoaderPreviewPage = lazy(() => import("@/pages/loader-preview"));
 const TestimonialRewardPage = lazy(() => import("@/pages/testimonial-reward"));
 const CampaignsPage = lazy(() => import("@/pages/campaigns"));
 const CheckoutPage = lazy(() => import("@/pages/checkout"));
@@ -472,6 +473,9 @@ function AppRoutes() {
       </Route>
       <Route path="/dmca">
         <DMCAPolicyPage />
+      </Route>
+      <Route path="/loader-preview">
+        <LoaderPreviewPage />
       </Route>
       <Route path="/testimonial-reward">
         <TestimonialRewardPage />
