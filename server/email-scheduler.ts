@@ -4,8 +4,18 @@ import { microsoftProvider } from "./microsoft";
 import type { IEmailProvider } from "./email-provider";
 import { spendCredits, refundCredits, getBalance, getActionCost } from "./credits";
 
-let schedulerInterval: NodeJS.Timeout | null = null;
+let schedulerTimer: NodeJS.Timeout | null = null;
+let schedulerStopped = true;
 let autoSortInterval: NodeJS.Timeout | null = null;
+
+// When idle (nothing scheduled), we still re-check the DB occasionally as a
+// safety net (e.g. in case another instance queued a send). This is a light
+// poll — a few queries per minute instead of one every second — so the
+// database is free to go idle and stop billing compute hours 24/7.
+const IDLE_POLL_MS = 30 * 1000;
+// Never sleep longer than this even when the next send is far away, so we
+// re-check periodically without drifting.
+const MAX_SLEEP_MS = 30 * 1000;
 const autoSortedEmails = new Map<string, Set<string>>();
 let autoSortRunning = false;
 
@@ -461,26 +471,63 @@ async function runAutoSort() {
   }
 }
 
+// Run one processing pass, then sleep only until the next send is actually due
+// (or a short idle poll if nothing is scheduled). This keeps scheduled/undo
+// sends firing at the exact same time as before while letting the database go
+// idle when there's nothing to do.
+async function runSchedulerTick() {
+  if (schedulerStopped) return;
+  try {
+    await processPendingSends();
+  } catch (error) {
+    console.error("[EmailScheduler] Tick failed:", error);
+  }
+  if (schedulerStopped) return;
+
+  let delay = IDLE_POLL_MS;
+  try {
+    const next = await storage.getNextPendingSend();
+    if (next?.scheduledSendAt) {
+      const due = new Date(next.scheduledSendAt).getTime() - Date.now();
+      delay = Math.max(0, Math.min(due, MAX_SLEEP_MS));
+    }
+  } catch (error) {
+    console.error("[EmailScheduler] Failed to compute next wake:", error);
+  }
+
+  if (schedulerTimer) clearTimeout(schedulerTimer);
+  schedulerTimer = setTimeout(runSchedulerTick, delay);
+}
+
+// Called right after a send is queued so it fires at its exact scheduled time
+// even though we're no longer polling every second.
+export function wakeEmailScheduler() {
+  if (schedulerStopped) return;
+  if (schedulerTimer) clearTimeout(schedulerTimer);
+  schedulerTimer = setTimeout(runSchedulerTick, 0);
+}
+
 export function startEmailScheduler() {
-  if (schedulerInterval) {
+  if (!schedulerStopped) {
     console.log("[EmailScheduler] Scheduler already running");
     return;
   }
-  
-  console.log("[EmailScheduler] Starting email scheduler (polling every 1 second)");
-  schedulerInterval = setInterval(processPendingSends, 1000);
+
+  console.log("[EmailScheduler] Starting email scheduler (event-driven, idle DB polling)");
+  schedulerStopped = false;
+  runSchedulerTick();
+
   dailyCheckInterval = setInterval(runDailyChecks, 60 * 60 * 1000);
   autoSortInterval = setInterval(runAutoSort, 5 * 60 * 1000);
-  
-  processPendingSends();
   setTimeout(runDailyChecks, 30000);
   setTimeout(runAutoSort, 60000);
 }
 
 export function stopEmailScheduler() {
-  if (schedulerInterval) {
-    clearInterval(schedulerInterval);
-    schedulerInterval = null;
+  schedulerStopped = true;
+  if (schedulerTimer) {
+    clearTimeout(schedulerTimer);
+    schedulerTimer = null;
   }
   if (dailyCheckInterval) {
     clearInterval(dailyCheckInterval);

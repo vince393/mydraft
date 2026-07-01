@@ -1,7 +1,7 @@
 import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type CampaignAttachment, type InsertCampaignAttachment, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, type PasswordResetToken, type RefreshToken, type InsertRefreshToken, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, campaignAttachments, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts, aiCostLog, passwordResetTokens, refreshTokens } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc, and, lte, gte, count, sql, ne, inArray } from "drizzle-orm";
+import { eq, desc, asc, and, lte, gte, count, sql, ne, inArray } from "drizzle-orm";
 import { encryptEmailContent, decryptEmailContent } from "./encryption";
 
 export interface IStorage {
@@ -109,6 +109,7 @@ export interface IStorage {
   getPendingSend(id: number): Promise<PendingSend | undefined>;
   getPendingSendsByUser(userId: string): Promise<PendingSend[]>;
   getPendingSendsReady(): Promise<PendingSend[]>;
+  getNextPendingSend(): Promise<PendingSend | undefined>;
   cancelPendingSend(userId: string, id: number): Promise<boolean>;
   claimPendingSendForProcessing(id: number): Promise<PendingSend | undefined>;
   markPendingSendSent(id: number): Promise<PendingSend | undefined>;
@@ -1516,6 +1517,15 @@ Business Development`,
     return db.select()
       .from(pendingSends)
       .where(and(eq(pendingSends.status, "pending"), lte(pendingSends.scheduledSendAt, now)));
+  }
+
+  async getNextPendingSend(): Promise<PendingSend | undefined> {
+    const [next] = await db.select()
+      .from(pendingSends)
+      .where(eq(pendingSends.status, "pending"))
+      .orderBy(asc(pendingSends.scheduledSendAt))
+      .limit(1);
+    return next;
   }
 
   async cancelPendingSend(userId: string, id: number): Promise<boolean> {

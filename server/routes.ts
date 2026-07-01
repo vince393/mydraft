@@ -23,6 +23,7 @@ import { sendVerificationEmail, sendPasswordResetEmail, sendTrialEndedEmail } fr
 import { jsonSchema } from "drizzle-zod";
 import { scanFile, checkFileType, sanitizeSVGBuffer } from "./antivirus";
 import { stripEmailNoise, stripHtml } from "./email-utils";
+import { wakeEmailScheduler } from "./email-scheduler";
 import {
   authLimiter,
   passwordResetLimiter,
@@ -5616,6 +5617,10 @@ Rules:
           : Math.min(Math.max(delaySeconds, 1), 30),
         status: "pending",
       });
+
+      // Wake the scheduler so this send fires at its exact scheduled time
+      // (the scheduler no longer polls every second).
+      wakeEmailScheduler();
 
       // Increment daily send count for Free plan users when queuing
       await storage.incrementDailySendCount(req.session.userId!);
