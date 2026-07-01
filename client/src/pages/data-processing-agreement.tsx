@@ -218,6 +218,7 @@ export default function DataProcessingAgreementPage() {
             <Link href="/dpa" className="hover:text-foreground transition-colors" data-testid="footer-link-dpa">DPA</Link>
             <Link href="/ai-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-ai">AI Policy</Link>
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
+            <Link href="/dmca" className="hover:text-foreground transition-colors" data-testid="footer-link-dmca">Copyright / DMCA</Link>
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground/50">© 2026 MyDraft. All rights reserved.</p>

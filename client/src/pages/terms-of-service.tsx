@@ -23,7 +23,7 @@ export default function TermsOfServicePage() {
           </Link>
           
           <h1 className="text-3xl font-semibold mb-2">Terms of Service</h1>
-          <p className="text-muted-foreground mb-8">Effective Date: January 16, 2026</p>
+          <p className="text-muted-foreground mb-8">Effective Date: July 1, 2026</p>
           
           <div className="prose prose-invert max-w-none space-y-6 text-muted-foreground">
             <section>
@@ -111,6 +111,13 @@ export default function TermsOfServicePage() {
               <p className="mt-4">
                 Your email content and communications remain your property. By using the Service, you grant us a limited license to process your content solely for the purpose of providing the Service to you.
               </p>
+              <p className="mt-4">
+                <strong>Your Content — Copyright Representations.</strong> You represent and warrant that you own or have all rights, licenses, consents, and permissions necessary to create, upload, process, and send any content through the Service, and that such content does not and will not infringe, misappropriate, or violate any copyright, trademark, trade secret, privacy, publicity, or other right of any third party. You are solely responsible for the content you send and for ensuring you have the right to send it. We do not pre-screen user content, and we are not responsible for content that you or other users create or transmit.
+              </p>
+              <p className="mt-4">
+                We respond to notices of alleged copyright infringement in accordance with the Digital Millennium Copyright Act. Please review our{" "}
+                <Link href="/dmca" className="text-foreground underline hover:no-underline" data-testid="link-dmca">Copyright &amp; DMCA Policy</Link>{" "}for details on how to submit a notice and how we handle repeat infringers.
+              </p>
             </section>
             
             <section>
@@ -160,7 +167,25 @@ export default function TermsOfServicePage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">13. Governing Law and Dispute Resolution</h2>
               <p>
-                These Terms shall be governed by and construed in accordance with the laws of the State of Delaware, United States, without regard to its conflict of law provisions. Any disputes arising under these Terms shall be resolved through binding arbitration in accordance with the rules of the American Arbitration Association.
+                These Terms shall be governed by and construed in accordance with the laws of the State of Delaware, United States, without regard to its conflict of law provisions.
+              </p>
+              <p className="mt-4">
+                <strong>13.1 Informal Resolution First.</strong> Before filing any claim, you agree to first contact us at support@mydraft.io and describe your dispute so we can try to resolve it informally. You and MyDraft agree to negotiate in good faith for at least thirty (30) days before starting arbitration.
+              </p>
+              <p className="mt-4">
+                <strong>13.2 Binding Arbitration.</strong> Except for the matters described in Section 13.5, any dispute, claim, or controversy arising out of or relating to these Terms or the Service shall be resolved exclusively by final and binding arbitration administered by the American Arbitration Association (AAA) under its Consumer Arbitration Rules then in effect. The arbitration shall be conducted in the English language, and judgment on the award may be entered in any court of competent jurisdiction.
+              </p>
+              <p className="mt-4">
+                <strong>13.3 Class Action Waiver.</strong> YOU AND MYDRAFT AGREE THAT EACH MAY BRING CLAIMS AGAINST THE OTHER ONLY IN YOUR OR ITS INDIVIDUAL CAPACITY, AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS, COLLECTIVE, CONSOLIDATED, OR REPRESENTATIVE PROCEEDING. The arbitrator may not consolidate more than one person's claims and may not otherwise preside over any form of a representative or class proceeding. If this Class Action Waiver is found to be unenforceable as to a particular claim, that claim (and only that claim) shall be severed and brought in a court of competent jurisdiction.
+              </p>
+              <p className="mt-4">
+                <strong>13.4 Jury Trial Waiver.</strong> TO THE MAXIMUM EXTENT PERMITTED BY LAW, YOU AND MYDRAFT WAIVE ANY CONSTITUTIONAL AND STATUTORY RIGHT TO SUE IN COURT AND TO HAVE A TRIAL IN FRONT OF A JUDGE OR JURY. You and MyDraft instead elect that all claims and disputes shall be resolved by arbitration under this Section, except as provided in Section 13.5.
+              </p>
+              <p className="mt-4">
+                <strong>13.5 Exceptions.</strong> Nothing in this Section prevents either party from (a) bringing an individual claim in small-claims court if it qualifies, or (b) seeking injunctive or other equitable relief in a court of competent jurisdiction to protect its intellectual property or confidential information.
+              </p>
+              <p className="mt-4">
+                <strong>13.6 30-Day Right to Opt Out.</strong> You may opt out of this arbitration agreement (Sections 13.2–13.4) by sending written notice to support@mydraft.io within thirty (30) days of first accepting these Terms. Your notice must include your name, the email associated with your account, and a clear statement that you wish to opt out of arbitration. Opting out will not affect any other part of these Terms.
               </p>
             </section>
             
@@ -201,6 +226,7 @@ export default function TermsOfServicePage() {
             <Link href="/dpa" className="hover:text-foreground transition-colors" data-testid="footer-link-dpa">DPA</Link>
             <Link href="/ai-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-ai">AI Policy</Link>
             <Link href="/refund-policy" className="hover:text-foreground transition-colors" data-testid="footer-link-refund">Refunds</Link>
+            <Link href="/dmca" className="hover:text-foreground transition-colors" data-testid="footer-link-dmca">Copyright / DMCA</Link>
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground/50">© 2026 MyDraft. All rights reserved.</p>

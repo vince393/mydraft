@@ -1416,6 +1416,7 @@ function Footer() {
             <h4 className="text-xs font-medium uppercase tracking-widest text-muted-foreground/40 mb-5">Billing</h4>
             <ul className="space-y-3">
               <li><Link href="/refund-policy" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-refund">Refund Policy</Link></li>
+              <li><Link href="/dmca" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-dmca">Copyright / DMCA</Link></li>
             </ul>
           </div>
         </div>
