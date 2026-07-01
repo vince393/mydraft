@@ -29,7 +29,7 @@ export default function DataProcessingAgreementPage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">1. Introduction</h2>
               <p>
-                This Data Processing Agreement ("DPA") is incorporated into and forms part of the Terms of Service between MyDraft ("Processor" or "we") and you ("Controller" or "you"). This DPA sets forth the parties' obligations regarding the processing of personal data in connection with the provision of our email management services.
+                This Data Processing Agreement ("DPA") is incorporated into and forms part of the Terms of Service between MyDraft Inc. ("MyDraft," "Processor," or "we") and you ("Controller" or "you"). This DPA sets forth the parties' obligations regarding the processing of personal data in connection with the provision of our email management services.
               </p>
             </section>
             

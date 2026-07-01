@@ -29,7 +29,7 @@ export default function TermsOfServicePage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">1. Agreement to Terms</h2>
               <p>
-                By creating an account or using MyDraft ("the Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not access or use the Service. These Terms constitute a legally binding agreement between you and MyDraft.
+                By creating an account or using MyDraft ("the Service"), operated by MyDraft Inc. ("MyDraft," "we," or "us"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not access or use the Service. These Terms constitute a legally binding agreement between you and MyDraft Inc.
               </p>
             </section>
             

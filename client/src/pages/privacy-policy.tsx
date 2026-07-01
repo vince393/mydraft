@@ -29,7 +29,7 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-3">1. Introduction</h2>
               <p>
-                MyDraft ("we," "our," or "us") operates an AI-powered email management platform designed for professionals and businesses. This Privacy Policy describes how we collect, use, protect, and share information when you use our services. By using MyDraft, you consent to the practices described in this policy.
+                MyDraft Inc. ("MyDraft," "we," "our," or "us") operates an AI-powered email management platform designed for professionals and businesses. This Privacy Policy describes how we collect, use, protect, and share information when you use our services. By using MyDraft, you consent to the practices described in this policy.
               </p>
             </section>
             

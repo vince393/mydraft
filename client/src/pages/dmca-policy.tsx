@@ -57,11 +57,8 @@ export default function DMCAPolicyPage() {
                 Notices of alleged copyright infringement should be sent to our Designated Copyright Agent:
               </p>
               <p className="mt-2">
-                {/* TODO: Replace the placeholder details below with your registered DMCA agent information. */}
                 <strong>Copyright Agent</strong><br />
-                MyDraft — Copyright / DMCA<br />
-                [Company legal name]<br />
-                [Mailing address]<br />
+                MyDraft Inc. — Copyright / DMCA<br />
                 <strong>Email:</strong> support@mydraft.io
               </p>
               <p className="mt-4">
