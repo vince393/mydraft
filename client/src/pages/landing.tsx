@@ -7,6 +7,7 @@ import { Seo } from "@/components/seo";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+import { SiApple } from "react-icons/si";
 import { 
   ArrowRight,
   Mail,
@@ -154,6 +155,27 @@ function HeroSection({ getStartedHref, isLoggedIn }: { getStartedHref: string; i
             >
               Free plan available. Connect in under 2 minutes.
             </p>
+
+            <div
+              className="mt-6 flex justify-center lg:justify-start transition-all duration-1000 ease-out"
+              style={{
+                opacity: mounted ? 1 : 0,
+                transitionDelay: '700ms'
+              }}
+            >
+              <div
+                className="inline-flex items-center gap-2.5 rounded-full border border-black/[0.08] dark:border-white/[0.10] bg-black/[0.03] dark:bg-white/[0.04] px-3.5 py-1.5 backdrop-blur-sm"
+                data-testid="badge-ios-coming-soon"
+              >
+                <SiApple className="w-3.5 h-3.5 text-foreground/70" aria-hidden="true" />
+                <span className="text-xs font-medium text-foreground/80">
+                  iOS app coming soon
+                </span>
+                <span className="text-[11px] font-medium text-blue-500 bg-blue-500/10 rounded-full px-2 py-0.5">
+                  In development
+                </span>
+              </div>
+            </div>
           </div>
           
           <div 
