@@ -51,6 +51,11 @@ import {
   TicketPercent,
   ShieldAlert,
   AtSign,
+  Server,
+  MessagesSquare,
+  SpellCheck,
+  KeyRound,
+  Wallet,
 } from "lucide-react";
 
 interface HelpArticle {
@@ -146,11 +151,11 @@ const articles: HelpArticle[] = [
     icon: Mail,
     iconColor: "#3B82F6",
     content: {
-      intro: "MyDraft currently supports the two most popular email providers: Google Gmail and Microsoft Outlook.",
+      intro: "MyDraft works with Gmail and Outlook through one-click sign-in, plus almost any other email provider — like Yahoo, iCloud, AOL, Zoho, and Fastmail — through a secure IMAP connection.",
       paragraphs: [
-        "You can connect any Gmail account, including personal Gmail addresses and Google Workspace (business) accounts. For Microsoft, we support Office 365 accounts and personal Outlook/Hotmail accounts. Both providers connect through secure OAuth 2.0 authentication.",
-        "Each MyDraft account supports one connected email account at a time. If you need to switch providers, you can disconnect your current account in Settings and connect a different one. All your MyDraft preferences and AI settings will carry over.",
-        "We're working on adding support for more providers in the future. If you need a specific provider, let us know through the contact form at the bottom of this page."
+        "For Gmail and Outlook, you connect with secure OAuth 2.0 — you sign in directly with Google or Microsoft and never share your password with us. This includes personal Gmail addresses, Google Workspace accounts, Office 365 accounts, and personal Outlook/Hotmail accounts.",
+        "For everything else, MyDraft supports IMAP/SMTP. That means you can connect Yahoo Mail, iCloud Mail, AOL, Zoho, Fastmail, and even custom-domain email. MyDraft automatically detects the correct server settings for well-known providers, and you can enter custom server details manually if needed. See the article on connecting other providers for step-by-step help.",
+        "Each MyDraft account supports one connected email account at a time. If you need to switch providers, you can disconnect your current account in Settings and connect a different one. All your MyDraft preferences and AI settings will carry over."
       ],
     }
   },
@@ -280,7 +285,7 @@ const articles: HelpArticle[] = [
         "When you open an email, you'll see an AI button that lets you generate a reply draft. Click it and MyDraft's AI will analyze the email content, understand what kind of response is needed, and write a professional reply in your preferred tone. The draft appears in the reply editor where you can review, edit, and customize it before sending.",
         "The AI takes into account your preferences set during onboarding — things like your preferred writing tone (professional, casual, friendly), how formal or informal you like to be, and your communication style. Pro and Business users get even better results because MyDraft learns their unique writing style over time by analyzing emails they've sent.",
         "You can also use quick-generate to get a reply with just one click, or use the AI refine feature to improve a draft you've already started writing. The AI assistant in the sidebar can help with more complex email tasks like drafting from scratch, summarizing threads, or translating content.",
-        "Free users get 10 AI credits per month. Pro users get 50 credits per month, and Business users get 200 credits per month. Each AI action uses credits (for example, an AI reply costs 2 credits and a summary costs 1), and you can top up anytime with credit packs."
+        "Free users get 10 AI credits per month. Personal users get 50, Pro users get 200, and Business users get 500 credits per month. Each AI action uses credits (for example, an AI reply costs 2 credits and a summary costs 1), and you can top up anytime with credit packs."
       ],
       steps: [
         { title: "Open an email", description: "Click on the email you want to reply to." },
@@ -918,7 +923,7 @@ const articles: HelpArticle[] = [
     content: {
       intro: "Every AI action uses credits. Here's how many credits each plan includes and what different actions cost.",
       paragraphs: [
-        "Free users get 10 AI credits per month, Pro users get 50, and Business users get 200. Your monthly credits refresh each billing cycle, and credits expire 30 days after they're added. If you run out, you can still compose and send emails manually — only the AI features pause until you have credits again.",
+        "Free users get 10 AI credits per month, Personal users get 50, Pro users get 200, and Business users get 500. Your monthly credits refresh each billing cycle, and credits expire 30 days after they're added. If you run out, you can still compose and send emails manually — only the AI features pause until you have credits again.",
         "Different AI actions cost different amounts. An AI reply or compose costs 2 credits, while a summary, rewrite, grammar check, translation, or AI chat message costs 1 credit each. Language detection is free. You can always see your balance in the sidebar and on the Credits page.",
         "Need more? You can buy one-time credit packs (50 credits for $4.99 up to 1,500 for $99.99) or add a recurring monthly top-up to your plan. Referring a friend earns you 25 bonus credits when they connect an email account."
       ],
@@ -1032,6 +1037,142 @@ const articles: HelpArticle[] = [
         "Since MyDraft connects to your existing email account through OAuth, all your emails remain stored by Google or Microsoft. If you ever stop using MyDraft, your emails are exactly where they've always been — in your Gmail or Outlook inbox. Nothing is lost.",
         "Your AI drafts, writing style profile, and preferences are stored in MyDraft. If you want to stop using the service, you can disconnect your email account and delete your MyDraft account. Your emails continue to exist in your email provider's servers regardless of what you do in MyDraft."
       ],
+    }
+  },
+  {
+    id: "connect-imap",
+    question: "How do I connect Yahoo, iCloud, or another email provider?",
+    readTime: "3 min read",
+    category: "Getting Started",
+    icon: Server,
+    iconColor: "#3B82F6",
+    content: {
+      intro: "Besides Gmail and Outlook, MyDraft connects to almost any other provider — Yahoo, iCloud, AOL, Zoho, Fastmail, and custom-domain email — using a secure IMAP/SMTP connection.",
+      paragraphs: [
+        "On the email connection screen, choose the \"Other Email (Yahoo, iCloud, AOL, etc.)\" option. Enter your email address and password, and MyDraft will automatically detect the correct incoming (IMAP) and outgoing (SMTP) server settings for well-known providers, so you usually don't have to type anything technical.",
+        "Most providers require an app-specific password rather than your normal login password, especially if you have two-factor authentication turned on. You generate this in your email provider's account security settings (for example, Yahoo's \"Generate app password\" or Apple's \"App-Specific Passwords\"). Paste that app password into MyDraft instead of your regular password.",
+        "If your provider isn't auto-detected, or you use a custom domain, you can open the advanced settings and enter your IMAP and SMTP server, port, and security options manually. Your credentials are encrypted at rest with AES-256-GCM and are only used to sync and send your mail."
+      ],
+      steps: [
+        { title: "Open email connection", description: "During onboarding, or go to Settings > Email Account." },
+        { title: "Choose \"Other Email\"", description: "Select the Yahoo / iCloud / AOL option instead of Gmail or Outlook." },
+        { title: "Enter your details", description: "Type your email address and app password. MyDraft auto-detects the servers." },
+        { title: "Adjust advanced settings (if needed)", description: "For custom domains, enter your IMAP/SMTP server and port manually." },
+        { title: "Connect", description: "Your inbox loads once the connection is verified." },
+      ],
+      tip: "For Yahoo, iCloud, and other providers with two-factor authentication, you must use an app-specific password — your normal password won't work."
+    }
+  },
+  {
+    id: "mobile-app",
+    question: "Is there a MyDraft mobile app?",
+    readTime: "2 min read",
+    category: "Getting Started",
+    icon: Smartphone,
+    iconColor: "#3B82F6",
+    content: {
+      intro: "A dedicated iOS app is currently in development and coming soon to the App Store. In the meantime, MyDraft works great right in your mobile browser.",
+      paragraphs: [
+        "We're building a native iOS app to make MyDraft even faster and more convenient on the go. It's in active development now, and we'll announce it here and on the homepage as soon as it's available on the App Store.",
+        "You don't have to wait to use MyDraft on your phone, though. Just open the website in your mobile browser (Safari, Chrome, etc.) and log in. The interface is fully responsive and includes touch-friendly buttons, swipe gestures for archiving and deleting, and all the same AI features you get on desktop.",
+        "For an app-like experience today, add MyDraft to your home screen from your browser's share menu. It will open in its own window without the browser bars, so it feels just like a native app."
+      ],
+      tip: "Add MyDraft to your home screen for a full-screen, app-like experience while the iOS app is on the way."
+    }
+  },
+  {
+    id: "email-threading",
+    question: "How does the conversation (threading) view work?",
+    readTime: "2 min read",
+    category: "Inbox & Email",
+    icon: MessagesSquare,
+    iconColor: "#8B5CF6",
+    content: {
+      intro: "MyDraft groups related messages into a single conversation, so you can follow an entire back-and-forth in one place instead of hunting through separate emails.",
+      paragraphs: [
+        "When someone replies to an email — or you reply to them — MyDraft keeps those messages together as one conversation in your list. The list shows the most recent message along with a count of how many emails are in the thread, so your inbox stays tidy.",
+        "Open a conversation to see every message stacked in order, oldest to newest, with the latest reply expanded. This makes it easy to catch up on long discussions without losing context, and any reply you send stays attached to the same thread.",
+        "Threading works across all supported providers. Gmail and Outlook use their built-in conversation grouping, and for IMAP accounts MyDraft intelligently links messages using their reply history so conversations still group correctly."
+      ],
+    }
+  },
+  {
+    id: "grammar-check",
+    question: "How do I check grammar and style in my email?",
+    readTime: "2 min read",
+    category: "AI Features",
+    icon: SpellCheck,
+    iconColor: "#F59E0B",
+    content: {
+      intro: "The composer includes an AI grammar & style check that catches typos, grammar mistakes, and awkward phrasing before you hit send.",
+      paragraphs: [
+        "While you're writing an email or reply, look for the grammar & style check option in the compose toolbar. The AI reviews what you've written and highlights suggestions — spelling fixes, grammar corrections, and clearer wording. You review each suggestion and decide what to apply, so you stay in control of the final message.",
+        "This is different from AI Refine. The grammar check points out specific issues for you to accept or ignore, while AI Refine rewrites and polishes your whole draft in one pass. Use the grammar check when you just want to catch mistakes, and Refine when you want the AI to smooth out the entire message.",
+        "Each grammar & style check uses 1 AI credit. It works in whatever language you're writing in, making it handy for double-checking emails in a second language."
+      ],
+      steps: [
+        { title: "Write your email", description: "Compose a new message or reply as usual." },
+        { title: "Run the grammar & style check", description: "Click the grammar/style check option in the compose toolbar." },
+        { title: "Review suggestions", description: "The AI highlights typos, grammar issues, and wording improvements." },
+        { title: "Apply and send", description: "Accept the fixes you want, then send your polished email." },
+      ],
+    }
+  },
+  {
+    id: "background-autosort",
+    question: "How does automatic background inbox sorting work?",
+    readTime: "2 min read",
+    category: "AI Features",
+    icon: Wand2,
+    iconColor: "#F59E0B",
+    content: {
+      intro: "Pro and Business users get background auto-sort — MyDraft quietly files new emails into your custom folders using AI, even when you're not looking.",
+      paragraphs: [
+        "Once you've created custom folders with AI descriptions (like \"Client invoices\" or \"Newsletters\"), background auto-sort periodically checks your incoming mail and moves matching messages into the right folders automatically. You don't have to run anything — it just happens in the background every few minutes.",
+        "This is different from the manual AI cleanup scan, which you trigger on demand to review and clean up your inbox. Background auto-sort is hands-off and continuous, keeping your folders organized as new email arrives. It's available on Pro and Business plans.",
+        "Auto-sort relies on the AI descriptions you give your folders, and it never touches starred emails. If you'd rather stay fully in control, you can leave folder descriptions blank and sort emails manually instead."
+      ],
+      tip: "The more specific your folder's AI description, the more accurately background auto-sort files your email."
+    }
+  },
+  {
+    id: "reset-password",
+    question: "I forgot my password — how do I reset it?",
+    readTime: "2 min read",
+    category: "Security & Privacy",
+    icon: KeyRound,
+    iconColor: "#EF4444",
+    content: {
+      intro: "If you can't remember your password, you can reset it right from the login screen using your email address — no need to contact support.",
+      paragraphs: [
+        "On the login page, click the \"Forgot password?\" link. Enter the email address associated with your MyDraft account and submit. If an account exists for that email, we'll send you a password reset link. For your security, we always show the same confirmation message whether or not an account was found, so no one can use this to check which emails are registered.",
+        "Open the email and click the reset link — it's valid for one hour. You'll be taken to a secure page where you can set a new password (at least 8 characters). Once saved, you can log in immediately with your new password.",
+        "This is different from changing your password while logged in. If you already know your current password and just want to update it, use Settings > Security instead."
+      ],
+      steps: [
+        { title: "Click \"Forgot password?\"", description: "Find the link on the login page." },
+        { title: "Enter your email", description: "Type the address for your MyDraft account and submit." },
+        { title: "Open the reset link", description: "Check your inbox for the email and click the link (valid 1 hour)." },
+        { title: "Set a new password", description: "Choose a new password of at least 8 characters, then log in." },
+      ],
+      tip: "The reset link expires after one hour. If it lapses, just request a new one — and check your spam folder if the email doesn't arrive."
+    }
+  },
+  {
+    id: "wallet-payments",
+    question: "Can I pay with Apple Pay or Google Pay?",
+    readTime: "2 min read",
+    category: "Billing & Plans",
+    icon: Wallet,
+    iconColor: "#10B981",
+    content: {
+      intro: "Yes — in addition to regular cards, MyDraft supports Apple Pay and Google Pay at checkout on supported devices.",
+      paragraphs: [
+        "When you subscribe to a plan or buy a credit pack, MyDraft checks whether your device and browser have a digital wallet set up. If they do, a wallet button appears at checkout — Apple Pay on Safari and Apple devices, or Google Pay on Chrome and Android. You can pay in a couple of taps without typing out your card details.",
+        "All payments, including wallet payments, are processed securely by Stripe. The wallet button only shows up on devices that actually support it and have a card added to their wallet; if you don't see it, you can always pay with a regular credit or debit card instead.",
+        "If you're starting a free trial, nothing is charged today — the wallet simply saves your payment method so your subscription can begin automatically when the trial ends."
+      ],
+      tip: "Don't see the wallet button? Make sure you have a card set up in Apple Wallet or Google Pay, and that you're using Safari (Apple) or Chrome (Android)."
     }
   },
 ];
