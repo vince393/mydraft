@@ -6,6 +6,12 @@ uri = "file://client/public/og-image.png"
 type = "image"
 title = "mydraft og share image"
 
+[[generated]]
+id = "YSp1arpcy_mpDV_C1Jg-g"
+uri = "file://attached_assets/generated_images/mydraft_social_banner.png"
+type = "image"
+title = "mydraft social banner"
+
 [[outputs]]
 id = "pZx9Q2Sl0PMm0hPh-T8eV"
 uri = "file://.local/mobile-app-prompt.md"
@@ -53,3 +59,9 @@ id = "aIJiKwsBqz329m0FWNS4n"
 uri = "file://exports/MyDraft_Early_Adopter_Playbook.pptx"
 type = "slides"
 title = "MyDraft — The Early-Adopter Playbook (Slide Deck)"
+
+[[outputs]]
+id = "v2ZfmVgYTL8udk4Y2nxVZ"
+uri = "file://attached_assets/generated_images/mydraft_social_banner.png"
+type = "image"
+title = "MyDraft Social Banner (YouTube / Facebook / Instagram)"
