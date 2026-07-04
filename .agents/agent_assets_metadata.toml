@@ -47,3 +47,9 @@ id = "eGzAbUq-KddbXYWKP9k94"
 uri = "file://campaign-press-and-hold-mobile-prompt.md"
 type = "text"
 title = "Mobile App Prompt — Press-and-Hold Compose → Campaign"
+
+[[outputs]]
+id = "aIJiKwsBqz329m0FWNS4n"
+uri = "file://exports/MyDraft_Early_Adopter_Playbook.pptx"
+type = "slides"
+title = "MyDraft — The Early-Adopter Playbook (Slide Deck)"
