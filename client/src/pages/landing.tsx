@@ -1416,6 +1416,7 @@ function Footer() {
               <li><Link href="/pricing" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-pricing">Pricing</Link></li>
               <li><Link href="/security" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-security">Security</Link></li>
               <li><Link href="/help" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-help">Help Center</Link></li>
+              <li><Link href="/download" className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors" data-testid="footer-link-download">Download App</Link></li>
             </ul>
           </div>
           <div>

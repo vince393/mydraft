@@ -1,0 +1,56 @@
+appId: io.mydraft.desktop
+productName: MyDraft
+copyright: Copyright © 2026 MyDraft
+
+directories:
+  buildResources: build
+  output: dist
+
+files:
+  - src/**/*
+  - build/icon.*
+  - package.json
+
+# The shell loads the live hosted app, so nothing extra needs bundling.
+asar: true
+
+win:
+  target:
+    - nsis
+  icon: build/icon.png
+  # Code-signing certificates are paid and out of scope for v1. Without them
+  # Windows SmartScreen shows an "unknown publisher" prompt on first install.
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: MyDraft
+
+mac:
+  target:
+    - dmg
+  icon: build/icon.png
+  category: public.app-category.productivity
+  # Apple notarization / Developer ID signing require building on macOS with
+  # credentials (see .github/workflows/desktop-build.yml). Out of scope for v1:
+  # users will see a Gatekeeper "unidentified developer" warning until certs
+  # are added.
+
+dmg:
+  title: MyDraft
+
+linux:
+  target:
+    - AppImage
+  icon: build/icon.png
+  category: Network
+  synopsis: AI Email Assistant
+
+# Publish target for auto-update / hosting later. GitHub Releases gives a stable
+# place to host installers and is what the Actions workflow uploads to.
+publish:
+  provider: github
+  releaseType: release

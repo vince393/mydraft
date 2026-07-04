@@ -120,6 +120,7 @@ const CampaignsPage = lazy(() => import("@/pages/campaigns"));
 const CheckoutPage = lazy(() => import("@/pages/checkout"));
 const TrialExpiredPage = lazy(() => import("@/pages/trial-expired"));
 const CreditsPage = lazy(() => import("@/pages/credits"));
+const DownloadPage = lazy(() => import("@/pages/download"));
 
 function PageLoader() {
   return (
@@ -448,6 +449,9 @@ function AppRoutes() {
       </Route>
       <Route path="/help">
         <HelpPage />
+      </Route>
+      <Route path="/download">
+        <DownloadPage />
       </Route>
       <Route path="/privacy">
         <PrivacyPolicyPage />
