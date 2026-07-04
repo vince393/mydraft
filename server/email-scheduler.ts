@@ -162,6 +162,14 @@ async function processPendingSends() {
           console.log(`[EmailScheduler] Skipping email ${send.id} - already cancelled or processed`);
           continue;
         }
+
+        // Skip scheduled sends for accounts pending deletion.
+        const sendOwner = await storage.getUser(claimed.userId);
+        if (!sendOwner || sendOwner.deletedAt) {
+          await storage.markPendingSendFailed(claimed.id, "Account is inactive");
+          console.log(`[EmailScheduler] Skipping email ${claimed.id} - account inactive/deleted`);
+          continue;
+        }
         
         const { to, cc, bcc, subject, body, replyToMessageId, attachments } = claimed.payload;
         
@@ -446,6 +454,7 @@ async function runAutoSort() {
 
     for (const user of allUsers) {
       if (user.plan === "free") continue;
+      if (user.deletedAt) continue;
 
       try {
         const folders = await storage.getCustomFolders(user.id);

@@ -1,7 +1,7 @@
 import { type User, type InsertUser, type Email, type InsertEmail, type Draft, type InsertDraft, type NylasGrant, type InsertNylasGrant, type AiPreferences, type SupportMessage, type InsertSupportMessage, type AssistantSettings, type AssistantMessage, type UserFeedback, type InsertUserFeedback, type UserStyleProfileRecord, type InsertUserStyleProfile, type UserStyleProfile, type AssistantAction, type InsertAssistantAction, type AssistantFeedbackRecord, type InsertAssistantFeedback, type MessageSummaryCache, type AssistantPermissions, type AssistantPermissionsRecord, type AssistantAuditLogRecord, type ChatSession, type PendingSend, type InsertPendingSend, type TeamInvite, type InsertTeamInvite, type TeamMember, type Notification, type InsertNotification, type ActivityLog, type AiUsage, type Expense, type InsertExpense, type Revenue, type InsertRevenue, type DailyFinancials, type ExpenseCategory, type VerificationCode, type InsertVerificationCode, type UserLoginSession, type InsertUserLoginSession, type WritingSample, type InsertWritingSample, type LearnedWritingStyle, type InsertLearnedWritingStyle, type EmailNote, type InsertEmailNote, type AiInboxSuggestion, type InsertAiInboxSuggestion, type CustomFolder, type EmailFolderAssignment, type Testimonial, type InsertTestimonial, type EmailCampaign, type InsertCampaign, type CampaignRecipient, type InsertCampaignRecipient, type CampaignAttachment, type InsertCampaignAttachment, type SecurityAuditLogRecord, type InsertSecurityAuditLog, type LocalEmailState, type CachedEmail, type EmailActionHistory, type LinkedAccount, type FeatureFlag, type Contact, type InsertContact, type Referral, type PromoCode, type EmailAccount, type InsertEmailAccount, type PasswordResetToken, type RefreshToken, type InsertRefreshToken, users, referrals, promoCodes, nylasGrants, emailAccounts, supportMessages, assistantSettings, assistantMessages, userFeedback, userStyleProfiles, assistantActions, assistantFeedback, messageSummaryCache, assistantPermissions, assistantAuditLog, chatSessions, pendingSends, userStyleProfileSchema, assistantPermissionsSchema, teamInvites, teamMembers, notifications, activityLogs, aiUsage, expenses, revenue, dailyFinancials, verificationCodes, userLoginSessions, writingSamples, learnedWritingStyles, featureFlags, emailNotes, aiInboxSuggestions, customFolders, emailFolderAssignments, starredEmails, localEmailStates, testimonials, emailCampaigns, campaignRecipients, campaignAttachments, securityAuditLog, cachedEmails, emailActionHistory, linkedAccounts, contacts, aiCostLog, passwordResetTokens, refreshTokens } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc, asc, and, lte, gte, count, sql, ne, inArray } from "drizzle-orm";
+import { eq, desc, asc, and, lte, gte, count, sql, ne, inArray, isNotNull } from "drizzle-orm";
 import { encryptEmailContent, decryptEmailContent } from "./encryption";
 
 export interface IStorage {
@@ -11,6 +11,10 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
+  softDeleteUser(id: string): Promise<boolean>;
+  restoreUser(id: string): Promise<boolean>;
+  getUsersToPurge(before: Date): Promise<User[]>;
+  purgeUser(id: string): Promise<boolean>;
   
   getEmails(folder?: string): Promise<Email[]>;
   getEmail(id: number): Promise<Email | undefined>;
@@ -761,6 +765,114 @@ Business Development`,
   async deleteUser(id: string): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id)).returning();
     return result.length > 0;
+  }
+
+  // Soft-delete: keep the row (and all data) for the 30-day restore window, but
+  // downgrade to free and clear the (already-cancelled) Stripe subscription so
+  // no billing continues. Credit lots are intentionally left untouched — they
+  // keep their own 30-day expiry, so credits under a month old survive a restore.
+  async softDeleteUser(id: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ deletedAt: new Date(), plan: "free", stripeSubscriptionId: null })
+      .where(eq(users.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async restoreUser(id: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ deletedAt: null })
+      .where(eq(users.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getUsersToPurge(before: Date): Promise<User[]> {
+    return db
+      .select()
+      .from(users)
+      .where(and(isNotNull(users.deletedAt), lte(users.deletedAt, before)));
+  }
+
+  // Permanent hard delete of a user and all of their personal data. Financial and
+  // analytics history (revenue, ai_cost_log, ai_usage, page_views, activity_logs,
+  // security_audit_log) is intentionally left as orphaned rows so owner reporting
+  // stays intact. There are no FK constraints, so ordering does not matter for
+  // integrity, but children of email_campaigns are removed first for tidiness.
+  async purgeUser(id: string): Promise<boolean> {
+    const user = await this.getUser(id);
+    const email = user?.email ?? null;
+
+    await db.transaction(async (tx) => {
+      // Campaign children (reference campaign_id, not user_id).
+      await tx.execute(sql`
+        DELETE FROM campaign_recipients
+        WHERE campaign_id IN (SELECT id FROM email_campaigns WHERE user_id = ${id})
+      `);
+      await tx.execute(sql`
+        DELETE FROM campaign_attachments
+        WHERE campaign_id IN (SELECT id FROM email_campaigns WHERE user_id = ${id})
+      `);
+
+      // Personal-data tables keyed by user_id.
+      const userIdTables = [
+        "drafts",
+        "nylas_grants",
+        "email_accounts",
+        "contacts",
+        "credit_lots",
+        "credit_transactions",
+        "credit_addons",
+        "custom_folders",
+        "email_folder_assignments",
+        "starred_emails",
+        "local_email_states",
+        "email_action_history",
+        "assistant_settings",
+        "chat_sessions",
+        "pending_sends",
+        "assistant_messages",
+        "user_feedback",
+        "user_style_profiles",
+        "assistant_actions",
+        "assistant_feedback",
+        "message_summary_cache",
+        "assistant_permissions",
+        "assistant_audit_log",
+        "notifications",
+        "writing_samples",
+        "learned_writing_styles",
+        "email_notes",
+        "ai_inbox_suggestions",
+        "testimonials",
+        "email_campaigns",
+        "user_login_sessions",
+        "password_reset_tokens",
+        "refresh_tokens",
+      ];
+      for (const table of userIdTables) {
+        await tx.execute(sql`DELETE FROM ${sql.raw(table)} WHERE user_id = ${id}`);
+      }
+
+      // Tables with differently-named owner columns.
+      await tx.execute(sql`DELETE FROM linked_accounts WHERE primary_user_id = ${id} OR linked_user_id = ${id}`);
+      await tx.execute(sql`DELETE FROM referrals WHERE referrer_user_id = ${id} OR referred_user_id = ${id}`);
+      await tx.execute(sql`DELETE FROM promo_codes WHERE owner_user_id = ${id}`);
+      await tx.execute(sql`DELETE FROM team_invites WHERE inviter_id = ${id} OR invitee_id = ${id}`);
+      await tx.execute(sql`DELETE FROM team_members WHERE owner_id = ${id} OR member_id = ${id}`);
+
+      // Verification codes are keyed by email.
+      if (email) {
+        await tx.execute(sql`DELETE FROM verification_codes WHERE email = ${email}`);
+      }
+
+      // Finally, the user row itself.
+      await tx.execute(sql`DELETE FROM users WHERE id = ${id}`);
+    });
+
+    return true;
   }
 
   async getEmails(folder?: string): Promise<Email[]> {

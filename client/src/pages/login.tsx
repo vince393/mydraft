@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ interface AuthResponse {
   user: { id: string; email: string; plan?: string; onboardingCompleted?: boolean; emailVerified?: boolean; twoFactorEnabled?: boolean } | null;
 }
 
-type AuthStep = "credentials" | "verify-registration" | "verify-2fa";
+type AuthStep = "credentials" | "verify-registration" | "verify-2fa" | "restore";
 
 function AuthShell({ children }: { children: React.ReactNode }) {
   return (
@@ -82,8 +82,30 @@ export default function LoginPage() {
   const [oauthConnecting, setOauthConnecting] = useState<string | null>(null);
   const [authStep, setAuthStep] = useState<AuthStep>("credentials");
   const [pendingEmail, setPendingEmail] = useState("");
+  const [restoreInfo, setRestoreInfo] = useState<{ email: string; daysLeft: number } | null>(null);
+  const [isRestore2FA, setIsRestore2FA] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // Surface OAuth redirect errors (e.g. a passed restore window) as a toast.
+  useEffect(() => {
+    const oauthError = urlParams.get("error");
+    if (!oauthError) return;
+    const messages: Record<string, string> = {
+      restore_window_expired:
+        "This account's 30-day restore window has passed and it can no longer be recovered.",
+      session_expired: "Your sign-in session expired. Please try again.",
+      invalid_state: "Sign in could not be completed. Please try again.",
+    };
+    toast({
+      title: "Sign in failed",
+      description: messages[oauthError] || "Something went wrong. Please try again.",
+      variant: "destructive",
+    });
+    // Clear the error from the URL so it doesn't re-fire on refresh.
+    window.history.replaceState({}, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: authData } = useQuery<AuthResponse>({
     queryKey: ["/api/auth/me"],
@@ -112,6 +134,12 @@ export default function LoginPage() {
       return response.json();
     },
     onSuccess: (data) => {
+      if (data.accountPendingDeletion) {
+        setRestoreInfo({ email: data.email, daysLeft: data.daysLeft ?? 0 });
+        setAuthStep("restore");
+        return;
+      }
+
       if (data.requires2FA) {
         setPendingEmail(data.email);
         setAuthStep("verify-2fa");
@@ -143,6 +171,44 @@ export default function LoginPage() {
     },
   });
 
+  const restoreMutation = useMutation({
+    mutationFn: async (data: { email: string; password: string; code?: string }) => {
+      const response = await apiRequest("POST", "/api/auth/restore", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Account has 2FA enabled — collect the emailed code before restoring.
+      if (data.requires2FA) {
+        setPendingEmail(data.email);
+        setIsRestore2FA(true);
+        setVerificationCode("");
+        setAuthStep("verify-2fa");
+        toast({
+          title: "Verification Required",
+          description: "A verification code has been sent to your email.",
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Welcome back!",
+        description: "Your account has been restored. Choose a plan to continue.",
+      });
+      setRestoreInfo(null);
+      setIsRestore2FA(false);
+      setAuthStep("credentials");
+      // After restore the account is on the free plan; prompt for plan choice.
+      setLocation("/select-plan");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Restore failed",
+        description: error.message || "Could not restore your account",
+        variant: "destructive",
+      });
+    },
+  });
+
   const registerMutation = useMutation({
     mutationFn: async (data: { email: string; password: string; referralCode?: string }) => {
       const response = await apiRequest("POST", "/api/auth/register", data);
@@ -161,7 +227,13 @@ export default function LoginPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       setLocation("/select-plan");
     },
-    onError: (error: Error) => {
+    onError: (error: Error & { status?: number }) => {
+      // Account exists but is pending deletion — steer them to the restore flow.
+      if (error.status === 409) {
+        setRestoreInfo({ email: email.toLowerCase().trim(), daysLeft: 0 });
+        setAuthStep("restore");
+        return;
+      }
       toast({
         title: "Registration failed",
         description: error.message || "Could not create account",
@@ -300,7 +372,11 @@ export default function LoginPage() {
     if (authStep === "verify-registration") {
       verifyRegistrationMutation.mutate({ email: pendingEmail, code: verificationCode });
     } else if (authStep === "verify-2fa") {
-      verify2FAMutation.mutate({ email: pendingEmail, code: verificationCode });
+      if (isRestore2FA) {
+        restoreMutation.mutate({ email: pendingEmail, password, code: verificationCode });
+      } else {
+        verify2FAMutation.mutate({ email: pendingEmail, code: verificationCode });
+      }
     }
   };
 
@@ -313,6 +389,7 @@ export default function LoginPage() {
     setAuthStep("credentials");
     setVerificationCode("");
     setPendingEmail("");
+    setIsRestore2FA(false);
     setErrors({});
   };
 
@@ -361,7 +438,7 @@ export default function LoginPage() {
   };
 
   const isPending = loginMutation.isPending || registerMutation.isPending;
-  const isVerifying = verifyRegistrationMutation.isPending || verify2FAMutation.isPending;
+  const isVerifying = verifyRegistrationMutation.isPending || verify2FAMutation.isPending || restoreMutation.isPending;
 
   if (isLoggedIn) {
     return (
@@ -396,6 +473,69 @@ export default function LoginPage() {
             )}
             Sign out
           </Button>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  if (authStep === "restore") {
+    return (
+      <AuthShell>
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Inbox className="w-5 h-5 text-primary" />
+          </div>
+          <h2 className="text-lg font-semibold text-black/90 dark:text-white/90 mb-1">
+            Restore your account
+          </h2>
+          <p className="text-sm text-black/40 dark:text-white/40">
+            <span className="font-medium text-black/60 dark:text-white/60">{restoreInfo?.email}</span>{" "}
+            is scheduled for deletion.
+          </p>
+          {restoreInfo && restoreInfo.daysLeft > 0 && (
+            <p className="text-xs text-black/30 dark:text-white/30 mt-2">
+              You have {restoreInfo.daysLeft} day{restoreInfo.daysLeft === 1 ? "" : "s"} left to bring it back before it's permanently deleted.
+            </p>
+          )}
+          <p className="text-xs text-black/30 dark:text-white/30 mt-2">
+            Restore it now to keep your emails and settings. Your subscription was cancelled, so you'll pick a plan next.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <Button
+            type="button"
+            className="w-full"
+            disabled={restoreMutation.isPending}
+            onClick={() => {
+              if (restoreInfo) {
+                restoreMutation.mutate({ email: restoreInfo.email, password });
+              }
+            }}
+            data-testid="button-restore-account"
+          >
+            {restoreMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Restore my account
+          </Button>
+
+          {!password && (
+            <p className="text-xs text-center text-black/30 dark:text-white/30">
+              For your security, go back and enter your password to confirm.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setRestoreInfo(null);
+              setAuthStep("credentials");
+            }}
+            className="w-full text-sm text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60 transition-colors inline-flex items-center justify-center gap-1"
+            data-testid="button-back-from-restore"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back
+          </button>
         </div>
       </AuthShell>
     );

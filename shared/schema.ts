@@ -79,6 +79,7 @@ export const users = pgTable("users", {
   trialEndsAt: timestamp("trial_ends_at"),
   hasUsedTrial: boolean("has_used_trial").default(false).notNull(),
   lastMonthlyGrantAt: timestamp("last_monthly_grant_at"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

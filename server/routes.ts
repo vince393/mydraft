@@ -52,6 +52,7 @@ import {
   REFERRAL_REFERRED_CREDITS,
   grantCredits,
   getActiveAddons,
+  cancelCreditAddon,
   type CreditAction,
 } from "./credits";
 
@@ -365,6 +366,27 @@ async function cancelReservation(
   });
 }
 
+// Number of days a soft-deleted account is retained before permanent purge.
+const ACCOUNT_RESTORE_DAYS = 30;
+
+// Build the response returned to the client when someone with the correct
+// password tries to sign in to an account that is pending deletion. No session
+// is created — the client must go through the explicit restore flow.
+function buildPendingDeletionResponse(user: { email: string; deletedAt: Date | null }) {
+  const deletedAt = user.deletedAt ? new Date(user.deletedAt) : new Date();
+  const purgeAt = new Date(deletedAt.getTime() + ACCOUNT_RESTORE_DAYS * 24 * 60 * 60 * 1000);
+  const daysLeft = Math.max(
+    0,
+    Math.ceil((purgeAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+  );
+  return {
+    accountPendingDeletion: true,
+    email: user.email,
+    deletionScheduledFor: purgeAt.toISOString(),
+    daysLeft,
+  };
+}
+
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (req.jwtUserId) {
     req.session.userId = req.jwtUserId;
@@ -377,7 +399,22 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
     }
     return res.status(401).json({ error: "Unauthorized" });
   }
-  next();
+  // Block accounts that are pending deletion from using any existing session or
+  // token — they must go through the explicit restore flow to become active again.
+  storage
+    .getUser(userId)
+    .then((user) => {
+      if (!user || user.deletedAt) {
+        return res
+          .status(401)
+          .json({ error: "Account is inactive", accountPendingDeletion: !!user?.deletedAt });
+      }
+      next();
+    })
+    .catch((err) => {
+      console.error("[requireAuth] Failed to load user:", err);
+      res.status(500).json({ error: "Authentication error" });
+    });
 }
 
 // Owner/Admin authentication middleware
@@ -898,6 +935,15 @@ export async function registerRoutes(
 
       const existingUser = await storage.getUserByEmail(normalizedEmail);
       if (existingUser) {
+        // Account exists but is pending deletion: tell them to log in to restore
+        // it rather than treating this as a fresh (or duplicate) registration.
+        if (existingUser.deletedAt) {
+          return res.status(409).json({
+            accountPendingDeletion: true,
+            error:
+              "This account is scheduled for deletion. Log in with your password to restore it.",
+          });
+        }
         return res.status(400).json({ error: "Email already registered" });
       }
 
@@ -1158,6 +1204,12 @@ export async function registerRoutes(
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
+      // Account is pending deletion: password is correct, but we do NOT sign them
+      // in. Return the restore prompt so the client can offer to reactivate it.
+      if (user.deletedAt) {
+        return res.json(buildPendingDeletionResponse(user));
+      }
+
       // Check if 2FA is enabled
       if (user.twoFactorEnabled) {
         // Create verification code and send
@@ -1239,6 +1291,121 @@ export async function registerRoutes(
     }
   });
 
+  // Restore a soft-deleted account. Requires the correct password and that the
+  // account is still within the 30-day grace window. On success we reactivate the
+  // account, sign the user in, and tell the client to prompt for a plan choice.
+  app.post("/api/auth/restore", authLimiter, async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await storage.getUserByEmail(normalizedEmail);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const isValid = await verifyPassword(user.password, password);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      if (!user.deletedAt) {
+        // Not a deleted account — nothing to restore.
+        return res
+          .status(400)
+          .json({ error: "This account is active. Please log in normally." });
+      }
+
+      // Refuse if the grace window has already elapsed (the purge job may not have
+      // run yet). The account is effectively gone.
+      const purgeAt =
+        new Date(user.deletedAt).getTime() +
+        ACCOUNT_RESTORE_DAYS * 24 * 60 * 60 * 1000;
+      if (Date.now() > purgeAt) {
+        return res.status(410).json({
+          error:
+            "This account's 30-day restore window has passed and it can no longer be recovered.",
+        });
+      }
+
+      // Enforce 2FA the same way normal login does, so restoring an account with
+      // 2FA enabled still requires the emailed code. Password is re-verified on
+      // every call above, so no separate pending-login state is needed.
+      if (user.twoFactorEnabled) {
+        const { code } = req.body;
+        if (!code) {
+          const verificationCode = await storage.createVerificationCode(
+            normalizedEmail,
+            "login",
+          );
+          await sendVerificationEmail(
+            normalizedEmail,
+            verificationCode.code,
+            "login",
+          );
+          return res.json({
+            requires2FA: true,
+            email: normalizedEmail,
+            message: "2FA code sent to your email",
+          });
+        }
+        const verificationCode = await storage.getVerificationCode(
+          normalizedEmail,
+          code,
+          "login",
+        );
+        if (!verificationCode) {
+          return res
+            .status(400)
+            .json({ error: "Invalid or expired verification code" });
+        }
+        await storage.markVerificationCodeUsed(verificationCode.id);
+      }
+
+      await storage.restoreUser(user.id);
+
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error (restore):", err);
+          return res.status(500).json({ error: "Session error" });
+        }
+        req.session.userId = user.id;
+
+        storage
+          .createSecurityAuditLog({
+            userId: user.id,
+            eventType: "account_restored",
+            ipAddress: getClientIp(req),
+            userAgent: req.headers["user-agent"] || null,
+            outcome: "success",
+            details: "Account restored within 30-day grace window",
+          })
+          .catch((err) => console.warn("Failed to log security event:", err));
+
+        // The account was downgraded to free on delete, so the client should
+        // prompt the user to pick a plan (or stay on free).
+        res.json({
+          success: true,
+          choosePlan: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            plan: "free",
+            onboardingCompleted: user.onboardingCompleted,
+            emailVerified: user.emailVerified,
+            twoFactorEnabled: user.twoFactorEnabled,
+          },
+        });
+      });
+    } catch (error) {
+      console.error("Account restore error:", error);
+      res.status(500).json({ error: "Failed to restore account" });
+    }
+  });
+
   app.post("/api/auth/device-switch", async (req, res) => {
     try {
       const { token } = req.body;
@@ -1252,6 +1419,12 @@ export async function registerRoutes(
       const user = await storage.getUser(payload.userId);
       if (!user) {
         return res.status(404).json({ error: "Account no longer exists" });
+      }
+      if (user.deletedAt) {
+        return res.status(401).json({
+          error: "This account is scheduled for deletion. Sign in with your password to restore it.",
+          accountPendingDeletion: true,
+        });
       }
       req.session.regenerate((err) => {
         if (err) {
@@ -1416,6 +1589,11 @@ export async function registerRoutes(
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
+      // Account is pending deletion: return the restore prompt, no tokens issued.
+      if (user.deletedAt) {
+        return res.json(buildPendingDeletionResponse(user));
+      }
+
       if (user.twoFactorEnabled) {
         const verificationCode = await storage.createVerificationCode(normalizedEmail, "login");
         await sendVerificationEmail(normalizedEmail, verificationCode.code, "login");
@@ -1476,6 +1654,13 @@ export async function registerRoutes(
       const normalizedEmail = email.toLowerCase().trim();
       const existingUser = await storage.getUserByEmail(normalizedEmail);
       if (existingUser) {
+        if (existingUser.deletedAt) {
+          return res.status(409).json({
+            accountPendingDeletion: true,
+            error:
+              "This account is scheduled for deletion. Log in with your password to restore it.",
+          });
+        }
         return res.status(400).json({ error: "Email already registered" });
       }
 
@@ -1659,6 +1844,15 @@ export async function registerRoutes(
           await storage.revokeAllUserRefreshTokens(payload.userId);
         }
         return res.status(401).json({ error: "Refresh token revoked or expired" });
+      }
+
+      // Do not mint new tokens for accounts pending deletion.
+      const refreshUser = await storage.getUser(payload.userId);
+      if (!refreshUser || refreshUser.deletedAt) {
+        await storage.revokeAllUserRefreshTokens(payload.userId);
+        return res
+          .status(401)
+          .json({ error: "Account is inactive", accountPendingDeletion: !!refreshUser?.deletedAt });
       }
 
       await storage.revokeRefreshToken(oldTokenHash);
@@ -2099,6 +2293,13 @@ export async function registerRoutes(
       return res.json({ user: null });
     }
 
+    // Account is pending deletion: never serve it as an active session. Clear any
+    // lingering session so the client falls back to the login/restore flow.
+    if (user.deletedAt) {
+      req.session?.destroy?.(() => {});
+      return res.json({ user: null });
+    }
+
     const emailAccount = await storage.getEmailAccount(user.id);
 
     const now = new Date();
@@ -2374,6 +2575,45 @@ export async function registerRoutes(
   };
   setInterval(checkTrialExpiries, 60 * 60 * 1000);
   setTimeout(checkTrialExpiries, 10000);
+
+  // Permanently purge accounts whose 30-day restore window has elapsed. Billing
+  // was already cancelled at soft-delete time; here we also defensively cancel any
+  // subscription that somehow lingered, then hard-delete all personal data.
+  const purgeExpiredDeletedAccounts = async () => {
+    try {
+      const cutoff = new Date(Date.now() - ACCOUNT_RESTORE_DAYS * 24 * 60 * 60 * 1000);
+      const usersToPurge = await storage.getUsersToPurge(cutoff);
+      if (usersToPurge.length === 0) return;
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      for (const user of usersToPurge) {
+        try {
+          if (user.stripeSubscriptionId) {
+            try {
+              const stripe = await getUncachableStripeClient();
+              await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+            } catch (stripeErr: any) {
+              const code = stripeErr?.code || stripeErr?.raw?.code;
+              if (code !== "resource_missing") {
+                console.error(
+                  `[account-purge] Failed to cancel lingering subscription for ${user.id}:`,
+                  stripeErr,
+                );
+              }
+            }
+          }
+          await storage.purgeUser(user.id);
+          console.log(`[account-purge] Permanently deleted account ${user.id}`);
+        } catch (purgeErr) {
+          console.error(`[account-purge] Failed to purge user ${user.id}:`, purgeErr);
+        }
+      }
+    } catch (err) {
+      console.error("Error purging deleted accounts:", err);
+    }
+  };
+  setInterval(purgeExpiredDeletedAccounts, 60 * 60 * 1000);
+  setTimeout(purgeExpiredDeletedAccounts, 20000);
 
   app.get("/api/settings", requireAuth, async (req, res) => {
     try {
@@ -2849,13 +3089,16 @@ Return ONLY valid JSON, no other text.`;
 
   app.delete("/api/user", requireAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.session.userId!);
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
 
-      // Cancel any active Stripe subscription so the user is not charged after deletion.
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      let stripe: Awaited<ReturnType<typeof getUncachableStripeClient>> | null = null;
+
+      // Cancel the main Stripe subscription immediately so the user is not charged.
       if (user?.stripeSubscriptionId) {
         try {
-          const { getUncachableStripeClient } = await import("./stripeClient");
-          const stripe = await getUncachableStripeClient();
+          stripe = await getUncachableStripeClient();
           await stripe.subscriptions.cancel(user.stripeSubscriptionId);
           console.log(
             `[account-delete] Cancelled Stripe subscription ${user.stripeSubscriptionId} for user ${user.id}`,
@@ -2876,8 +3119,52 @@ Return ONLY valid JSON, no other text.`;
         }
       }
 
-      await storage.deleteEmailAccount(req.session.userId!);
-      await storage.deleteUser(req.session.userId!);
+      // Cancel any recurring credit add-on subscriptions too, so nothing keeps billing.
+      try {
+        const addons = await getActiveAddons(userId);
+        for (const addon of addons) {
+          if (!addon.stripeSubscriptionId) continue;
+          try {
+            stripe = stripe || (await getUncachableStripeClient());
+            await stripe.subscriptions.cancel(addon.stripeSubscriptionId);
+          } catch (addonErr: any) {
+            const code = addonErr?.code || addonErr?.raw?.code;
+            if (code !== "resource_missing") {
+              console.error(
+                "[account-delete] Failed to cancel add-on subscription:",
+                addonErr,
+              );
+              return res.status(500).json({
+                error:
+                  "Failed to cancel one of your add-on subscriptions. Please try again or contact support so you aren't charged.",
+              });
+            }
+          }
+          await cancelCreditAddon(addon.stripeSubscriptionId);
+        }
+      } catch (addonListErr) {
+        // If we cannot even determine the add-ons, do not proceed — we can't be
+        // sure billing is fully stopped.
+        console.error("[account-delete] Failed to process add-ons:", addonListErr);
+        return res.status(500).json({
+          error:
+            "Failed to cancel your add-on subscriptions. Please try again or contact support so you aren't charged.",
+        });
+      }
+
+      // Soft-delete: keep the account and its data for 30 days so the user can
+      // restore it, but billing is already cancelled above. A scheduled purge
+      // job permanently erases the account after the grace period.
+      await storage.softDeleteUser(userId);
+      // Revoke any mobile refresh tokens so a lingering token can't mint new
+      // access tokens for the (now inactive) account.
+      try {
+        await storage.revokeAllUserRefreshTokens(userId);
+      } catch (revokeErr) {
+        console.error("[account-delete] Failed to revoke refresh tokens:", revokeErr);
+      }
+      console.log(`[account-delete] Soft-deleted user ${userId} (30-day restore window)`);
+
       req.session.destroy((err) => {
         if (err) {
           console.error("Session destruction error:", err);
@@ -3149,6 +3436,22 @@ Return ONLY valid JSON, no other text.`;
 
         let user = await storage.getUserByEmail(normalizedEmail);
 
+        // Logging in via OAuth proves ownership of the mailbox, so if the account
+        // is pending deletion we auto-restore it and route the user to pick a plan
+        // — but only while still inside the 30-day restore window.
+        let restoredViaOAuth = false;
+        if (user?.deletedAt) {
+          const purgeAt =
+            new Date(user.deletedAt).getTime() +
+            ACCOUNT_RESTORE_DAYS * 24 * 60 * 60 * 1000;
+          if (Date.now() > purgeAt) {
+            return res.redirect("/login?error=restore_window_expired");
+          }
+          await storage.restoreUser(user.id);
+          user = (await storage.getUser(user.id)) || user;
+          restoredViaOAuth = true;
+        }
+
         if (!user) {
           const randomPassword = randomBytes(32).toString("hex");
           const hashedPassword = await hashPassword(randomPassword);
@@ -3187,7 +3490,7 @@ Return ONLY valid JSON, no other text.`;
 
         req.session.userId = user.id;
 
-        if (!user.plan) {
+        if (restoredViaOAuth || !user.plan) {
           return res.redirect("/select-plan");
         } else if (!user.onboardingCompleted) {
           return res.redirect("/onboarding");
@@ -3298,6 +3601,22 @@ Return ONLY valid JSON, no other text.`;
 
         let user = await storage.getUserByEmail(normalizedEmail);
 
+        // Logging in via OAuth proves ownership of the mailbox, so if the account
+        // is pending deletion we auto-restore it and route the user to pick a plan
+        // — but only while still inside the 30-day restore window.
+        let restoredViaOAuth = false;
+        if (user?.deletedAt) {
+          const purgeAt =
+            new Date(user.deletedAt).getTime() +
+            ACCOUNT_RESTORE_DAYS * 24 * 60 * 60 * 1000;
+          if (Date.now() > purgeAt) {
+            return res.redirect("/login?error=restore_window_expired");
+          }
+          await storage.restoreUser(user.id);
+          user = (await storage.getUser(user.id)) || user;
+          restoredViaOAuth = true;
+        }
+
         if (!user) {
           const randomPassword = randomBytes(32).toString("hex");
           const hashedPassword = await hashPassword(randomPassword);
@@ -3336,7 +3655,7 @@ Return ONLY valid JSON, no other text.`;
 
         req.session.userId = user.id;
 
-        if (!user.plan) {
+        if (restoredViaOAuth || !user.plan) {
           return res.redirect("/select-plan");
         } else if (!user.onboardingCompleted) {
           return res.redirect("/onboarding");
