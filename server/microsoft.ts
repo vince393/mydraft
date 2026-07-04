@@ -267,6 +267,56 @@ export const microsoftProvider: IEmailProvider = {
     }
   },
 
+  async searchMessages(accessToken: string, query: string, options?: { limit?: number }): Promise<(EmailListItem & { folder?: string })[]> {
+    const limit = options?.limit || 50;
+    try {
+      // Graph $search cannot be combined with $orderby. Escape embedded quotes,
+      // then URL-encode the ENTIRE quoted literal (quotes included) — encoding
+      // only the text *inside* literal quotes makes Graph match the percent-
+      // encoded characters (e.g. "%20") instead of the intended terms. Graph
+      // $search also requires the ConsistencyLevel: eventual header.
+      const safe = query.replace(/"/g, '\\"');
+      const searchLiteral = encodeURIComponent(`"${safe}"`);
+      const response = await graphRequest(
+        accessToken,
+        `/me/messages?$search=${searchLiteral}&$top=${limit}&$select=id,subject,from,receivedDateTime,isRead,flag,bodyPreview,conversationId,parentFolderId`,
+        { headers: { ConsistencyLevel: "eventual" } }
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        await logApiHealth("microsoft", "messages/search", response.status, error, "error");
+        throw new Error(`Failed to search messages: ${error}`);
+      }
+
+      const data = await response.json();
+      const messages = data.value || [];
+      await logApiHealth("microsoft", "messages/search", 200);
+
+      return messages.map((msg: any) => {
+        const from = parseGraphEmailAddress(msg.from);
+        return {
+          id: msg.id,
+          subject: msg.subject || "(No Subject)",
+          from: from.name,
+          fromEmail: from.email,
+          preview: msg.bodyPreview || "",
+          date: new Date(msg.receivedDateTime),
+          isRead: msg.isRead,
+          isStarred: msg.flag?.flagStatus === "flagged",
+          threadId: msg.conversationId || msg.id,
+          avatarColor: getAvatarColor(from.email),
+          folder: "inbox",
+        };
+      });
+    } catch (error: any) {
+      if (!error.message?.includes("Failed to search")) {
+        await logApiHealth("microsoft", "messages/search", 500, error.message, "error");
+      }
+      throw error;
+    }
+  },
+
   async getMessage(accessToken: string, messageId: string): Promise<EmailDetail> {
     try {
       const response = await graphRequest(

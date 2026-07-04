@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect, type ReactNode } from "react";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
-import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare, ArrowDown, Plus, Shield, Inbox, Megaphone } from "lucide-react";
+import { Star, Sparkles, Loader2, Archive, Trash2, Clock, Search, SlidersHorizontal, X, Check, Mail, Calendar, User, Link, Wand2, PenSquare, ArrowDown, Plus, Shield, Inbox, Megaphone, AlertTriangle } from "lucide-react";
 import { useScreenSize } from "@/hooks/use-screen-size";
 import { useLongPress } from "@/hooks/use-long-press";
 import { useQuery } from "@tanstack/react-query";
@@ -35,6 +35,30 @@ function formatEmailTime(date: Date): string {
   }
 }
 
+interface SyncError extends Error {
+  code?: string;
+  status?: number;
+}
+
+// Relative age of the last successful sync, e.g. "just now", "5m ago", "2h ago".
+function formatSyncAge(lastSyncedAt: number, now: number): string {
+  const diffSec = Math.max(0, Math.round((now - lastSyncedAt) / 1000));
+  if (diffSec < 10) return "just now";
+  if (diffSec < 60) return "seconds ago";
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.round(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
+// Human "how current is this inbox" label, relative to now.
+function formatLastSynced(lastSyncedAt: number, now: number): string {
+  const age = formatSyncAge(lastSyncedAt, now);
+  return age === "just now" ? "Updated just now" : `Updated ${age}`;
+}
+
 interface EmailListProps {
   emails: EmailWithNylasId[];
   selectedEmailId: string | number | null;
@@ -59,6 +83,9 @@ interface EmailListProps {
   isMoving?: boolean;
   isLoading?: boolean;
   isSyncing?: boolean;
+  lastSyncedAt?: number | null;
+  syncErrorKind?: "auth" | "transient" | null;
+  onReconnect?: () => void;
   activeFolder?: string;
   hasConnectedAccount?: boolean;
   onConnectAccount?: () => void;
@@ -150,7 +177,7 @@ interface Filters {
   sender: string;
 }
 
-export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onCampaign, onOpenAssistant, mobileNavLeft }: EmailListProps) {
+export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, onAiReplyMultiple, onTrashEmail, onArchiveEmail, onTrashMultipleEmails, onArchiveMultipleEmails, onToggleStar, onToggleFlag, onTrashSingleEmail, onArchiveSingleEmail, onRestoreSingleEmail, onPermanentDeleteSingleEmail, onMoveToFolder, onMarkUnread, onReplyEmail, onForwardEmail, isAiLoading, isMoving, isLoading, isSyncing, lastSyncedAt, syncErrorKind, onReconnect, activeFolder = "inbox", hasConnectedAccount = true, onConnectAccount, onInboxRefresh, onRefresh, isRefreshing, onCompose, onCampaign, onOpenAssistant, mobileNavLeft }: EmailListProps) {
   const composeHandlers = useLongPress({
     onClick: () => onCompose?.(),
     onLongPress: () => onCampaign?.(),
@@ -174,6 +201,13 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
   const prevEmailIdsRef = useRef<Set<string | number>>(new Set());
   const [visibleCount, setVisibleCount] = useState(50);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Live clock so the "Updated Xm ago" freshness label stays current without a re-fetch.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, []);
   
   const { data: responseTime, isLoading: isLoadingTime } = useQuery<ResponseTimeEstimate>({
     queryKey: ['/api/response-time', activeFolder],
@@ -265,10 +299,69 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
     return result;
   }, [emails, searchQuery, filters]);
 
-  const categoryFilteredEmails = useMemo(() => {
+  const localFilteredEmails = useMemo(() => {
     if (!activeCategory) return filteredEmails;
     return filteredEmails.filter(email => categorizeEmail(email) === activeCategory);
   }, [filteredEmails, activeCategory]);
+
+  // Provider-backed search fallback: when the locally-cached window yields no
+  // matches for a real search, ask the server to search the full mailbox so mail
+  // outside the cached window is still findable. Debounced so we don't hammer
+  // the provider on every keystroke.
+  const trimmedSearch = searchQuery.trim();
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(trimmedSearch), 350);
+    return () => clearTimeout(t);
+  }, [trimmedSearch]);
+
+  const shouldServerSearch =
+    hasConnectedAccount &&
+    debouncedSearch.length >= 2 &&
+    localFilteredEmails.length === 0;
+
+  const {
+    data: serverSearchResults = [],
+    isFetching: isSearchingServer,
+    error: serverSearchError,
+    refetch: refetchServerSearch,
+  } = useQuery<EmailWithNylasId[], SyncError>({
+    queryKey: ["/api/emails/search", debouncedSearch],
+    queryFn: async () => {
+      const res = await fetch(`/api/emails/search?q=${encodeURIComponent(debouncedSearch)}`);
+      if (!res.ok) {
+        // Surface the failure honestly instead of pretending there are no
+        // results: an auth/transient error must not read as "no matches".
+        let code: string | undefined;
+        try {
+          code = (await res.json())?.code;
+        } catch {
+          // ignore body parse errors
+        }
+        const err: SyncError = new Error("Search failed");
+        err.code = code ?? (res.status === 401 ? "AUTH_ERROR" : "SEARCH_FAILED");
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    enabled: shouldServerSearch,
+    staleTime: 60 * 1000,
+    retry: (failureCount, err) => (err?.code === "AUTH_ERROR" ? false : failureCount < 2),
+  });
+
+  const searchErrorKind: "auth" | "transient" | null = serverSearchError
+    ? serverSearchError.code === "AUTH_ERROR"
+      ? "auth"
+      : "transient"
+    : null;
+
+  const usingServerSearch = shouldServerSearch && serverSearchResults.length > 0;
+
+  const categoryFilteredEmails = useMemo(() => {
+    if (usingServerSearch) return serverSearchResults;
+    return localFilteredEmails;
+  }, [usingServerSearch, serverSearchResults, localFilteredEmails]);
 
   // Windowed rendering: only mount a slice of the list at a time, growing as the
   // user scrolls. Keeps large inboxes smooth without dropping any emails.
@@ -819,18 +912,106 @@ export function EmailList({ emails, selectedEmailId, onSelectEmail, onAiReply, o
             )}
           </div>
         )}
-        {isSyncing && !isRefreshing && (
-          <div className="flex items-center justify-center py-1.5" data-testid="syncing-banner">
+        {syncErrorKind ? (
+          <div
+            className="flex items-center justify-between gap-3 mx-3 my-2 px-3 py-2 rounded-lg border border-destructive/30 bg-destructive/10"
+            data-testid="sync-error-banner"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+              <span className="text-xs text-foreground/80 truncate" data-testid="text-sync-error-message">
+                {syncErrorKind === "auth"
+                  ? `Can't sync — reconnect your email account.${lastSyncedAt ? ` Showing mail synced ${formatSyncAge(lastSyncedAt, nowTick)}.` : ""}`
+                  : lastSyncedAt
+                    ? `Couldn't refresh — showing mail last synced ${formatSyncAge(lastSyncedAt, nowTick)}.`
+                    : "Couldn't reach your email provider. Showing the last synced copy."}
+              </span>
+            </div>
+            {syncErrorKind === "auth" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onReconnect}
+                className="h-7 text-xs shrink-0"
+                data-testid="button-reconnect-account"
+              >
+                Reconnect
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefresh}
+                disabled={isRefreshing || isSyncing}
+                className="h-7 text-xs shrink-0"
+                data-testid="button-retry-sync"
+              >
+                {isRefreshing || isSyncing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  "Retry"
+                )}
+              </Button>
+            )}
+          </div>
+        ) : (isSyncing && !isRefreshing) ? (
+          <div className="flex items-center justify-center gap-2 py-1.5" data-testid="syncing-banner">
             <Loader2 className="w-3.5 h-3.5 text-foreground/20 animate-spin" />
+            <span className="text-[11px] text-muted-foreground/50">Checking for new mail…</span>
+          </div>
+        ) : lastSyncedAt ? (
+          <div className="flex items-center justify-center py-1" data-testid="last-synced-indicator">
+            <span className="text-[11px] text-muted-foreground/40 tabular-nums">
+              {formatLastSynced(lastSyncedAt, nowTick)}
+            </span>
+          </div>
+        ) : null}
+        {isSearchingServer && (
+          <div className="flex items-center justify-center gap-2 py-1.5" data-testid="searching-provider-banner">
+            <Loader2 className="w-3.5 h-3.5 text-foreground/20 animate-spin" />
+            <span className="text-[11px] text-muted-foreground/50">Searching your full mailbox…</span>
           </div>
         )}
-        {categoryFilteredEmails.length === 0 ? (
+        {categoryFilteredEmails.length === 0 && searchErrorKind ? (
+          <div className="flex flex-col items-center justify-center h-48 text-center p-8" data-testid="search-error-state">
+            <AlertTriangle className="w-10 h-10 text-destructive/70 mb-4" />
+            <h3 className="font-medium text-sm mb-1">Couldn't search your mailbox</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              {searchErrorKind === "auth"
+                ? "Your email account needs to be reconnected before we can search it."
+                : "We couldn't reach your email provider. This isn't a \"no results\" — please try again."}
+            </p>
+            {searchErrorKind === "auth" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onReconnect}
+                className="text-xs"
+                data-testid="button-reconnect-search"
+              >
+                Reconnect
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetchServerSearch()}
+                className="text-xs"
+                data-testid="button-retry-search"
+              >
+                Try again
+              </Button>
+            )}
+          </div>
+        ) : categoryFilteredEmails.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center p-8">
             <Search className="w-10 h-10 text-muted-foreground/40 mb-4" />
             <h3 className="font-medium text-sm mb-1">No emails match your filters</h3>
             <p className="text-xs text-muted-foreground mb-3">
               {searchQuery
-                ? `No results for "${searchQuery}" out of ${emails.length} emails`
+                ? (shouldServerSearch
+                    ? `No results for "${searchQuery}" anywhere in your mailbox`
+                    : `No results for "${searchQuery}" out of ${emails.length} emails`)
                 : activeCategory
                   ? `No ${activeCategory} emails match — ${emails.length} total in this folder`
                   : `0 of ${emails.length} emails match — try clearing filters`}

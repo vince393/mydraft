@@ -325,6 +325,80 @@ export const imapProvider: IEmailProvider = {
     }
   },
 
+  async searchMessages(accessToken: string, query: string, options?: { limit?: number }): Promise<(EmailListItem & { folder?: string })[]> {
+    const config = parseImapConfig(accessToken);
+    const client = await createImapConnection(config);
+    const limit = options?.limit || 50;
+
+    try {
+      const mailboxPath = await findMailbox(client, FOLDER_MAP.inbox);
+      const lock = await client.getMailboxLock(mailboxPath);
+      try {
+        // Match subject OR from OR body text. Server-side IMAP SEARCH scans the
+        // whole mailbox, not just the recently-synced window.
+        const uids = await client.search(
+          {
+            or: [
+              { header: { subject: query } },
+              { header: { from: query } },
+              { body: query },
+            ],
+          },
+          { uid: true }
+        );
+
+        if (!uids || uids.length === 0) {
+          await logApiHealth("imap", "messages/search", 200);
+          return [];
+        }
+
+        // Newest first, capped.
+        const wanted = uids.slice(-limit).reverse();
+        const messages: (EmailListItem & { folder?: string })[] = [];
+
+        for await (const msg of client.fetch(
+          wanted,
+          { envelope: true, flags: true, uid: true, headers: ["references"] },
+          { uid: true }
+        )) {
+          const from = parseAddress(msg.envelope?.from);
+          const flags = msg.flags || new Set();
+          const referencesHeader = msg.headers ? msg.headers.toString() : "";
+
+          messages.push({
+            id: encodeImapId(mailboxPath, msg.uid),
+            subject: msg.envelope?.subject || "(No Subject)",
+            from: from.name || from.email,
+            fromEmail: from.email,
+            preview: "",
+            date: msg.envelope?.date || new Date(),
+            isRead: flags.has("\\Seen"),
+            isStarred: flags.has("\\Flagged"),
+            threadId: deriveImapThreadId({
+              references: referencesHeader,
+              inReplyTo: msg.envelope?.inReplyTo,
+              messageId: msg.envelope?.messageId,
+              fallback: String(msg.uid),
+            }),
+            avatarColor: getAvatarColor(from.email),
+            folder: "inbox",
+          });
+        }
+
+        await logApiHealth("imap", "messages/search", 200);
+        return messages;
+      } finally {
+        lock.release();
+      }
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      await logApiHealth("imap", "messages/search", 500, errMsg, "error");
+      throw error;
+    } finally {
+      await client.logout().catch(() => {});
+    }
+  },
+
   async getMessage(accessToken: string, messageId: string): Promise<EmailDetail> {
     const config = parseImapConfig(accessToken);
     const client = await createImapConnection(config);

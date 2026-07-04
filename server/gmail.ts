@@ -222,6 +222,72 @@ export const gmailProvider: IEmailProvider = {
     }
   },
 
+  async searchMessages(accessToken: string, query: string, options?: { limit?: number }): Promise<(EmailListItem & { folder?: string })[]> {
+    const gmail = getGmail(accessToken);
+    const limit = options?.limit || 50;
+
+    try {
+      const listResponse = await gmail.users.messages.list({
+        userId: "me",
+        q: query,
+        maxResults: limit,
+      });
+
+      const messageIds = listResponse.data.messages || [];
+      if (messageIds.length === 0) return [];
+
+      const batchSize = 20;
+      const results: (EmailListItem & { folder?: string })[] = [];
+
+      for (let i = 0; i < messageIds.length; i += batchSize) {
+        const batch = messageIds.slice(i, i + batchSize);
+        const messages = await Promise.all(
+          batch.map((m) =>
+            gmail.users.messages.get({
+              userId: "me",
+              id: m.id!,
+              format: "metadata",
+              metadataHeaders: ["From", "Subject", "Date"],
+            })
+          )
+        );
+
+        for (const msg of messages) {
+          const headers = msg.data.payload?.headers || [];
+          const fromRaw = getHeader(headers, "From");
+          const { name: fromName, email: fromEmail } = parseEmailAddress(fromRaw);
+          const labels = msg.data.labelIds || [];
+          let folder = "archived";
+          if (labels.includes("INBOX")) folder = "inbox";
+          else if (labels.includes("SENT")) folder = "sent";
+          else if (labels.includes("TRASH")) folder = "trash";
+          else if (labels.includes("SPAM")) folder = "junk";
+          else if (labels.includes("DRAFT")) folder = "drafts";
+
+          results.push({
+            id: msg.data.id!,
+            subject: getHeader(headers, "Subject") || "(No Subject)",
+            from: fromName || fromEmail,
+            fromEmail,
+            preview: msg.data.snippet || "",
+            date: new Date(parseInt(msg.data.internalDate || "0")),
+            isRead: !labels.includes("UNREAD"),
+            isStarred: labels.includes("STARRED"),
+            threadId: msg.data.threadId || msg.data.id!,
+            avatarColor: getAvatarColor(fromEmail),
+            folder,
+          });
+        }
+      }
+
+      await logApiHealth("google", "messages/search", 200);
+      return results;
+    } catch (error: any) {
+      await logApiHealth("google", "messages/search", error.code || 500, error.message, "error");
+      throw error;
+    }
+  },
+
   async getMessage(accessToken: string, messageId: string): Promise<EmailDetail> {
     const gmail = getGmail(accessToken);
     try {

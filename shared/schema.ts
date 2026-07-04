@@ -193,6 +193,9 @@ export const emailAccounts = pgTable("email_accounts", {
   imapPort: integer("imap_port"),
   smtpHost: text("smtp_host"),
   smtpPort: integer("smtp_port"),
+  // Timestamp of the last successful fresh fetch from the provider. Drives the
+  // inbox "Updated X ago" freshness signal and survives reloads.
+  lastSyncedAt: timestamp("last_synced_at"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });

@@ -8,6 +8,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startEmailScheduler } from "./email-scheduler";
 import { setupEmailSyncWebSocket } from "./ws-email-sync";
+import { startEmailPoller } from "./email-poller";
 import { ensureCreditIndexes } from "./credits";
 import { runMigrations } from "stripe-replit-sync";
 import { getStripeSync, getUncachableStripeClient } from "./stripeClient";
@@ -210,24 +211,32 @@ const pgPool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-app.use(
-  session({
-    store: new PgStore({
-      pool: pgPool,
-      tableName: "user_sessions",
-      createTableIfMissing: true,
-    }),
-    secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    },
-  })
-);
+// Exported so non-HTTP entry points (e.g. the email-sync WebSocket upgrade) can
+// resolve a session directly from the store instead of running the Express
+// middleware with a fake response object.
+export const sessionStore = new PgStore({
+  pool: pgPool,
+  tableName: "user_sessions",
+  createTableIfMissing: true,
+});
+export const SESSION_COOKIE_NAME = "connect.sid";
+export const sessionSecrets = [sessionSecret];
+
+export const sessionMiddleware = session({
+  store: sessionStore,
+  name: SESSION_COOKIE_NAME,
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  },
+});
+
+app.use(sessionMiddleware);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -284,7 +293,13 @@ app.use((req, res, next) => {
   
   startEmailScheduler();
 
-  setupEmailSyncWebSocket(httpServer);
+  setupEmailSyncWebSocket(httpServer, {
+    store: sessionStore,
+    cookieName: SESSION_COOKIE_NAME,
+    secrets: sessionSecrets,
+  });
+
+  startEmailPoller();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

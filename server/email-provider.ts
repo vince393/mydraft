@@ -59,6 +59,10 @@ export interface IEmailProvider {
   exchangeCode(code: string, redirectUri: string): Promise<TokenData>;
   refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; expiresAt: Date }>;
   getMessages(accessToken: string, options?: GetMessagesOptions): Promise<EmailListItem[]>;
+  // Search the mailbox (across folders where the provider supports it) so mail
+  // outside the recently-cached window is still findable. Returns list items
+  // shaped like getMessages, with a `folder` hint where the provider exposes it.
+  searchMessages(accessToken: string, query: string, options?: { limit?: number }): Promise<(EmailListItem & { folder?: string })[]>;
   getMessage(accessToken: string, messageId: string): Promise<EmailDetail>;
   sendMessage(accessToken: string, params: {
     to: string[];

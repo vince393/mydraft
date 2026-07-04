@@ -531,12 +531,39 @@ function isExternalEmailId(id: string, account: EmailAccount | undefined): boole
   return id.length > 10 && !/^\d+$/.test(id);
 }
 
-async function getProviderAndToken(userId: string): Promise<{ provider: IEmailProvider; accessToken: string; account: EmailAccount } | null> {
+// Heuristic: does this provider error mean the stored credentials are no longer
+// valid (revoked / expired refresh token / bad app password) — i.e. the user
+// must reconnect — versus a transient network/rate-limit hiccup they can retry?
+function isAuthError(error: unknown): boolean {
+  const anyErr = error as any;
+  const status = anyErr?.code ?? anyErr?.status ?? anyErr?.response?.status;
+  if (status === 401 || status === 403) return true;
+  const msg = (anyErr?.message ? String(anyErr.message) : String(error)).toLowerCase();
+  return (
+    msg.includes("invalid_grant") ||
+    msg.includes("invalid credentials") ||
+    msg.includes("invalid_credentials") ||
+    msg.includes("unauthorized") ||
+    msg.includes("authenticationfailed") ||
+    msg.includes("authentication failed") ||
+    msg.includes("token has been expired or revoked") ||
+    msg.includes("reconnect required")
+  );
+}
+
+type ProviderResult =
+  | { ok: true; provider: IEmailProvider; accessToken: string; account: EmailAccount }
+  | { ok: false; reason: "no_account" | "auth_error" };
+
+// Detailed variant: distinguishes "no mailbox connected" from "connected but the
+// stored credentials can no longer be refreshed" (auth error → user must
+// reconnect). Callers that need honest sync-failure semantics use this.
+async function getProviderAndTokenResult(userId: string): Promise<ProviderResult> {
   const account = await storage.getEmailAccount(userId);
-  if (!account) return null;
+  if (!account) return { ok: false, reason: "no_account" };
 
   if (account.provider === "imap") {
-    return { provider: imapProvider, accessToken: account.accessToken, account };
+    return { ok: true, provider: imapProvider, accessToken: account.accessToken, account };
   }
 
   const isExpired = account.tokenExpiresAt && new Date(account.tokenExpiresAt).getTime() < Date.now() + 5 * 60 * 1000;
@@ -549,15 +576,21 @@ async function getProviderAndToken(userId: string): Promise<{ provider: IEmailPr
         accessToken: refreshed.accessToken,
         tokenExpiresAt: refreshed.expiresAt,
       });
-      return { provider: emailProvider, accessToken: refreshed.accessToken, account: { ...account, accessToken: refreshed.accessToken } };
+      return { ok: true, provider: emailProvider, accessToken: refreshed.accessToken, account: { ...account, accessToken: refreshed.accessToken } };
     } catch (error) {
       console.error("Token refresh failed:", error);
-      return null;
+      return { ok: false, reason: "auth_error" };
     }
   }
 
   const emailProvider = account.provider === "google" ? gmailProvider : microsoftProvider;
-  return { provider: emailProvider, accessToken: account.accessToken, account };
+  return { ok: true, provider: emailProvider, accessToken: account.accessToken, account };
+}
+
+async function getProviderAndToken(userId: string): Promise<{ provider: IEmailProvider; accessToken: string; account: EmailAccount } | null> {
+  const result = await getProviderAndTokenResult(userId);
+  if (!result.ok) return null;
+  return { provider: result.provider, accessToken: result.accessToken, account: result.account };
 }
 
 const pendingOAuthStates: Map<
@@ -2340,6 +2373,7 @@ export async function registerRoutes(
         emailConnected: !!emailAccount,
         connectedEmail: emailAccount?.email || null,
         connectedProvider: emailAccount?.provider || null,
+        lastSyncedAt: emailAccount?.lastSyncedAt || null,
         createdAt: user.createdAt,
         emailSignature: user.emailSignature,
         signatureEnabled: user.signatureEnabled,
@@ -3758,11 +3792,12 @@ Return ONLY valid JSON, no other text.`;
       const userId = req.session.userId!;
       const userIdNum = parseInt(userId, 10);
 
-      const providerResult = await getProviderAndToken(userId);
-      if (!providerResult) {
-        return res.json([]);
-      }
-
+      // Serve the persisted cache FIRST when requested, before any provider or
+      // token resolution. This guarantees an honest "showing last synced mail"
+      // view even when credentials can no longer be refreshed: an auth failure
+      // must never turn the client's instant cached query into an empty inbox.
+      // The separate fresh query still resolves the provider below and returns
+      // 401 AUTH_ERROR so the client shows the reconnect prompt over the cache.
       if (useCached) {
         const cachedData = await storage.getCachedEmails(userIdNum);
         if (cachedData.length > 0) {
@@ -3781,7 +3816,21 @@ Return ONLY valid JSON, no other text.`;
           });
           return res.json(emails);
         }
+        // No cache persisted yet — fall through to a live fetch below.
       }
+
+      const provider = await getProviderAndTokenResult(userId);
+      if (!provider.ok) {
+        // No mailbox connected → not an error, just an empty inbox.
+        if (provider.reason === "no_account") {
+          return res.json([]);
+        }
+        // Connected, but credentials can no longer be refreshed. Surface an
+        // honest auth error so the client can prompt a reconnect instead of
+        // silently showing stale mail as if it were current.
+        return res.status(401).json({ error: "Reconnect required", code: "AUTH_ERROR" });
+      }
+      const providerResult = provider;
 
       let allMessages: any[] = [];
 
@@ -3789,19 +3838,25 @@ Return ONLY valid JSON, no other text.`;
 
       if (allFolders) {
         const folders = ["inbox", "sent", "trash", "junk", "archived"] as const;
+        // Let the primary (inbox) folder reject so a total inbox failure is not
+        // silently masked as an empty-but-fresh sync. Secondary folders still
+        // fail soft — a missing "sent" folder should not fail the whole load.
         const folderResults = await Promise.allSettled(
           folders.map(async (f) => {
-            try {
-              const messages = await providerResult.provider.getMessages(
-                providerResult.accessToken,
-                { folder: f, limit: f === "inbox" ? 300 : 100 },
-              );
-              return messages.map((m) => ({ ...m, folder: f }));
-            } catch {
-              return [];
-            }
+            const messages = await providerResult.provider.getMessages(
+              providerResult.accessToken,
+              { folder: f, limit: f === "inbox" ? 300 : 100 },
+            );
+            return messages.map((m) => ({ ...m, folder: f }));
           }),
         );
+
+        const inboxResult = folderResults[0];
+        if (inboxResult.status === "rejected") {
+          throw inboxResult.reason instanceof Error
+            ? inboxResult.reason
+            : new Error(String(inboxResult.reason));
+        }
 
         for (const result of folderResults) {
           if (result.status === "fulfilled") {
@@ -3825,6 +3880,12 @@ Return ONLY valid JSON, no other text.`;
           folder: folder || "inbox",
         }));
       }
+
+      // The fresh fetch succeeded — record the moment so the inbox can honestly
+      // show how current it is. Persisted per account so it survives reloads.
+      storage.updateEmailAccount(userId, { lastSyncedAt: new Date() }).catch((err) => {
+        console.error("Failed to persist lastSyncedAt:", err);
+      });
 
       // Apply local state overrides (folder and read status)
       allMessages = allMessages.map((msg) => {
@@ -3895,7 +3956,96 @@ Return ONLY valid JSON, no other text.`;
       return res.json(emails);
     } catch (error) {
       console.error("Error fetching emails:", error);
-      res.status(500).json({ error: "Failed to fetch emails" });
+      // Distinguish an auth failure (revoked/expired credentials → reconnect)
+      // from a transient provider/network hiccup (retry). This lets the client
+      // show the honest recovery path instead of a generic error.
+      if (isAuthError(error)) {
+        return res.status(401).json({ error: "Reconnect required", code: "AUTH_ERROR" });
+      }
+      res.status(502).json({ error: "Failed to fetch emails", code: "SYNC_FAILED" });
+    }
+  });
+
+  // Provider-backed search. The inbox first filters its locally-cached window;
+  // when that yields nothing, the client falls back to this endpoint so mail
+  // outside the cached window is still findable. Returns list items shaped like
+  // /api/emails, with local read-state/star overrides applied.
+  app.get("/api/emails/search", requireAuth, async (req, res) => {
+    try {
+      const query = (req.query.q as string | undefined)?.trim();
+      if (!query) {
+        return res.json([]);
+      }
+
+      const userId = req.session.userId!;
+      const provider = await getProviderAndTokenResult(userId);
+      if (!provider.ok) {
+        if (provider.reason === "no_account") return res.json([]);
+        return res.status(401).json({ error: "Reconnect required", code: "AUTH_ERROR" });
+      }
+
+      const results = await provider.provider.searchMessages(provider.accessToken, query, { limit: 50 });
+
+      const localStates = await storage.getAllLocalEmailStates(userId);
+      const starredIds = await storage.getStarredEmailIds(userId);
+      const starredSet = new Set(starredIds);
+
+      const emails = results.map((msg) => {
+        const localState = localStates.get(msg.id);
+        return {
+          nylasId: msg.id,
+          sender: msg.from,
+          senderEmail: msg.fromEmail,
+          subject: msg.subject,
+          preview: msg.preview,
+          body: "",
+          receivedAt: msg.date,
+          isRead: localState?.isRead !== null && localState?.isRead !== undefined ? localState.isRead : msg.isRead,
+          isStarred: starredSet.has(msg.id),
+          folder: localState?.folder || msg.folder || "inbox",
+          threadId: msg.threadId,
+          avatarColor: msg.avatarColor,
+        };
+      });
+
+      // Never surface mail the user locally trashed/deleted in search results.
+      const visible = emails.filter((e) => e.folder !== "trash");
+
+      // Collapse into threads so search results match the inbox list shape
+      // (one representative row per conversation, newest message wins, with a
+      // threadCount). Messages without a threadId are treated as their own thread.
+      const threadGroups = new Map<string, typeof visible>();
+      const singles: typeof visible = [];
+      for (const e of visible) {
+        if (e.threadId) {
+          const group = threadGroups.get(e.threadId);
+          if (group) group.push(e);
+          else threadGroups.set(e.threadId, [e]);
+        } else {
+          singles.push(e);
+        }
+      }
+
+      const newest = (a: typeof visible[number], b: typeof visible[number]) =>
+        new Date(b.receivedAt as any).getTime() - new Date(a.receivedAt as any).getTime();
+
+      const collapsed = [
+        ...Array.from(threadGroups.values()).map((group) => {
+          const sorted = [...group].sort(newest);
+          return { ...sorted[0], threadCount: group.length };
+        }),
+        ...singles.map((e) => ({ ...e, threadCount: 1 })),
+      ].sort(newest);
+
+      const withIds = collapsed.map((e, index) => ({ ...e, id: index + 1 }));
+
+      return res.json(withIds);
+    } catch (error) {
+      console.error("Error searching emails:", error);
+      if (isAuthError(error)) {
+        return res.status(401).json({ error: "Reconnect required", code: "AUTH_ERROR" });
+      }
+      res.status(502).json({ error: "Search failed", code: "SEARCH_FAILED" });
     }
   });
 

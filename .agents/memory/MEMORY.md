@@ -12,3 +12,4 @@
 - [Stripe wallet payments](stripe-wallet-payments.md) — Apple/Google Pay via Payment Request API on our own checkout; gate on canMakePayment(), $0 rejected, ev.complete once, serve well-known file at 200.
 - [Long-press vs tap gesture](long-press-tap-gesture.md) — drag/scroll/pointercancel must set a cancel flag that suppresses the trailing onClick, not just clear the timer, or it fires the tap action anyway.
 - [Account soft-delete/restore](account-soft-delete.md) — 30-day soft delete; EVERY auth entry point must reject deletedAt users; restore honors the window + 2FA; OAuth auto-restores within window.
+- [Honest inbox sync failure](honest-sync-failure.md) — inbox sync AND search must prove freshness and never present a failure as empty/no-results; split auth (reconnect) vs transient (retry); WS identity must come from session, not a client param.

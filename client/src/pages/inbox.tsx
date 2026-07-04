@@ -52,6 +52,12 @@ interface InboxProps {
   isAIChatEnabled?: boolean;
 }
 
+// Carries the server's honest sync-failure code (AUTH_ERROR vs transient) so the
+// inbox can offer the right recovery path.
+interface SyncError extends Error {
+  code?: string;
+}
+
 function getEmailId(email: EmailWithNylasId): string | number {
   return email.nylasId || email.id;
 }
@@ -84,6 +90,7 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     connectedEmail: string | null;
     connectedProvider: string | null;
     plan: string | null;
+    lastSyncedAt: string | null;
   } | null }>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
@@ -313,11 +320,24 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   });
 
   // Step 2: Fetch fresh emails from provider in background
-  const { data: freshEmails, isFetching: isFetchingFresh, isSuccess: hasFreshData, isLoading: isFreshInitialLoading, isError: isFreshError } = useQuery<EmailWithNylasId[]>({
+  const { data: freshEmails, isFetching: isFetchingFresh, isSuccess: hasFreshData, isLoading: isFreshInitialLoading, isError: isFreshError, error: freshError } = useQuery<EmailWithNylasId[], SyncError>({
     queryKey: ["/api/emails", "fresh"],
     queryFn: async () => {
       const response = await fetch(`/api/emails?allFolders=true`);
-      if (!response.ok) throw new Error("Failed to fetch emails");
+      if (!response.ok) {
+        // Surface the server's honest failure code so the UI can offer the right
+        // recovery: reconnect for auth errors, retry for transient ones.
+        let code = "SYNC_FAILED";
+        try {
+          const body = await response.json();
+          if (body?.code) code = body.code;
+        } catch {}
+        const err: SyncError = new Error(
+          code === "AUTH_ERROR" ? "Reconnect required" : "Failed to fetch emails",
+        );
+        err.code = response.status === 401 ? "AUTH_ERROR" : code;
+        throw err;
+      }
       return response.json();
     },
     enabled: !!userData?.user && !isCustomFolder,
@@ -327,22 +347,32 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
-    retry: 2,
+    // Don't auto-retry auth errors (retrying with bad credentials is pointless);
+    // keep the existing backoff retry for transient failures.
+    retry: (failureCount, error) => {
+      if ((error as SyncError)?.code === "AUTH_ERROR") return false;
+      return failureCount < 2;
+    },
     retryDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 8000),
     placeholderData: keepPreviousData,
   });
 
-  // Prefer fresh when it actually returned emails; otherwise fall back to cached
-  // so transient fresh failures or empty responses don't wipe a populated inbox.
-  const freshHasEmails = hasFreshData && Array.isArray(freshEmails) && freshEmails.length > 0;
-  const cachedHasEmails = cachedEmails.length > 0;
-  const allEmails = freshHasEmails
-    ? freshEmails!
-    : cachedHasEmails
-      ? cachedEmails
-      : hasFreshData
-        ? (freshEmails ?? [])
-        : cachedEmails;
+  // Classify the current sync failure (if any) so the UI shows an honest,
+  // non-blocking banner instead of silently presenting stale mail as fresh.
+  const syncErrorKind: "auth" | "transient" | null = isFreshError
+    ? (freshError?.code === "AUTH_ERROR" ? "auth" : "transient")
+    : null;
+
+  // Provider truth wins once we have it. As soon as the fresh fetch has resolved
+  // at least once, `freshEmails` is a defined array — use it even when it's
+  // empty, so mail the user deleted/archived/moved on the provider actually
+  // disappears here instead of lingering as stale-but-"just synced" rows. Only
+  // before the first successful fresh fetch (or a transient error with nothing
+  // fresh ever loaded) do we fall back to the instant cached copy. On a later
+  // transient refetch error React Query retains the last successful `freshEmails`,
+  // so we keep showing the freshest data we had (with the honest error banner)
+  // rather than reverting to an older cache.
+  const allEmails = Array.isArray(freshEmails) ? freshEmails : cachedEmails;
 
   // Show loading skeleton while we have no confirmed data yet. Also keep the
   // skeleton up if the fresh query errored and we never got any cached data,
@@ -357,16 +387,64 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
   useEffect(() => {
     if (!isFetchingFresh && isManualRefresh) {
       setIsManualRefresh(false);
+      // Honest manual-refresh feedback: confirm success, or explain the failure
+      // and the recovery path (reconnect vs try again).
+      if (isFreshError) {
+        toast({
+          title: syncErrorKind === "auth" ? "Reconnect needed" : "Couldn't refresh",
+          description:
+            syncErrorKind === "auth"
+              ? "Your email connection expired. Reconnect to keep your inbox current."
+              : "We couldn't reach your email provider. Showing your last synced emails.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Inbox up to date" });
+      }
     }
-  }, [isFetchingFresh, isManualRefresh]);
+  }, [isFetchingFresh, isManualRefresh, isFreshError, syncErrorKind, toast]);
+
+  // "Last updated" must reflect a *real successful provider fetch*, not any write
+  // to the fresh cache. We deliberately do NOT use React Query's `dataUpdatedAt`
+  // here: optimistic local mutations (archive/read/delete call setQueryData on
+  // the fresh key) advance `dataUpdatedAt` too, which would falsely show
+  // "Updated just now" after a purely local change. Instead we stamp our own
+  // timestamp only when a fetch actually completes successfully (see effect
+  // below), and fall back to the server-persisted lastSyncedAt before the first
+  // fresh fetch of this session lands.
+  const [lastSuccessfulSyncMs, setLastSuccessfulSyncMs] = useState<number | null>(null);
+  const lastSyncedMs: number | null =
+    lastSuccessfulSyncMs != null
+      ? lastSuccessfulSyncMs
+      : userData?.user?.lastSyncedAt
+        ? new Date(userData.user.lastSyncedAt).getTime()
+        : null;
 
   // Stamp when our own /api/emails fetch finishes so the WS sync handler can
-  // ignore the echo from our own fetch and avoid a refetch loop.
+  // ignore the echo from our own fetch and avoid a refetch loop, and record the
+  // real successful-sync time for the freshness indicator. This effect only runs
+  // on a fetch state transition (isFetchingFresh true->false with success), so
+  // it is not triggered by optimistic setQueryData writes.
   useEffect(() => {
     if (!isFetchingFresh && hasFreshData) {
-      lastSelfFetchAtRef.current = Date.now();
+      const now = Date.now();
+      lastSelfFetchAtRef.current = now;
+      setLastSuccessfulSyncMs(now);
     }
+    // Intentionally NOT depending on freshUpdatedAt: it advances on optimistic
+    // setQueryData writes, and depending on it would re-fire this effect and
+    // stamp a false sync time on a purely local mutation.
   }, [isFetchingFresh, hasFreshData]);
+
+  // Keep the instant "cached" query coherent with provider truth: once a fresh
+  // fetch succeeds (even with an empty result after deletes/archives), mirror it
+  // into the cached query so the two in-session caches can't diverge and stale
+  // rows can't reappear via the cached path.
+  useEffect(() => {
+    if (hasFreshData && Array.isArray(freshEmails)) {
+      queryClient.setQueryData(["/api/emails", "cached"], freshEmails);
+    }
+  }, [hasFreshData, freshEmails]);
 
   // Fetch emails from custom folder when viewing a custom folder
   const { data: customFolderData, isLoading: isLoadingCustomFolder } = useQuery<{ emails: EmailWithNylasId[] }>({
@@ -916,6 +994,9 @@ export default function Inbox({ activeFolder, onFolderChange, showComposeDialog,
             isMoving={moveEmailMutation.isPending}
             isLoading={isLoadingEmails || isLoadingCustomFolder}
             isSyncing={isSyncing}
+            lastSyncedAt={lastSyncedMs}
+            syncErrorKind={syncErrorKind}
+            onReconnect={() => setLocation("/connect-email")}
             activeFolder={activeFolder}
             hasConnectedAccount={!!userData?.user?.connectedEmail}
             onConnectAccount={() => setLocation("/connect-email")}
