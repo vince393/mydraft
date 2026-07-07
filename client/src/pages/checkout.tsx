@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { trackMetaEvent } from "@/lib/meta-pixel";
 import { COUNTRIES, STATE_MAP } from "@/lib/countries";
 import { WalletPaymentButton, type PaymentRequestPaymentMethodEvent } from "@/components/wallet-payment-button";
 import { ArrowLeft, Loader2, Shield, Check, Lock, CreditCard, Sparkles, Clock, Zap, Ticket, X, CheckCircle2 } from "lucide-react";
@@ -181,6 +182,17 @@ const pricing: Record<string, Record<string, { amount: number; period: string; m
   },
 };
 
+function trackCheckoutConversion(plan: string, interval: string) {
+  const value = pricing[plan]?.[interval]?.amount ?? 0;
+  const params = { content_name: plan, interval, value, currency: "USD" };
+  trackMetaEvent("Subscribe", params);
+  if (plan === "personal") {
+    trackMetaEvent("Purchase", { ...params, content_type: "subscription" });
+  } else {
+    trackMetaEvent("StartTrial", params);
+  }
+}
+
 function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: string; onSuccess: () => void }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -318,6 +330,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
           confirmed.payment_method as string,
         );
         if (result.success) {
+          trackCheckoutConversion(plan, interval);
           await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
           toast({
             title: "Welcome to MyDraft!",
@@ -385,6 +398,7 @@ function CheckoutForm({ plan, interval, onSuccess }: { plan: string; interval: s
         const result = await confirmSubscriptionMutation.mutateAsync(setupIntent.payment_method as string);
         
         if (result.success) {
+          trackCheckoutConversion(plan, interval);
           await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
           toast({
             title: "Welcome to MyDraft!",

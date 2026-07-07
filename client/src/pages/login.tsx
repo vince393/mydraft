@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { trackMetaEvent, trackMetaEventOnce } from "@/lib/meta-pixel";
 import { saveDeviceAccount } from "@/lib/device-accounts";
 import { Loader2, Eye, EyeOff, ArrowRight, LogOut, Mail, ArrowLeft, Building2, Inbox, Shield, Sparkles, Lock, Zap, Globe } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
@@ -248,6 +249,7 @@ export default function LoginPage() {
       return response.json();
     },
     onSuccess: (data) => {
+      trackMetaEventOnce("signup", "CompleteRegistration");
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Email verified!",

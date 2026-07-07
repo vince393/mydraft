@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { trackMetaEvent, trackMetaEventOnce } from "@/lib/meta-pixel";
 import { ArrowRight, ArrowLeft, Loader2, Check, Star, Clock, Brain, Rocket, Shield, Mail, Briefcase, RefreshCw, Inbox, MailOpen, Mails, Waves, PenLine, Sparkles, Tag, FileText, Palette, Smile, Zap, Search, Users, Newspaper, Radio, Megaphone, MessageCircle, ChevronLeft } from "lucide-react";
 import logoPath from "@assets/mydraft_logo.png";
 import type { User } from "@shared/schema";
@@ -168,6 +169,9 @@ export default function OnboardingPage() {
   });
 
   useEffect(() => {
+    if (authData?.user && !authData.user.onboardingCompleted) {
+      trackMetaEventOnce("signup", "CompleteRegistration");
+    }
     if (authData?.user?.onboardingCompleted) {
       if (!authData.user.emailConnected) {
         setLocation("/connect-email");
@@ -276,7 +280,12 @@ export default function OnboardingPage() {
       const response = await apiRequest("POST", "/api/user/plan", body);
       return response.json();
     },
-    onSuccess: () => completeOnboardingMutation.mutate(),
+    onSuccess: (_data, planId) => {
+      if (planId === "pro" || planId === "business") {
+        trackMetaEvent("StartTrial", { content_name: planId });
+      }
+      completeOnboardingMutation.mutate();
+    },
     onError: (error: Error) => {
       toast({ title: "Failed to select plan", description: error.message, variant: "destructive" });
     },

@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { trackMetaEvent } from "@/lib/meta-pixel";
 import { WalletPaymentButton, type PaymentRequestPaymentMethodEvent } from "@/components/wallet-payment-button";
 import { Loader2, Lock, Coins, CreditCard } from "lucide-react";
 
@@ -189,6 +190,7 @@ function CreditCheckoutForm({
         });
       }
 
+      trackMetaEvent("Purchase", { content_name: item.sku, value: item.price, currency: "USD" });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/credits"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/credits/transactions"] }),
@@ -264,6 +266,7 @@ function CreditCheckoutForm({
         });
       }
 
+      trackMetaEvent("Purchase", { content_name: item.sku, value: item.price, currency: "USD" });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/credits"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/credits/transactions"] }),
