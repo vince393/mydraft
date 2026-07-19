@@ -16,6 +16,10 @@ import { eq, and, gt, lte, desc, asc, sql } from "drizzle-orm";
 
 export const CREDIT_EXPIRY_DAYS = 30;
 
+// One-time credit packs never expire (~100 years; lots require an expiry date).
+// Monthly plan/add-on credits keep the 30-day cycle above.
+export const PACK_CREDIT_EXPIRY_DAYS = 36500;
+
 // Monthly credit allowance per plan
 export const PLAN_MONTHLY_CREDITS: Record<Plan, number> = {
   free: 10,

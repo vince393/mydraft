@@ -50,6 +50,7 @@ import {
   TRIAL_DAYS,
   REFERRAL_REFERRER_CREDITS,
   REFERRAL_REFERRED_CREDITS,
+  PACK_CREDIT_EXPIRY_DAYS,
   grantCredits,
   getActiveAddons,
   cancelCreditAddon,
@@ -11092,6 +11093,7 @@ ${instructions ? `\nInstructions: ${instructions}` : "Include a brief note expla
           action: "pack_purchase",
           reference: pi.id,
           idempotencyKey: `pack:pi:${pi.id}`,
+          expiresInDays: PACK_CREDIT_EXPIRY_DAYS,
           metadata: { stripePaymentIntentId: pi.id, packCredits: credits, note: pi.metadata.sku },
         });
       }

@@ -3,6 +3,7 @@ import { storage } from './storage';
 import { sendPlanPurchaseEmail, sendBillingReceiptEmail } from './email';
 import {
   PLAN_PRICES,
+  PACK_CREDIT_EXPIRY_DAYS,
   grantPlanMonthlyCredits,
   grantCredits,
   createCreditAddon,
@@ -265,6 +266,7 @@ export class WebhookHandlers {
                 action: 'pack_purchase',
                 reference: session.id,
                 idempotencyKey: `pack:${session.id}`,
+                expiresInDays: PACK_CREDIT_EXPIRY_DAYS,
                 metadata: { stripeSessionId: session.id, packCredits: credits, note: session.metadata.sku },
               });
               console.log(`[Webhook] Granted ${credits} pack credits to user ${userId}`);
@@ -301,6 +303,7 @@ export class WebhookHandlers {
               action: 'pack_purchase',
               reference: pi.id,
               idempotencyKey: `pack:pi:${pi.id}`,
+              expiresInDays: PACK_CREDIT_EXPIRY_DAYS,
               metadata: { stripePaymentIntentId: pi.id, packCredits: credits, note: pi.metadata.sku },
             });
             console.log(`[Webhook] Granted ${credits} pack credits to user ${userId} (payment_intent)`);

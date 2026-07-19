@@ -422,7 +422,7 @@ function CreditCheckoutForm({
       <p className="text-[11px] text-center text-muted-foreground/40 leading-relaxed">
         {isAddon
           ? "You can cancel anytime. Your card will be charged monthly until you cancel."
-          : "One-time purchase. Credits expire 30 days after they are added."}
+          : "One-time purchase. These credits never expire."}
       </p>
     </form>
   );
