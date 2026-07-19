@@ -2350,9 +2350,11 @@ export async function registerRoutes(
 
     let creditBalance = 0;
     try {
+      // Grant against the *effective* plan: an expired trial must refill at the
+      // free allowance, not the trial plan's paid allowance.
       await ensureMonthlyGrant({
         id: user.id,
-        plan: user.plan,
+        plan: effectivePlan,
         lastMonthlyGrantAt: user.lastMonthlyGrantAt ?? null,
         stripeSubscriptionId: user.stripeSubscriptionId,
       });

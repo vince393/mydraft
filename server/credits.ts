@@ -429,31 +429,81 @@ export async function refundCredits(params: {
 }
 
 // Lazily grant the user's monthly plan allowance if a new ~30-day cycle has begun.
-// Used for free users and as a safety net for paid users (Stripe also grants on invoice.paid).
+// This is the self-healing path for ALL plans: free users are only granted here,
+// and paid/trial users are granted here whenever the Stripe invoice.paid webhook
+// didn't do it first (missed/undelivered webhooks must not starve paying users).
+//
+// Double-grant safety (two layers):
+// 1. Grace buffer: users with an active Stripe subscription only get a lazy
+//    grant once they are LAZY_GRACE_DAYS past the normal cycle, giving the
+//    invoice.paid webhook a multi-day head start around renewal.
+// 2. Atomic claim: before granting we compare-and-set lastMonthlyGrantAt
+//    against the exact value we read. If the webhook (or a concurrent request)
+//    granted in the meantime, the conditional update matches zero rows and we
+//    bail without granting.
+const LAZY_GRACE_DAYS = 3;
+
 export async function ensureMonthlyGrant(user: {
   id: string;
   plan: Plan;
   lastMonthlyGrantAt: Date | null;
   stripeSubscriptionId?: string | null;
 }): Promise<boolean> {
-  // Paid plans are granted via Stripe invoice.paid; only free users are lazily granted here.
-  if (user.plan !== "free") return false;
+  const amount = PLAN_MONTHLY_CREDITS[user.plan] ?? 0;
+  if (amount <= 0) return false;
 
   const now = new Date();
   const last = user.lastMonthlyGrantAt ? new Date(user.lastMonthlyGrantAt) : null;
-  const due =
-    !last || now.getTime() - last.getTime() >= CREDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  const dayMs = 24 * 60 * 60 * 1000;
+  const hasActiveSub = !!user.stripeSubscriptionId;
+  const waitDays = hasActiveSub ? CREDIT_EXPIRY_DAYS + LAZY_GRACE_DAYS : CREDIT_EXPIRY_DAYS;
+  const due = !last || now.getTime() - last.getTime() >= waitDays * dayMs;
   if (!due) return false;
 
-  await grantCredits({
-    userId: user.id,
-    amount: PLAN_MONTHLY_CREDITS.free,
-    source: "plan_monthly",
-    action: "monthly_grant",
-    metadata: { plan: "free" },
-  });
-  await db.update(users).set({ lastMonthlyGrantAt: now }).where(eq(users.id, user.id));
-  return true;
+  // Atomically claim this cycle: only succeeds if lastMonthlyGrantAt is still
+  // exactly what we read. Loses the race cleanly if the webhook or another
+  // request updated it first.
+  const claimed = await db
+    .update(users)
+    .set({ lastMonthlyGrantAt: now })
+    .where(
+      and(
+        eq(users.id, user.id),
+        last ? eq(users.lastMonthlyGrantAt, last) : sql`${users.lastMonthlyGrantAt} IS NULL`,
+      ),
+    )
+    .returning({ id: users.id });
+  if (claimed.length === 0) return false;
+
+  // Belt-and-braces: unique grant reference per user+cycle window so even a
+  // duplicated claim (e.g. after a partial failure retry) can't insert twice.
+  const cycleIndex = Math.floor(now.getTime() / (CREDIT_EXPIRY_DAYS * dayMs));
+  try {
+    const lot = await grantCredits({
+      userId: user.id,
+      amount,
+      source: "plan_monthly",
+      action: "monthly_grant",
+      idempotencyKey: `lazy-monthly:${user.id}:${cycleIndex}`,
+      metadata: { plan: user.plan, lazy: true },
+    });
+    return !!lot;
+  } catch (err) {
+    // The grant failed after we claimed the cycle — release the claim so the
+    // user isn't marked refilled without credits until the next cycle.
+    // Conditional on our own claim value so we never clobber a newer grant.
+    await db
+      .update(users)
+      .set({ lastMonthlyGrantAt: last })
+      .where(and(eq(users.id, user.id), eq(users.lastMonthlyGrantAt, now)))
+      .catch((rollbackErr) => {
+        console.error(
+          `[credits] CRITICAL: failed to release monthly-grant claim for user ${user.id} after grant failure — user may be marked refilled without credits until next cycle`,
+          rollbackErr,
+        );
+      });
+    throw err;
+  }
 }
 
 // Grant a plan's monthly allowance (called from Stripe webhooks on invoice.paid).
@@ -465,6 +515,36 @@ export async function grantPlanMonthlyCredits(params: {
 }): Promise<void> {
   const amount = PLAN_MONTHLY_CREDITS[params.plan] ?? 0;
   if (amount <= 0) return;
+
+  // Cross-path dedup: if the lazy self-heal already granted this plan's
+  // allowance within the current cycle window (it only fires when a webhook
+  // was missed), a late or replayed invoice.paid must not grant again. A lazy
+  // grant older than a full cycle means the replayed invoice effectively funds
+  // the NEXT cycle, so granting then is correct (and it updates
+  // lastMonthlyGrantAt, which stops the lazy path from re-granting). Upgrades
+  // still grant: the check is scoped to lazy grants of the SAME amount.
+  const recentCutoff = new Date(Date.now() - CREDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const [recentLazy] = await db
+    .select({ id: creditTransactions.id })
+    .from(creditTransactions)
+    .where(
+      and(
+        eq(creditTransactions.userId, params.userId),
+        eq(creditTransactions.type, "grant"),
+        eq(creditTransactions.action, "monthly_grant"),
+        sql`${creditTransactions.reference} LIKE ${`lazy-monthly:${params.userId}:%`}`,
+        gt(creditTransactions.createdAt, recentCutoff),
+        eq(creditTransactions.amount, amount),
+      ),
+    )
+    .limit(1);
+  if (recentLazy) {
+    console.log(
+      `[credits] Skipping invoice grant for ${params.userId}: lazy grant already covered this cycle`,
+    );
+    return;
+  }
+
   const lot = await grantCredits({
     userId: params.userId,
     amount,

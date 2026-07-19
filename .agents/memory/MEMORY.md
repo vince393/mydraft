@@ -10,6 +10,7 @@
 - [IMAP email threading](imap-threading.md) — IMAP has no native thread id; derive from References/In-Reply-To root and ALWAYS normalize message-ids (envelope=bare, headers=bracketed) or threads split.
 - [Email body iframe rendering](email-iframe-rendering.md) — body renders in a sandboxed iframe: global scrollbar CSS can't reach it (style inside), and `fillAvailable` makes a nested scroll "box" (omit it; outer ScrollArea scrolls).
 - [Stripe wallet payments](stripe-wallet-payments.md) — Apple/Google Pay via Payment Request API on our own checkout; gate on canMakePayment(), $0 rejected, ev.complete once, serve well-known file at 200.
+- [Stripe webhook dev hijack](stripe-webhook-dev-hijack.md) — dev startup deleted prod's Stripe webhook (killed paid credit refills); webhook setup is prod-gated + lazy monthly grant self-heals all plans.
 - [Long-press vs tap gesture](long-press-tap-gesture.md) — drag/scroll/pointercancel must set a cancel flag that suppresses the trailing onClick, not just clear the timer, or it fires the tap action anyway.
 - [Account soft-delete/restore](account-soft-delete.md) — 30-day soft delete; EVERY auth entry point must reject deletedAt users; restore honors the window + 2FA; OAuth auto-restores within window.
 - [Honest inbox sync failure](honest-sync-failure.md) — inbox sync AND search must prove freshness and never present a failure as empty/no-results; split auth (reconnect) vs transient (retry); WS identity must come from session, not a client param.

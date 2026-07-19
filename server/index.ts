@@ -74,15 +74,24 @@ async function initStripe() {
 
     const stripeSync = await getStripeSync();
 
-    console.log('Setting up managed webhook...');
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
-    try {
-      const result = await stripeSync.findOrCreateManagedWebhook(
-        `${webhookBaseUrl}/api/stripe/webhook`
-      );
-      console.log(`Webhook configured: ${result?.webhook?.url || webhookBaseUrl + '/api/stripe/webhook'}`);
-    } catch (webhookError) {
-      console.log('Webhook setup skipped (will be configured on first event):', webhookError);
+    // Only production may (re)configure the managed Stripe webhook. The manager
+    // deletes any other managed webhook it finds, so running this in the dev
+    // workspace used to DELETE the live site's webhook and re-point it at the
+    // dev URL — production then silently missed invoice.paid events and paying
+    // users never received their monthly credits.
+    if (process.env.REPLIT_DEPLOYMENT) {
+      console.log('Setting up managed webhook...');
+      const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      try {
+        const result = await stripeSync.findOrCreateManagedWebhook(
+          `${webhookBaseUrl}/api/stripe/webhook`
+        );
+        console.log(`Webhook configured: ${result?.webhook?.url || webhookBaseUrl + '/api/stripe/webhook'}`);
+      } catch (webhookError) {
+        console.log('Webhook setup skipped (will be configured on first event):', webhookError);
+      }
+    } else {
+      console.log('Skipping managed webhook setup in development (production owns the Stripe webhook)');
     }
 
     console.log('Syncing Stripe data...');
