@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "description": "MyDraft — AI Email Assistant desktop app",
   "author": "MyDraft <support@mydraft.io>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vince393/mydraft.git"
+  },
   "license": "MIT",
   "private": true,
   "main": "src/main.js",

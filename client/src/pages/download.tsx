@@ -11,7 +11,7 @@ import { Monitor, Download, CheckCircle, ShieldAlert } from "lucide-react";
 // build workflow) is the default stable host; override with VITE_DESKTOP_RELEASE_URL.
 const RELEASE_BASE =
   import.meta.env.VITE_DESKTOP_RELEASE_URL ||
-  "https://github.com/mydraft/mydraft-desktop/releases/latest/download";
+  "https://github.com/vince393/mydraft/releases/latest/download";
 
 type OS = "windows" | "mac" | "linux" | "other";
 
